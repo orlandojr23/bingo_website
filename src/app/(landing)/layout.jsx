@@ -36,45 +36,54 @@ export default function LandingLayout({ children }) {
       <main className="flex-1">
         {children}
       </main>
-      <footer className="bg-zinc-50 border-t border-zinc-200/60 py-16 text-zinc-600">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-12 pb-12 border-b border-zinc-200/40">
-            {/* Brand Column */}
-            <div className="md:col-span-2 flex flex-col gap-4 items-center md:items-start text-center md:text-left">
+      <footer className="bg-emerald-950 text-emerald-100 pt-20 pb-12 overflow-hidden relative">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          
+          {/* Top Section */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-12 pb-16 border-b border-emerald-800/40">
+            {/* Brand / Info Column */}
+            <div className="md:col-span-2 flex flex-col gap-5 items-center md:items-start text-center md:text-left">
               <div className="flex items-center gap-3">
                 <img 
                   src="/logo-green-v2.png" 
                   alt="Bin-Go Logo" 
-                  className="h-16 w-auto object-contain mix-blend-multiply origin-left scale-[1.3]" 
+                  className="h-12 w-auto object-contain brightness-0 invert origin-left scale-110" 
                 />
+                <span className="font-extrabold text-xl tracking-tight text-white">Bin&apos;Go Municipal</span>
               </div>
-              <p className="text-sm text-zinc-500 max-w-sm leading-relaxed">
+              <p className="text-sm text-emerald-300/80 max-w-sm leading-relaxed">
                 Empowering communities with smart, real-time waste tracking and citizen reporting to keep Metro Cebu green and clean.
               </p>
             </div>
             
-            {/* Quick Links Column */}
+            {/* Navigation Column */}
             <div className="flex flex-col gap-3 items-center md:items-start">
-              <span className="font-bold text-xs uppercase tracking-wider text-zinc-900">Platform</span>
-              <Link href="#" className="text-sm text-zinc-500 hover:text-emerald-700 transition-colors">Register</Link>
-              <Link href="/live-map" className="text-sm text-zinc-500 hover:text-emerald-700 transition-colors">Incident Map</Link>
+              <span className="font-bold text-xs uppercase tracking-wider text-emerald-400">Platform</span>
+              <Link href="#" className="text-sm text-emerald-200 hover:text-white transition-colors">Register</Link>
+              <Link href="/live-map" className="text-sm text-emerald-200 hover:text-white transition-colors">Incident Map</Link>
+              <Link href="/dashboard" className="text-sm text-emerald-200 hover:text-white transition-colors">Dashboard</Link>
             </div>
 
-            {/* Legal & Info Column */}
+            {/* Legal Column */}
             <div className="flex flex-col gap-3 items-center md:items-start">
-              <span className="font-bold text-xs uppercase tracking-wider text-zinc-900">Information</span>
-              <Link href="#" className="text-sm text-zinc-500 hover:text-emerald-700 transition-colors">Privacy Policy</Link>
-              <Link href="#" className="text-sm text-zinc-500 hover:text-emerald-700 transition-colors">Terms of Service</Link>
-              <Link href="#" className="text-sm text-zinc-500 hover:text-emerald-700 transition-colors">Contact Support</Link>
+              <span className="font-bold text-xs uppercase tracking-wider text-emerald-400">Information</span>
+              <Link href="#" className="text-sm text-emerald-200 hover:text-white transition-colors">Privacy Policy</Link>
+              <Link href="#" className="text-sm text-emerald-200 hover:text-white transition-colors">Terms of Service</Link>
+              <Link href="#" className="text-sm text-emerald-200 hover:text-white transition-colors">Contact Support</Link>
             </div>
           </div>
 
-          <div className="pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-medium text-zinc-400">
-            <span>© {new Date().getFullYear()} Cebu City LGU. Open source waste management initiative.</span>
-            <div className="flex gap-6">
+          {/* Bottom Section with Giant Brand Text */}
+          <div className="pt-12 flex flex-col items-center">
+            <h2 className="text-[12vw] font-black text-emerald-800/40 tracking-tighter uppercase leading-none select-none my-8 text-center w-full">
+              Bin&apos;Go
+            </h2>
+            <div className="w-full flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-medium text-emerald-400/60 pt-8 border-t border-emerald-800/10">
+              <span>© {new Date().getFullYear()} Cebu City LGU. Open source waste management initiative.</span>
               <span>Barangay Guadalupe Command Center</span>
             </div>
           </div>
+
         </div>
       </footer>
     </div>
