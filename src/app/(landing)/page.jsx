@@ -12,10 +12,15 @@ export default function LandingPage() {
         <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-sky-50/50 rounded-full blur-3xl opacity-60 translate-y-1/3 -translate-x-1/4 -z-10 pointer-events-none" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-          <div className="grid lg:grid-cols-2 gap-8 lg:gap-4 items-center lg:items-center pt-2 lg:pt-4">
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-4 items-center lg:items-center pt-2 lg:pt-0">
             
-            {/* Text Side */}
-            <div className="flex flex-col items-center lg:items-start text-center lg:text-left lg:pl-12 xl:pl-24 lg:pr-12 xl:pr-16 lg:border-r lg:border-zinc-200/60">
+            {/* Phone Side (Now Left) */}
+            <div className="flex justify-center lg:justify-center xl:justify-start relative animate-in-fade xl:pl-8" style={{ animationDelay: "400ms" }}>
+               <PhoneMockup />
+            </div>
+
+            {/* Text Side (Now Right) */}
+            <div className="flex flex-col items-center lg:items-start text-center lg:text-left lg:pl-12 xl:pl-16 lg:pr-12 xl:pr-24 lg:border-l lg:border-zinc-200/60">
               <h1 className="text-5xl sm:text-6xl lg:text-7xl [@media(max-height:800px)]:text-6xl [@media(max-height:720px)]:text-5xl font-bold tracking-tight text-zinc-900 mb-6 [@media(max-height:800px)]:mb-4 leading-[1.1] animate-in-fade" style={{ animationDelay: "100ms" }}>
                 Smart waste collection, <br className="hidden lg:block"/>
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-500">simplified.</span>
@@ -39,11 +44,6 @@ export default function LandingPage() {
                   Request Demo
                 </button>
               </div>
-            </div>
-
-            {/* Phone Side */}
-            <div className="flex justify-center lg:justify-center xl:justify-end relative animate-in-fade xl:pr-8" style={{ animationDelay: "400ms" }}>
-               <PhoneMockup />
             </div>
 
           </div>
