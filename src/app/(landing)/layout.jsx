@@ -4,15 +4,24 @@ import { ArrowRight } from "lucide-react";
 export default function LandingLayout({ children }) {
   return (
     <div className="min-h-screen flex flex-col font-sans bg-white">
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-zinc-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[72px] flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3 group">
+      {/* Floating Sticky Logo */}
+      <div className="fixed top-1 z-50 pointer-events-none w-full">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[72px] flex items-center">
+          <Link href="/" className="inline-flex items-center gap-3 group pointer-events-auto">
             <img 
               src="/logo-green-v2.png" 
               alt="Bin-Go Logo" 
               className="h-16 w-auto object-contain mix-blend-multiply origin-left scale-[1.4]" 
             />
           </Link>
+        </div>
+      </div>
+
+      <header className="bg-white border-b border-zinc-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[72px] flex items-center justify-between">
+          {/* Spacer to match the logo width and maintain layout alignment */}
+          <div className="w-[150px] shrink-0" />
+          
           <nav className="flex items-center gap-6">
             <Link href="/" className="text-sm font-bold text-zinc-600 hover:text-emerald-700 transition-colors hidden sm:block">Home</Link>
             <Link href="#about" className="text-sm font-bold text-zinc-600 hover:text-emerald-700 transition-colors hidden sm:block">About</Link>
