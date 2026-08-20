@@ -36,7 +36,9 @@ export default function LandingLayout({ children }) {
       <main className="flex-1">
         {children}
       </main>
-      <footer className="bg-[#cde7dc] text-emerald-950 pt-20 pb-12 overflow-hidden relative border-t border-[#b8dfcc]">
+      <footer className="relative pt-20 pb-12 overflow-hidden border-t border-[#b8dfcc] bg-[url('/hero-bg.jpg')] bg-cover bg-bottom bg-no-repeat text-emerald-950">
+        {/* Soft mint overlay to blend the background and ensure text readability */}
+        <div className="absolute inset-0 bg-[#cde7dc]/90 -z-0" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           
           {/* Top Section */}
