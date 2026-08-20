@@ -19,23 +19,30 @@ export default function LandingPage() {
 
             {/* Text Side (Now Right) */}
             <div className="flex flex-col items-center lg:items-start text-center lg:text-left lg:pl-12 xl:pl-16 lg:pr-12 xl:pr-24 lg:border-l lg:border-zinc-200/60">
-              <h1 className="text-5xl sm:text-6xl lg:text-7xl [@media(max-height:800px)]:text-6xl [@media(max-height:720px)]:text-5xl font-bold tracking-tight text-zinc-900 mb-6 [@media(max-height:800px)]:mb-4 leading-[1.1] animate-in-fade" style={{ animationDelay: "100ms" }}>
-                Smart waste collection, <br className="hidden lg:block"/>
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-500">simplified.</span>
+
+              {/* Playful badge */}
+              <div className="inline-flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold px-3 py-1.5 rounded-full mb-5 animate-in-fade" style={{ animationDelay: "50ms" }}>
+                🗑️ Smart Waste Management
+              </div>
+
+              <h1 className="text-5xl sm:text-6xl lg:text-7xl [@media(max-height:800px)]:text-6xl [@media(max-height:720px)]:text-5xl font-bold tracking-tight text-zinc-900 mb-4 [@media(max-height:800px)]:mb-3 leading-[1.1] animate-in-fade" style={{ animationDelay: "100ms" }}>
+                Trash day,{" "}
+                <br className="hidden lg:block"/>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-400">sorted. ✓</span>
               </h1>
-              
-              <p className="text-lg sm:text-xl [@media(max-height:800px)]:text-base text-zinc-600 mb-8 [@media(max-height:800px)]:mb-6 max-w-xl leading-relaxed font-medium animate-in-fade" style={{ animationDelay: "200ms" }}>
-                Never miss a collection day again. Live track garbage trucks, receive instant arrival alerts, and help keep your community clean.
+
+              <p className="text-base sm:text-lg [@media(max-height:800px)]:text-base text-zinc-500 mb-8 [@media(max-height:800px)]:mb-5 max-w-md leading-relaxed animate-in-fade" style={{ animationDelay: "200ms" }}>
+                No more missed pickups. Track your garbage truck live, snap illegal dumps in one tap, and help keep your barangay 🌿 clean.
               </p>
-              
+
               <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto animate-in-fade" style={{ animationDelay: "300ms" }}>
-                <Link 
-                  href="#" 
+                <Link
+                  href="#"
                   className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-full text-sm sm:text-base font-bold transition-all shadow-lg shadow-emerald-600/20 hover:shadow-xl hover:-translate-y-0.5"
                 >
                   Download the App <Download className="w-4 h-4" />
                 </Link>
-                <button 
+                <button
                   type="button"
                   className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white hover:bg-zinc-50 text-zinc-900 border-2 border-zinc-200 px-6 py-3 rounded-full text-sm sm:text-base font-bold transition-all"
                 >
