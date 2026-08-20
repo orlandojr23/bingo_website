@@ -19,18 +19,23 @@ export default function LandingLayout({ children }) {
 
       <header className="absolute top-0 left-0 w-full z-40 bg-transparent">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[72px] flex items-center justify-between">
-          {/* Spacer to match the logo width and maintain layout alignment */}
+          {/* Spacer to match the logo width on the left */}
           <div className="w-[220px] shrink-0" />
           
-          <nav className="flex items-center gap-6">
-            <Link href="/" className="text-sm font-bold text-zinc-600 hover:text-emerald-700 transition-colors hidden sm:block">Home</Link>
-            <Link href="#about" className="text-sm font-bold text-zinc-600 hover:text-emerald-700 transition-colors hidden sm:block">About</Link>
-            <Link href="#features" className="text-sm font-bold text-zinc-600 hover:text-emerald-700 transition-colors hidden sm:block">Features</Link>
-            <Link href="#faq" className="text-sm font-bold text-zinc-600 hover:text-emerald-700 transition-colors hidden sm:block">FAQ</Link>
+          {/* Centered Navigation Links */}
+          <nav className="hidden md:flex items-center justify-center gap-8">
+            <Link href="/" className="text-sm font-bold text-zinc-600 hover:text-emerald-700 transition-colors">Home</Link>
+            <Link href="#about" className="text-sm font-bold text-zinc-600 hover:text-emerald-700 transition-colors">About</Link>
+            <Link href="#features" className="text-sm font-bold text-zinc-600 hover:text-emerald-700 transition-colors">Features</Link>
+            <Link href="#faq" className="text-sm font-bold text-zinc-600 hover:text-emerald-700 transition-colors">FAQ</Link>
+          </nav>
+          
+          {/* Register Button Container on the right (balances the left spacer) */}
+          <div className="w-[220px] shrink-0 flex justify-end">
             <Link href="#" className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-full text-sm font-bold transition-all shadow-sm">
               Register <ArrowRight className="w-4 h-4" />
             </Link>
-          </nav>
+          </div>
         </div>
       </header>
       <main className="flex-1">
