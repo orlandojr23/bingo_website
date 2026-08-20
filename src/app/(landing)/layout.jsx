@@ -10,7 +10,7 @@ export default function LandingLayout({ children }) {
             <img 
               src="/logo-green-v2.png" 
               alt="Bin-Go Logo" 
-              className="h-16 w-auto object-contain mix-blend-multiply origin-left scale-[1.25]" 
+              className="h-16 w-auto object-contain mix-blend-multiply origin-left scale-[1.4]" 
             />
           </Link>
           <nav className="flex items-center gap-6">
