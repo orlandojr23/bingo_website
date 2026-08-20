@@ -7,7 +7,7 @@ export default function LandingPage() {
       {/* Hero Section */}
       <section className="relative pt-24 pb-16 lg:py-0 lg:h-screen lg:min-h-[640px] flex items-center overflow-hidden bg-[url('/hero-bg.jpg')] bg-cover bg-center bg-no-repeat">
         {/* Subtle overlay to ensure high text contrast */}
-        <div className="absolute inset-0 bg-white/20 -z-10" />
+        <div className="absolute inset-0 bg-white/5 -z-10" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
           <div className="grid lg:grid-cols-2 gap-8 lg:gap-4 items-center lg:items-center pt-2 lg:pt-0">
