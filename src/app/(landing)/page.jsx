@@ -21,40 +21,23 @@ export default function LandingPage() {
             <div className="flex flex-col items-center lg:items-start text-center lg:text-left lg:pl-12 xl:pl-16 lg:pr-12 xl:pr-24 lg:border-l lg:border-zinc-200/60">
 
               <h1
-                className="text-5xl sm:text-6xl lg:text-7xl [@media(max-height:800px)]:text-6xl [@media(max-height:720px)]:text-5xl font-black tracking-tight text-zinc-900 mb-6 [@media(max-height:800px)]:mb-4 leading-[1.15] animate-in-fade"
+                className="text-5xl sm:text-6xl lg:text-7xl [@media(max-height:800px)]:text-6xl [@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-6 [@media(max-height:800px)]:mb-4 animate-in-fade"
                 style={{ animationDelay: "100ms" }}
               >
-                {/* 3D clay-style dark text */}
-                <span style={{ textShadow: "2px 2px 0px #d4d4d8, 4px 4px 0px #a1a1aa" }}>
-                  Smart waste{" "}
+                <span className="text-[#0f172a]">
+                  Smart Waste{" "}
                   <br className="hidden lg:block" />
-                  collection,
+                  Collection,
                 </span>
                 <br className="hidden lg:block" />
 
-                {/* "simplified." — emerald 3D + playful wavy underline */}
+                {/* "Simplified." — bright emerald with thick straight underline */}
                 <span className="relative inline-block mt-1">
-                  <span
-                    className="text-emerald-500"
-                    style={{ textShadow: "2px 2px 0px #059669, 4px 4px 0px #047857, 6px 6px 0px #065f46" }}
-                  >
-                    simplified.
+                  <span className="text-emerald-500">
+                    Simplified.
                   </span>
-                  {/* Wavy SVG underline */}
-                  <svg
-                    className="absolute -bottom-2 left-0 w-full overflow-visible"
-                    viewBox="0 0 300 10"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    preserveAspectRatio="none"
-                  >
-                    <path
-                      d="M0 5 C20 0, 40 10, 60 5 C80 0, 100 10, 120 5 C140 0, 160 10, 180 5 C200 0, 220 10, 240 5 C260 0, 280 10, 300 5"
-                      stroke="#34d399"
-                      strokeWidth="3.5"
-                      strokeLinecap="round"
-                    />
-                  </svg>
+                  {/* Thick straight underline */}
+                  <span className="absolute -bottom-2 left-0 w-full h-[5px] bg-emerald-400 rounded-full block" />
                 </span>
               </h1>
 
