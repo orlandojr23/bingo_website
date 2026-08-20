@@ -15,7 +15,7 @@ export default function LandingPage() {
           <div className="grid lg:grid-cols-2 gap-8 lg:gap-4 items-center lg:items-center pt-2 lg:pt-4">
             
             {/* Text Side */}
-            <div className="flex flex-col items-center lg:items-start text-center lg:text-left lg:pl-8 xl:pl-16">
+            <div className="flex flex-col items-center lg:items-start text-center lg:text-left lg:pl-12 xl:pl-24">
               <h1 className="text-5xl sm:text-6xl lg:text-7xl [@media(max-height:800px)]:text-6xl [@media(max-height:720px)]:text-5xl font-bold tracking-tight text-zinc-900 mb-6 [@media(max-height:800px)]:mb-4 leading-[1.1] animate-in-fade" style={{ animationDelay: "100ms" }}>
                 Smart waste collection, <br className="hidden lg:block"/>
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-500">simplified.</span>
