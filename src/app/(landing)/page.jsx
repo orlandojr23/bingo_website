@@ -5,7 +5,7 @@ export default function LandingPage() {
   return (
     <div className="flex flex-col w-full overflow-hidden">
       {/* Hero Section */}
-      <section className="relative pt-8 pb-16 lg:py-0 lg:h-[calc(100vh-72px)] lg:min-h-[580px] flex items-center overflow-hidden bg-[url('/hero-bg.jpg')] bg-cover bg-center bg-no-repeat">
+      <section className="relative pt-24 pb-16 lg:py-0 lg:h-screen lg:min-h-[640px] flex items-center overflow-hidden bg-[url('/hero-bg.jpg')] bg-cover bg-center bg-no-repeat">
         {/* Subtle overlay to ensure high text contrast */}
         <div className="absolute inset-0 bg-white/20 -z-10" />
 
