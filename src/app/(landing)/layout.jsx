@@ -34,7 +34,7 @@ export default function LandingLayout({ children }) {
                 <img 
                   src="/logo-green-v2.png" 
                   alt="Bin-Go Logo" 
-                  className="h-12 w-auto object-contain mix-blend-multiply origin-left scale-110" 
+                  className="h-16 w-auto object-contain mix-blend-multiply origin-left scale-[1.3]" 
                 />
               </div>
               <p className="text-sm text-zinc-500 max-w-sm leading-relaxed">
