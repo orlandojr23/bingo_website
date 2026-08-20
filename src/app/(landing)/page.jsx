@@ -5,36 +5,36 @@ export default function LandingPage() {
   return (
     <div className="flex flex-col w-full overflow-hidden">
       {/* Hero Section */}
-      <section className="relative pt-8 pb-16 lg:pt-12 lg:pb-16 overflow-hidden">
+      <section className="relative pt-4 pb-16 lg:pt-8 lg:pb-12 overflow-hidden">
         {/* Background Pattern */}
         <div className="absolute inset-0 bg-white -z-10" />
         <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-emerald-100/40 rounded-full blur-3xl opacity-50 -translate-y-1/2 translate-x-1/3 -z-10 pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-sky-50/50 rounded-full blur-3xl opacity-60 translate-y-1/3 -translate-x-1/4 -z-10 pointer-events-none" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center lg:items-start pt-4 lg:pt-12">
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-4 items-center lg:items-center pt-2 lg:pt-4">
             
             {/* Text Side */}
             <div className="flex flex-col items-center lg:items-start text-center lg:text-left">
-              <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-zinc-900 mb-6 leading-[1.1] animate-in-fade" style={{ animationDelay: "100ms" }}>
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-zinc-900 mb-4 leading-[1.1] animate-in-fade" style={{ animationDelay: "100ms" }}>
                 Smart waste collection, <br className="hidden lg:block"/>
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-500">simplified.</span>
               </h1>
               
-              <p className="text-lg sm:text-xl text-zinc-600 mb-8 max-w-xl leading-relaxed font-medium animate-in-fade" style={{ animationDelay: "200ms" }}>
+              <p className="text-base sm:text-lg text-zinc-600 mb-6 max-w-lg leading-relaxed font-medium animate-in-fade" style={{ animationDelay: "200ms" }}>
                 Bin&apos;Go empowers citizens to report uncollected garbage and enables local governments to track, route, and resolve waste incidents in real-time.
               </p>
               
-              <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto animate-in-fade" style={{ animationDelay: "300ms" }}>
+              <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto animate-in-fade" style={{ animationDelay: "300ms" }}>
                 <Link 
                   href="/dashboard" 
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3.5 rounded-full text-base font-bold transition-all shadow-lg shadow-emerald-600/20 hover:shadow-xl hover:-translate-y-0.5"
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-full text-sm sm:text-base font-bold transition-all shadow-lg shadow-emerald-600/20 hover:shadow-xl hover:-translate-y-0.5"
                 >
                   Access Dashboard <ArrowRight className="w-5 h-5" />
                 </Link>
                 <button 
                   type="button"
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white hover:bg-zinc-50 text-zinc-900 border-2 border-zinc-200 px-8 py-3.5 rounded-full text-base font-bold transition-all"
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white hover:bg-zinc-50 text-zinc-900 border-2 border-zinc-200 px-6 py-3 rounded-full text-sm sm:text-base font-bold transition-all"
                 >
                   Request Demo
                 </button>
@@ -42,7 +42,7 @@ export default function LandingPage() {
             </div>
 
             {/* Phone Side */}
-            <div className="flex justify-center lg:justify-end relative animate-in-fade" style={{ animationDelay: "400ms" }}>
+            <div className="flex justify-center lg:justify-center xl:justify-end relative animate-in-fade xl:pr-8" style={{ animationDelay: "400ms" }}>
                <PhoneMockup />
             </div>
 
