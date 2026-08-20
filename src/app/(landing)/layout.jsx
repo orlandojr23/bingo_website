@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ChevronDown, Play, Apple } from "lucide-react";
 
 export default function LandingLayout({ children }) {
   const [scrolled, setScrolled] = useState(false);
@@ -64,6 +64,40 @@ export default function LandingLayout({ children }) {
             <Link href="#about" className="text-sm font-bold text-zinc-600 hover:text-emerald-700 transition-colors">About</Link>
             <Link href="#features" className="text-sm font-bold text-zinc-600 hover:text-emerald-700 transition-colors">Features</Link>
             <Link href="#faq" className="text-sm font-bold text-zinc-600 hover:text-emerald-700 transition-colors">FAQ</Link>
+            
+            {/* Download Dropdown */}
+            <div className="relative group">
+              <button type="button" className="text-sm font-bold text-zinc-600 hover:text-emerald-700 transition-colors flex items-center gap-1 py-1 cursor-pointer">
+                Download <ChevronDown className="w-4 h-4 transition-transform duration-300 group-hover:rotate-180" />
+              </button>
+              
+              {/* Dropdown Box */}
+              <div className="absolute left-1/2 -translate-x-1/2 top-full pt-2 w-52 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform scale-95 group-hover:scale-100 origin-top z-50">
+                <div className="bg-white rounded-2xl border border-zinc-100 shadow-xl p-2.5 flex flex-col gap-1.5">
+                  <div className="px-3 py-1 text-[10px] font-bold text-zinc-400 uppercase tracking-wider text-left">
+                    Mobile App
+                  </div>
+                  
+                  {/* Google Play */}
+                  <div className="flex items-center gap-3 px-3 py-2 text-zinc-500 rounded-xl bg-zinc-50/50 hover:bg-zinc-50 transition-colors cursor-not-allowed border border-zinc-100">
+                    <Play className="w-4 h-4 text-zinc-400 fill-zinc-400" />
+                    <div className="text-left">
+                      <p className="font-bold text-zinc-700 text-xs leading-none mb-1">Google Play</p>
+                      <p className="text-[10px] text-zinc-400 leading-none">Coming Soon</p>
+                    </div>
+                  </div>
+                  
+                  {/* App Store */}
+                  <div className="flex items-center gap-3 px-3 py-2 text-zinc-500 rounded-xl bg-zinc-50/50 hover:bg-zinc-50 transition-colors cursor-not-allowed border border-zinc-100">
+                    <Apple className="w-4 h-4 text-zinc-400" />
+                    <div className="text-left">
+                      <p className="font-bold text-zinc-700 text-xs leading-none mb-1">App Store</p>
+                      <p className="text-[10px] text-zinc-400 leading-none">Coming Soon</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </nav>
           
           {/* Register Button Container on the right (balances the left spacer) */}
