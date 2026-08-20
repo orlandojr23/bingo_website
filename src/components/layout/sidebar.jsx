@@ -13,6 +13,7 @@ import {
   Settings,
   LogOut,
   X,
+  Globe,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -106,6 +107,14 @@ export default function Sidebar({ isOpen, onClose }) {
             </span>
           </div>
         </div>
+
+        <Link 
+          href="/" 
+          className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-emerald-700 hover:border-emerald-200 transition-colors shadow-sm mb-1"
+        >
+          <Globe className="w-4 h-4 text-slate-500" />
+          <span>View Public Site</span>
+        </Link>
 
         <div className="grid grid-cols-2 gap-2">
           <Link
