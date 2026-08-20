@@ -111,9 +111,9 @@ export default function LandingLayout({ children }) {
       <main className="flex-1">
         {children}
       </main>
-      <footer className="relative pt-20 pb-12 overflow-hidden border-t border-emerald-900/30 bg-[url('/hero-bg.jpg')] bg-cover bg-bottom bg-no-repeat text-emerald-100">
-        {/* Deep forest green overlay to blend the background and ensure high text contrast */}
-        <div className="absolute inset-0 bg-[#0b1e19]/92 -z-0" />
+      <footer className="relative pt-20 pb-12 overflow-hidden border-t border-emerald-900/30 bg-[url('/footer-bg.jpg')] bg-cover bg-top bg-no-repeat text-emerald-100">
+        {/* Subtle dark overlay to ensure text contrast */}
+        <div className="absolute inset-0 bg-[#0b1e19]/60 -z-0" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           
           {/* Top Section */}
