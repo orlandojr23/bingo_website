@@ -1,14 +1,22 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { AlertTriangle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function CrudDeleteModal({ isOpen, onClose, onConfirm, record }) {
-  if (!isOpen || !record) return null;
+  const [mounted, setMounted] = useState(false);
 
-  return (
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!isOpen || !record || !mounted) return null;
+
+  const modalContent = (
     <div
-      className="fixed inset-0 bg-zinc-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-zinc-900/40 backdrop-blur-xs z-[100] flex items-center justify-center p-4"
       onClick={onClose}
     >
       <div
@@ -50,4 +58,6 @@ export default function CrudDeleteModal({ isOpen, onClose, onConfirm, record }) 
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }

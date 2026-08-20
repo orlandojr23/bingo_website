@@ -1,14 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X, MapPin, User, Calendar, Clock, AlertCircle, CheckCircle2, Truck } from "lucide-react";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateStatus }) {
   const [selectedStatus, setSelectedStatus] = useState(ticket?.status || "Pending");
+  const [mounted, setMounted] = useState(false);
 
-  if (!isOpen || !ticket) return null;
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!isOpen || !ticket || !mounted) return null;
 
   const handleStatusChange = (newStatus) => {
     setSelectedStatus(newStatus);
@@ -17,9 +23,9 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
     }
   };
 
-  return (
+  const modalContent = (
     <div
-      className="fixed inset-0 bg-zinc-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-zinc-900/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
       onClick={onClose}
     >
       <div
@@ -154,4 +160,6 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }
