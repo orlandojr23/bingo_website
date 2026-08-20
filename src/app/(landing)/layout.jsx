@@ -94,21 +94,24 @@ export default function LandingLayout({ children }) {
                 />
               </div>
               <p className="text-sm text-emerald-300/80 max-w-sm leading-relaxed font-medium">
-                Empowering communities with smart, real-time waste tracking and citizen reporting to keep Metro Cebu green and clean.
+                Empowering barangays with smart waste management, live compactor truck telemetry, and rapid illegal dumping response.
               </p>
             </div>
             
-            {/* Navigation Column */}
+            {/* Platform links column matching bin-go-website */}
             <div className="flex flex-col gap-3 items-center md:items-start">
-              <span className="font-bold text-xs uppercase tracking-wider text-emerald-400">Platform</span>
+              <span className="font-bold text-xs uppercase tracking-wider text-emerald-400 font-mono">Platform</span>
+              <Link href="/" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">Home</Link>
+              <Link href="#about" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">About</Link>
+              <Link href="#features" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">Features</Link>
+              <Link href="#faq" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">FAQ</Link>
               <Link href="#" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">Register</Link>
               <Link href="/live-map" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">Incident Map</Link>
-              <Link href="/dashboard" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">Dashboard</Link>
             </div>
 
-            {/* Legal Column */}
+            {/* Legal Links Column matching bin-go-website */}
             <div className="flex flex-col gap-3 items-center md:items-start">
-              <span className="font-bold text-xs uppercase tracking-wider text-emerald-400">Information</span>
+              <span className="font-bold text-xs uppercase tracking-wider text-emerald-400 font-mono">Legal & Support</span>
               <Link href="#" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">Privacy Policy</Link>
               <Link href="#" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">Terms of Service</Link>
               <Link href="#" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">Contact Support</Link>
@@ -121,7 +124,7 @@ export default function LandingLayout({ children }) {
               Bin&apos;Go
             </h2>
             <div className="w-full flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-semibold text-emerald-400/60 pt-8 border-t border-emerald-800/10">
-              <span>© {new Date().getFullYear()} Cebu City LGU. Open source waste management initiative.</span>
+              <span>© {new Date().getFullYear()} Bin&apos;Go Waste Management Platform. All rights reserved.</span>
               <span>Barangay Guadalupe Command Center</span>
             </div>
           </div>
