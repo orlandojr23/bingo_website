@@ -13,13 +13,7 @@ export default function LandingPage() {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
           <div className="max-w-3xl mx-auto text-center flex flex-col items-center">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200/60 text-emerald-700 text-sm font-bold mb-8 animate-in-fade">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-              </span>
-              Live in Cebu City
-            </div>
+
             
             <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-zinc-900 mb-8 leading-[1.1] animate-in-fade" style={{ animationDelay: "100ms" }}>
               Smarter waste management for a <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-500">greener city.</span>
