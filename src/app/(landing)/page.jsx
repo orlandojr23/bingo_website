@@ -31,13 +31,27 @@ export default function LandingPage() {
                 </span>
                 <br className="hidden lg:block" />
 
-                {/* "Simplified." — bright emerald with thick straight underline */}
+                {/* "Simplified." — bright emerald with curved arc underline */}
                 <span className="relative inline-block mt-1">
                   <span className="text-emerald-500">
                     Simplified.
                   </span>
-                  {/* Thick straight underline */}
-                  <span className="absolute -bottom-2 left-0 w-full h-[5px] bg-emerald-400 rounded-full block" />
+                  {/* Curved arc underline (smile shape) */}
+                  <svg
+                    className="absolute -bottom-3 left-0 w-full overflow-visible"
+                    viewBox="0 0 300 16"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    preserveAspectRatio="none"
+                  >
+                    <path
+                      d="M4 12 Q150 2 296 12"
+                      stroke="#34d399"
+                      strokeWidth="5"
+                      strokeLinecap="round"
+                      fill="none"
+                    />
+                  </svg>
                 </span>
               </h1>
 
