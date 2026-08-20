@@ -5,17 +5,28 @@ import { ArrowRight } from "lucide-react";
 
 export default function LandingLayout({ children }) {
   const [scrolled, setScrolled] = useState(false);
+  const [hideLogo, setHideLogo] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 40) {
-        setScrolled(true);
-      } else {
-        setScrolled(false);
-      }
+      const scrollY = window.scrollY;
+      setScrolled(scrollY > 40);
+      
+      const scrollHeight = document.documentElement.scrollHeight;
+      const clientHeight = window.innerHeight;
+      const totalScrollable = scrollHeight - clientHeight;
+      
+      // Hide the logo when the user is within 380px of the bottom (near the footer)
+      setHideLogo(totalScrollable - scrollY < 380);
     };
+    
+    handleScroll();
     window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    window.addEventListener("resize", handleScroll);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", handleScroll);
+    };
   }, []);
 
   return (
@@ -31,9 +42,11 @@ export default function LandingLayout({ children }) {
               src="/logo-green-v2.png" 
               alt="Bin-Go Logo" 
               className={`h-16 w-auto object-contain origin-left scale-[1.5] transition-all duration-500 ease-out ${
-                scrolled 
-                  ? "brightness-0 opacity-85 drop-shadow-[0_2px_8px_rgba(255,255,255,0.8)]" 
-                  : "mix-blend-multiply"
+                hideLogo 
+                  ? "opacity-0 scale-90 pointer-events-none" 
+                  : scrolled 
+                    ? "brightness-0 opacity-85" 
+                    : "mix-blend-multiply"
               }`} 
             />
           </Link>
