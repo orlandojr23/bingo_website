@@ -25,14 +25,49 @@ export default function LandingPage() {
                 🗑️ Smart Waste Management
               </div>
 
-              <h1 className="text-5xl sm:text-6xl lg:text-7xl [@media(max-height:800px)]:text-6xl [@media(max-height:720px)]:text-5xl font-bold tracking-tight text-zinc-900 mb-4 [@media(max-height:800px)]:mb-3 leading-[1.1] animate-in-fade" style={{ animationDelay: "100ms" }}>
-                Trash day,{" "}
-                <br className="hidden lg:block"/>
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-400">sorted. ✓</span>
+              <h1
+                className="text-5xl sm:text-6xl lg:text-7xl [@media(max-height:800px)]:text-6xl [@media(max-height:720px)]:text-5xl font-black tracking-tight text-zinc-900 mb-6 [@media(max-height:800px)]:mb-4 leading-[1.15] animate-in-fade"
+                style={{ animationDelay: "100ms" }}
+              >
+                {/* 3D clay-style dark text */}
+                <span style={{ textShadow: "2px 2px 0px #d4d4d8, 4px 4px 0px #a1a1aa" }}>
+                  Smart waste{" "}
+                  <br className="hidden lg:block" />
+                  collection,
+                </span>
+                <br className="hidden lg:block" />
+
+                {/* "simplified." — emerald 3D + playful wavy underline */}
+                <span className="relative inline-block mt-1">
+                  <span
+                    className="text-emerald-500"
+                    style={{ textShadow: "2px 2px 0px #059669, 4px 4px 0px #047857, 6px 6px 0px #065f46" }}
+                  >
+                    simplified.
+                  </span>
+                  {/* Wavy SVG underline */}
+                  <svg
+                    className="absolute -bottom-2 left-0 w-full overflow-visible"
+                    viewBox="0 0 300 10"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    preserveAspectRatio="none"
+                  >
+                    <path
+                      d="M0 5 C20 0, 40 10, 60 5 C80 0, 100 10, 120 5 C140 0, 160 10, 180 5 C200 0, 220 10, 240 5 C260 0, 280 10, 300 5"
+                      stroke="#34d399"
+                      strokeWidth="3.5"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </span>
               </h1>
 
-              <p className="text-base sm:text-lg [@media(max-height:800px)]:text-base text-zinc-500 mb-8 [@media(max-height:800px)]:mb-5 max-w-md leading-relaxed animate-in-fade" style={{ animationDelay: "200ms" }}>
-                No more missed pickups. Track your garbage truck live, snap illegal dumps in one tap, and help keep your barangay 🌿 clean.
+              <p
+                className="text-base sm:text-lg [@media(max-height:800px)]:text-base text-zinc-500 mb-8 [@media(max-height:800px)]:mb-5 max-w-md leading-relaxed animate-in-fade"
+                style={{ animationDelay: "200ms" }}
+              >
+                Never miss a collection day again. Live track garbage trucks, receive instant arrival alerts, and help keep your community clean.
               </p>
 
               <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto animate-in-fade" style={{ animationDelay: "300ms" }}>
