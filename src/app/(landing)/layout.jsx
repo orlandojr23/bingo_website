@@ -18,8 +18,8 @@ export default function LandingLayout({ children }) {
             <Link href="#about" className="text-sm font-bold text-zinc-600 hover:text-emerald-700 transition-colors hidden sm:block">About</Link>
             <Link href="#features" className="text-sm font-bold text-zinc-600 hover:text-emerald-700 transition-colors hidden sm:block">Features</Link>
             <Link href="#faq" className="text-sm font-bold text-zinc-600 hover:text-emerald-700 transition-colors hidden sm:block">FAQ</Link>
-            <Link href="/dashboard" className="flex items-center gap-2 bg-zinc-900 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-full text-sm font-bold transition-all shadow-sm">
-              Admin Portal <ArrowRight className="w-4 h-4" />
+            <Link href="#" className="flex items-center gap-2 bg-zinc-900 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-full text-sm font-bold transition-all shadow-sm">
+              Register <ArrowRight className="w-4 h-4" />
             </Link>
           </nav>
         </div>
@@ -47,7 +47,7 @@ export default function LandingLayout({ children }) {
             {/* Quick Links Column */}
             <div className="flex flex-col gap-3 items-center md:items-start">
               <span className="font-bold text-xs uppercase tracking-wider text-zinc-900">Platform</span>
-              <Link href="/dashboard" className="text-sm text-zinc-500 hover:text-emerald-700 transition-colors">Admin Portal</Link>
+              <Link href="#" className="text-sm text-zinc-500 hover:text-emerald-700 transition-colors">Register</Link>
               <Link href="/live-map" className="text-sm text-zinc-500 hover:text-emerald-700 transition-colors">Incident Map</Link>
             </div>
 
