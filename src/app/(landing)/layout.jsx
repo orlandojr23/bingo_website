@@ -41,7 +41,7 @@ export default function LandingLayout({ children }) {
             <img 
               src="/logo-green-v2.png" 
               alt="Bin-Go Logo" 
-              className={`h-16 w-auto object-contain origin-left scale-[1.5] transition-all duration-500 ease-out ${
+              className={`h-20 w-auto object-contain origin-left scale-[1.8] transition-all duration-500 ease-out ${
                 hideLogo 
                   ? "opacity-0 scale-90 pointer-events-none" 
                   : scrolled 
@@ -56,7 +56,7 @@ export default function LandingLayout({ children }) {
       <header className="absolute top-0 left-0 w-full z-40 bg-transparent">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[72px] flex items-center justify-between">
           {/* Spacer to match the logo width on the left */}
-          <div className="w-[220px] shrink-0" />
+          <div className="w-[260px] shrink-0" />
           
           {/* Centered Navigation Links */}
           <nav className="hidden md:flex items-center justify-center gap-8">
