@@ -5,7 +5,7 @@ export default function LandingPage() {
   return (
     <div className="flex flex-col w-full overflow-hidden">
       {/* Hero Section */}
-      <section className="relative pt-20 pb-32 lg:pt-28 lg:pb-36 overflow-hidden">
+      <section className="relative pt-12 pb-16 lg:pt-20 lg:pb-20 overflow-hidden">
         {/* Background Pattern */}
         <div className="absolute inset-0 bg-white -z-10" />
         <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-emerald-100/40 rounded-full blur-3xl opacity-50 -translate-y-1/2 translate-x-1/3 -z-10 pointer-events-none" />
@@ -149,7 +149,7 @@ function FeatureCard({ icon: Icon, title, description }) {
 
 function PhoneMockup() {
   return (
-    <div className="relative w-[280px] sm:w-[320px] md:w-[280px] lg:w-[300px] xl:w-[340px] h-[580px] xl:h-[620px] z-10 transition-transform duration-700 hover:-translate-y-2">
+    <div className="relative w-[280px] sm:w-[320px] md:w-[280px] lg:w-[300px] xl:w-[340px] h-[580px] xl:h-[620px] z-10 transition-transform duration-700 hover:-translate-y-2 scale-90 sm:scale-95 lg:scale-90 xl:scale-100 origin-top -mb-[60px] sm:-mb-[30px] lg:-mb-[60px] xl:-mb-0">
       {/* Outer Phone Bezel */}
       <div className="absolute inset-0 bg-slate-900 rounded-[2.5rem] sm:rounded-[3rem] shadow-2xl overflow-hidden border-[6px] sm:border-[8px] border-slate-900 flex flex-col pointer-events-auto">
         
