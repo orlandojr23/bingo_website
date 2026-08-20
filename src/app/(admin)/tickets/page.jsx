@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Search, Filter, ArrowUpDown, Eye } from "lucide-react";
 import { mockTickets } from "@/lib/mock-data";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
-import TicketDetailsModal from "@/components/admin/ticket-details-modal";
+import TicketDetailsModal from "@/components/modals/ticket-details-modal";
 
 export default function TicketsPage() {
   const [tickets, setTickets] = useState(mockTickets);

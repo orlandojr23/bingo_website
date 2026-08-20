@@ -16,7 +16,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { mockDashboardStats, mockTickets } from "@/lib/mock-data";
-import TicketDetailsModal from "@/components/admin/ticket-details-modal";
+import TicketDetailsModal from "@/components/modals/ticket-details-modal";
 
 export default function DashboardPage() {
   const [tickets, setTickets] = useState(mockTickets);

@@ -5,7 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 import { Plus, Edit2, Trash2, CheckCircle2, RotateCcw, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
-import CrudDeleteModal from "@/components/admin/crud-delete-modal";
+import CrudDeleteModal from "@/components/modals/crud-delete-modal";
 import { initialTestRecords, getSupabaseClient } from "@/lib/supabase";
 
 export default function CrudPage() {

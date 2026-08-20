@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { mockTickets } from "@/lib/mock-data";
 import { Layers, Filter, MapPin } from "lucide-react";
 
-const MapCanvas = dynamic(() => import("@/components/admin/map-canvas"), {
+const MapCanvas = dynamic(() => import("@/components/map/map-canvas"), {
   ssr: false,
   loading: () => (
     <div className="w-full h-full flex items-center justify-center bg-zinc-50 text-zinc-400 text-xs">
