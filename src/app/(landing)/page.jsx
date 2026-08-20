@@ -149,7 +149,7 @@ function FeatureCard({ icon: Icon, title, description }) {
 
 function PhoneMockup() {
   return (
-    <div className="relative w-[280px] sm:w-[320px] md:w-[280px] lg:w-[300px] xl:w-[340px] h-[580px] xl:h-[620px] z-10 transition-transform duration-700 hover:-translate-y-2 scale-90 sm:scale-95 lg:scale-90 xl:scale-95 origin-top -mb-[60px] sm:-mb-[30px] lg:-mb-[60px] xl:-mb-[30px]">
+    <div className="relative w-[260px] sm:w-[280px] lg:w-[280px] xl:w-[300px] h-[500px] xl:h-[540px] z-10 transition-transform duration-700 hover:-translate-y-2">
       {/* Outer Phone Bezel */}
       <div className="absolute inset-0 bg-slate-900 rounded-[2.5rem] sm:rounded-[3rem] shadow-2xl overflow-hidden border-[6px] sm:border-[8px] border-slate-900 flex flex-col pointer-events-auto">
         
