@@ -11,7 +11,7 @@ export default function LandingLayout({ children }) {
             <img 
               src="/logo-green-v2.png" 
               alt="Bin-Go Logo" 
-              className="h-16 w-auto object-contain mix-blend-multiply origin-left scale-[1.4]" 
+              className="h-20 w-auto object-contain mix-blend-multiply origin-left scale-[1.65]" 
             />
           </Link>
         </div>
@@ -20,7 +20,7 @@ export default function LandingLayout({ children }) {
       <header className="bg-white border-b border-zinc-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[72px] flex items-center justify-between">
           {/* Spacer to match the logo width and maintain layout alignment */}
-          <div className="w-[150px] shrink-0" />
+          <div className="w-[220px] shrink-0" />
           
           <nav className="flex items-center gap-6">
             <Link href="/" className="text-sm font-bold text-zinc-600 hover:text-emerald-700 transition-colors hidden sm:block">Home</Link>
