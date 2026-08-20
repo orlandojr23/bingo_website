@@ -49,7 +49,7 @@ export default function LandingLayout({ children }) {
                   alt="Bin-Go Logo" 
                   className="h-12 w-auto object-contain brightness-0 invert origin-left scale-110" 
                 />
-                <span className="font-extrabold text-xl tracking-tight text-white">Bin&apos;Go Municipal</span>
+                <span className="font-extrabold text-xl tracking-tight text-white">Bin&apos;Go</span>
               </div>
               <p className="text-sm text-emerald-300/80 max-w-sm leading-relaxed">
                 Empowering communities with smart, real-time waste tracking and citizen reporting to keep Metro Cebu green and clean.
