@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { X, MapPin, User, Calendar, CheckCircle2, Truck } from "lucide-react";
+import { X, MapPin, User, Calendar, CheckCircle2, Truck, Save } from "lucide-react";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateStatus }) {
   const [selectedStatus, setSelectedStatus] = useState(ticket?.status || "Pending");
@@ -21,11 +22,11 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
 
   if (!isOpen || !ticket || !mounted) return null;
 
-  const handleStatusChange = (newStatus) => {
-    setSelectedStatus(newStatus);
-    if (onUpdateStatus) {
-      onUpdateStatus(ticket.id, newStatus);
+  const handleSave = () => {
+    if (onUpdateStatus && selectedStatus !== ticket.status) {
+      onUpdateStatus(ticket.id, selectedStatus);
     }
+    onClose();
   };
 
   const modalContent = (
@@ -38,12 +39,13 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
 
       {/* Right Sheet Content */}
       <div
-        className="relative w-full max-w-md bg-white h-full shadow-2xl border-l border-zinc-200 flex flex-col animate-slide-in-right overflow-y-auto"
+        className="relative w-full max-w-md bg-white h-full shadow-2xl border-l border-zinc-200 flex flex-col animate-slide-in-right"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-5 sm:p-6 flex flex-col gap-5 min-h-full">
+        {/* Scrollable Content Area */}
+        <div className="flex-1 overflow-y-auto p-5 sm:p-6 flex flex-col gap-5">
           {/* Header */}
-          <div className="flex items-start justify-between pb-4 border-b border-zinc-200/80">
+          <div className="flex items-start justify-between pb-4 border-b border-zinc-200/80 shrink-0">
             <div className="flex flex-col gap-2">
               <div className="flex flex-wrap items-center gap-2.5">
                 <span className="font-mono font-bold text-base text-zinc-900 bg-zinc-100 px-2.5 py-1 rounded-lg">
@@ -57,14 +59,14 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
             <button
               onClick={onClose}
               className="text-zinc-500 hover:text-zinc-900 p-2 rounded-xl hover:bg-zinc-100 transition-colors bg-zinc-50 border border-transparent hover:border-zinc-200"
-              aria-label="Close modal"
+              aria-label="Close sheet"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
           {/* Location & Details List */}
-          <div className="flex flex-col gap-3 py-1">
+          <div className="flex flex-col gap-3 py-1 shrink-0">
             <div className="flex items-start gap-3 p-3.5 rounded-xl border border-zinc-200 bg-zinc-50/50">
               <div className="p-1.5 bg-white rounded-lg border border-zinc-200 shrink-0 mt-0.5">
                 <MapPin className="w-4 h-4 text-zinc-600" />
@@ -113,25 +115,22 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
           </div>
 
           {/* Description */}
-          <div className="flex flex-col gap-1.5 p-4 rounded-xl border border-zinc-200 bg-zinc-50">
+          <div className="flex flex-col gap-1.5 p-4 rounded-xl border border-zinc-200 bg-zinc-50 shrink-0">
             <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Incident Notes</span>
             <p className="text-sm text-zinc-800 leading-relaxed font-medium">
               {ticket.description || "No specific detailed description provided."}
             </p>
           </div>
 
-          {/* Spacer to push controls to bottom if needed */}
-          <div className="flex-1" />
-
           {/* Quick Status Action Controls */}
-          <div className="flex flex-col gap-3 pt-4 border-t border-zinc-200/80 mt-2">
+          <div className="flex flex-col gap-3 pt-4 border-t border-zinc-200/80 mt-2 shrink-0 pb-4">
             <span className="text-xs font-bold text-zinc-700">
               Change Current Status:
             </span>
             <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
-                onClick={() => handleStatusChange("Pending")}
+                onClick={() => setSelectedStatus("Pending")}
                 className={`inline-flex items-center justify-center py-2.5 px-2 rounded-lg text-xs font-bold border transition-all shadow-sm ${
                   selectedStatus === "Pending"
                     ? "border-amber-500 bg-amber-50 text-amber-900 ring-1 ring-amber-500/20"
@@ -142,7 +141,7 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
               </button>
               <button
                 type="button"
-                onClick={() => handleStatusChange("In Progress")}
+                onClick={() => setSelectedStatus("In Progress")}
                 className={`inline-flex items-center justify-center py-2.5 px-2 rounded-lg text-xs font-bold border transition-all shadow-sm ${
                   selectedStatus === "In Progress"
                     ? "border-blue-500 bg-blue-50 text-blue-900 ring-1 ring-blue-500/20"
@@ -153,7 +152,7 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
               </button>
               <button
                 type="button"
-                onClick={() => handleStatusChange("Resolved")}
+                onClick={() => setSelectedStatus("Resolved")}
                 className={`inline-flex items-center justify-center py-2.5 px-2 rounded-lg text-xs font-bold border transition-all shadow-sm ${
                   selectedStatus === "Resolved"
                     ? "border-emerald-500 bg-emerald-50 text-emerald-900 ring-1 ring-emerald-500/20"
@@ -164,6 +163,20 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
               </button>
             </div>
           </div>
+        </div>
+
+        {/* Sticky Footer Actions */}
+        <div className="p-4 sm:p-5 border-t border-zinc-200 bg-zinc-50 flex items-center justify-end gap-3 shrink-0">
+          <Button variant="secondary" onClick={onClose} className="font-bold">
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleSave} 
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center gap-2"
+          >
+            <Save className="w-4 h-4" />
+            <span>Save Changes</span>
+          </Button>
         </div>
       </div>
     </div>
