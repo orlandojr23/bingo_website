@@ -30,10 +30,10 @@ export default function LandingLayout({ children }) {
             <img 
               src="/logo-green-v2.png" 
               alt="Bin-Go Logo" 
-              className={`w-auto object-contain origin-left transition-all duration-500 ease-out ${
+              className={`h-16 w-auto object-contain origin-left scale-[1.5] transition-all duration-500 ease-out ${
                 scrolled 
-                  ? "h-12 brightness-0 opacity-85 drop-shadow-[0_2px_8px_rgba(255,255,255,0.8)]" 
-                  : "h-16 mix-blend-multiply scale-[1.5]"
+                  ? "brightness-0 opacity-85 drop-shadow-[0_2px_8px_rgba(255,255,255,0.8)]" 
+                  : "mix-blend-multiply"
               }`} 
             />
           </Link>
