@@ -36,7 +36,7 @@ export default function LandingLayout({ children }) {
       <main className="flex-1">
         {children}
       </main>
-      <footer className="bg-[#76a596] text-emerald-950 pt-20 pb-12 overflow-hidden relative border-t border-[#659183]">
+      <footer className="bg-[#cde7dc] text-emerald-950 pt-20 pb-12 overflow-hidden relative border-t border-[#b8dfcc]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           
           {/* Top Section */}
@@ -74,7 +74,7 @@ export default function LandingLayout({ children }) {
 
           {/* Bottom Section with Giant Brand Text */}
           <div className="pt-12 flex flex-col items-center">
-            <h2 className="text-[12vw] font-black text-white/15 tracking-tighter uppercase leading-none select-none my-8 text-center w-full">
+            <h2 className="text-[12vw] font-black text-emerald-900/10 tracking-tighter uppercase leading-none select-none my-8 text-center w-full">
               Bin&apos;Go
             </h2>
             <div className="w-full flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-semibold text-emerald-900/60 pt-8 border-t border-emerald-900/10">
