@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { X, MapPin, User, Calendar, CheckCircle2, Truck, Save } from "lucide-react";
+import { X, MapPin, User, Calendar, CheckCircle2, Truck } from "lucide-react";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -68,7 +68,7 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
           {/* Location & Details List */}
           <div className="flex flex-col gap-3 py-1 shrink-0">
             <div className="flex items-start gap-3 p-3.5 rounded-xl border border-zinc-200 bg-zinc-50/50">
-              <div className="p-1.5 bg-white rounded-lg border border-zinc-200 shrink-0 mt-0.5">
+              <div className="shrink-0 mt-0.5">
                 <MapPin className="w-4 h-4 text-zinc-600" />
               </div>
               <div className="flex flex-col">
@@ -78,7 +78,7 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
             </div>
 
             <div className="flex items-start gap-3 p-3.5 rounded-xl border border-zinc-200 bg-zinc-50/50">
-              <div className="p-1.5 bg-white rounded-lg border border-zinc-200 shrink-0 mt-0.5">
+              <div className="shrink-0 mt-0.5">
                 <User className="w-4 h-4 text-zinc-600" />
               </div>
               <div className="flex flex-col">
@@ -90,7 +90,7 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
             </div>
 
             <div className="flex items-start gap-3 p-3.5 rounded-xl border border-zinc-200 bg-zinc-50/50">
-              <div className="p-1.5 bg-white rounded-lg border border-zinc-200 shrink-0 mt-0.5">
+              <div className="shrink-0 mt-0.5">
                 <Calendar className="w-4 h-4 text-zinc-600" />
               </div>
               <div className="flex flex-col">
@@ -102,7 +102,7 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
             </div>
 
             <div className="flex items-start gap-3 p-3.5 rounded-xl border border-zinc-200 bg-zinc-50/50">
-              <div className="p-1.5 bg-white rounded-lg border border-zinc-200 shrink-0 mt-0.5">
+              <div className="shrink-0 mt-0.5">
                 <Truck className="w-4 h-4 text-zinc-600" />
               </div>
               <div className="flex flex-col">
@@ -172,10 +172,9 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
           </Button>
           <Button 
             onClick={handleSave} 
-            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center gap-2"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
           >
-            <Save className="w-4 h-4" />
-            <span>Save Changes</span>
+            Save Changes
           </Button>
         </div>
       </div>
