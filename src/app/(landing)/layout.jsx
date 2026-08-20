@@ -1,17 +1,44 @@
+"use client";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
 export default function LandingLayout({ children }) {
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 40) {
+        setScrolled(true);
+      } else {
+        setScrolled(false);
+      }
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   return (
     <div className="min-h-screen flex flex-col font-sans bg-white">
       {/* Floating Sticky Logo */}
-      <div className="fixed top-1 z-50 pointer-events-none w-full">
+      <div className="fixed top-2 z-50 pointer-events-none w-full">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[72px] flex items-center">
-          <Link href="/" className="inline-flex items-center gap-3 group pointer-events-auto">
+          <Link 
+            href="/" 
+            className={`inline-flex items-center group pointer-events-auto transition-all duration-500 ease-out ${
+              scrolled 
+                ? "bg-emerald-950/95 shadow-xl shadow-emerald-950/30 backdrop-blur-md px-5 py-2.5 rounded-full border border-emerald-800/40 translate-y-1" 
+                : "bg-transparent border-transparent"
+            }`}
+          >
             <img 
               src="/logo-green-v2.png" 
               alt="Bin-Go Logo" 
-              className="h-20 w-auto object-contain mix-blend-multiply origin-left scale-[1.65]" 
+              className={`w-auto object-contain origin-left transition-all duration-500 ease-out ${
+                scrolled 
+                  ? "h-9 brightness-0 invert" 
+                  : "h-16 mix-blend-multiply scale-[1.5]"
+              }`} 
             />
           </Link>
         </div>
