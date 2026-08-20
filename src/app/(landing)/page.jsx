@@ -56,7 +56,7 @@ export default function LandingPage() {
               </h1>
 
               <p
-                className="text-base sm:text-lg [@media(max-height:800px)]:text-base text-zinc-500 mb-8 [@media(max-height:800px)]:mb-5 max-w-md leading-relaxed animate-in-fade"
+                className="text-base sm:text-lg [@media(max-height:800px)]:text-base text-zinc-700 font-medium mb-8 [@media(max-height:800px)]:mb-5 max-w-md leading-relaxed animate-in-fade"
                 style={{ animationDelay: "200ms" }}
               >
                 Never miss a collection day again. Live track garbage trucks, receive instant arrival alerts, and help keep your community clean.
