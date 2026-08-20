@@ -25,16 +25,44 @@ export default function LandingLayout({ children }) {
       <main className="flex-1">
         {children}
       </main>
-      <footer className="bg-zinc-50 text-zinc-500 py-12 border-t border-zinc-200/60">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="flex flex-col gap-1 items-center md:items-start">
-            <span className="font-bold text-lg text-zinc-900 tracking-tight">Bin&apos;Go Municipal</span>
-            <span className="text-sm font-medium">© {new Date().getFullYear()} Cebu City LGU. Open source waste management.</span>
+      <footer className="bg-zinc-50 border-t border-zinc-200/60 py-16 text-zinc-600">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-12 pb-12 border-b border-zinc-200/40">
+            {/* Brand Column */}
+            <div className="md:col-span-2 flex flex-col gap-4 items-center md:items-start text-center md:text-left">
+              <div className="flex items-center gap-3">
+                <img 
+                  src="/logo-green-v2.png" 
+                  alt="Bin-Go Logo" 
+                  className="h-12 w-auto object-contain mix-blend-multiply origin-left scale-110" 
+                />
+              </div>
+              <p className="text-sm text-zinc-500 max-w-sm leading-relaxed">
+                Empowering communities with smart, real-time waste tracking and citizen reporting to keep Metro Cebu green and clean.
+              </p>
+            </div>
+            
+            {/* Quick Links Column */}
+            <div className="flex flex-col gap-3 items-center md:items-start">
+              <span className="font-bold text-xs uppercase tracking-wider text-zinc-900">Platform</span>
+              <Link href="/dashboard" className="text-sm text-zinc-500 hover:text-emerald-700 transition-colors">Admin Portal</Link>
+              <Link href="/live-map" className="text-sm text-zinc-500 hover:text-emerald-700 transition-colors">Incident Map</Link>
+            </div>
+
+            {/* Legal & Info Column */}
+            <div className="flex flex-col gap-3 items-center md:items-start">
+              <span className="font-bold text-xs uppercase tracking-wider text-zinc-900">Information</span>
+              <Link href="#" className="text-sm text-zinc-500 hover:text-emerald-700 transition-colors">Privacy Policy</Link>
+              <Link href="#" className="text-sm text-zinc-500 hover:text-emerald-700 transition-colors">Terms of Service</Link>
+              <Link href="#" className="text-sm text-zinc-500 hover:text-emerald-700 transition-colors">Contact Support</Link>
+            </div>
           </div>
-          <div className="flex gap-6 text-sm font-bold">
-            <Link href="#" className="hover:text-emerald-600 transition-colors">Privacy</Link>
-            <Link href="#" className="hover:text-emerald-600 transition-colors">Terms</Link>
-            <Link href="#" className="hover:text-emerald-600 transition-colors">Contact</Link>
+
+          <div className="pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-medium text-zinc-400">
+            <span>© {new Date().getFullYear()} Cebu City LGU. Open source waste management initiative.</span>
+            <div className="flex gap-6">
+              <span>Barangay Guadalupe Command Center</span>
+            </div>
           </div>
         </div>
       </footer>
