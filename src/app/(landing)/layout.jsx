@@ -18,7 +18,7 @@ export default function LandingLayout({ children }) {
             <Link href="#about" className="text-sm font-bold text-zinc-600 hover:text-emerald-700 transition-colors hidden sm:block">About</Link>
             <Link href="#features" className="text-sm font-bold text-zinc-600 hover:text-emerald-700 transition-colors hidden sm:block">Features</Link>
             <Link href="#faq" className="text-sm font-bold text-zinc-600 hover:text-emerald-700 transition-colors hidden sm:block">FAQ</Link>
-            <Link href="#" className="flex items-center gap-2 bg-zinc-900 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-full text-sm font-bold transition-all shadow-sm">
+            <Link href="#" className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-full text-sm font-bold transition-all shadow-sm">
               Register <ArrowRight className="w-4 h-4" />
             </Link>
           </nav>
