@@ -43,13 +43,12 @@ export default function LandingLayout({ children }) {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-12 pb-16 border-b border-emerald-800/40">
             {/* Brand / Info Column */}
             <div className="md:col-span-2 flex flex-col gap-5 items-center md:items-start text-center md:text-left">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center">
                 <img 
                   src="/logo-green-v2.png" 
                   alt="Bin-Go Logo" 
-                  className="h-12 w-auto object-contain brightness-0 invert origin-left scale-110" 
+                  className="h-16 w-auto object-contain brightness-0 invert origin-left scale-[1.3]" 
                 />
-                <span className="font-extrabold text-xl tracking-tight text-white">Bin&apos;Go</span>
               </div>
               <p className="text-sm text-emerald-300/80 max-w-sm leading-relaxed">
                 Empowering communities with smart, real-time waste tracking and citizen reporting to keep Metro Cebu green and clean.
