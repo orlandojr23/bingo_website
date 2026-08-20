@@ -14,8 +14,10 @@ export default function LandingLayout({ children }) {
             />
           </Link>
           <nav className="flex items-center gap-6">
+            <Link href="/" className="text-sm font-bold text-zinc-600 hover:text-emerald-700 transition-colors hidden sm:block">Home</Link>
+            <Link href="#about" className="text-sm font-bold text-zinc-600 hover:text-emerald-700 transition-colors hidden sm:block">About</Link>
             <Link href="#features" className="text-sm font-bold text-zinc-600 hover:text-emerald-700 transition-colors hidden sm:block">Features</Link>
-            <Link href="#impact" className="text-sm font-bold text-zinc-600 hover:text-emerald-700 transition-colors hidden sm:block">Impact</Link>
+            <Link href="#faq" className="text-sm font-bold text-zinc-600 hover:text-emerald-700 transition-colors hidden sm:block">FAQ</Link>
             <Link href="/dashboard" className="flex items-center gap-2 bg-zinc-900 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-full text-sm font-bold transition-all shadow-sm">
               Admin Portal <ArrowRight className="w-4 h-4" />
             </Link>

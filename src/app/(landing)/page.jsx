@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, ShieldCheck, Clock, Wifi, Battery, MapPin, Truck } from "lucide-react";
+import { ArrowRight, ShieldCheck, Clock, Wifi, Battery, MapPin, Truck, Download } from "lucide-react";
 
 export default function LandingPage() {
   return (
@@ -32,10 +32,10 @@ export default function LandingPage() {
               
               <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto animate-in-fade" style={{ animationDelay: "300ms" }}>
                 <Link 
-                  href="/dashboard" 
+                  href="#" 
                   className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-full text-sm sm:text-base font-bold transition-all shadow-lg shadow-emerald-600/20 hover:shadow-xl hover:-translate-y-0.5"
                 >
-                  Access Dashboard <ArrowRight className="w-5 h-5" />
+                  Download the App <Download className="w-4 h-4" />
                 </Link>
                 <button 
                   type="button"
