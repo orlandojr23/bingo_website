@@ -25,7 +25,7 @@ export default function LandingPage() {
               </h1>
               
               <p className="text-lg sm:text-xl [@media(max-height:800px)]:text-base text-zinc-600 mb-8 [@media(max-height:800px)]:mb-6 max-w-xl leading-relaxed font-medium animate-in-fade" style={{ animationDelay: "200ms" }}>
-                Bin&apos;Go empowers citizens to report uncollected garbage and enables local governments to track, route, and resolve waste incidents in real-time.
+                Never miss a collection day again. Live track garbage trucks, receive instant arrival alerts, and help keep your community clean.
               </p>
               
               <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto animate-in-fade" style={{ animationDelay: "300ms" }}>
