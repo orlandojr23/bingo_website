@@ -154,7 +154,7 @@ export default function LandingLayout({ children }) {
 
           {/* Bottom Section with Giant Brand Text */}
           <div className="pt-12 flex flex-col items-center">
-            <h2 className="text-[12vw] font-black text-emerald-900/30 tracking-tighter uppercase leading-none select-none my-8 text-center w-full">
+            <h2 className="text-[12vw] font-black text-white/8 tracking-tighter uppercase leading-none select-none my-8 text-center w-full">
               Bin&apos;Go
             </h2>
             <div className="w-full flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-semibold text-emerald-400/60 pt-8 border-t border-emerald-800/10">
