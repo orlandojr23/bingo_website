@@ -169,7 +169,12 @@ export default function Sidebar({ isOpen, onClose }) {
               </button>
               <button
                 type="button"
-                onClick={() => setShowSignOutModal(false)}
+                onClick={() => {
+                  import("js-cookie").then((Cookies) => {
+                    Cookies.default.remove("admin_session");
+                    window.location.href = "/login";
+                  });
+                }}
                 className="flex-1 py-2 px-4 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 shadow-sm"
               >
                 Sign Out
