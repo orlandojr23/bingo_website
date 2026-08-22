@@ -22,20 +22,20 @@ export default function Topbar({ onMenuClick }) {
   };
 
   return (
-    <header className="lg:hidden h-20 px-4 sm:px-8 bg-white border-b border-zinc-200 sticky top-0 z-20 flex items-center justify-between gap-4">
+    <header className="h-16 lg:h-20 px-4 sm:px-8 bg-white border-b border-zinc-200 sticky top-0 z-20 flex items-center justify-between gap-4">
       {/* Left: Mobile Menu & Breadcrumb */}
       <div className="flex items-center gap-4 min-w-0">
         <button
           type="button"
           onClick={onMenuClick}
-          className="lg:hidden p-2.5 rounded-xl text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 flex items-center justify-center cursor-pointer"
+          className="lg:hidden p-2.5 -ml-2 rounded-xl text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 flex items-center justify-center cursor-pointer"
           aria-label="Open Navigation Menu"
         >
           <Menu className="w-6 h-6" />
         </button>
 
         <div className="flex flex-col min-w-0">
-          <h1 className="text-lg sm:text-xl font-bold text-zinc-900 tracking-tight truncate">
+          <h1 className="text-lg lg:text-2xl font-black text-zinc-900 tracking-tight truncate">
             {current.title}
           </h1>
         </div>
@@ -53,7 +53,7 @@ export default function Topbar({ onMenuClick }) {
 
         <Link
           href="/notifications"
-          className="relative p-2.5 rounded-xl text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 flex items-center justify-center border-2 border-zinc-200"
+          className="relative p-2.5 rounded-xl text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 flex items-center justify-center"
           aria-label="View Notifications"
         >
           <Bell className="w-5 h-5" />

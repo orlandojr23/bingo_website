@@ -171,7 +171,6 @@ export default function LandingLayout({ children }) {
               <a href="#features" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">Features</a>
               <a href="#faq" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">FAQ</a>
               <Link href="#" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">Register</Link>
-              <Link href="/live-map" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">Incident Map</Link>
             </div>
 
             {/* Legal Links Column matching bin-go-website */}

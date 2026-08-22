@@ -56,7 +56,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Primary KPI Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-5">
         <StatCard
           label="Average Resolution Turnaround"
           value="4.2 hrs"
@@ -72,6 +72,7 @@ export default function AnalyticsPage() {
           description="126 resolved, 16 active"
         />
         <StatCard
+          className="col-span-2 lg:col-span-1"
           label="Overall Resolution Rate"
           value="88.7%"
           icon={CheckCircle2}

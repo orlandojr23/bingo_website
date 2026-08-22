@@ -45,7 +45,7 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-8 max-w-7xl mx-auto pb-8">
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-5">
         <div className="rounded-2xl">
           <StatCard
             label="Total Incidents"
@@ -98,7 +98,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Quick Status Filter Tabs */}
-            <div className="flex flex-wrap items-center gap-1.5 bg-white border-2 border-zinc-200 rounded-xl p-1 self-start sm:self-auto">
+            <div className="flex flex-nowrap items-center gap-1.5 bg-white border-2 border-zinc-200 rounded-xl p-1 self-start sm:self-auto overflow-x-auto scrollbar-hide max-w-full">
               {["All", "Pending", "In Progress", "Resolved"].map((status) => {
                 const isActive = statusFilter === status;
                 let count = totalCount;
@@ -111,7 +111,7 @@ export default function DashboardPage() {
                     key={status}
                     type="button"
                     onClick={() => setStatusFilter(status)}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-bold transition-colors ${
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-bold transition-colors whitespace-nowrap shrink-0 ${
                       isActive
                         ? "bg-emerald-600 text-white shadow-sm"
                         : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
@@ -196,13 +196,13 @@ export default function DashboardPage() {
           </div>
 
           {/* Table Footer Link */}
-          <div className="p-4 sm:px-6 border-t-2 border-zinc-200 bg-zinc-50/50 flex items-center justify-between">
+          <div className="p-4 sm:px-6 border-t-2 border-zinc-200 bg-zinc-50/50 flex flex-wrap items-center justify-between gap-3">
             <span className="text-sm font-medium text-zinc-500">
               Showing {filteredTickets.length} of {tickets.length} total reports
             </span>
             <Link
               href="/tickets"
-              className="text-sm font-bold text-zinc-700 hover:text-zinc-900 flex items-center gap-1 bg-white px-3 py-1.5 border-2 border-zinc-200 rounded-lg shadow-sm transition-colors"
+              className="text-sm font-bold text-zinc-700 hover:text-zinc-900 flex items-center gap-1 bg-white px-3 py-1.5 border-2 border-zinc-200 rounded-lg shadow-sm transition-colors whitespace-nowrap shrink-0"
             >
               <span>See all reports</span>
               <ChevronRight className="w-4 h-4" />

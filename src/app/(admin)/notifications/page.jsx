@@ -119,8 +119,8 @@ export default function NotificationsPage() {
   return (
     <div className="flex flex-col gap-6 max-w-4xl mx-auto">
       {/* Filter Tabs & Bulk Actions */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 bg-white border border-zinc-200 rounded-xl">
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-1.5 overflow-x-auto p-1.5 bg-white border border-zinc-200 rounded-xl max-w-full scrollbar-hide">
           {["All", "Emergency Reports", "System Alerts", "Ticket Reports"].map(
             (tab) => {
               const isActive = activeTab === tab;
@@ -162,10 +162,10 @@ export default function NotificationsPage() {
           <button
             type="button"
             onClick={markAllAsRead}
-            className="flex items-center gap-1 text-xs font-medium text-zinc-500 hover:text-zinc-900 px-2 py-1 transition-colors"
+            className="flex items-center gap-1.5 text-xs font-bold text-zinc-600 hover:text-zinc-900 bg-white border border-zinc-200 px-3 py-2 rounded-lg shadow-sm hover:bg-zinc-50 transition-colors shrink-0 self-end sm:self-auto"
           >
-            <CheckCheck className="w-3.5 h-3.5" />
-            <span>Mark all read</span>
+            <CheckCheck className="w-4 h-4 text-emerald-600" />
+            <span>Mark all as read</span>
           </button>
         )}
       </div>

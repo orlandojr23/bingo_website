@@ -11,21 +11,21 @@ export function StatCard({
   return (
     <div
       className={cn(
-        "bg-white border-2 border-zinc-200 rounded-2xl p-5 sm:p-6 flex flex-col justify-between transition-all duration-150 hover:border-zinc-300 hover:shadow-sm",
+        "bg-white border-2 border-zinc-200 rounded-2xl p-4 sm:p-6 flex flex-col justify-between transition-all duration-150 hover:border-zinc-300 hover:shadow-sm",
         className
       )}
     >
-      <div className="flex items-center justify-between gap-3 mb-4">
-        <span className="text-sm font-bold text-zinc-500 tracking-tight">
+      <div className="flex items-start sm:items-center justify-between gap-2 mb-3 sm:mb-4">
+        <span className="text-xs sm:text-sm font-bold text-zinc-500 tracking-tight leading-tight">
           {label}
         </span>
         {Icon && (
-          <Icon className="w-5 h-5 text-emerald-600 shrink-0" strokeWidth={2} />
+          <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600 shrink-0" strokeWidth={2} />
         )}
       </div>
 
       <div className="flex flex-col gap-1">
-        <div className="text-3xl sm:text-4xl font-bold tracking-tight text-zinc-900 font-mono">
+        <div className="text-2xl sm:text-4xl font-bold tracking-tight text-zinc-900 font-mono">
           {value}
         </div>
 

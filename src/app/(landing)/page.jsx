@@ -9,7 +9,7 @@ export default function LandingPage() {
   const [activeSection, setActiveSection] = useState("home");
 
   useEffect(() => {
-    const handleHashChange = () => {
+    const handleHashChange = (e) => {
       const hash = window.location.hash;
       if (hash === "#about") {
         setActiveSection("about");
@@ -19,6 +19,12 @@ export default function LandingPage() {
         setActiveSection("faq");
       } else {
         setActiveSection("home");
+      }
+      
+      // If triggered by a user clicking a link (event exists), scroll back to top
+      // so they can see the new section content instead of staring at the footer!
+      if (e) {
+        window.scrollTo({ top: 0, behavior: "smooth" });
       }
     };
     window.addEventListener("hashchange", handleHashChange);
@@ -174,12 +180,12 @@ function FeaturesContent() {
       </p>
 
       <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
-        <button
-          type="button"
+        <Link
+          href="/features"
           className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-full text-sm sm:text-base font-bold transition-all shadow-lg shadow-emerald-600/20 hover:shadow-xl hover:-translate-y-0.5"
         >
           Explore Features <ArrowRight className="w-4 h-4" />
-        </button>
+        </Link>
       </div>
     </>
   );

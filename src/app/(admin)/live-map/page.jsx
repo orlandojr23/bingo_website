@@ -28,7 +28,7 @@ export default function LiveMapPage() {
   });
 
   return (
-    <div className="flex flex-col gap-4 max-w-7xl mx-auto h-[calc(100vh-8rem)] min-h-[600px]">
+    <div className="flex flex-col gap-3 sm:gap-4 max-w-7xl mx-auto h-[calc(100dvh-96px)] sm:h-[calc(100dvh-128px)] lg:h-[calc(100vh-144px)]">
       {/* Top Filter & Mode Control Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-white border border-zinc-200 rounded-xl shrink-0">
         <div className="flex items-center gap-3 flex-wrap">
