@@ -10,8 +10,9 @@ export default function AboutPage() {
         
         {/* Header Section */}
         <div className="text-center mb-20">
-          <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-zinc-900 mb-6">
-            Building Cleaner Communities,<br className="hidden sm:block" />
+          <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-zinc-900 mb-6 leading-[1.1]">
+            Building Cleaner Communities,{" "}
+            <br className="hidden sm:block" />
             <span className="text-emerald-600">Together.</span>
           </h1>
           <p className="text-lg text-zinc-600 font-medium max-w-2xl mx-auto leading-relaxed">
