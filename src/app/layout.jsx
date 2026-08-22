@@ -19,7 +19,7 @@ export const viewport = {
 };
 
 export const metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://bin-go-demo.onrender.com"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://simplybingo.onrender.com"),
   title: "Bin'Go | Smart Waste Collection, Simplified.",
   description:
     "Smart Waste Collection, Simplified. Track garbage trucks live, receive instant arrival alerts, and help keep your community clean with Bin'Go.",
