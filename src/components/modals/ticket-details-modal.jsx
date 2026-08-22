@@ -58,7 +58,7 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
 
             <button
               onClick={onClose}
-              className="text-zinc-500 hover:text-zinc-900 p-2 rounded-xl hover:bg-zinc-100 transition-colors bg-zinc-50 border border-transparent hover:border-zinc-200"
+              className="text-zinc-500 hover:text-zinc-900 p-2 rounded-xl transition-colors hover:bg-zinc-100"
               aria-label="Close sheet"
             >
               <X className="w-5 h-5" />

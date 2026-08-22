@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 const routeMeta = {
   "/dashboard": { title: "Dashboard Overview" },
   "/crud": { title: "Create Report" },
-  "/live-map": { title: "Live Incident Map" },
+  "/live-map": { title: "Live Map" },
   "/tickets": { title: "Tickets Log" },
   "/analytics": { title: "Analytics & Reports" },
   "/notifications": { title: "Notifications" },
