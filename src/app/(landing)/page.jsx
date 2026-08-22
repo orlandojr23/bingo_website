@@ -103,24 +103,9 @@ function HomeContent() {
           Smart Waste <br className="hidden lg:block" /> Collection,
         </span>
         <br className="hidden lg:block" />
-        <span className="relative inline-block mt-1">
-          <span className="text-emerald-500">Simplified.</span>
-          <svg
-            className="absolute -bottom-3 left-0 w-full overflow-visible"
-            viewBox="0 0 300 16"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            preserveAspectRatio="none"
-          >
-            <path
-              d="M4 16 Q150 14 296 2"
-              stroke="#34d399"
-              strokeWidth="5"
-              strokeLinecap="round"
-              fill="none"
-              vectorEffect="non-scaling-stroke"
-            />
-          </svg>
+        <span className="relative inline-block mt-1 px-2">
+          <span className="relative z-10 text-white">Simplified.</span>
+          <span className="absolute inset-0 bg-emerald-500 rounded-xl -rotate-2 scale-[1.05] shadow-sm"></span>
         </span>
       </h1>
 
@@ -151,24 +136,9 @@ function AboutContent() {
     <>
       <h2 className="text-4xl sm:text-5xl lg:text-7xl [@media(max-height:800px)]:text-6xl [@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-6 [@media(max-height:800px)]:mb-4 text-[#0f172a]">
         Municipal Cleanups, <br className="hidden lg:block" />
-        <span className="relative inline-block mt-1">
-          <span className="text-emerald-500">Accelerated.</span>
-          <svg
-            className="absolute -bottom-3 left-0 w-full overflow-visible"
-            viewBox="0 0 300 16"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            preserveAspectRatio="none"
-          >
-            <path
-              d="M4 12 Q150 2 296 12"
-              stroke="#34d399"
-              strokeWidth="5"
-              strokeLinecap="round"
-              fill="none"
-              vectorEffect="non-scaling-stroke"
-            />
-          </svg>
+        <span className="relative inline-block mt-1 px-2">
+          <span className="relative z-10 text-white">Accelerated.</span>
+          <span className="absolute inset-0 bg-emerald-500 rounded-xl -rotate-2 scale-[1.05] shadow-sm"></span>
         </span>
       </h2>
 
@@ -193,26 +163,9 @@ function FeaturesContent() {
     <>
       <h2 className="text-4xl sm:text-5xl lg:text-7xl [@media(max-height:800px)]:text-6xl [@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-6 [@media(max-height:800px)]:mb-4 text-[#0f172a]">
         Powerful Tools, <br className="hidden lg:block" />
-        <span className="relative inline-block mt-1">
-          <span className="text-emerald-500">Unleashed.</span>
-          <svg
-            className="absolute -bottom-3 left-0 w-full overflow-visible"
-            viewBox="0 0 300 16"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            preserveAspectRatio="none"
-          >
-            {/* Energetic, jagged zig-zag line for Features */}
-            <path
-              d="M4 12 L100 2 L200 14 L296 4"
-              stroke="#34d399"
-              strokeWidth="5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              fill="none"
-              vectorEffect="non-scaling-stroke"
-            />
-          </svg>
+        <span className="relative inline-block mt-1 px-2">
+          <span className="relative z-10 text-white">Unleashed.</span>
+          <span className="absolute inset-0 bg-emerald-500 rounded-xl -rotate-2 scale-[1.05] shadow-sm"></span>
         </span>
       </h2>
 
@@ -237,26 +190,9 @@ function FaqContent() {
     <>
       <h2 className="text-4xl sm:text-5xl lg:text-7xl [@media(max-height:800px)]:text-6xl [@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-6 [@media(max-height:800px)]:mb-4 text-[#0f172a]">
         Your Questions, <br className="hidden lg:block" />
-        <span className="relative inline-block mt-1">
-          <span className="text-emerald-500">Answered.</span>
-          <svg
-            className="absolute -bottom-3 left-0 w-full overflow-visible"
-            viewBox="0 0 300 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            preserveAspectRatio="none"
-          >
-            {/* Smooth, continuous sine wave / squiggle for FAQ */}
-            <path
-              d="M4 12 C 50 -4, 100 28, 150 12 C 200 -4, 250 28, 296 12"
-              stroke="#34d399"
-              strokeWidth="5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              fill="none"
-              vectorEffect="non-scaling-stroke"
-            />
-          </svg>
+        <span className="relative inline-block mt-1 px-2">
+          <span className="relative z-10 text-white">Answered.</span>
+          <span className="absolute inset-0 bg-emerald-500 rounded-xl -rotate-2 scale-[1.05] shadow-sm"></span>
         </span>
       </h2>
 

@@ -11,6 +11,26 @@ export default function LandingLayout({ children }) {
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  const [activeSection, setActiveSection] = useState("home");
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash;
+      if (hash === "#about") setActiveSection("about");
+      else if (hash === "#features") setActiveSection("features");
+      else if (hash === "#faq") setActiveSection("faq");
+      else setActiveSection("home");
+    };
+    window.addEventListener("hashchange", handleHashChange);
+    window.addEventListener("popstate", handleHashChange);
+    handleHashChange();
+    
+    return () => {
+      window.removeEventListener("hashchange", handleHashChange);
+      window.removeEventListener("popstate", handleHashChange);
+    };
+  }, []);
+
   useEffect(() => {
     const handleScroll = () => {
       const scrollY = window.scrollY;
@@ -63,11 +83,11 @@ export default function LandingLayout({ children }) {
           <div className="hidden md:block w-[230px] shrink-0" />
           
           {/* Centered Navigation Links */}
-          <nav className="hidden md:flex items-center justify-center gap-8">
-            <a href="/#home" className="text-sm font-bold text-zinc-600 hover:text-emerald-700 transition-colors">Home</a>
-            <a href="/#about" className="text-sm font-bold text-zinc-600 hover:text-emerald-700 transition-colors">About</a>
-            <a href="/#features" className="text-sm font-bold text-zinc-600 hover:text-emerald-700 transition-colors">Features</a>
-            <a href="/#faq" className="text-sm font-bold text-zinc-600 hover:text-emerald-700 transition-colors">FAQ</a>
+          <nav className="hidden md:flex items-center justify-center gap-2">
+            <a href="/#home" className={`text-sm font-bold transition-all px-4 py-2 rounded-full ${activeSection === "home" ? "bg-emerald-50 text-emerald-700" : "text-zinc-600 hover:text-emerald-700 hover:bg-zinc-50"}`}>Home</a>
+            <a href="/#about" className={`text-sm font-bold transition-all px-4 py-2 rounded-full ${activeSection === "about" ? "bg-emerald-50 text-emerald-700" : "text-zinc-600 hover:text-emerald-700 hover:bg-zinc-50"}`}>About</a>
+            <a href="/#features" className={`text-sm font-bold transition-all px-4 py-2 rounded-full ${activeSection === "features" ? "bg-emerald-50 text-emerald-700" : "text-zinc-600 hover:text-emerald-700 hover:bg-zinc-50"}`}>Features</a>
+            <a href="/#faq" className={`text-sm font-bold transition-all px-4 py-2 rounded-full ${activeSection === "faq" ? "bg-emerald-50 text-emerald-700" : "text-zinc-600 hover:text-emerald-700 hover:bg-zinc-50"}`}>FAQ</a>
             
             {/* Download Dropdown */}
             <div className="relative group">
@@ -204,11 +224,11 @@ export default function LandingLayout({ children }) {
 
             {/* Centered Navigation */}
             <div className="flex-1 flex flex-col justify-center items-center">
-              <nav className="flex flex-col gap-8 text-3xl font-black text-zinc-900 tracking-tight text-center">
-                <a href="/#home" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-emerald-600 transition-colors">Home</a>
-                <a href="/#about" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-emerald-600 transition-colors">About</a>
-                <a href="/#features" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-emerald-600 transition-colors">Features</a>
-                <a href="/#faq" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-emerald-600 transition-colors">FAQ</a>
+              <nav className="flex flex-col gap-6 text-3xl font-black tracking-tight text-center">
+                <a href="/#home" onClick={() => setIsMobileMenuOpen(false)} className={`transition-all px-6 py-2 rounded-2xl ${activeSection === "home" ? "bg-emerald-50 text-emerald-700" : "text-zinc-900 hover:text-emerald-600 hover:bg-zinc-50"}`}>Home</a>
+                <a href="/#about" onClick={() => setIsMobileMenuOpen(false)} className={`transition-all px-6 py-2 rounded-2xl ${activeSection === "about" ? "bg-emerald-50 text-emerald-700" : "text-zinc-900 hover:text-emerald-600 hover:bg-zinc-50"}`}>About</a>
+                <a href="/#features" onClick={() => setIsMobileMenuOpen(false)} className={`transition-all px-6 py-2 rounded-2xl ${activeSection === "features" ? "bg-emerald-50 text-emerald-700" : "text-zinc-900 hover:text-emerald-600 hover:bg-zinc-50"}`}>Features</a>
+                <a href="/#faq" onClick={() => setIsMobileMenuOpen(false)} className={`transition-all px-6 py-2 rounded-2xl ${activeSection === "faq" ? "bg-emerald-50 text-emerald-700" : "text-zinc-900 hover:text-emerald-600 hover:bg-zinc-50"}`}>FAQ</a>
               </nav>
             </div>
 
