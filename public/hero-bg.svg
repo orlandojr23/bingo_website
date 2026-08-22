@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900" width="100%" height="100%" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <!-- Background Sky Gradient -->
+    <linearGradient id="skyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#f8fafc" />
+      <stop offset="60%" stop-color="#f1f5f9" />
+      <stop offset="100%" stop-color="#ecfdf5" />
+    </linearGradient>
+
+    <!-- Mist Gradients to create depth between ranges -->
+    <linearGradient id="mistGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.85" />
+    </linearGradient>
+    
+    <linearGradient id="mistGradientDense" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.95" />
+    </linearGradient>
+    
+    <!-- Bird shape -->
+    <path id="bird" d="M0,0 Q4,-4 8,0 Q12,-4 16,0 Q12,-1.5 8,-0.8 Q4,-1.5 0,0 Z" fill="#94a3b8" />
+  </defs>
+
+  <!-- Sky -->
+  <rect width="1440" height="900" fill="url(#skyGradient)" />
+
+  <!-- Birds -->
+  <use href="#bird" x="650" y="150" transform="scale(0.8)" opacity="0.6" />
+  <use href="#bird" x="690" y="130" transform="scale(0.6)" opacity="0.5" />
+  <use href="#bird" x="720" y="160" transform="scale(0.5)" opacity="0.4" />
+  <use href="#bird" x="840" y="90" transform="scale(0.9)" opacity="0.5" />
+
+  <!-- 1. Distant Mountain Range -->
+  <path d="M-100,900 L-100,500 L180,310 L450,440 L780,240 L1080,410 L1380,200 L1600,340 L1600,900 Z" fill="#e2f5ec" />
+  
+  <!-- Mist between Far and Mid mountains -->
+  <rect x="0" y="300" width="1440" height="300" fill="url(#mistGradient)" />
+
+  <!-- 2. Mid Mountain Range -->
+  <path d="M-100,900 L-100,590 L300,420 L600,530 L950,310 L1250,470 L1600,280 L1600,900 Z" fill="#d2ede0" />
+
+  <!-- Mist between Mid and Near layers -->
+  <rect x="0" y="450" width="1440" height="350" fill="url(#mistGradient)" />
+
+  <!-- 3. Near Hills / Mountain Range -->
+  <path d="M-100,900 L-100,720 Q220,550 580,680 T1250,620 L1600,740 L1600,900 Z" fill="#bce2cd" />
+
+  <!-- Gentle Foreground Slope -->
+  <path d="M-100,900 L-100,810 Q320,740 750,830 T1600,790 L1600,900 Z" fill="#a4d7ba" />
+
+  <!-- Dense Bottom Mist to ground the design -->
+  <rect x="0" y="800" width="1440" height="100" fill="url(#mistGradientDense)" />
+</svg>

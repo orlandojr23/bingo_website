@@ -19,8 +19,31 @@ export const viewport = {
 };
 
 export const metadata = {
-  title: "Bin'Go Admin | Municipal Waste & Incident Management",
-  description: "Minimalist, clean, and data-driven municipal waste management and incident reporting dashboard for Metro Cebu.",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://bin-go-demo.onrender.com"),
+  title: "Bin'Go | Smart Waste Collection, Simplified.",
+  description:
+    "Smart Waste Collection, Simplified. Track garbage trucks live, receive instant arrival alerts, and help keep your community clean with Bin'Go.",
+  keywords: [
+    "waste management",
+    "Metro Cebu",
+    "illegal dumping",
+    "sanitation",
+    "civic tech",
+    "community",
+  ],
+  openGraph: {
+    title: "Bin'Go | Smart Waste Collection, Simplified.",
+    description:
+      "Smart Waste Collection, Simplified. Track garbage trucks live, receive instant arrival alerts, and help keep your community clean with Bin'Go.",
+    type: "website",
+    locale: "en_PH",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Bin'Go | Smart Waste Collection, Simplified.",
+    description:
+      "Smart Waste Collection, Simplified. Track garbage trucks live, receive instant arrival alerts, and help keep your community clean with Bin'Go.",
+  },
 };
 
 export default function RootLayout({ children }) {
