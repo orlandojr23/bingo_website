@@ -119,18 +119,12 @@ function HomeContent() {
         Never miss a collection day again. Live track garbage trucks, receive instant arrival alerts, and help keep your community clean.
       </p>
 
-      <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
-        <Link
-          href="#"
-          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-full text-sm sm:text-base font-bold transition-all shadow-lg shadow-emerald-600/20 hover:shadow-xl hover:-translate-y-0.5"
-        >
-          Download the App <Download className="w-4 h-4" />
-        </Link>
+      <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto mt-2">
         <button
           type="button"
-          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white hover:bg-zinc-50 text-zinc-900 border-2 border-zinc-200 px-6 py-3 rounded-full text-sm sm:text-base font-bold transition-all"
+          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3.5 rounded-full text-sm sm:text-base font-bold transition-all shadow-lg shadow-emerald-600/20 hover:shadow-xl hover:-translate-y-0.5"
         >
-          Request Demo
+          Request a Demo
         </button>
       </div>
     </>
@@ -141,7 +135,7 @@ function AboutContent() {
   return (
     <>
       <h2 className="text-4xl sm:text-5xl lg:text-7xl [@media(max-height:800px)]:text-6xl [@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-6 [@media(max-height:800px)]:mb-4 text-[#0f172a]">
-        Municipal Cleanups, <br className="hidden lg:block" />
+        Community Cleanups, <br className="hidden lg:block" />
         <span className="relative inline-block mt-1 px-2">
           <span className="relative z-10 text-white">Accelerated.</span>
           <span className="absolute inset-0 bg-emerald-500 rounded-xl -rotate-2 scale-[1.05] shadow-sm"></span>
@@ -149,7 +143,7 @@ function AboutContent() {
       </h2>
 
       <p className="text-base sm:text-lg [@media(max-height:800px)]:text-base text-zinc-700 font-medium mb-8 [@media(max-height:800px)]:mb-5 max-w-md leading-relaxed">
-        Connect municipal sanitation services directly with local communities. Track routes, log incidents in real-time, and ensure rapid responses to uncollected waste.
+        Connect waste collection services directly with local neighborhoods. Track routes, log waste reports in real-time, and ensure quick cleanups.
       </p>
 
       <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
@@ -176,7 +170,7 @@ function FeaturesContent() {
       </h2>
 
       <p className="text-base sm:text-lg [@media(max-height:800px)]:text-base text-zinc-700 font-medium mb-8 [@media(max-height:800px)]:mb-5 max-w-md leading-relaxed">
-        Experience real-time analytics, automated dispatching, and community-driven telemetry in one beautifully designed platform.
+        Experience real-time tracking, smart truck routing, and community-driven waste reports in one beautifully designed platform.
       </p>
 
       <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
@@ -203,7 +197,7 @@ function FaqContent() {
       </h2>
 
       <p className="text-base sm:text-lg [@media(max-height:800px)]:text-base text-zinc-700 font-medium mb-8 [@media(max-height:800px)]:mb-5 max-w-md leading-relaxed">
-        Everything you need to know about setting up, deploying, and scaling our smart waste management solution in your municipality.
+        Everything you need to know about using our smart waste management solution in your community.
       </p>
 
       <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">

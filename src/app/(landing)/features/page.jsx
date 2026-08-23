@@ -15,7 +15,7 @@ export default function FeaturesPage() {
             <span className="text-emerald-600">Simplified.</span>
           </h1>
           <p className="text-lg text-zinc-600 font-medium max-w-2xl mx-auto leading-relaxed">
-            Everything your municipality needs to track fleets, manage incident reports, and empower the community in one single platform.
+            Everything your municipality needs to track fleets, manage waste reports, and empower the community in one single platform.
           </p>
         </div>
 
@@ -23,9 +23,9 @@ export default function FeaturesPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-24">
           
           <div className="bg-white p-8 rounded-3xl shadow-sm border border-zinc-100 flex flex-col items-start transition-all hover:shadow-md hover:-translate-y-1">
-            <h3 className="text-xl font-bold text-zinc-900 mb-3">Live Telemetry Map</h3>
+            <h3 className="text-xl font-bold text-zinc-900 mb-3">Live Tracking Map</h3>
             <p className="text-zinc-600 font-medium leading-relaxed text-sm">
-              Track your entire compactor truck fleet in real-time. Optimize routes and predict arrival times accurately.
+              Track all your waste collection trucks in real-time. Optimize routes and predict arrival times accurately.
             </p>
           </div>
 
@@ -37,23 +37,23 @@ export default function FeaturesPage() {
           </div>
 
           <div className="bg-white p-8 rounded-3xl shadow-sm border border-zinc-100 flex flex-col items-start transition-all hover:shadow-md hover:-translate-y-1">
-            <h3 className="text-xl font-bold text-zinc-900 mb-3">Analytics Dashboard</h3>
+            <h3 className="text-xl font-bold text-zinc-900 mb-3">Data & Insights Dashboard</h3>
             <p className="text-zinc-600 font-medium leading-relaxed text-sm">
-              Turn raw data into actionable insights. Monitor SLA resolution times and identify problematic hotspots.
+              Turn raw data into actionable insights. Monitor how fast cleanups happen and identify problematic hotspots.
             </p>
           </div>
 
           <div className="bg-white p-8 rounded-3xl shadow-sm border border-zinc-100 flex flex-col items-start transition-all hover:shadow-md hover:-translate-y-1">
             <h3 className="text-xl font-bold text-zinc-900 mb-3">Automated Dispatch</h3>
             <p className="text-zinc-600 font-medium leading-relaxed text-sm">
-              Intelligently assign the nearest available cleanup crew to urgent incident reports without manual overhead.
+              Intelligently assign the nearest available cleanup crew to urgent waste reports automatically.
             </p>
           </div>
 
           <div className="bg-white p-8 rounded-3xl shadow-sm border border-zinc-100 flex flex-col items-start transition-all hover:shadow-md hover:-translate-y-1">
             <h3 className="text-xl font-bold text-zinc-900 mb-3">Real-time Alerts</h3>
             <p className="text-zinc-600 font-medium leading-relaxed text-sm">
-              Get notified immediately when critical incidents occur or when trucks deviate from their scheduled routes.
+              Get notified immediately when emergency reports come in or when trucks deviate from their scheduled routes.
             </p>
           </div>
 

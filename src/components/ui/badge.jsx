@@ -17,6 +17,11 @@ const urgencyTextColors = {
 export function StatusBadge({ status, className }) {
   const config = statusConfig[status] || { color: "text-zinc-700", icon: Circle };
   const Icon = config.icon;
+  let displayStatus = status;
+  if (status === "Pending") displayStatus = "Waiting";
+  if (status === "In Progress") displayStatus = "On the Way";
+  if (status === "Resolved") displayStatus = "Cleaned Up";
+
   return (
     <span
       className={cn(
@@ -26,13 +31,16 @@ export function StatusBadge({ status, className }) {
       )}
     >
       <Icon className="w-3.5 h-3.5 shrink-0" strokeWidth={2.5} />
-      {status}
+      {displayStatus}
     </span>
   );
 }
 
 export function UrgencyBadge({ urgency, className }) {
   const textColor = urgencyTextColors[urgency] || "text-zinc-700";
+  let displayUrgency = urgency;
+  if (urgency === "Critical") displayUrgency = "Emergency";
+  
   return (
     <span
       className={cn(
@@ -41,7 +49,7 @@ export function UrgencyBadge({ urgency, className }) {
         className
       )}
     >
-      {urgency}
+      {displayUrgency}
     </span>
   );
 }

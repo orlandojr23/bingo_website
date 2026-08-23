@@ -9,7 +9,8 @@ export default function CrudDeleteModal({ isOpen, onClose, onConfirm, record }) 
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    const t = setTimeout(() => setMounted(true), 0);
+    return () => clearTimeout(t);
   }, []);
 
   if (!isOpen || !record || !mounted) return null;

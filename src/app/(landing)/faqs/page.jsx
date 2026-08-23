@@ -11,7 +11,7 @@ const faqCategories = [
     faqs: [
       {
         question: "What is Bin'Go and how does it work?",
-        answer: "Bin'Go is a smart municipal waste collection platform that bridges the gap between citizens and local government units. Citizens use the mobile app to track garbage trucks in real-time and report illegal dumping. LGUs and haulers use our web dashboard to manage fleets, optimize routes, and respond to citizen reports."
+        answer: "Bin'Go is a smart municipal waste collection platform that bridges the gap between citizens and local government units. Citizens use the mobile app to track garbage trucks in real-time and report illegal dumping. LGUs and haulers use our web dashboard to manage fleets, optimize routes, and respond to waste reports."
       },
       {
         question: "Do I need to pay to use the Bin'Go app?",
@@ -19,7 +19,7 @@ const faqCategories = [
       },
       {
         question: "Can I use my web account to log into the mobile app?",
-        answer: "Yes! Bin'Go uses a unified authentication system. You can register on the web and use the exact same credentials to log into the iOS or Android mobile application."
+        answer: "Yes! Bin'Go uses a secure login system. You can register on the web and use the exact same credentials to log into the iOS or Android mobile application."
       }
     ]
   },
@@ -47,11 +47,11 @@ const faqCategories = [
     faqs: [
       {
         question: "Are my reports anonymous?",
-        answer: "Yes, you have the option to toggle 'Anonymous Mode' when submitting a report for illegal dumping. In this mode, the LGU dashboard will only see the incident details and location, not your personal information."
+        answer: "Yes, you have the option to toggle 'Anonymous Mode' when submitting a report for illegal dumping. In this mode, the LGU dashboard will only see the report details and location, not your personal information."
       },
       {
         question: "How is my location data used?",
-        answer: "We only request location access when you are actively viewing the live map (to show your position relative to the trucks) or when you are dropping a pin for an incident report. We never track your location in the background."
+        answer: "We only request location access when you are actively viewing the live map (to show your position relative to the trucks) or when you are dropping a pin for a waste report. We never track your location in the background."
       }
     ]
   }
@@ -103,7 +103,7 @@ export default function FaqsPage() {
             Frequently Asked Questions
           </h1>
           <p className="text-lg text-zinc-600 font-medium max-w-2xl mx-auto">
-            Everything you need to know about setting up, deploying, and using the Bin'Go platform.
+            Everything you need to know about setting up and using the Bin'Go platform.
           </p>
         </div>
 

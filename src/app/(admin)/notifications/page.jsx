@@ -27,7 +27,7 @@ const initialNotifications = [
     timestamp: "10m ago",
     ticketId: "TKT-008",
     actionUrl: "/tickets",
-    actionLabel: "View Ticket",
+    actionLabel: "View Report",
     isRead: false,
   },
   {
@@ -59,7 +59,7 @@ const initialNotifications = [
   {
     id: "NOTIF-004",
     type: "Ticket",
-    title: "New Sanitation Incident Filed",
+    title: "New Waste Report Filed",
     message:
       "Resident reported overflowing communal bin near Guadalupe Public Market.",
     location: "Public Market Access Rd",
@@ -67,7 +67,7 @@ const initialNotifications = [
     timestamp: "2h ago",
     ticketId: "TKT-001",
     actionUrl: "/tickets",
-    actionLabel: "Inspect Log",
+    actionLabel: "Review Report",
     isRead: true,
   },
 ];
@@ -121,7 +121,7 @@ export default function NotificationsPage() {
       {/* Filter Tabs & Bulk Actions */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex items-center gap-1.5 overflow-x-auto p-1.5 bg-white border border-zinc-200 rounded-xl max-w-full scrollbar-hide">
-          {["All", "Emergency Reports", "System Alerts", "Ticket Reports"].map(
+          {["All", "Emergency Reports", "System Alerts", "Waste Reports"].map(
             (tab) => {
               const isActive = activeTab === tab;
               let count = notifications.length;
@@ -131,7 +131,7 @@ export default function NotificationsPage() {
                 count = notifications.filter(
                   (n) => n.type === "System" || n.type === "Dispatch"
                 ).length;
-              if (tab === "Ticket Reports")
+              if (tab === "Waste Reports")
                 count = notifications.filter((n) => n.type === "Ticket").length;
 
               return (

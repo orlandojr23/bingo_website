@@ -1,10 +1,49 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, CheckCircle2, Smartphone, ShieldCheck, Mail, Lock, User, MapPin, Laptop, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, CheckCircle2, Smartphone, ShieldCheck, Mail, Lock, User, MapPin, Laptop, X, Loader2 } from "lucide-react";
 import Link from "next/link";
+import Cookies from "js-cookie";
 
-export default function RegisterSheet({ isOpen, onClose }) {
+export default function RegisterSheet({ isOpen, onClose, initialMode = "register" }) {
+  const [mode, setMode] = useState(initialMode);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isOpen) setMode(initialMode);
+  }, [isOpen, initialMode]);
+
+  // Form states
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    setTimeout(() => {
+      if (mode === "login") {
+        const normalizedUsername = email.trim().toLowerCase();
+        
+        if (normalizedUsername === "user" && password === "user123") {
+          try { Cookies.set("user_session", "true", { expires: 1 }); } catch (err) {}
+          try { router.push("/track"); } catch (navErr) { window.location.href = "/track"; }
+        } else {
+          alert("Invalid credentials. Try user/user123");
+          setIsSubmitting(false);
+        }
+      } else {
+        // Dummy register flow
+        setMode("login");
+        setIsSubmitting(false);
+        alert("Account created successfully. Please sign in.");
+      }
+    }, 1000); // Sleek 1-second delay
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -24,73 +63,88 @@ export default function RegisterSheet({ isOpen, onClose }) {
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", stiffness: 65, damping: 20, mass: 0.8 }}
-            className="relative w-full max-w-[500px] h-full bg-white flex shadow-[-10px_0_40px_rgba(0,0,0,0.1)] z-10"
+            className="relative w-full max-w-[500px] h-full bg-white flex flex-col shadow-[-10px_0_40px_rgba(0,0,0,0.1)] z-10"
           >
-            {/* Form Panel */}
-            <div className="w-full h-full overflow-y-auto flex flex-col justify-center px-8 sm:px-12 py-12 relative">
-              {/* Close Button */}
-              <button 
-                onClick={onClose}
-                className="absolute top-6 right-6 p-2 rounded-full hover:bg-zinc-100 transition-colors text-zinc-400 hover:text-zinc-600"
-              >
-                <X className="w-6 h-6" />
-              </button>
+            {/* Close Button */}
+            <button 
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="absolute top-6 right-6 p-2 rounded-full hover:bg-zinc-100 transition-colors text-zinc-400 hover:text-zinc-600 z-20 disabled:opacity-50"
+            >
+              <X className="w-6 h-6" />
+            </button>
 
-              <div className="max-w-md w-full mx-auto mt-8">
+            {/* Scrollable Form Panel */}
+            <div className="w-full h-full overflow-y-auto flex flex-col px-8 sm:px-12 pt-24 pb-12">
+              <div className="max-w-md w-full mx-auto my-auto">
                 {/* Header */}
                 <div className="mb-10">
-                  <h1 className="text-4xl font-black tracking-tight text-zinc-900 mb-3">
-                    Create your account
+                  <h1 className="text-4xl font-black tracking-tight text-zinc-900 mb-3 pr-4">
+                    {mode === "login" ? "Welcome back" : "Create your account"}
                   </h1>
-                  <p className="text-zinc-500 font-medium">
-                    Join Bin'Go to start tracking municipal waste collection in real-time.
+                  <p className="text-zinc-500 font-medium leading-relaxed">
+                    {mode === "login" 
+                      ? "Sign in to access your dashboard and track schedules." 
+                      : "Join Bin'Go to start tracking your community's waste collection in real-time."}
                   </p>
                 </div>
 
                 {/* Form */}
-                <form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
+                <form className="space-y-6" onSubmit={handleSubmit}>
                   
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-zinc-700 uppercase tracking-wider">Full Name</label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-zinc-400">
-                        <User className="w-5 h-5" />
+                  {mode === "register" && (
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-zinc-700 uppercase tracking-wider">Full Name</label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-zinc-400">
+                          <User className="w-5 h-5" />
+                        </div>
+                        <input 
+                          type="text" 
+                          disabled={isSubmitting}
+                          className="w-full pl-11 pr-4 py-3.5 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all placeholder:text-zinc-400 text-zinc-900 disabled:opacity-60"
+                          placeholder="Juan Dela Cruz"
+                        />
                       </div>
-                      <input 
-                        type="text" 
-                        className="w-full pl-11 pr-4 py-3.5 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all placeholder:text-zinc-400 text-zinc-900"
-                        placeholder="Juan Dela Cruz"
-                      />
                     </div>
-                  </div>
+                  )}
 
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-zinc-700 uppercase tracking-wider">Email Address</label>
+                    <label className="text-xs font-bold text-zinc-700 uppercase tracking-wider">
+                      {mode === "login" ? "Email or Username" : "Email Address"}
+                    </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-zinc-400">
                         <Mail className="w-5 h-5" />
                       </div>
                       <input 
-                        type="email" 
-                        className="w-full pl-11 pr-4 py-3.5 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all placeholder:text-zinc-400 text-zinc-900"
-                        placeholder="juan@example.com"
+                        type="text" 
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        disabled={isSubmitting}
+                        className="w-full pl-11 pr-4 py-3.5 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all placeholder:text-zinc-400 text-zinc-900 disabled:opacity-60"
+                        placeholder={mode === "login" ? "user@example.com or 'user'" : "juan@example.com"}
                       />
                     </div>
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-zinc-700 uppercase tracking-wider">Municipality / Barangay</label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-zinc-400">
-                        <MapPin className="w-5 h-5" />
+                  {mode === "register" && (
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-zinc-700 uppercase tracking-wider">Municipality / Barangay</label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-zinc-400">
+                          <MapPin className="w-5 h-5" />
+                        </div>
+                        <input 
+                          type="text" 
+                          disabled={isSubmitting}
+                          className="w-full pl-11 pr-4 py-3.5 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all placeholder:text-zinc-400 text-zinc-900 disabled:opacity-60"
+                          placeholder="e.g. Guadalupe, Cebu City"
+                        />
                       </div>
-                      <input 
-                        type="text" 
-                        className="w-full pl-11 pr-4 py-3.5 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all placeholder:text-zinc-400 text-zinc-900"
-                        placeholder="e.g. Guadalupe, Cebu City"
-                      />
                     </div>
-                  </div>
+                  )}
 
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-zinc-700 uppercase tracking-wider">Password</label>
@@ -100,7 +154,11 @@ export default function RegisterSheet({ isOpen, onClose }) {
                       </div>
                       <input 
                         type="password" 
-                        className="w-full pl-11 pr-4 py-3.5 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all placeholder:text-zinc-400 text-zinc-900"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        disabled={isSubmitting}
+                        className="w-full pl-11 pr-4 py-3.5 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all placeholder:text-zinc-400 text-zinc-900 disabled:opacity-60"
                         placeholder="••••••••"
                       />
                     </div>
@@ -109,13 +167,35 @@ export default function RegisterSheet({ isOpen, onClose }) {
                   <div className="pt-2">
                     <button 
                       type="submit"
-                      className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-xl text-sm font-bold transition-all shadow-lg shadow-emerald-600/20 hover:shadow-xl hover:-translate-y-0.5"
+                      disabled={isSubmitting}
+                      className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-600/70 text-white py-4 rounded-full text-sm font-bold transition-all shadow-lg shadow-emerald-600/20 hover:shadow-xl hover:-translate-y-0.5 disabled:transform-none"
                     >
-                      Create Account
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          <span>Please wait...</span>
+                        </>
+                      ) : (
+                        mode === "login" ? "Sign In" : "Create Account"
+                      )}
                     </button>
                   </div>
-
                 </form>
+                  
+                {/* Toggle Mode */}
+                <div className="pt-6 text-center">
+                  <p className="text-sm font-medium text-zinc-500">
+                    {mode === "login" ? "Don't have an account?" : "Already have an account?"}
+                    <button 
+                      type="button"
+                      disabled={isSubmitting}
+                      onClick={() => setMode(mode === "login" ? "register" : "login")}
+                      className="ml-2 font-bold text-emerald-600 hover:text-emerald-700 transition-colors disabled:opacity-50"
+                    >
+                      {mode === "login" ? "Create one" : "Sign in"}
+                    </button>
+                  </p>
+                </div>
               </div>
             </div>
           </motion.div>

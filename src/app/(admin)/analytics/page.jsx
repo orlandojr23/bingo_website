@@ -42,42 +42,42 @@ export default function AnalyticsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-white border border-zinc-200 rounded-xl">
         <div>
           <h2 className="text-sm font-semibold text-zinc-900">
-            Municipal Sanitation Telemetry & SLA Analytics
+            Waste Collection Data & Insights
           </h2>
           <p className="text-xs text-zinc-500">
-            Performance metrics for solid waste collection and incident resolution.
+            Review how well we are collecting and cleaning up waste.
           </p>
         </div>
 
         <Button variant="secondary" size="sm" onClick={handleExportCSV} disabled={downloading}>
           <Download className="w-3.5 h-3.5" />
-          <span>{downloading ? "Generating CSV..." : "Export SLA Report"}</span>
+          <span>{downloading ? "Generating CSV..." : "Download Report"}</span>
         </Button>
       </div>
 
       {/* Primary KPI Metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-5">
         <StatCard
-          label="Average Resolution Turnaround"
+          label="Average Time to Clean Up"
           value="4.2 hrs"
           icon={Clock}
           trend={{ value: "15% faster", isPositive: true }}
-          description="Target SLA: 6.0 hrs"
+          description="Goal: under 6 hours"
         />
         <StatCard
-          label="Total Incidents (30-Day Period)"
+          label="Total Reports (Last 30 Days)"
           value="142"
           icon={FileText}
           trend={{ value: "+8% volume", isPositive: false }}
-          description="126 resolved, 16 active"
+          description="126 cleaned up, 16 active"
         />
         <StatCard
           className="col-span-2 lg:col-span-1"
-          label="Overall Resolution Rate"
+          label="Overall Clean-Up Rate"
           value="88.7%"
           icon={CheckCircle2}
           trend={{ value: "+2.4% MoM", isPositive: true }}
-          description="Target SLA: 85.0%"
+          description="Goal: 85%"
         />
       </div>
 
@@ -88,7 +88,7 @@ export default function AnalyticsPage() {
           <div className="flex items-center justify-between pb-3 border-b border-zinc-200/80">
             <div>
               <h3 className="text-sm font-semibold text-zinc-900">
-                Monthly Incident Inflow vs. Resolutions
+                Monthly Reports vs. Clean-Ups
               </h3>
               <p className="text-xs text-zinc-500">6-Month historical comparison</p>
             </div>
@@ -148,7 +148,7 @@ export default function AnalyticsPage() {
           <div className="flex items-center justify-between pb-3 border-b border-zinc-200/80">
             <div>
               <h3 className="text-sm font-semibold text-zinc-900">
-                Incident Volume by Category
+                Reports by Category
               </h3>
               <p className="text-xs text-zinc-500">Distribution breakdown for current quarter</p>
             </div>

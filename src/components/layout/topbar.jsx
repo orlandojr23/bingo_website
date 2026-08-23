@@ -9,8 +9,8 @@ const routeMeta = {
   "/dashboard": { title: "Dashboard Overview" },
   "/crud": { title: "Create Report" },
   "/live-map": { title: "Live Map" },
-  "/tickets": { title: "Tickets Log" },
-  "/analytics": { title: "Analytics & Reports" },
+  "/tickets": { title: "Reports Log" },
+  "/analytics": { title: "Data & Insights" },
   "/notifications": { title: "Notifications" },
   "/settings": { title: "Settings" },
 };
@@ -18,7 +18,7 @@ const routeMeta = {
 export default function Topbar({ onMenuClick }) {
   const pathname = usePathname();
   const current = routeMeta[pathname] || {
-    title: "Admin Command",
+    title: "Admin Portal",
   };
 
   return (
@@ -48,7 +48,7 @@ export default function Topbar({ onMenuClick }) {
           className="hidden sm:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold transition-all shadow-sm"
         >
           <PlusCircle className="w-4 h-4" />
-          <span>New Record</span>
+          <span>New Report</span>
         </Link>
 
         <Link

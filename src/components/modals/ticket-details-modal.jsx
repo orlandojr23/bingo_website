@@ -11,12 +11,14 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    const t = setTimeout(() => setMounted(true), 0);
+    return () => clearTimeout(t);
   }, []);
 
   useEffect(() => {
     if (ticket) {
-      setSelectedStatus(ticket.status);
+      const t = setTimeout(() => setSelectedStatus(ticket.status), 0);
+      return () => clearTimeout(t);
     }
   }, [ticket]);
 
@@ -116,7 +118,7 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
 
           {/* Description */}
           <div className="flex flex-col gap-1.5 p-4 rounded-xl border border-zinc-200 bg-zinc-50 shrink-0">
-            <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Incident Notes</span>
+            <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Additional Details</span>
             <p className="text-sm text-zinc-800 leading-relaxed font-medium">
               {ticket.description || "No specific detailed description provided."}
             </p>
@@ -125,7 +127,7 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
           {/* Quick Status Action Controls */}
           <div className="flex flex-col gap-3 pt-4 border-t border-zinc-200/80 mt-2 shrink-0 pb-4">
             <span className="text-xs font-bold text-zinc-700">
-              Change Current Status:
+              Update Status:
             </span>
             <div className="grid grid-cols-3 gap-2">
               <button
@@ -137,7 +139,7 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
                     : "border-zinc-200 text-zinc-600 hover:text-zinc-900 hover:border-zinc-300 hover:bg-zinc-50 bg-white"
                 }`}
               >
-                <span>Pending</span>
+                <span>Waiting</span>
               </button>
               <button
                 type="button"
@@ -148,7 +150,7 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
                     : "border-zinc-200 text-zinc-600 hover:text-zinc-900 hover:border-zinc-300 hover:bg-zinc-50 bg-white"
                 }`}
               >
-                <span>In Progress</span>
+                <span>On the Way</span>
               </button>
               <button
                 type="button"
@@ -159,7 +161,7 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
                     : "border-zinc-200 text-zinc-600 hover:text-zinc-900 hover:border-zinc-300 hover:bg-zinc-50 bg-white"
                 }`}
               >
-                <span>Resolved</span>
+                <span>Cleaned Up</span>
               </button>
             </div>
           </div>

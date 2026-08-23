@@ -252,3 +252,73 @@ export const mockAnalyticsData = {
     { name: "Ermita", reports: 15, resolvedRate: "80%" },
   ],
 };
+
+export const mockPilotData = {
+  barangay: "Guadalupe",
+  city: "Cebu City",
+  center: [10.3236, 123.8814], // Approx Guadalupe center
+  zones: [
+    {
+      id: "zone-a",
+      name: "North Sector (Sitio Kamagong, Banawa)",
+      coordinates: [
+        [10.325, 123.880],
+        [10.330, 123.880],
+        [10.330, 123.885],
+        [10.325, 123.885]
+      ]
+    },
+    {
+      id: "zone-b",
+      name: "South Sector (V. Rama, Riverfront)",
+      coordinates: [
+        [10.318, 123.880],
+        [10.322, 123.880],
+        [10.322, 123.885],
+        [10.318, 123.885]
+      ]
+    }
+  ],
+  trucks: [
+    {
+      id: "TRK-01",
+      plate: "GW-8821",
+      capacity: "10 Tons",
+      driver: "Juan Dela Cruz"
+    },
+    {
+      id: "TRK-02",
+      plate: "XYZ-1234",
+      capacity: "12 Tons",
+      driver: "Pedro Reyes"
+    }
+  ],
+  schedules: [
+    {
+      id: "SCH-001",
+      zoneId: "zone-a",
+      type: "Biodegradable (Nabubulok)",
+      days: ["Monday", "Wednesday", "Friday"],
+      time: "08:00 AM - 11:00 AM",
+      activeTruckId: "TRK-01",
+      status: "In Progress" // Could be Scheduled, In Progress, Completed
+    },
+    {
+      id: "SCH-002",
+      zoneId: "zone-b",
+      type: "Non-Biodegradable (Di-Nabubulok)",
+      days: ["Tuesday", "Thursday"],
+      time: "01:00 PM - 04:00 PM",
+      activeTruckId: "TRK-02",
+      status: "Scheduled"
+    }
+  ],
+  activeTracking: {
+    "TRK-01": {
+      lat: 10.3245,
+      lng: 123.8820,
+      lastUpdated: "Just now",
+      eta: "5 mins"
+    }
+  }
+};

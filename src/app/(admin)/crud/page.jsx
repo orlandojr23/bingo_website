@@ -138,12 +138,12 @@ export default function CrudPage() {
         <div className="flex items-center justify-between pb-3 border-b border-zinc-200/80">
           <div>
             <h2 className="text-sm sm:text-base font-semibold text-zinc-900">
-              {editingId ? `Update Record (${editingId})` : "Add Waste Incident Record"}
+              {editingId ? `Update Report (${editingId})` : "Create New Report"}
             </h2>
             <p className="text-xs text-zinc-500">
               {editingId
-                ? "Modify existing incident database parameters"
-                : "Submit a new verified incident report to the municipal repository"}
+                ? "Edit the details of this report"
+                : "Enter the details to log a new waste report"}
             </p>
           </div>
           {editingId && (
@@ -183,7 +183,7 @@ export default function CrudPage() {
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-zinc-700">Reporter Full Name</label>
+            <label className="text-xs font-medium text-zinc-700">Reporter Name</label>
             <input
               type="text"
               required
@@ -195,7 +195,7 @@ export default function CrudPage() {
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-zinc-700">Urgency Level</label>
+            <label className="text-xs font-medium text-zinc-700">Priority</label>
             <select
               value={form.urgency}
               onChange={(e) => setForm({ ...form, urgency: e.target.value })}
@@ -204,25 +204,25 @@ export default function CrudPage() {
               <option value="Low">Low</option>
               <option value="Medium">Medium</option>
               <option value="High">High</option>
-              <option value="Critical">Critical</option>
+              <option value="Critical">Emergency</option>
             </select>
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-zinc-700">Resolution Status</label>
+            <label className="text-xs font-medium text-zinc-700">Status</label>
             <select
               value={form.status}
               onChange={(e) => setForm({ ...form, status: e.target.value })}
               className="px-3 py-2 border border-zinc-200 rounded-lg text-xs sm:text-sm bg-white text-zinc-900 focus:border-zinc-900 focus:outline-none font-medium"
             >
-              <option value="Pending">Pending</option>
-              <option value="In Progress">In Progress</option>
-              <option value="Resolved">Resolved</option>
+              <option value="Pending">Waiting</option>
+              <option value="In Progress">On the Way</option>
+              <option value="Resolved">Cleaned Up</option>
             </select>
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-zinc-700">Incident Details</label>
+            <label className="text-xs font-medium text-zinc-700">Additional Details</label>
             <input
               type="text"
               placeholder="Brief description notes..."
@@ -240,7 +240,7 @@ export default function CrudPage() {
             </Button>
           )}
           <Button variant="primary" size="sm" type="submit">
-            <span>{editingId ? "Save Changes" : "Save New Record"}</span>
+            <span>{editingId ? "Save Changes" : "Save New Report"}</span>
           </Button>
         </div>
       </form>
@@ -250,10 +250,10 @@ export default function CrudPage() {
         <div className="p-4 sm:p-5 border-b border-zinc-200/80 flex items-center justify-between">
           <div>
             <h3 className="text-sm font-semibold text-zinc-900">
-              Database Records ({records.length} items)
+              Submitted Reports ({records.length} reports)
             </h3>
             <p className="text-xs text-zinc-500">
-              Synchronized with Supabase and local storage
+              A list of all reports in the system
             </p>
           </div>
         </div>
@@ -265,7 +265,7 @@ export default function CrudPage() {
                 <th className="px-4 py-3">ID</th>
                 <th className="px-4 py-3">Location & Barangay</th>
                 <th className="px-4 py-3">Reporter</th>
-                <th className="px-4 py-3">Urgency</th>
+                <th className="px-4 py-3">Priority</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>

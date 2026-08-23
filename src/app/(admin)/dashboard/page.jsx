@@ -48,7 +48,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-5">
         <div className="rounded-2xl">
           <StatCard
-            label="Total Incidents"
+            label="Total Reports"
             value={totalCount}
             icon={FileText}
             description="vs. last 30 days"
@@ -58,27 +58,27 @@ export default function DashboardPage() {
 
         <div className="rounded-2xl">
           <StatCard
-            label="Pending Reports"
+            label="Waiting"
             value={pendingCount}
             icon={Clock}
-            description="Waiting for truck"
+            description="Ready for collection"
             className="p-6"
           />
         </div>
 
         <div className="rounded-2xl">
           <StatCard
-            label="In Progress"
+            label="On the Way"
             value={inProgressCount}
             icon={Loader}
-            description="Truck on the way"
+            description="Truck dispatched"
             className="p-6"
           />
         </div>
 
         <div className="rounded-2xl">
           <StatCard
-            label="Resolved"
+            label="Cleaned Up"
             value={resolvedCount}
             icon={CheckCircle2}
             description="Average: 4 hours"
@@ -93,7 +93,7 @@ export default function DashboardPage() {
         <div className="p-5 sm:p-6 border-b-2 border-zinc-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-zinc-50/50">
             <div>
               <h3 className="text-lg font-bold text-zinc-900">
-                Recent Incident Reports
+                Recent Reports
               </h3>
             </div>
 
@@ -102,9 +102,10 @@ export default function DashboardPage() {
               {["All", "Pending", "In Progress", "Resolved"].map((status) => {
                 const isActive = statusFilter === status;
                 let count = totalCount;
-                if (status === "Pending") count = pendingCount;
-                if (status === "In Progress") count = inProgressCount;
-                if (status === "Resolved") count = resolvedCount;
+                let displayLabel = "All";
+                if (status === "Pending") { count = pendingCount; displayLabel = "Waiting"; }
+                if (status === "In Progress") { count = inProgressCount; displayLabel = "On the Way"; }
+                if (status === "Resolved") { count = resolvedCount; displayLabel = "Cleaned Up"; }
 
                 return (
                   <button
@@ -117,7 +118,7 @@ export default function DashboardPage() {
                         : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                     }`}
                   >
-                    <span>{status}</span>
+                    <span>{displayLabel}</span>
                     <span
                       className={`text-xs font-bold ${
                         isActive
@@ -138,9 +139,9 @@ export default function DashboardPage() {
             <table className="w-full text-left text-sm text-zinc-700">
               <thead className="text-zinc-600 font-bold border-b-2 border-zinc-200 bg-white uppercase text-xs tracking-wider">
                 <tr>
-                  <th className="px-5 py-4">Ticket ID</th>
-                  <th className="px-5 py-4">Location Details</th>
-                  <th className="px-5 py-4">Urgency</th>
+                  <th className="px-5 py-4">Report ID</th>
+                  <th className="px-5 py-4">Location</th>
+                  <th className="px-5 py-4">Priority</th>
                   <th className="px-5 py-4">Status</th>
                   <th className="px-5 py-4 text-right">Action</th>
                 </tr>

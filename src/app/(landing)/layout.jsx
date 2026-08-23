@@ -9,6 +9,7 @@ export default function LandingLayout({ children }) {
   const [scrolled, setScrolled] = useState(false);
   const [hideLogo, setHideLogo] = useState(false);
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
+  const [authMode, setAuthMode] = useState("register");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const [activeSection, setActiveSection] = useState("home");
@@ -125,9 +126,12 @@ export default function LandingLayout({ children }) {
           </nav>
           
           {/* Right Side Actions */}
-          <div className="flex-1 md:flex-none md:w-[220px] shrink-0 flex justify-end items-center gap-3">
-            <button onClick={() => setIsRegisterOpen(true)} className="group flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-full text-sm font-bold transition-all shadow-sm">
-              Register <ArrowRight className="hidden sm:block w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
+          <div className="flex-1 md:flex-none md:w-[260px] shrink-0 flex justify-end items-center gap-3">
+            <button 
+              onClick={() => { setAuthMode("register"); setIsRegisterOpen(true); }} 
+              className="group flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-full text-sm font-bold transition-all shadow-sm"
+            >
+              Get Started <ArrowRight className="hidden sm:block w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
             </button>
             <button 
               onClick={() => setIsMobileMenuOpen(true)}
@@ -141,7 +145,7 @@ export default function LandingLayout({ children }) {
       <main className="flex-1">
         {children}
       </main>
-      <RegisterSheet isOpen={isRegisterOpen} onClose={() => setIsRegisterOpen(false)} />
+      <RegisterSheet isOpen={isRegisterOpen} onClose={() => setIsRegisterOpen(false)} initialMode={authMode} />
       <footer className="relative pt-20 pb-12 overflow-hidden border-t border-emerald-900/30 bg-[url('/footer-bg.svg')] bg-cover bg-top bg-no-repeat text-emerald-100">
         {/* Subtle dark overlay to ensure text contrast */}
         <div className="absolute inset-0 bg-[#0b1e19]/30 -z-0" />
@@ -228,6 +232,12 @@ export default function LandingLayout({ children }) {
                 <a href="/#about" onClick={() => setIsMobileMenuOpen(false)} className={`transition-all px-6 py-2 rounded-2xl ${activeSection === "about" ? "bg-emerald-50 text-emerald-700" : "text-zinc-900 hover:text-emerald-600 hover:bg-zinc-50"}`}>About</a>
                 <a href="/#features" onClick={() => setIsMobileMenuOpen(false)} className={`transition-all px-6 py-2 rounded-2xl ${activeSection === "features" ? "bg-emerald-50 text-emerald-700" : "text-zinc-900 hover:text-emerald-600 hover:bg-zinc-50"}`}>Features</a>
                 <a href="/#faq" onClick={() => setIsMobileMenuOpen(false)} className={`transition-all px-6 py-2 rounded-2xl ${activeSection === "faq" ? "bg-emerald-50 text-emerald-700" : "text-zinc-900 hover:text-emerald-600 hover:bg-zinc-50"}`}>FAQ</a>
+                <button 
+                  onClick={() => { setIsMobileMenuOpen(false); setAuthMode("register"); setIsRegisterOpen(true); }} 
+                  className="transition-all px-6 py-2 rounded-2xl text-emerald-600 hover:bg-emerald-50"
+                >
+                  Get Started
+                </button>
               </nav>
             </div>
 

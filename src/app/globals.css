@@ -176,3 +176,9 @@ html {
   scrollbar-width: thin;
   scrollbar-color: rgba(161, 161, 170, 0.4) transparent;
 }
+
+@supports (padding-top: env(safe-area-inset-top)) {
+  .pt-safe { padding-top: env(safe-area-inset-top); }
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+}
+

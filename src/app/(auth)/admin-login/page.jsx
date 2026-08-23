@@ -20,32 +20,34 @@ export default function LoginPage() {
 
     // Simulate network request
     setTimeout(() => {
-      // Hardcoded admin credentials for demo purposes
-      if (username === "admin" && password === "admin123") {
-        // Set a secure cookie (for the middleware to read)
-        Cookies.set("admin_session", "true", { expires: 1 });
-        router.push("/dashboard");
+      const normalizedUsername = username.trim().toLowerCase();
+      
+      // Hardcoded credentials for demo purposes
+      if (normalizedUsername === "admin" && password === "admin123") {
+        try { Cookies.set("admin_session", "true", { expires: 1 }); } catch (err) {}
+        try { router.push("/dashboard"); } catch (navErr) { window.location.href = "/dashboard"; }
       } else {
-        setError("Invalid username or password");
+        setError("Invalid admin credentials");
         setIsLoading(false);
       }
     }, 800);
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-sm">
-        <h2 className="text-center text-2xl font-bold tracking-tight text-zinc-900">
-          Admin Login
+    <div className="min-h-screen bg-zinc-900 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-[url('/footer-bg.svg')] bg-cover bg-center relative">
+
+      <div className="mx-auto w-full max-w-sm relative z-10">
+        <h2 className="text-center text-3xl font-black tracking-tight text-white mb-6">
+          Admin Portal
         </h2>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-sm">
-        <div className="bg-white py-6 px-4 sm:px-10 border border-zinc-200 rounded-2xl">
+      <div className="mt-8 mx-auto w-full max-w-sm relative z-10">
+        <div className="bg-white/10 backdrop-blur-md py-8 px-4 sm:px-10 border border-white/20 rounded-3xl shadow-2xl">
           <form className="space-y-6 mt-2" onSubmit={handleLogin}>
             {error && (
-              <div className="bg-red-50 text-red-600 text-sm font-medium px-4 py-3 rounded-xl border border-red-100 flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0" />
+              <div className="bg-red-500/20 text-red-200 text-sm font-medium px-4 py-3 rounded-xl border border-red-500/30 flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
                 {error}
               </div>
             )}
@@ -53,12 +55,12 @@ export default function LoginPage() {
             <div>
               <label
                 htmlFor="username"
-                className="block text-sm font-bold text-zinc-700"
+                className="block text-sm font-bold text-zinc-300"
               >
-                Username
+                Admin ID
               </label>
               <div className="mt-2 relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                   <User className="h-5 w-5 text-zinc-400" />
                 </div>
                 <input
@@ -68,8 +70,11 @@ export default function LoginPage() {
                   required
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="appearance-none block w-full pl-10 pr-3 py-2.5 border border-zinc-300 rounded-xl shadow-sm placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm font-medium transition-colors"
-                  placeholder="Enter admin username"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck="false"
+                  className="appearance-none block w-full pl-11 pr-3 py-3 bg-zinc-900/50 border border-white/10 rounded-xl shadow-sm placeholder-zinc-500 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm font-medium transition-colors"
+                  placeholder="Enter admin ID"
                 />
               </div>
             </div>
@@ -77,12 +82,12 @@ export default function LoginPage() {
             <div>
               <label
                 htmlFor="password"
-                className="block text-sm font-bold text-zinc-700"
+                className="block text-sm font-bold text-zinc-300"
               >
-                Password
+                Passcode
               </label>
               <div className="mt-2 relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                   <Lock className="h-5 w-5 text-zinc-400" />
                 </div>
                 <input
@@ -92,13 +97,13 @@ export default function LoginPage() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="appearance-none block w-full pl-10 pr-10 py-2.5 border border-zinc-300 rounded-xl shadow-sm placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm font-medium transition-colors"
-                  placeholder="Enter your password"
+                  className="appearance-none block w-full pl-11 pr-11 py-3 bg-zinc-900/50 border border-white/10 rounded-xl shadow-sm placeholder-zinc-500 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm font-medium transition-colors"
+                  placeholder="••••••••"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 w-10 flex items-center justify-center text-zinc-400 hover:text-zinc-600 transition-colors"
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center justify-center text-zinc-400 hover:text-zinc-300 transition-colors"
                 >
                   <EyeOff 
                     className={`absolute h-5 w-5 transition-all duration-300 transform ${
@@ -114,11 +119,11 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <div>
+            <div className="pt-2">
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+                className="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-full shadow-lg shadow-emerald-900/50 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-zinc-900 focus:ring-emerald-500 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
                   <div className="flex items-center gap-2">
@@ -126,14 +131,14 @@ export default function LoginPage() {
                     <span>Authenticating...</span>
                   </div>
                 ) : (
-                  "Sign In"
+                  "Access Secure Portal"
                 )}
               </button>
             </div>
             
-            <div className="mt-4 text-center">
-              <p className="text-xs text-zinc-500">
-                Demo Credentials: <span className="font-mono font-bold bg-zinc-100 px-1 rounded">admin</span> / <span className="font-mono font-bold bg-zinc-100 px-1 rounded">admin123</span>
+            <div className="mt-6 text-center">
+              <p className="text-xs text-zinc-400/80">
+                Demo access: <span className="font-mono text-emerald-400">admin</span> / <span className="font-mono text-emerald-400">admin123</span>
               </p>
             </div>
           </form>

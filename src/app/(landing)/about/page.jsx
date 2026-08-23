@@ -23,7 +23,7 @@ export default function AboutPage() {
         {/* Mission Content */}
         <div className="prose prose-lg prose-zinc mx-auto mb-24">
           <p className="text-zinc-700 font-medium leading-relaxed">
-            For decades, municipal waste collection has operated in the dark. Citizens drag their bins to the curb not knowing exactly when the truck will arrive, and dispatchers struggle to optimize routes without real-time telemetry. When illegal dumping occurs, it often goes unreported for weeks.
+            For decades, municipal waste collection has operated in the dark. Citizens drag their bins to the curb not knowing exactly when the truck will arrive, and dispatchers struggle to optimize routes without real-time tracking data. When illegal dumping occurs, it often goes unreported for weeks.
           </p>
           <p className="text-zinc-700 font-medium leading-relaxed mt-6">
             We built Bin'Go to change that. By putting live tracking apps in the hands of citizens, and powerful, data-driven dashboards in the offices of LGUs, we are turning waste management into a collaborative, community-driven effort.
@@ -47,7 +47,7 @@ export default function AboutPage() {
               <h3 className="text-xl font-bold text-zinc-900">Community First</h3>
             </div>
             <p className="text-zinc-600 font-medium leading-relaxed">
-              We empower citizens to actively participate in keeping their neighborhoods clean through intuitive, rapid incident reporting tools.
+              We empower citizens to actively participate in keeping their neighborhoods clean through intuitive, rapid waste reporting tools.
             </p>
           </div>
 
@@ -65,7 +65,7 @@ export default function AboutPage() {
               <h3 className="text-xl font-bold text-zinc-900">Accountability</h3>
             </div>
             <p className="text-zinc-600 font-medium leading-relaxed">
-              Every dispatched truck, collected bin, and resolved incident is logged on the blockchain-inspired immutable ledger for complete LGU accountability.
+              Every scheduled truck, collected bin, and cleaned-up waste report is logged securely so your local government stays accountable.
             </p>
           </div>
 
@@ -76,7 +76,7 @@ export default function AboutPage() {
           <div className="relative z-10">
             <h3 className="text-2xl sm:text-3xl font-black text-white mb-4">Ready to transform your city?</h3>
             <p className="text-zinc-400 font-medium mb-8 max-w-lg mx-auto">
-              Whether you are a citizen looking to download the app, or an LGU official wanting to deploy the dashboard.
+              Whether you are a citizen looking to download the app, or an LGU official wanting to start using the dashboard.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <button className="w-full sm:w-auto px-8 py-3 bg-emerald-600 text-white rounded-full font-bold hover:bg-emerald-500 transition-colors">

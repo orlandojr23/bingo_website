@@ -9,7 +9,7 @@ const MapCanvas = dynamic(() => import("@/components/map/map-canvas"), {
   ssr: false,
   loading: () => (
     <div className="w-full h-full flex items-center justify-center bg-zinc-50 text-zinc-400 text-xs">
-      Loading geospatial map canvas...
+      Loading live map...
     </div>
   ),
 });
@@ -41,30 +41,30 @@ export default function LiveMapPage() {
               className="text-xs border border-zinc-200 rounded-lg px-2.5 py-1.5 bg-white text-zinc-900 focus:outline-none focus:border-zinc-900 font-medium"
             >
               <option value="All">All Statuses</option>
-              <option value="Pending">Pending</option>
-              <option value="In Progress">In Progress</option>
-              <option value="Resolved">Resolved</option>
+              <option value="Pending">Waiting</option>
+              <option value="In Progress">On the Way</option>
+              <option value="Resolved">Cleaned Up</option>
             </select>
           </div>
 
           {/* Urgency Filter */}
           <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-zinc-500">Urgency:</span>
+            <span className="text-xs font-medium text-zinc-500">Priority:</span>
             <select
               value={urgencyFilter}
               onChange={(e) => setUrgencyFilter(e.target.value)}
               className="text-xs border border-zinc-200 rounded-lg px-2.5 py-1.5 bg-white text-zinc-900 focus:outline-none focus:border-zinc-900 font-medium"
             >
-              <option value="All">All Urgencies</option>
+              <option value="All">All Priorities</option>
               <option value="Low">Low</option>
               <option value="Medium">Medium</option>
               <option value="High">High</option>
-              <option value="Critical">Critical</option>
+              <option value="Critical">Emergency</option>
             </select>
           </div>
 
           <span className="text-xs text-zinc-400 hidden sm:inline-block">
-            Showing {filteredTickets.length} incidents
+            Showing {filteredTickets.length} reports
           </span>
         </div>
 
@@ -101,7 +101,7 @@ export default function LiveMapPage() {
                 : "text-zinc-600 hover:text-zinc-900"
             }`}
           >
-            Combined
+            Both
           </button>
         </div>
       </div>
@@ -113,12 +113,12 @@ export default function LiveMapPage() {
         {/* Floating Urgency Legend */}
         <div className="absolute bottom-4 left-4 z-20 bg-white/95 backdrop-blur-xs border border-zinc-200/80 rounded-lg p-2.5 shadow-sm text-xs flex flex-col gap-1.5 pointer-events-auto">
           <span className="text-[10px] font-mono uppercase text-zinc-400 font-semibold tracking-wider">
-            Urgency Legend
+            Priority Legend
           </span>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-rose-600" />
-              <span className="text-zinc-700 font-medium">Critical</span>
+              <span className="text-zinc-700 font-medium">Emergency</span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-orange-500" />

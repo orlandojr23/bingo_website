@@ -41,7 +41,7 @@ export default function TicketsPage() {
           <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Search tickets by ID, address, barangay, or reporter..."
+            placeholder="Search reports by ID, address, barangay, or reporter..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-2 border border-zinc-200 rounded-lg text-xs sm:text-sm bg-white text-zinc-900 focus:border-zinc-900 focus:outline-none placeholder:text-zinc-400"
@@ -55,9 +55,9 @@ export default function TicketsPage() {
             className="text-xs border border-zinc-200 rounded-lg px-3 py-2 bg-white text-zinc-900 focus:border-zinc-900 focus:outline-none font-medium"
           >
             <option value="All">All Statuses</option>
-            <option value="Pending">Pending</option>
-            <option value="In Progress">In Progress</option>
-            <option value="Resolved">Resolved</option>
+            <option value="Pending">Waiting</option>
+            <option value="In Progress">On the Way</option>
+            <option value="Resolved">Cleaned Up</option>
           </select>
 
           <select
@@ -65,24 +65,24 @@ export default function TicketsPage() {
             onChange={(e) => setUrgencyFilter(e.target.value)}
             className="text-xs border border-zinc-200 rounded-lg px-3 py-2 bg-white text-zinc-900 focus:border-zinc-900 focus:outline-none font-medium"
           >
-            <option value="All">All Urgencies</option>
+            <option value="All">All Priorities</option>
             <option value="Low">Low</option>
             <option value="Medium">Medium</option>
             <option value="High">High</option>
-            <option value="Critical">Critical</option>
+            <option value="Critical">Emergency</option>
           </select>
         </div>
       </div>
 
-      {/* Tickets Master Table */}
+      {/* Reports Master Table */}
       <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden flex flex-col">
         <div className="p-4 sm:p-5 border-b border-zinc-200/80 flex items-center justify-between">
           <div>
             <h2 className="text-sm sm:text-base font-semibold text-zinc-900">
-              Sanitation Incident Log ({filteredTickets.length} records)
+              Sanitation Reports Log ({filteredTickets.length} reports)
             </h2>
             <p className="text-xs text-zinc-500">
-              Complete dispatch and incident tracking catalog for LGU units
+              Complete report log and dispatch history for your area
             </p>
           </div>
         </div>
@@ -95,7 +95,7 @@ export default function TicketsPage() {
                 <th className="px-4 py-3 whitespace-nowrap min-w-[200px]">Location & Barangay</th>
                 <th className="px-4 py-3 whitespace-nowrap">Reporter</th>
                 <th className="px-4 py-3 whitespace-nowrap">Category</th>
-                <th className="px-4 py-3 whitespace-nowrap">Urgency</th>
+                <th className="px-4 py-3 whitespace-nowrap">Priority</th>
                 <th className="px-4 py-3 whitespace-nowrap">Status</th>
                 <th className="px-4 py-3 whitespace-nowrap">Date</th>
                 <th className="px-4 py-3 text-right whitespace-nowrap">Action</th>

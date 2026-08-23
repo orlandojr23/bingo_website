@@ -14,15 +14,19 @@ import {
   LogOut,
   X,
   Globe,
+  Truck,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Fleet Dispatch", href: "/dispatch", icon: Truck },
+  { name: "Staff & Drivers", href: "/staff", icon: Users },
   { name: "Create Report", href: "/crud", icon: Database },
   { name: "Live Map", href: "/live-map", icon: Map },
-  { name: "Tickets Log", href: "/tickets", icon: Ticket },
-  { name: "Analytics", href: "/analytics", icon: BarChart3 },
+  { name: "Reports Log", href: "/tickets", icon: Ticket },
+  { name: "Data & Insights", href: "/analytics", icon: BarChart3 },
   { name: "Notifications", href: "/notifications", icon: Bell, badge: 2 },
 ];
 
@@ -171,7 +175,9 @@ export default function Sidebar({ isOpen, onClose }) {
                 type="button"
                 onClick={() => {
                   import("js-cookie").then((Cookies) => {
-                    Cookies.default.remove("admin_session");
+                    try {
+                      Cookies.default.remove("admin_session");
+                    } catch (err) {}
                     window.location.href = "/login";
                   });
                 }}

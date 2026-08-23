@@ -1,3 +1,5 @@
+const isDev = process.env.NODE_ENV !== 'production';
+
 const cspHeader = `
   default-src 'self';
   script-src 'self' 'unsafe-eval' 'unsafe-inline';
@@ -7,7 +9,7 @@ const cspHeader = `
   object-src 'none';
   base-uri 'self';
   form-action 'self';
-  frame-ancestors 'none';
+  ${isDev ? '' : "frame-ancestors 'none';"}
   upgrade-insecure-requests;
 `;
 
@@ -29,10 +31,14 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: cspHeader.replace(/\n/g, ''),
           },
-          {
-            key: 'X-Frame-Options',
-            value: 'DENY',
-          },
+          ...(isDev
+            ? []
+            : [
+                {
+                  key: 'X-Frame-Options',
+                  value: 'DENY',
+                },
+              ]),
           {
             key: 'X-Content-Type-Options',
             value: 'nosniff',

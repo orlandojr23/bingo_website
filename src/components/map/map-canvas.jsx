@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Circle, useMap, ZoomControl } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
@@ -65,7 +65,8 @@ export default function MapCanvas({ tickets = [], mapMode = "pins" }) {
   const cebuCenter = [10.3157, 123.8854];
 
   useEffect(() => {
-    setMounted(true);
+    const t = setTimeout(() => setMounted(true), 0);
+    return () => clearTimeout(t);
   }, []);
 
   if (!mounted) {
@@ -86,15 +87,16 @@ export default function MapCanvas({ tickets = [], mapMode = "pins" }) {
         zoom={13}
         scrollWheelZoom={false}
         attributionControl={false}
+        zoomControl={false}
         className="w-full h-full z-10"
       >
         <ChangeMapView center={cebuCenter} zoom={13} />
+        <ZoomControl position="topright" />
         
-        {/* Crisp clean CartoDB Voyager or Positron tiles for minimal look */}
+        {/* Crisp clean CartoDB Voyager tiles forced to Retina @2x for ultra-sharp rendering */}
         <TileLayer
           attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-          detectRetina={true}
+          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png"
           maxZoom={19}
         />
 
