@@ -234,7 +234,7 @@ export default function LandingLayout({ children }) {
               </a>
               <button 
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="w-10 h-10 bg-zinc-100 rounded-xl flex items-center justify-center text-zinc-600 hover:bg-zinc-200 transition-colors"
+                className="w-10 h-10 flex items-center justify-center text-zinc-400 hover:text-zinc-900 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>

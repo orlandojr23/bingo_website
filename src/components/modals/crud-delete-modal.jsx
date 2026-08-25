@@ -26,7 +26,7 @@ export default function CrudDeleteModal({ isOpen, onClose, onConfirm, record }) 
       >
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-600 p-1"
+          className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-900 p-1 transition-colors"
         >
           <X className="w-4 h-4" />
         </button>

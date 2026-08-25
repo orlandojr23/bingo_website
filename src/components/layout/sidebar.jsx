@@ -48,7 +48,7 @@ export default function Sidebar({ isOpen, onClose }) {
         {onClose && (
           <button
             onClick={onClose}
-            className="lg:hidden p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200"
+            className="lg:hidden p-2 text-slate-400 hover:text-slate-900 transition-colors"
             aria-label="Close navigation"
           >
             <X className="w-6 h-6" />

@@ -119,7 +119,7 @@ export default function RegisterSheet({ isOpen, onClose, initialMode = "register
             <button 
               onClick={onClose}
               disabled={isSubmitting}
-              className="absolute top-6 right-6 p-2 rounded-xl hover:bg-zinc-100 transition-colors text-zinc-400 hover:text-zinc-600 z-20 disabled:opacity-50"
+              className="absolute top-6 right-6 p-2 transition-colors text-zinc-400 hover:text-zinc-900 z-20 disabled:opacity-50"
             >
               <X className="w-6 h-6" />
             </button>

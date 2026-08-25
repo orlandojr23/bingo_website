@@ -126,7 +126,7 @@ export default function DispatchPage() {
                 <h2 className="text-xl font-black text-zinc-900">Create Assignment</h2>
                 <button
                   onClick={() => setIsCreateSheetOpen(false)}
-                  className="text-zinc-500 hover:text-zinc-900 p-2 rounded-xl transition-colors hover:bg-zinc-100"
+                  className="text-zinc-400 hover:text-zinc-900 p-2 transition-colors"
                 >
                   <span className="sr-only">Close</span>
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
