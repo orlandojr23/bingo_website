@@ -68,7 +68,7 @@ function FaqItem({ question, answer, isOpen, onClick }) {
         <motion.div
           animate={{ rotate: isOpen ? 180 : 0 }}
           transition={{ duration: 0.2 }}
-          className="shrink-0 text-emerald-600 bg-emerald-50 w-8 h-8 rounded-full flex items-center justify-center"
+          className="shrink-0 text-emerald-600 bg-emerald-50 w-8 h-8 rounded-xl flex items-center justify-center"
         >
           <ChevronDown className="w-5 h-5" />
         </motion.div>
@@ -145,7 +145,10 @@ export default function FaqsPage() {
               Can't find the answer you're looking for? Please chat to our friendly team or request a demo tailored to your municipality.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <button className="w-full sm:w-auto px-8 py-3 bg-white text-emerald-900 rounded-full font-bold hover:bg-zinc-100 transition-colors">
+              <button 
+                onClick={() => window.dispatchEvent(new CustomEvent("openContactSheet"))}
+                className="w-full sm:w-auto px-8 py-3 bg-white text-emerald-900 rounded-xl font-bold hover:bg-zinc-100 transition-colors"
+              >
                 Contact Support
               </button>
             </div>

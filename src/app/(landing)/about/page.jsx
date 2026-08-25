@@ -79,7 +79,7 @@ export default function AboutPage() {
               Whether you are a citizen looking to download the app, or an LGU official wanting to start using the dashboard.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <button className="w-full sm:w-auto px-8 py-3 bg-emerald-600 text-white rounded-full font-bold hover:bg-emerald-500 transition-colors">
+              <button className="w-full sm:w-auto px-8 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-500 transition-colors">
                 Request Demo
               </button>
             </div>

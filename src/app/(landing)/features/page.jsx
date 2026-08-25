@@ -74,7 +74,7 @@ export default function FeaturesPage() {
               Request a live demo to see how Bin'Go can transform your municipality's waste management workflow.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link href="/#home" className="w-full sm:w-auto px-8 py-3 bg-emerald-600 text-white rounded-full font-bold hover:bg-emerald-500 transition-colors">
+              <Link href="/#home" className="w-full sm:w-auto px-8 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-500 transition-colors">
                 Back to Home
               </Link>
             </div>

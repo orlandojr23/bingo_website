@@ -64,7 +64,7 @@ export default function DriverRoutePage() {
                     {route.active ? (
                       <button 
                         onClick={() => setIsRouteActive(true)}
-                        className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full font-bold text-xs shadow-sm active:scale-95 transition-all"
+                        className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-sm active:scale-95 transition-all"
                       >
                         Start
                       </button>
@@ -99,7 +99,7 @@ export default function DriverRoutePage() {
                   className="px-4 py-2 flex items-center gap-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-zinc-300 hover:text-white transition-all text-xs font-bold uppercase tracking-wide border border-zinc-700"
                 >
                   <LogOut className="w-3.5 h-3.5" />
-                  <span>Logout</span>
+                  <span>Sign Out</span>
                 </button>
               </div>
             </div>
@@ -113,7 +113,7 @@ export default function DriverRoutePage() {
             <div className="absolute top-6 left-6 z-[400] pt-safe pointer-events-none">
               <button 
                 onClick={() => setIsRouteActive(false)}
-                className="w-12 h-12 bg-white text-zinc-700 rounded-full shadow-lg pointer-events-auto flex items-center justify-center border border-zinc-100 active:scale-95 transition-all"
+                className="w-12 h-12 bg-white text-zinc-700 rounded-xl shadow-lg pointer-events-auto flex items-center justify-center border border-zinc-100 active:scale-95 transition-all"
                 title="Back to Dashboard"
               >
                 <ArrowLeft className="w-5 h-5" />
@@ -124,7 +124,7 @@ export default function DriverRoutePage() {
             
             {/* Map Controls */}
             <div className="absolute bottom-28 right-6 z-[400] pb-safe flex flex-col gap-3 pointer-events-none">
-              <button className="w-12 h-12 bg-white text-blue-600 rounded-full shadow-lg pointer-events-auto flex items-center justify-center border border-zinc-100 active:scale-95 transition-all" title="Follow my location">
+              <button className="w-12 h-12 bg-white text-blue-600 rounded-xl shadow-lg pointer-events-auto flex items-center justify-center border border-zinc-100 active:scale-95 transition-all" title="Follow my location">
                 <Navigation className="w-5 h-5 fill-current" />
               </button>
             </div>
@@ -134,7 +134,7 @@ export default function DriverRoutePage() {
               {/* Main Primary Action */}
               <button 
                 onClick={() => setIsRouteActive(false)}
-                className="px-8 py-4 bg-rose-600 active:bg-rose-700 text-white rounded-full font-bold text-[15px] shadow-[0_8px_30px_rgba(225,29,72,0.3)] pointer-events-auto transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                className="px-8 py-4 bg-rose-600 active:bg-rose-700 text-white rounded-xl font-bold text-[15px] shadow-[0_8px_30px_rgba(225,29,72,0.3)] pointer-events-auto transition-all active:scale-[0.98] flex items-center justify-center gap-2"
               >
                 <CheckCircle2 className="w-5 h-5" />
                 Finish Route
@@ -149,7 +149,12 @@ export default function DriverRoutePage() {
       {showLogoutModal && (
         <div className="fixed inset-0 z-[1000] bg-black/50 flex items-center justify-center p-6">
           <div className="bg-white rounded-2xl p-6 w-full max-w-sm flex flex-col gap-6 shadow-2xl">
-            <h3 className="text-lg font-bold text-zinc-900">Sign out?</h3>
+            <div>
+              <h3 className="text-lg font-bold text-zinc-900 mb-1">Sign out?</h3>
+              <p className="text-sm font-medium text-zinc-500">
+                You will need to log back in to access your routes.
+              </p>
+            </div>
             <div className="flex justify-end gap-2 font-bold text-sm">
               <button 
                 onClick={() => setShowLogoutModal(false)}

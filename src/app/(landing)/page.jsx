@@ -122,7 +122,7 @@ function HomeContent() {
       <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto mt-2">
         <button
           type="button"
-          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3.5 rounded-full text-sm sm:text-base font-bold transition-all shadow-lg shadow-emerald-600/20 hover:shadow-xl hover:-translate-y-0.5"
+          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3.5 rounded-xl text-sm sm:text-base font-bold transition-all shadow-lg shadow-emerald-600/20 hover:shadow-xl hover:-translate-y-0.5"
         >
           Request a Demo
         </button>
@@ -149,7 +149,7 @@ function AboutContent() {
       <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
         <Link
           href="/about"
-          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-full text-sm sm:text-base font-bold transition-all shadow-lg shadow-emerald-600/20 hover:shadow-xl hover:-translate-y-0.5"
+          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl text-sm sm:text-base font-bold transition-all shadow-lg shadow-emerald-600/20 hover:shadow-xl hover:-translate-y-0.5"
         >
           Learn More <ArrowRight className="w-4 h-4" />
         </Link>
@@ -176,7 +176,7 @@ function FeaturesContent() {
       <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
         <Link
           href="/features"
-          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-full text-sm sm:text-base font-bold transition-all shadow-lg shadow-emerald-600/20 hover:shadow-xl hover:-translate-y-0.5"
+          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl text-sm sm:text-base font-bold transition-all shadow-lg shadow-emerald-600/20 hover:shadow-xl hover:-translate-y-0.5"
         >
           Explore Features <ArrowRight className="w-4 h-4" />
         </Link>
@@ -203,7 +203,7 @@ function FaqContent() {
       <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
         <Link
           href="/faqs"
-          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-full text-sm sm:text-base font-bold transition-all shadow-lg shadow-emerald-600/20 hover:shadow-xl hover:-translate-y-0.5"
+          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl text-sm sm:text-base font-bold transition-all shadow-lg shadow-emerald-600/20 hover:shadow-xl hover:-translate-y-0.5"
         >
           View All FAQs <ArrowRight className="w-4 h-4" />
         </Link>

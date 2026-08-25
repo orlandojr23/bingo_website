@@ -49,7 +49,8 @@ export default function CrudPage() {
   const handleSave = async (e) => {
     e.preventDefault();
     if (!form.location || !form.barangay || !form.reporter) {
-      alert("Please fill in location, barangay, and reporter.");
+      setToastMessage("Error: Please fill in location, barangay, and reporter.");
+      setTimeout(() => setToastMessage(null), 3000);
       return;
     }
 

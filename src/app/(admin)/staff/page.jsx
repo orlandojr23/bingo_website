@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Search, Truck, User, UserPlus, MoreVertical, Edit2, Trash2 } from "lucide-react";
 
 // Mock data for initial staff
@@ -53,23 +54,6 @@ export default function StaffPage() {
   return (
     <div className="flex flex-col gap-8 max-w-7xl mx-auto pb-8 font-sans relative h-full">
       
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-black text-zinc-900 tracking-tight">Staff & Drivers</h1>
-          <p className="text-zinc-500 font-medium text-sm mt-1">
-            Manage internal municipal accounts and fleet assignments.
-          </p>
-        </div>
-        <button 
-          onClick={() => setIsAddModalOpen(true)}
-          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm"
-        >
-          <UserPlus className="w-4 h-4" />
-          Add Driver
-        </button>
-      </div>
-
       {/* Toolbar */}
       <div className="bg-white border-2 border-zinc-200 rounded-2xl p-4 flex flex-col sm:flex-row gap-4 items-center justify-between shadow-sm">
         <div className="relative w-full sm:max-w-md">
@@ -84,8 +68,16 @@ export default function StaffPage() {
             className="w-full pl-10 pr-4 py-2 border-2 border-zinc-100 bg-zinc-50 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:bg-white outline-none transition-all"
           />
         </div>
-        <div className="flex items-center gap-2 text-sm font-bold text-zinc-500">
-          Total Staff: <span className="text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">{staff.length}</span>
+        <div className="flex items-center gap-4 text-sm font-bold text-zinc-500">
+          <div>
+            Total Drivers: <span className="text-zinc-900 ml-1">{staff.length}</span>
+          </div>
+          <button 
+            onClick={() => setIsAddModalOpen(true)}
+            className="flex items-center justify-center bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-bold transition-all shadow-sm"
+          >
+            Add Driver
+          </button>
         </div>
       </div>
 
@@ -95,8 +87,10 @@ export default function StaffPage() {
           <div key={person.id} className="bg-white border-2 border-zinc-200 rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow group flex flex-col h-full">
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-lg">
-                  {person.name.charAt(0)}
+                <div className="w-12 h-12 bg-emerald-600 rounded-full flex items-center justify-center border border-emerald-500/50 shadow-sm shrink-0">
+                  <span className="text-[15px] font-bold text-white tracking-widest">
+                    {person.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                  </span>
                 </div>
                 <div>
                   <h3 className="font-black text-zinc-900 leading-tight">{person.name}</h3>
@@ -110,18 +104,18 @@ export default function StaffPage() {
 
             <div className="flex-1 flex flex-col gap-3 mt-2">
               <div className="flex items-center justify-between py-2 border-b border-zinc-100 gap-4">
-                <span className="text-xs font-bold text-zinc-400 flex items-center gap-1.5 shrink-0"><User className="w-4 h-4" /> Username</span>
+                <span className="text-xs font-bold text-zinc-400 shrink-0">Username</span>
                 <span className="text-sm font-bold text-zinc-700 font-mono text-right truncate">{person.username}</span>
               </div>
               <div className="flex items-center justify-between py-2 border-b border-zinc-100 gap-4">
-                <span className="text-xs font-bold text-zinc-400 flex items-center gap-1.5 shrink-0"><Truck className="w-4 h-4" /> Assignment</span>
-                <span className="text-sm font-bold text-zinc-700 text-right">{person.truck}</span>
+                <span className="text-xs font-bold text-zinc-400 shrink-0">Assignment</span>
+                <span className="text-sm font-bold text-zinc-700 text-right whitespace-nowrap truncate">{person.truck}</span>
               </div>
             </div>
 
             <div className="mt-6 flex items-center gap-2">
               <button className="flex-1 py-2 text-xs font-bold text-zinc-600 bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 rounded-xl transition-colors flex items-center justify-center gap-1">
-                <Edit2 className="w-3 h-3" /> Edit
+                Edit
               </button>
               <button className="flex-1 py-2 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-100 rounded-xl transition-colors flex items-center justify-center gap-1">
                 <Trash2 className="w-3 h-3" /> Revoke
@@ -132,19 +126,30 @@ export default function StaffPage() {
       </div>
 
       {/* Add Driver Side Sheet */}
-      {isAddModalOpen && mounted && createPortal(
-        <div className="fixed inset-0 z-[100] flex justify-end">
-          {/* Backdrop */}
-          <div 
-            className="absolute inset-0 bg-zinc-900/40 backdrop-blur-sm animate-in-fade" 
-            onClick={() => setIsAddModalOpen(false)} 
-          />
-          
-          {/* Right Sheet */}
-          <div className="relative w-full max-w-md bg-white h-full shadow-2xl border-l border-zinc-200 flex flex-col animate-slide-in-right">
-            
-            {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto p-6 flex flex-col">
+      {mounted && createPortal(
+        <AnimatePresence>
+          {isAddModalOpen && (
+            <div className="fixed inset-0 z-[100] flex justify-end">
+              {/* Backdrop */}
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-zinc-900/40 backdrop-blur-sm" 
+                onClick={() => setIsAddModalOpen(false)} 
+              />
+              
+              {/* Right Sheet */}
+              <motion.div 
+                initial={{ x: "100%" }}
+                animate={{ x: 0 }}
+                exit={{ x: "100%" }}
+                transition={{ type: "spring", stiffness: 65, damping: 20, mass: 0.8 }}
+                className="relative w-full max-w-md bg-white h-full shadow-2xl border-l border-zinc-200 flex flex-col z-10"
+              >
+                
+                {/* Scrollable Content */}
+                <div className="flex-1 overflow-y-auto p-6 flex flex-col">
               <div className="flex items-center justify-between mb-2">
                 <h2 className="text-xl font-black text-zinc-900">Add New Driver</h2>
                 <button
@@ -202,8 +207,10 @@ export default function StaffPage() {
                 Create Account
               </button>
             </div>
-          </div>
-        </div>,
+            </motion.div>
+            </div>
+          )}
+        </AnimatePresence>,
         document.body
       )}
     </div>

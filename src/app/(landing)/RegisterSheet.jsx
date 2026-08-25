@@ -12,34 +12,84 @@ export default function RegisterSheet({ isOpen, onClose, initialMode = "register
   const router = useRouter();
 
   useEffect(() => {
-    if (isOpen) setMode(initialMode);
+    if (isOpen) {
+      setMode(initialMode);
+      setError("");
+      setSuccess("");
+      setEmail("");
+      setPassword("");
+      setFullName("");
+      setMunicipality("");
+    }
   }, [isOpen, initialMode]);
 
   // Form states
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [municipality, setMunicipality] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const validateEmail = (emailStr) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailStr);
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    setError("");
+    setSuccess("");
+
+    // Strict Validations
+    if (mode === "register") {
+      if (fullName.trim().length < 3) {
+        setError("Full name must be at least 3 characters.");
+        return;
+      }
+      if (!validateEmail(email)) {
+        setError("Please enter a valid email address format.");
+        return;
+      }
+      if (municipality.trim().length < 3) {
+        setError("Please enter a valid municipality.");
+        return;
+      }
+      if (password.length < 8) {
+        setError("Password must be at least 8 characters long.");
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     
     setTimeout(() => {
       if (mode === "login") {
         const normalizedUsername = email.trim().toLowerCase();
         
+        // Simple login validation
+        if (password.length < 8 && normalizedUsername !== "user") {
+          setError("Password must be at least 8 characters.");
+          setIsSubmitting(false);
+          return;
+        }
+
         if (normalizedUsername === "user" && password === "user123") {
           try { Cookies.set("user_session", "true", { expires: 1 }); } catch (err) {}
           try { router.push("/track"); } catch (navErr) { window.location.href = "/track"; }
         } else {
-          alert("Invalid credentials. Try user/user123");
+          setError("Invalid credentials. Try user/user123");
           setIsSubmitting(false);
         }
       } else {
         // Dummy register flow
         setMode("login");
         setIsSubmitting(false);
-        alert("Account created successfully. Please sign in.");
+        setSuccess("Account created successfully. Please sign in.");
+        setEmail("");
+        setPassword("");
+        setFullName("");
+        setMunicipality("");
       }
     }, 1000); // Sleek 1-second delay
   };
@@ -69,7 +119,7 @@ export default function RegisterSheet({ isOpen, onClose, initialMode = "register
             <button 
               onClick={onClose}
               disabled={isSubmitting}
-              className="absolute top-6 right-6 p-2 rounded-full hover:bg-zinc-100 transition-colors text-zinc-400 hover:text-zinc-600 z-20 disabled:opacity-50"
+              className="absolute top-6 right-6 p-2 rounded-xl hover:bg-zinc-100 transition-colors text-zinc-400 hover:text-zinc-600 z-20 disabled:opacity-50"
             >
               <X className="w-6 h-6" />
             </button>
@@ -101,6 +151,9 @@ export default function RegisterSheet({ isOpen, onClose, initialMode = "register
                         </div>
                         <input 
                           type="text" 
+                          required
+                          value={fullName}
+                          onChange={(e) => setFullName(e.target.value)}
                           disabled={isSubmitting}
                           className="w-full pl-11 pr-4 py-3.5 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all placeholder:text-zinc-400 text-zinc-900 disabled:opacity-60"
                           placeholder="Juan Dela Cruz"
@@ -118,7 +171,7 @@ export default function RegisterSheet({ isOpen, onClose, initialMode = "register
                         <Mail className="w-5 h-5" />
                       </div>
                       <input 
-                        type="text" 
+                        type={mode === "register" ? "email" : "text"}
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
@@ -138,6 +191,9 @@ export default function RegisterSheet({ isOpen, onClose, initialMode = "register
                         </div>
                         <input 
                           type="text" 
+                          required
+                          value={municipality}
+                          onChange={(e) => setMunicipality(e.target.value)}
                           disabled={isSubmitting}
                           className="w-full pl-11 pr-4 py-3.5 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all placeholder:text-zinc-400 text-zinc-900 disabled:opacity-60"
                           placeholder="e.g. Guadalupe, Cebu City"
@@ -164,11 +220,27 @@ export default function RegisterSheet({ isOpen, onClose, initialMode = "register
                     </div>
                   </div>
 
+                  {error && (
+                    <div className="text-center">
+                      <p className="text-sm font-medium text-rose-500">
+                        {error}
+                      </p>
+                    </div>
+                  )}
+
+                  {success && (
+                    <div className="text-center">
+                      <p className="text-sm font-medium text-emerald-600">
+                        {success}
+                      </p>
+                    </div>
+                  )}
+
                   <div className="pt-2">
                     <button 
                       type="submit"
                       disabled={isSubmitting}
-                      className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-600/70 text-white py-4 rounded-full text-sm font-bold transition-all shadow-lg shadow-emerald-600/20 hover:shadow-xl hover:-translate-y-0.5 disabled:transform-none"
+                      className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-600/70 text-white py-4 rounded-xl text-sm font-bold transition-all shadow-lg shadow-emerald-600/20 hover:shadow-xl hover:-translate-y-0.5 disabled:transform-none"
                     >
                       {isSubmitting ? (
                         <>
@@ -189,7 +261,11 @@ export default function RegisterSheet({ isOpen, onClose, initialMode = "register
                     <button 
                       type="button"
                       disabled={isSubmitting}
-                      onClick={() => setMode(mode === "login" ? "register" : "login")}
+                      onClick={() => {
+                        setMode(mode === "login" ? "register" : "login");
+                        setError("");
+                        setSuccess("");
+                      }}
                       className="ml-2 font-bold text-emerald-600 hover:text-emerald-700 transition-colors disabled:opacity-50"
                     >
                       {mode === "login" ? "Create one" : "Sign in"}

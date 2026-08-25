@@ -161,6 +161,7 @@ export default function SettingsPage() {
                 onChange={(e) =>
                   setProfile({ ...profile, email: e.target.value })
                 }
+                pattern="[^\s@]+@[^\s@]+\.[^\s@]+"
                 className="px-3 py-2 border border-zinc-200 rounded-lg text-xs sm:text-sm bg-white text-zinc-900 focus:border-zinc-900 focus:outline-none"
                 required
               />
@@ -403,6 +404,7 @@ export default function SettingsPage() {
               <div className="relative">
                 <input
                   type={showCurrent ? "text" : "password"}
+                  required
                   value={passwords.currentPassword}
                   onChange={(e) =>
                     setPasswords({ ...passwords, currentPassword: e.target.value })
@@ -425,6 +427,7 @@ export default function SettingsPage() {
               <div className="relative">
                 <input
                   type={showNew ? "text" : "password"}
+                  required
                   value={passwords.newPassword}
                   onChange={(e) =>
                     setPasswords({ ...passwords, newPassword: e.target.value })
@@ -446,6 +449,7 @@ export default function SettingsPage() {
               <label className="text-xs font-medium text-zinc-700">Confirm New Password</label>
               <input
                 type="password"
+                required
                 value={passwords.confirmPassword}
                 onChange={(e) =>
                   setPasswords({ ...passwords, confirmPassword: e.target.value })

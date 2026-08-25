@@ -45,12 +45,6 @@ export default function LoginPage() {
       <div className="mt-8 mx-auto w-full max-w-sm relative z-10">
         <div className="bg-white/10 backdrop-blur-md py-8 px-4 sm:px-10 border border-white/20 rounded-3xl shadow-2xl">
           <form className="space-y-6 mt-2" onSubmit={handleLogin}>
-            {error && (
-              <div className="bg-red-500/20 text-red-200 text-sm font-medium px-4 py-3 rounded-xl border border-red-500/30 flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
-                {error}
-              </div>
-            )}
 
             <div>
               <label
@@ -119,19 +113,27 @@ export default function LoginPage() {
               </div>
             </div>
 
+            {error && (
+              <div className="text-center">
+                <p className="text-sm font-medium text-rose-400">
+                  {error}
+                </p>
+              </div>
+            )}
+
             <div className="pt-2">
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-full shadow-lg shadow-emerald-900/50 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-zinc-900 focus:ring-emerald-500 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+                className="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-lg shadow-emerald-900/50 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-zinc-900 focus:ring-emerald-500 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                    <span>Authenticating...</span>
+                    <span>Signing in...</span>
                   </div>
                 ) : (
-                  "Access Secure Portal"
+                  "Start Shift"
                 )}
               </button>
             </div>

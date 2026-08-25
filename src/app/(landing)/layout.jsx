@@ -1,14 +1,18 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ArrowRight, ChevronDown, Play, Apple, Menu, X } from "lucide-react";
 import RegisterSheet from "./RegisterSheet";
 import { AnimatePresence, motion } from "framer-motion";
+import ContactSheet from "./ContactSheet";
 
 export default function LandingLayout({ children }) {
+  const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [hideLogo, setHideLogo] = useState(false);
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
+  const [isContactOpen, setIsContactOpen] = useState(false);
   const [authMode, setAuthMode] = useState("register");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -16,6 +20,11 @@ export default function LandingLayout({ children }) {
 
   useEffect(() => {
     const handleHashChange = () => {
+      if (pathname !== "/") {
+        setActiveSection("");
+        return;
+      }
+
       const hash = window.location.hash;
       if (hash === "#about") setActiveSection("about");
       else if (hash === "#features") setActiveSection("features");
@@ -30,6 +39,12 @@ export default function LandingLayout({ children }) {
       window.removeEventListener("hashchange", handleHashChange);
       window.removeEventListener("popstate", handleHashChange);
     };
+  }, [pathname]);
+
+  useEffect(() => {
+    const handleOpenContact = () => setIsContactOpen(true);
+    window.addEventListener("openContactSheet", handleOpenContact);
+    return () => window.removeEventListener("openContactSheet", handleOpenContact);
   }, []);
 
   useEffect(() => {
@@ -85,10 +100,10 @@ export default function LandingLayout({ children }) {
           
           {/* Centered Navigation Links */}
           <nav className="hidden md:flex items-center justify-center gap-2">
-            <a href="/#home" className={`text-sm font-bold transition-all px-4 py-2 rounded-full ${activeSection === "home" ? "bg-emerald-50 text-emerald-700" : "text-zinc-600 hover:text-emerald-700 hover:bg-zinc-50"}`}>Home</a>
-            <a href="/#about" className={`text-sm font-bold transition-all px-4 py-2 rounded-full ${activeSection === "about" ? "bg-emerald-50 text-emerald-700" : "text-zinc-600 hover:text-emerald-700 hover:bg-zinc-50"}`}>About</a>
-            <a href="/#features" className={`text-sm font-bold transition-all px-4 py-2 rounded-full ${activeSection === "features" ? "bg-emerald-50 text-emerald-700" : "text-zinc-600 hover:text-emerald-700 hover:bg-zinc-50"}`}>Features</a>
-            <a href="/#faq" className={`text-sm font-bold transition-all px-4 py-2 rounded-full ${activeSection === "faq" ? "bg-emerald-50 text-emerald-700" : "text-zinc-600 hover:text-emerald-700 hover:bg-zinc-50"}`}>FAQ</a>
+            <a href="/#home" className={`text-sm font-bold transition-all px-4 py-2 rounded-xl ${activeSection === "home" ? "bg-emerald-50 text-emerald-700" : "text-zinc-600 hover:text-emerald-700 hover:bg-zinc-50"}`}>Home</a>
+            <a href="/#about" className={`text-sm font-bold transition-all px-4 py-2 rounded-xl ${activeSection === "about" ? "bg-emerald-50 text-emerald-700" : "text-zinc-600 hover:text-emerald-700 hover:bg-zinc-50"}`}>About</a>
+            <a href="/#features" className={`text-sm font-bold transition-all px-4 py-2 rounded-xl ${activeSection === "features" ? "bg-emerald-50 text-emerald-700" : "text-zinc-600 hover:text-emerald-700 hover:bg-zinc-50"}`}>Features</a>
+            <a href="/#faq" className={`text-sm font-bold transition-all px-4 py-2 rounded-xl ${activeSection === "faq" ? "bg-emerald-50 text-emerald-700" : "text-zinc-600 hover:text-emerald-700 hover:bg-zinc-50"}`}>FAQ</a>
             
             {/* Download Dropdown */}
             <div className="relative group">
@@ -129,13 +144,13 @@ export default function LandingLayout({ children }) {
           <div className="flex-1 md:flex-none md:w-[260px] shrink-0 flex justify-end items-center gap-3">
             <button 
               onClick={() => { setAuthMode("register"); setIsRegisterOpen(true); }} 
-              className="group flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-full text-sm font-bold transition-all shadow-sm"
+              className="group flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm"
             >
               Get Started <ArrowRight className="hidden sm:block w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
             </button>
             <button 
               onClick={() => setIsMobileMenuOpen(true)}
-              className="md:hidden flex items-center justify-center w-10 h-10 rounded-full bg-zinc-100 text-zinc-600 hover:bg-zinc-200 transition-colors"
+              className="md:hidden flex items-center justify-center w-10 h-10 rounded-xl bg-zinc-100 text-zinc-600 hover:bg-zinc-200 transition-colors"
             >
               <Menu className="w-5 h-5" />
             </button>
@@ -146,6 +161,7 @@ export default function LandingLayout({ children }) {
         {children}
       </main>
       <RegisterSheet isOpen={isRegisterOpen} onClose={() => setIsRegisterOpen(false)} initialMode={authMode} />
+      <ContactSheet isOpen={isContactOpen} onClose={() => setIsContactOpen(false)} />
       <footer className="relative pt-20 pb-12 overflow-hidden border-t border-emerald-900/30 bg-[url('/footer-bg.svg')] bg-cover bg-top bg-no-repeat text-emerald-100">
         {/* Subtle dark overlay to ensure text contrast */}
         <div className="absolute inset-0 bg-[#0b1e19]/30 -z-0" />
@@ -174,15 +190,14 @@ export default function LandingLayout({ children }) {
               <a href="#about" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">About</a>
               <a href="#features" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">Features</a>
               <a href="#faq" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">FAQ</a>
-              <Link href="#" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">Register</Link>
             </div>
 
             {/* Legal Links Column matching bin-go-website */}
             <div className="flex flex-col gap-3 items-center md:items-start">
               <span className="font-bold text-xs uppercase tracking-wider text-emerald-400 font-mono">Legal & Support</span>
-              <Link href="#" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">Privacy Policy</Link>
-              <Link href="#" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">Terms of Service</Link>
-              <Link href="#" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">Contact Support</Link>
+              <Link href="/privacy" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">Privacy Policy</Link>
+              <Link href="/terms" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">Terms of Service</Link>
+              <button onClick={() => setIsContactOpen(true)} className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">Contact Support</button>
             </div>
           </div>
 
@@ -219,7 +234,7 @@ export default function LandingLayout({ children }) {
               </a>
               <button 
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center text-zinc-600 hover:bg-zinc-200 transition-colors"
+                className="w-10 h-10 bg-zinc-100 rounded-xl flex items-center justify-center text-zinc-600 hover:bg-zinc-200 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>

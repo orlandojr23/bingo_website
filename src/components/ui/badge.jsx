@@ -1,10 +1,12 @@
 import { cn } from "@/lib/utils";
-import { Clock, Loader, CheckCircle2, Circle } from "lucide-react";
+import { Clock, Loader, CheckCircle2, Circle, CalendarClock } from "lucide-react";
 
 const statusConfig = {
   Resolved: { color: "text-emerald-700", icon: CheckCircle2 },
   "In Progress": { color: "text-blue-700", icon: Loader },
   Pending: { color: "text-amber-700", icon: Clock },
+  Scheduled: { color: "text-zinc-700", icon: CalendarClock },
+  Completed: { color: "text-emerald-700", icon: CheckCircle2 },
 };
 
 const urgencyTextColors = {

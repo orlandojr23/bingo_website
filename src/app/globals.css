@@ -182,3 +182,11 @@ html {
   .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
 }
 
+/* Utility to completely hide scrollbars but allow scrolling */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}

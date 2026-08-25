@@ -22,8 +22,7 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Fleet Dispatch", href: "/dispatch", icon: Truck },
-  { name: "Staff & Drivers", href: "/staff", icon: Users },
-  { name: "Create Report", href: "/crud", icon: Database },
+  { name: "Drivers", href: "/staff", icon: Users },
   { name: "Live Map", href: "/live-map", icon: Map },
   { name: "Reports Log", href: "/tickets", icon: Ticket },
   { name: "Data & Insights", href: "/analytics", icon: BarChart3 },
@@ -99,8 +98,8 @@ export default function Sidebar({ isOpen, onClose }) {
       {/* Footer Profile & Actions */}
       <div className="px-3 pb-4 pt-2 border-t border-slate-200/60 flex flex-col gap-3 mt-auto">
         <div className="px-2 py-2 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-white ring-1 ring-slate-200 text-slate-600 flex items-center justify-center font-bold text-sm shrink-0 shadow-sm">
-            GC
+          <div className="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center border border-emerald-500/50 shadow-sm shrink-0">
+            <span className="text-[13px] font-bold text-white tracking-widest">MS</span>
           </div>
           <div className="flex flex-col min-w-0">
             <span className="text-sm font-semibold text-slate-900 truncate leading-tight">
@@ -112,13 +111,7 @@ export default function Sidebar({ isOpen, onClose }) {
           </div>
         </div>
 
-        <Link 
-          href="/" 
-          className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-emerald-700 hover:border-emerald-200 transition-colors shadow-sm mb-1"
-        >
-          <Globe className="w-4 h-4 text-slate-500" />
-          <span>View Public Site</span>
-        </Link>
+
 
         <div className="grid grid-cols-2 gap-2">
           <Link
@@ -148,40 +141,39 @@ export default function Sidebar({ isOpen, onClose }) {
 
       {/* Sign Out Confirmation Modal */}
       {showSignOutModal && (
-        <div
-          className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        <div 
+          className="fixed inset-0 z-[1000] bg-black/50 flex items-center justify-center p-6"
           onClick={() => setShowSignOutModal(false)}
         >
           <div
-            className="bg-white rounded-xl shadow-xl max-w-[280px] w-full p-5 border border-slate-200"
+            className="bg-white rounded-2xl p-6 w-full max-w-sm flex flex-col gap-6 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center gap-2 mb-1">
-              <LogOut className="w-4 h-4 text-rose-500" />
-              <h4 className="text-sm font-bold text-slate-900">Sign Out</h4>
+            <div>
+              <h3 className="text-lg font-bold text-zinc-900 mb-1">Sign out?</h3>
+              <p className="text-sm font-medium text-zinc-500">
+                You will need to log back in to access the dashboard.
+              </p>
             </div>
-            <p className="text-xs text-slate-600 leading-relaxed mb-4">
-              Are you sure you want to exit your administrator session?
-            </p>
-            <div className="flex items-center gap-2">
-              <button
+            <div className="flex justify-end gap-2 font-bold text-sm">
+              <button 
                 type="button"
                 onClick={() => setShowSignOutModal(false)}
-                className="flex-1 py-2 px-4 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 bg-slate-50 hover:bg-slate-100"
+                className="px-5 py-2.5 text-zinc-500 hover:text-zinc-700 active:scale-95 transition-all"
               >
                 Cancel
               </button>
-              <button
+              <button 
                 type="button"
                 onClick={() => {
                   import("js-cookie").then((Cookies) => {
                     try {
                       Cookies.default.remove("admin_session");
                     } catch (err) {}
-                    window.location.href = "/login";
+                    window.location.href = "/admin-login";
                   });
                 }}
-                className="flex-1 py-2 px-4 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 shadow-sm"
+                className="px-5 py-2.5 text-rose-600 hover:text-rose-700 active:scale-95 transition-all"
               >
                 Sign Out
               </button>

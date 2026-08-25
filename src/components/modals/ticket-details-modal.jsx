@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import { X, MapPin, User, Calendar, CheckCircle2, Truck } from "lucide-react";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,7 +23,7 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
     }
   }, [ticket]);
 
-  if (!isOpen || !ticket || !mounted) return null;
+  if (!mounted) return null;
 
   const handleSave = () => {
     if (onUpdateStatus && selectedStatus !== ticket.status) {
@@ -32,17 +33,26 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
   };
 
   const modalContent = (
-    <div className="fixed inset-0 z-[100] flex justify-end">
-      {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-zinc-900/40 backdrop-blur-sm animate-in-fade"
-        onClick={onClose}
-      />
+    <AnimatePresence>
+      {isOpen && ticket && (
+        <div className="fixed inset-0 z-[100] flex justify-end">
+          {/* Backdrop */}
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-zinc-900/40 backdrop-blur-sm"
+            onClick={onClose}
+          />
 
-      {/* Right Sheet Content */}
-      <div
-        className="relative w-full max-w-md bg-white h-full shadow-2xl border-l border-zinc-200 flex flex-col animate-slide-in-right"
-        onClick={(e) => e.stopPropagation()}
+          {/* Right Sheet Content */}
+          <motion.div
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ type: "spring", stiffness: 65, damping: 20, mass: 0.8 }}
+            className="relative w-full max-w-md bg-white h-full shadow-2xl border-l border-zinc-200 flex flex-col z-10"
+            onClick={(e) => e.stopPropagation()}
       >
         {/* Scrollable Content Area */}
         <div className="flex-1 overflow-y-auto p-5 sm:p-6 flex flex-col gap-5">
@@ -179,8 +189,10 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
             Save Changes
           </Button>
         </div>
-      </div>
-    </div>
+      </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
   );
 
   return createPortal(modalContent, document.body);
