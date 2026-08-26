@@ -52,6 +52,28 @@ const createCustomIcon = (urgency) => {
   });
 };
 
+const createTruckIcon = () => {
+  return L.divIcon({
+    className: "custom-truck bg-transparent border-0",
+    html: `
+      <div style="display: flex; align-items: center; justify-content: center; position: relative;">
+        <div class="animate-pulse" style="position: absolute; width: 44px; height: 44px; background-color: rgba(16, 185, 129, 0.25); border-radius: 50%; z-index: 1;"></div>
+        <div style="background-color: #059669; padding: 6px; border-radius: 50%; border: 2px solid white; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1); width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; position: relative; z-index: 2;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="14" height="10" x="2" y="6" rx="2" />
+            <path d="M16 8h4a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+            <circle cx="6.5" cy="18.5" r="1.5" />
+            <circle cx="16.5" cy="18.5" r="1.5" />
+          </svg>
+        </div>
+      </div>
+    `,
+    iconSize: [36, 36],
+    iconAnchor: [18, 18],
+    popupAnchor: [0, -18],
+  });
+};
+
 function ChangeMapView({ center, zoom }) {
   const map = useMap();
   useEffect(() => {
@@ -60,9 +82,11 @@ function ChangeMapView({ center, zoom }) {
   return null;
 }
 
-export default function MapCanvas({ tickets = [], mapMode = "pins" }) {
+export default function MapCanvas({ tickets = [], trucks = [], mapMode = "pins", center }) {
   const [mounted, setMounted] = useState(false);
   const cebuCenter = [10.3157, 123.8854];
+  const mapCenter = center || cebuCenter;
+  const zoom = center ? 15 : 13;
 
   useEffect(() => {
     const t = setTimeout(() => setMounted(true), 0);
@@ -83,14 +107,14 @@ export default function MapCanvas({ tickets = [], mapMode = "pins" }) {
   return (
     <div className="w-full h-full relative">
       <MapContainer
-        center={cebuCenter}
-        zoom={13}
+        center={mapCenter}
+        zoom={zoom}
         scrollWheelZoom={false}
         attributionControl={false}
         zoomControl={false}
         className="w-full h-full z-10"
       >
-        <ChangeMapView center={cebuCenter} zoom={13} />
+        <ChangeMapView center={mapCenter} zoom={zoom} />
         <ZoomControl position="topright" />
         
         {/* Crisp clean CartoDB Voyager tiles forced to Retina @2x for ultra-sharp rendering */}
@@ -155,6 +179,35 @@ export default function MapCanvas({ tickets = [], mapMode = "pins" }) {
                     <span className="text-[10px] text-zinc-400 font-mono">
                       {t.date}
                     </span>
+                  </div>
+                </div>
+              </Popup>
+            </Marker>
+          ))}
+
+        {/* Truck Markers */}
+        {trucks &&
+          trucks.map((trk) => (
+            <Marker
+              key={`truck-${trk.id}`}
+              position={[trk.lat, trk.lng]}
+              icon={createTruckIcon()}
+            >
+              <Popup>
+                <div className="p-3 flex flex-col gap-1.5 min-w-[200px] text-zinc-900 font-sans">
+                  <div className="flex items-center gap-1.5 pb-1 border-b border-zinc-100">
+                    <span className="font-bold text-xs text-zinc-900">
+                      Compactor {trk.id}
+                    </span>
+                    <span className="text-[10px] bg-emerald-50 text-emerald-700 font-bold px-1.5 py-0.5 rounded-sm">
+                      Live
+                    </span>
+                  </div>
+                  <div className="flex flex-col text-[11px] text-zinc-600 gap-0.5">
+                    <div><span className="font-semibold text-zinc-700">Driver:</span> {trk.driver}</div>
+                    <div><span className="font-semibold text-zinc-700">Plate:</span> {trk.plate}</div>
+                    {trk.capacity && <div><span className="font-semibold text-zinc-700">Capacity:</span> {trk.capacity}</div>}
+                    {trk.eta && <div className="text-emerald-600 font-bold mt-1">ETA: {trk.eta}</div>}
                   </div>
                 </div>
               </Popup>

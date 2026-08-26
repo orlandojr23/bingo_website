@@ -3,25 +3,12 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CheckCircle2, Smartphone, ShieldCheck, Mail, Lock, User, MapPin, Laptop, X, Loader2 } from "lucide-react";
-import Link from "next/link";
-import Cookies from "js-cookie";
+import { Mail, Lock, User, MapPin, X, Loader2 } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 export default function RegisterSheet({ isOpen, onClose, initialMode = "register" }) {
   const [mode, setMode] = useState(initialMode);
   const router = useRouter();
-
-  useEffect(() => {
-    if (isOpen) {
-      setMode(initialMode);
-      setError("");
-      setSuccess("");
-      setEmail("");
-      setPassword("");
-      setFullName("");
-      setMunicipality("");
-    }
-  }, [isOpen, initialMode]);
 
   // Form states
   const [email, setEmail] = useState("");
@@ -32,66 +19,95 @@ export default function RegisterSheet({ isOpen, onClose, initialMode = "register
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const validateEmail = (emailStr) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailStr);
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setError("");
-    setSuccess("");
-
-    // Strict Validations
-    if (mode === "register") {
-      if (fullName.trim().length < 3) {
-        setError("Full name must be at least 3 characters.");
-        return;
-      }
-      if (!validateEmail(email)) {
-        setError("Please enter a valid email address format.");
-        return;
-      }
-      if (municipality.trim().length < 3) {
-        setError("Please enter a valid municipality.");
-        return;
-      }
-      if (password.length < 8) {
-        setError("Password must be at least 8 characters long.");
-        return;
-      }
-    }
-
-    setIsSubmitting(true);
-    
-    setTimeout(() => {
-      if (mode === "login") {
-        const normalizedUsername = email.trim().toLowerCase();
-        
-        // Simple login validation
-        if (password.length < 8 && normalizedUsername !== "user") {
-          setError("Password must be at least 8 characters.");
-          setIsSubmitting(false);
-          return;
-        }
-
-        if (normalizedUsername === "user" && password === "user123") {
-          try { Cookies.set("user_session", "true", { expires: 1 }); } catch (err) {}
-          try { router.push("/track"); } catch (navErr) { window.location.href = "/track"; }
-        } else {
-          setError("Invalid credentials. Try user/user123");
-          setIsSubmitting(false);
-        }
-      } else {
-        // Dummy register flow
-        setMode("login");
-        setIsSubmitting(false);
-        setSuccess("Account created successfully. Please sign in.");
+  useEffect(() => {
+    if (isOpen) {
+      const t = setTimeout(() => {
+        setMode(initialMode);
+        setError("");
+        setSuccess("");
         setEmail("");
         setPassword("");
         setFullName("");
         setMunicipality("");
+      }, 0);
+      return () => clearTimeout(t);
+    }
+  }, [isOpen, initialMode]);
+
+  const validateEmail = (emailStr) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailStr);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+
+    // Validations
+    if (mode === "register") {
+      if (fullName.trim().length < 3) { setError("Full name must be at least 3 characters."); return; }
+      if (!validateEmail(email)) { setError("Please enter a valid email address format."); return; }
+      if (municipality.trim().length < 3) { setError("Please enter a valid municipality."); return; }
+      if (password.length < 8) { setError("Password must be at least 8 characters long."); return; }
+    }
+
+    setIsSubmitting(true);
+
+    if (mode === "login") {
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      });
+
+      if (signInError) {
+        setError(signInError.message);
+        setIsSubmitting(false);
+        return;
       }
-    }, 1000); // Sleek 1-second delay
+
+      const role = data.user?.user_metadata?.role;
+      if (role === "admin" || role === "driver") {
+        await supabase.auth.signOut();
+        setError("This portal is for citizens only.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      router.push("/track");
+    } else {
+      // Register
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: email.trim().toLowerCase(),
+        password,
+        options: {
+          data: {
+            full_name: fullName.trim(),
+            municipality: municipality.trim(),
+            role: "citizen",
+          },
+        },
+      });
+
+      if (signUpError) {
+        setError(signUpError.message);
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (signUpData?.session) {
+        setIsSubmitting(false);
+        router.push("/track");
+        return;
+      }
+
+      setMode("login");
+      setIsSubmitting(false);
+      setSuccess("Account created! Please sign in.");
+      setEmail("");
+      setPassword("");
+      setFullName("");
+      setMunicipality("");
+    }
   };
 
   return (

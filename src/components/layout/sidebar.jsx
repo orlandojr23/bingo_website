@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 import {
   LayoutDashboard,
   Database,
@@ -31,7 +32,13 @@ const navItems = [
 
 export default function Sidebar({ isOpen, onClose }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [showSignOutModal, setShowSignOutModal] = useState(false);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.replace("/auth/admin-login");
+  };
 
   const sidebarContent = (
     <div className="flex flex-col h-full bg-slate-100 border-r border-slate-200 w-72 lg:w-80 shrink-0">
@@ -165,14 +172,7 @@ export default function Sidebar({ isOpen, onClose }) {
               </button>
               <button 
                 type="button"
-                onClick={() => {
-                  import("js-cookie").then((Cookies) => {
-                    try {
-                      Cookies.default.remove("admin_session");
-                    } catch (err) {}
-                    window.location.href = "/admin-login";
-                  });
-                }}
+                onClick={handleSignOut}
                 className="px-5 py-2.5 text-rose-600 hover:text-rose-700 active:scale-95 transition-all"
               >
                 Sign Out

@@ -6,6 +6,7 @@ import { ArrowRight, ChevronDown, Play, Apple, Menu, X } from "lucide-react";
 import RegisterSheet from "./RegisterSheet";
 import { AnimatePresence, motion } from "framer-motion";
 import ContactSheet from "./ContactSheet";
+import { supabase } from "@/lib/supabase";
 
 export default function LandingLayout({ children }) {
   const pathname = usePathname();
@@ -15,8 +16,24 @@ export default function LandingLayout({ children }) {
   const [isContactOpen, setIsContactOpen] = useState(false);
   const [authMode, setAuthMode] = useState("register");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
+  const [sessionUser, setSessionUser] = useState(null);
+  const [sessionRole, setSessionRole] = useState(null);
   const [activeSection, setActiveSection] = useState("home");
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSessionUser(session?.user ?? null);
+      setSessionRole(session?.user?.user_metadata?.role ?? null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSessionUser(session?.user ?? null);
+      setSessionRole(session?.user?.user_metadata?.role ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -74,7 +91,7 @@ export default function LandingLayout({ children }) {
       {/* Floating Sticky Logo */}
       <div className="fixed top-2 z-50 pointer-events-none w-full">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[72px] flex items-center">
-          <a 
+          <Link 
             href="/#home" 
             className="inline-flex items-center group pointer-events-auto transition-all duration-500 ease-out"
           >
@@ -89,7 +106,7 @@ export default function LandingLayout({ children }) {
                     : "mix-blend-multiply"
               }`} 
             />
-          </a>
+          </Link>
         </div>
       </div>
 
@@ -100,10 +117,10 @@ export default function LandingLayout({ children }) {
           
           {/* Centered Navigation Links */}
           <nav className="hidden md:flex items-center justify-center gap-2">
-            <a href="/#home" className={`text-sm font-bold transition-all px-4 py-2 rounded-xl ${activeSection === "home" ? "bg-emerald-50 text-emerald-700" : "text-zinc-600 hover:text-emerald-700 hover:bg-zinc-50"}`}>Home</a>
-            <a href="/#about" className={`text-sm font-bold transition-all px-4 py-2 rounded-xl ${activeSection === "about" ? "bg-emerald-50 text-emerald-700" : "text-zinc-600 hover:text-emerald-700 hover:bg-zinc-50"}`}>About</a>
-            <a href="/#features" className={`text-sm font-bold transition-all px-4 py-2 rounded-xl ${activeSection === "features" ? "bg-emerald-50 text-emerald-700" : "text-zinc-600 hover:text-emerald-700 hover:bg-zinc-50"}`}>Features</a>
-            <a href="/#faq" className={`text-sm font-bold transition-all px-4 py-2 rounded-xl ${activeSection === "faq" ? "bg-emerald-50 text-emerald-700" : "text-zinc-600 hover:text-emerald-700 hover:bg-zinc-50"}`}>FAQ</a>
+            <Link href="/#home" className={`text-sm font-bold transition-all px-4 py-2 rounded-xl ${activeSection === "home" ? "bg-emerald-50 text-emerald-700" : "text-zinc-600 hover:text-emerald-700 hover:bg-zinc-50"}`}>Home</Link>
+            <Link href="/#about" className={`text-sm font-bold transition-all px-4 py-2 rounded-xl ${activeSection === "about" ? "bg-emerald-50 text-emerald-700" : "text-zinc-600 hover:text-emerald-700 hover:bg-zinc-50"}`}>About</Link>
+            <Link href="/#features" className={`text-sm font-bold transition-all px-4 py-2 rounded-xl ${activeSection === "features" ? "bg-emerald-50 text-emerald-700" : "text-zinc-600 hover:text-emerald-700 hover:bg-zinc-50"}`}>Features</Link>
+            <Link href="/#faq" className={`text-sm font-bold transition-all px-4 py-2 rounded-xl ${activeSection === "faq" ? "bg-emerald-50 text-emerald-700" : "text-zinc-600 hover:text-emerald-700 hover:bg-zinc-50"}`}>FAQ</Link>
             
             {/* Download Dropdown */}
             <div className="relative group">
@@ -142,12 +159,21 @@ export default function LandingLayout({ children }) {
           
           {/* Right Side Actions */}
           <div className="flex-1 md:flex-none md:w-[260px] shrink-0 flex justify-end items-center gap-3">
-            <button 
-              onClick={() => { setAuthMode("register"); setIsRegisterOpen(true); }} 
-              className="group flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm"
-            >
-              Get Started <ArrowRight className="hidden sm:block w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
-            </button>
+            {sessionUser ? (
+              <Link 
+                href={sessionRole === "admin" ? "/dashboard" : sessionRole === "driver" ? "/driver/route" : "/track"} 
+                className="group flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm"
+              >
+                Go to App <ArrowRight className="hidden sm:block w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
+              </Link>
+            ) : (
+              <button 
+                onClick={() => { setAuthMode("register"); setIsRegisterOpen(true); }} 
+                className="group flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm"
+              >
+                Get Started <ArrowRight className="hidden sm:block w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
+              </button>
+            )}
             <button 
               onClick={() => setIsMobileMenuOpen(true)}
               className="md:hidden flex items-center justify-center w-10 h-10 rounded-xl bg-zinc-100 text-zinc-600 hover:bg-zinc-200 transition-colors"
@@ -225,13 +251,13 @@ export default function LandingLayout({ children }) {
           >
             {/* Top Bar inside Menu */}
             <div className="flex items-center justify-between h-[72px] mt-2 shrink-0">
-              <a href="/#home" onClick={() => setIsMobileMenuOpen(false)}>
+              <Link href="/#home" onClick={() => setIsMobileMenuOpen(false)}>
                 <img 
                   src="/logo-green-v2.png" 
                   alt="Bin-Go Logo" 
                   className="h-14 w-auto object-contain origin-left scale-[1.3] mix-blend-multiply" 
                 />
-              </a>
+              </Link>
               <button 
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="w-10 h-10 flex items-center justify-center text-zinc-400 hover:text-zinc-900 transition-colors"
@@ -243,16 +269,26 @@ export default function LandingLayout({ children }) {
             {/* Centered Navigation */}
             <div className="flex-1 flex flex-col justify-center items-center">
               <nav className="flex flex-col gap-6 text-3xl font-black tracking-tight text-center">
-                <a href="/#home" onClick={() => setIsMobileMenuOpen(false)} className={`transition-all px-6 py-2 rounded-2xl ${activeSection === "home" ? "bg-emerald-50 text-emerald-700" : "text-zinc-900 hover:text-emerald-600 hover:bg-zinc-50"}`}>Home</a>
-                <a href="/#about" onClick={() => setIsMobileMenuOpen(false)} className={`transition-all px-6 py-2 rounded-2xl ${activeSection === "about" ? "bg-emerald-50 text-emerald-700" : "text-zinc-900 hover:text-emerald-600 hover:bg-zinc-50"}`}>About</a>
-                <a href="/#features" onClick={() => setIsMobileMenuOpen(false)} className={`transition-all px-6 py-2 rounded-2xl ${activeSection === "features" ? "bg-emerald-50 text-emerald-700" : "text-zinc-900 hover:text-emerald-600 hover:bg-zinc-50"}`}>Features</a>
-                <a href="/#faq" onClick={() => setIsMobileMenuOpen(false)} className={`transition-all px-6 py-2 rounded-2xl ${activeSection === "faq" ? "bg-emerald-50 text-emerald-700" : "text-zinc-900 hover:text-emerald-600 hover:bg-zinc-50"}`}>FAQ</a>
-                <button 
-                  onClick={() => { setIsMobileMenuOpen(false); setAuthMode("register"); setIsRegisterOpen(true); }} 
-                  className="transition-all px-6 py-2 rounded-2xl text-emerald-600 hover:bg-emerald-50"
-                >
-                  Get Started
-                </button>
+                <Link href="/#home" onClick={() => setIsMobileMenuOpen(false)} className={`transition-all px-6 py-2 rounded-2xl ${activeSection === "home" ? "bg-emerald-50 text-emerald-700" : "text-zinc-900 hover:text-emerald-600 hover:bg-zinc-50"}`}>Home</Link>
+                <Link href="/#about" onClick={() => setIsMobileMenuOpen(false)} className={`transition-all px-6 py-2 rounded-2xl ${activeSection === "about" ? "bg-emerald-50 text-emerald-700" : "text-zinc-900 hover:text-emerald-600 hover:bg-zinc-50"}`}>About</Link>
+                <Link href="/#features" onClick={() => setIsMobileMenuOpen(false)} className={`transition-all px-6 py-2 rounded-2xl ${activeSection === "features" ? "bg-emerald-50 text-emerald-700" : "text-zinc-900 hover:text-emerald-600 hover:bg-zinc-50"}`}>Features</Link>
+                <Link href="/#faq" onClick={() => setIsMobileMenuOpen(false)} className={`transition-all px-6 py-2 rounded-2xl ${activeSection === "faq" ? "bg-emerald-50 text-emerald-700" : "text-zinc-900 hover:text-emerald-600 hover:bg-zinc-50"}`}>FAQ</Link>
+                {sessionUser ? (
+                  <Link 
+                    href={sessionRole === "admin" ? "/dashboard" : sessionRole === "driver" ? "/driver/route" : "/track"} 
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="transition-all px-6 py-2 rounded-2xl text-emerald-600 hover:bg-emerald-50"
+                  >
+                    Go to App
+                  </Link>
+                ) : (
+                  <button 
+                    onClick={() => { setIsMobileMenuOpen(false); setAuthMode("register"); setIsRegisterOpen(true); }} 
+                    className="transition-all px-6 py-2 rounded-2xl text-emerald-600 hover:bg-emerald-50"
+                  >
+                    Get Started
+                  </button>
+                )}
               </nav>
             </div>
 

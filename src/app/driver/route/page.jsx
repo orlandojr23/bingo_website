@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { mockPilotData } from "@/lib/mock-data";
-import { CheckCircle2, Clock, MapPin, Navigation, Truck, LogOut, AlertTriangle, ArrowLeft } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { CheckCircle2, Clock, Navigation, LogOut, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
+import { supabase } from "@/lib/supabase";
 
 const MapCanvas = dynamic(() => import("@/components/map/map-canvas"), {
   ssr: false,
@@ -13,25 +14,36 @@ const MapCanvas = dynamic(() => import("@/components/map/map-canvas"), {
 });
 
 export default function DriverRoutePage() {
+  const router = useRouter();
   const [isRouteActive, setIsRouteActive] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [isSheetExpanded, setIsSheetExpanded] = useState(false);
   const [mounted, setMounted] = useState(false);
   
   // Assign driver to the first schedule
   const currentAssignment = mockPilotData.schedules[0];
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      const role = session?.user?.user_metadata?.role;
+      if (!session || role !== "driver") {
+        router.replace("/auth/driver-login");
+        return;
+      }
+      const timer = setTimeout(() => setMounted(true), 0);
+      return () => clearTimeout(timer);
+    });
+  }, [router]);
 
   if (!mounted) return null;
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-zinc-50 font-sans select-none">
+    <div className="h-[100dvh] w-full flex flex-col bg-zinc-150 font-sans antialiased text-zinc-900 overflow-hidden select-none overscroll-none [-webkit-tap-highlight-color:transparent] touch-manipulation">
       
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col relative overflow-hidden">
+      {/* Centered Mobile Canvas Frame */}
+      <div className="w-full max-w-md mx-auto h-full flex flex-col bg-zinc-50 border-x border-zinc-200/60 shadow-xl relative overflow-hidden">
+        
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col relative overflow-hidden">
         
         {/* Driver Dashboard View */}
         {!isRouteActive ? (
@@ -40,7 +52,7 @@ export default function DriverRoutePage() {
             {/* Dashboard Content */}
             <div className="flex-1 overflow-y-auto px-6 pt-8 pb-5">
               <div className="mb-6">
-                <h2 className="text-2xl font-black text-zinc-900 tracking-tight">Today's Routes</h2>
+                <h2 className="text-2xl font-black text-zinc-900 tracking-tight">Today&apos;s Routes</h2>
                 <p className="text-sm text-zinc-500 font-medium mt-1">You have 2 scheduled collection runs.</p>
               </div>
               
@@ -49,7 +61,7 @@ export default function DriverRoutePage() {
                 {[
                   { id: 1, name: mockPilotData.zones[0].name, time: currentAssignment.time, type: currentAssignment.type, active: true },
                   { id: 2, name: "South Sector (Labangon)", time: "3:00 PM - 6:00 PM", type: "Non-Biodegradable", active: false }
-                ].map((route, i) => (
+                ].map((route) => (
                   <div key={route.id} className={`p-4 rounded-2xl border-2 flex items-center justify-between transition-all ${route.active ? 'bg-white border-zinc-200 shadow-sm' : 'bg-transparent border-zinc-200/50 opacity-70'}`}>
                     <div className="flex flex-col gap-1">
                       <h3 className={`font-bold text-[15px] leading-tight ${route.active ? 'text-zinc-900' : 'text-zinc-600'}`}>
@@ -172,7 +184,8 @@ export default function DriverRoutePage() {
           </div>
         </div>
       )}
-
+      
+      </div>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "@/context/AuthContext";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -31,6 +32,11 @@ export const metadata = {
     "civic tech",
     "community",
   ],
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Bin'Go",
+  },
   openGraph: {
     title: "Bin'Go | Smart Waste Collection, Simplified.",
     description:
@@ -53,8 +59,11 @@ export default function RootLayout({ children }) {
       className={`${inter.variable} ${jetbrainsMono.variable} antialiased`}
     >
       <body className="min-h-screen bg-zinc-50 text-zinc-900 font-sans selection:bg-emerald-100 selection:text-emerald-900">
-        {children}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );
 }
+
