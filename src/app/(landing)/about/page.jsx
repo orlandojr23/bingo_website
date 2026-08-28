@@ -16,17 +16,17 @@ export default function AboutPage() {
             <span className="text-emerald-600">Together.</span>
           </h1>
           <p className="text-sm sm:text-lg text-zinc-600 font-medium max-w-2xl mx-auto leading-relaxed">
-            Bin'Go was founded with a singular mission: to bridge the gap between citizens and local government units (LGUs) through transparent, real-time waste management technology.
+            Bin'Go was built with one simple mission: to connect residents with their barangay so garbage collection is clear, on time, and easy for everyone.
           </p>
         </div>
 
         {/* Mission Content */}
         <div className="prose prose-lg prose-zinc mx-auto mb-24">
           <p className="text-zinc-700 font-medium leading-relaxed">
-            For decades, municipal waste collection has operated in the dark. Citizens drag their bins to the curb not knowing exactly when the truck will arrive, and dispatchers struggle to optimize routes without real-time tracking data. When illegal dumping occurs, it often goes unreported for weeks.
+            For years, garbage collection has been hard to keep track of. Residents bring out their trash without knowing exactly when the truck will arrive, and collection teams have no easy way to see where their trucks are. When garbage piles up or gets dumped in the wrong place, it often goes unnoticed for weeks.
           </p>
           <p className="text-zinc-700 font-medium leading-relaxed mt-6">
-            We built Bin'Go to change that. By putting live tracking apps in the hands of citizens, and powerful, data-driven dashboards in the offices of LGUs, we are turning waste management into a collaborative, community-driven effort.
+            We built Bin'Go to change that. By putting live truck tracking in the hands of residents and a clear, easy-to-use dashboard in the hands of barangay officials, we are turning garbage collection into a team effort for the whole community.
           </p>
         </div>
 
@@ -38,7 +38,7 @@ export default function AboutPage() {
               <h3 className="text-xl font-bold text-zinc-900">Transparency</h3>
             </div>
             <p className="text-zinc-600 font-medium leading-relaxed">
-              No more guessing games. We provide real-time GPS tracking of all sanitation vehicles so citizens can plan their day around actual arrival times.
+              No more guessing games. Every garbage truck is shown live on the map, so residents can plan their day around actual arrival times.
             </p>
           </div>
 
@@ -47,7 +47,7 @@ export default function AboutPage() {
               <h3 className="text-xl font-bold text-zinc-900">Community First</h3>
             </div>
             <p className="text-zinc-600 font-medium leading-relaxed">
-              We empower citizens to actively participate in keeping their neighborhoods clean through intuitive, rapid waste reporting tools.
+              We make it easy for residents to help keep their neighborhoods clean with simple, fast waste reporting tools.
             </p>
           </div>
 
@@ -56,7 +56,7 @@ export default function AboutPage() {
               <h3 className="text-xl font-bold text-zinc-900">Sustainability</h3>
             </div>
             <p className="text-zinc-600 font-medium leading-relaxed">
-              By optimizing routes with real-time data, we help municipalities reduce fuel consumption, lower emissions, and run greener fleets.
+              Better-planned collection routes mean less fuel used, less pollution, and a cleaner environment for everyone.
             </p>
           </div>
 
@@ -65,7 +65,7 @@ export default function AboutPage() {
               <h3 className="text-xl font-bold text-zinc-900">Accountability</h3>
             </div>
             <p className="text-zinc-600 font-medium leading-relaxed">
-              Every scheduled truck, collected bin, and cleaned-up waste report is logged securely so your local government stays accountable.
+              Every scheduled collection and resolved report is recorded, so your barangay can always see what was done and when.
             </p>
           </div>
 
@@ -76,7 +76,7 @@ export default function AboutPage() {
           <div className="relative z-10">
             <h3 className="text-2xl sm:text-3xl font-black text-white mb-4">Ready to transform your city?</h3>
             <p className="text-zinc-400 font-medium mb-8 max-w-lg mx-auto">
-              Whether you are a citizen looking to download the app, or an LGU official wanting to start using the dashboard.
+              Whether you're a resident waiting to try the app, or a barangay official ready to use the dashboard, we'd love to help you get started.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <button
@@ -84,7 +84,7 @@ export default function AboutPage() {
                 onClick={() => window.dispatchEvent(new CustomEvent("openContactSheet"))}
                 className="w-full sm:w-auto px-8 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-500 transition-colors cursor-pointer"
               >
-                Request Demo
+                Request a Demo
               </button>
               <a href="/#home" className="w-full sm:w-auto px-8 py-3 bg-zinc-800 text-white rounded-xl font-bold hover:bg-zinc-700 transition-colors cursor-pointer">
                 Back to Home

@@ -116,7 +116,7 @@ function HomeContent() {
       </h1>
 
       <p className="text-base sm:text-lg [@media(max-height:800px)]:text-base text-zinc-700 font-medium mb-8 [@media(max-height:800px)]:mb-5 max-w-md leading-relaxed">
-        Never miss a collection day again. Live track garbage trucks, receive instant arrival alerts, and help keep your community clean.
+        Never miss a collection day again. Track garbage trucks live, get instant arrival alerts, and help keep your community clean.
       </p>
 
       <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto mt-2">
@@ -198,7 +198,7 @@ function FaqContent() {
       </h2>
 
       <p className="text-base sm:text-lg [@media(max-height:800px)]:text-base text-zinc-700 font-medium mb-8 [@media(max-height:800px)]:mb-5 max-w-md leading-relaxed">
-        Everything you need to know about using our smart waste management solution in your community.
+        Everything you need to know about using Bin'Go in your community.
       </p>
 
       <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">

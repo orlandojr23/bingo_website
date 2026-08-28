@@ -191,7 +191,7 @@ export default function LandingLayout({ children }) {
                 />
               </div>
               <p className="text-sm text-emerald-300/80 max-w-sm leading-relaxed font-medium">
-                Empowering barangays with smart waste management, live compactor truck telemetry, and rapid illegal dumping response.
+                Helping barangays manage waste collection with live truck tracking, easy waste reporting, and fast cleanups.
               </p>
             </div>
             

@@ -15,7 +15,7 @@ export default function FeaturesPage() {
             <span className="text-emerald-600">Simplified.</span>
           </h1>
           <p className="text-sm sm:text-lg text-zinc-600 font-medium max-w-2xl mx-auto leading-relaxed">
-            Everything your municipality needs to track fleets, manage waste reports, and empower the community in one single platform.
+            Everything your barangay needs to track collection trucks, manage waste reports, and keep the community clean, all in one place.
           </p>
         </div>
 
@@ -25,42 +25,42 @@ export default function FeaturesPage() {
           <div className="bg-white p-8 rounded-3xl shadow-sm border border-zinc-100 flex flex-col items-start transition-all hover:shadow-md hover:-translate-y-1">
             <h3 className="text-xl font-bold text-zinc-900 mb-3">Live Tracking Map</h3>
             <p className="text-zinc-600 font-medium leading-relaxed text-sm">
-              Track all your waste collection trucks in real-time. Optimize routes and predict arrival times accurately.
+              See all your garbage trucks on a live map, plan better routes, and know exactly when they will arrive.
             </p>
           </div>
 
           <div className="bg-white p-8 rounded-3xl shadow-sm border border-zinc-100 flex flex-col items-start transition-all hover:shadow-md hover:-translate-y-1">
-            <h3 className="text-xl font-bold text-zinc-900 mb-3">Citizen Mobile App</h3>
+            <h3 className="text-xl font-bold text-zinc-900 mb-3">Resident Mobile App</h3>
             <p className="text-zinc-600 font-medium leading-relaxed text-sm">
-              Empower residents to report illegal dumping with photo evidence and exact GPS coordinates instantly.
+              Let residents report uncollected garbage or dumping in seconds, complete with a photo and the exact location.
             </p>
           </div>
 
           <div className="bg-white p-8 rounded-3xl shadow-sm border border-zinc-100 flex flex-col items-start transition-all hover:shadow-md hover:-translate-y-1">
             <h3 className="text-xl font-bold text-zinc-900 mb-3">Data & Insights Dashboard</h3>
             <p className="text-zinc-600 font-medium leading-relaxed text-sm">
-              Turn raw data into actionable insights. Monitor how fast cleanups happen and identify problematic hotspots.
+              See how fast reports get resolved and spot which areas need the most attention, all in one clear view.
             </p>
           </div>
 
           <div className="bg-white p-8 rounded-3xl shadow-sm border border-zinc-100 flex flex-col items-start transition-all hover:shadow-md hover:-translate-y-1">
-            <h3 className="text-xl font-bold text-zinc-900 mb-3">Automated Dispatch</h3>
+            <h3 className="text-xl font-bold text-zinc-900 mb-3">Automatic Team Assignment</h3>
             <p className="text-zinc-600 font-medium leading-relaxed text-sm">
-              Intelligently assign the nearest available cleanup crew to urgent waste reports automatically.
+              The nearest available cleanup team is automatically assigned to urgent reports, so nothing waits too long.
             </p>
           </div>
 
           <div className="bg-white p-8 rounded-3xl shadow-sm border border-zinc-100 flex flex-col items-start transition-all hover:shadow-md hover:-translate-y-1">
-            <h3 className="text-xl font-bold text-zinc-900 mb-3">Real-time Alerts</h3>
+            <h3 className="text-xl font-bold text-zinc-900 mb-3">Instant Alerts</h3>
             <p className="text-zinc-600 font-medium leading-relaxed text-sm">
-              Get notified immediately when emergency reports come in or when trucks deviate from their scheduled routes.
+              Get notified right away when urgent reports come in or when a truck goes off its scheduled route.
             </p>
           </div>
 
           <div className="bg-white p-8 rounded-3xl shadow-sm border border-zinc-100 flex flex-col items-start transition-all hover:shadow-md hover:-translate-y-1">
-            <h3 className="text-xl font-bold text-zinc-900 mb-3">Role-based Access</h3>
+            <h3 className="text-xl font-bold text-zinc-900 mb-3">Team Accounts & Permissions</h3>
             <p className="text-zinc-600 font-medium leading-relaxed text-sm">
-              Secure your operations with strict permission levels for dispatchers, drivers, and top-level administrators.
+              Everyone on your team gets just the right level of access, from drivers to administrators.
             </p>
           </div>
 
@@ -71,7 +71,7 @@ export default function FeaturesPage() {
           <div className="relative z-10">
             <h3 className="text-2xl sm:text-3xl font-black text-white mb-4">See these features in action.</h3>
             <p className="text-zinc-400 font-medium mb-8 max-w-lg mx-auto">
-              Request a live demo to see how Bin'Go can transform your municipality's waste management workflow.
+              Request a demo to see how Bin'Go can make waste collection easier for your barangay.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <button
@@ -79,7 +79,7 @@ export default function FeaturesPage() {
                 onClick={() => window.dispatchEvent(new CustomEvent("openContactSheet"))}
                 className="w-full sm:w-auto px-8 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-500 transition-colors cursor-pointer"
               >
-                Request Demo
+                Request a Demo
               </button>
               <a href="/#home" className="w-full sm:w-auto px-8 py-3 bg-zinc-800 text-white rounded-xl font-bold hover:bg-zinc-700 transition-colors cursor-pointer">
                 Back to Home

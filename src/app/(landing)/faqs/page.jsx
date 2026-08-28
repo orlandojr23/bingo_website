@@ -11,15 +11,15 @@ const faqCategories = [
     faqs: [
       {
         question: "What is Bin'Go and how does it work?",
-        answer: "Bin'Go is a smart municipal waste collection platform that bridges the gap between citizens and local government units. Citizens use the mobile app to track garbage trucks in real-time and report illegal dumping. LGUs and haulers use our web dashboard to manage fleets, optimize routes, and respond to waste reports."
+        answer: "Bin'Go is a smart waste collection platform that connects residents with their barangay. Residents use the mobile app to track garbage trucks live and report uncollected waste or dumping. Barangay staff use the web dashboard to manage trucks, plan routes, and respond to reports."
       },
       {
         question: "Do I need to pay to use the Bin'Go app?",
-        answer: "No, the Bin'Go mobile app is 100% free for all citizens. Our mission is to make waste management transparent and accessible for every household."
+        answer: "No, the Bin'Go mobile app is 100% free for all residents. Our goal is to make garbage collection clear and easy for every household."
       },
       {
         question: "Can I use my web account to log into the mobile app?",
-        answer: "Yes! Bin'Go uses a secure login system. You can register on the web and use the exact same credentials to log into the iOS or Android mobile application."
+        answer: "Yes! Your Bin'Go account works everywhere. Sign up on the website and use the same email and password to log into the iOS or Android mobile app."
       }
     ]
   },
@@ -29,15 +29,15 @@ const faqCategories = [
     faqs: [
       {
         question: "How accurate is the live truck tracking?",
-        answer: "Our tracking system relies on GPS devices installed in the collection trucks, providing real-time location updates every 5-10 seconds depending on network connectivity."
+        answer: "Every collection truck has a tracker that shares its location every 5 to 10 seconds, so the live map stays accurate and up to date."
       },
       {
         question: "What happens when I report an uncollected garbage bin?",
-        answer: "When you submit a report via the mobile app, it is instantly pinned on the live map in the municipal dashboard. Dispatchers can then assign the nearest available truck to resolve the issue, and you'll receive a notification when it's picked up."
+        answer: "When you submit a report in the mobile app, it appears right away on your barangay's live map. The team then assigns the nearest available truck to handle it, and you'll get a notification once it's resolved."
       },
       {
         question: "Can I track trucks outside of my designated Barangay?",
-        answer: "By default, your dashboard highlights the collection routes and trucks active in your registered Barangay to reduce noise. However, you can use the interactive map to view ongoing operations across the entire municipality."
+        answer: "By default, your map highlights the routes and trucks active in your own barangay so it stays easy to read. You can still zoom out to see collection activity across the whole city or municipality."
       }
     ]
   },
@@ -47,7 +47,7 @@ const faqCategories = [
     faqs: [
       {
         question: "Are my reports anonymous?",
-        answer: "Yes, you have the option to toggle 'Anonymous Mode' when submitting a report for illegal dumping. In this mode, the LGU dashboard will only see the report details and location, not your personal information."
+        answer: "Yes, you have the option to turn on 'Anonymous Mode' when submitting a report. In this mode, the barangay dashboard will only see the report details and location, not your personal information."
       },
       {
         question: "How is my location data used?",
@@ -141,7 +141,7 @@ export default function FaqsPage() {
           <div className="relative z-10">
             <h3 className="text-2xl sm:text-3xl font-black text-white mb-4">Still have questions?</h3>
             <p className="text-zinc-400 font-medium mb-8 max-w-lg mx-auto">
-              Can't find the answer you're looking for? Please chat to our friendly team or request a demo tailored to your municipality.
+              Can't find the answer you're looking for? Send us a message or request a demo tailored to your barangay.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <button 

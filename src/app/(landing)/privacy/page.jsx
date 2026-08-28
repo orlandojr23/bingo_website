@@ -37,10 +37,10 @@ export default function PrivacyPolicyPage() {
             <h2 className="text-2xl font-bold text-zinc-900">Information We Collect</h2>
             <div className="space-y-3 text-zinc-600 font-medium leading-relaxed">
               <p>
-                When you register for a Bin'Go account, we collect basic information such as your name, email address, and designated municipality/barangay. This information is strictly used to tailor your dashboard experience and authenticate you into our platform.
+                When you register for a Bin'Go account, we collect basic information such as your name, email address, and your city or barangay. This is only used to set up your account and show you information relevant to your area.
               </p>
               <p>
-                If you use the mobile application to track trucks or report waste, we may request access to your device's location services. This data is only processed when the app is actively in use.
+                If you use the mobile app to track trucks or report waste, we may ask for access to your device's location. This is only used while the app is open and in use.
               </p>
             </div>
           </section>
@@ -52,9 +52,9 @@ export default function PrivacyPolicyPage() {
             <h2 className="text-2xl font-bold text-zinc-900">How We Use Your Data</h2>
             <div className="space-y-3 text-zinc-600 font-medium leading-relaxed">
               <ul className="list-disc pl-5 space-y-2">
-                <li><strong className="text-zinc-800">To Provide Service:</strong> Displaying garbage truck telemetry relative to your home area.</li>
-                <li><strong className="text-zinc-800">For Citizen Reports:</strong> Sending your waste reports directly to local government dispatchers.</li>
-                <li><strong className="text-zinc-800">Communication:</strong> Delivering important push notifications (like when a truck is arriving) or email updates regarding policy changes.</li>
+                <li><strong className="text-zinc-800">To Provide the Service:</strong> Showing live truck locations near your area.</li>
+                <li><strong className="text-zinc-800">For Waste Reports:</strong> Sending your reports straight to the barangay team that handles collection.</li>
+                <li><strong className="text-zinc-800">To Keep You Updated:</strong> Sending helpful alerts (like when a truck is arriving) and emails about important changes to our policies.</li>
               </ul>
             </div>
           </section>
@@ -66,7 +66,7 @@ export default function PrivacyPolicyPage() {
             <h2 className="text-2xl font-bold text-zinc-900">Data Security</h2>
             <div className="space-y-3 text-zinc-600 font-medium leading-relaxed">
               <p>
-                Bin'Go employs industry-standard security protocols to ensure that your personal information is kept safe. We utilize secure socket layer (SSL) technology for all network transmissions and encrypt sensitive databases. We will never sell, rent, or lease your data to third parties.
+                Bin'Go uses standard security practices to keep your personal information safe. All information sent between your device and Bin'Go is encrypted, and sensitive data is stored securely. We will never sell, rent, or share your data with third parties.
               </p>
               <p className="text-sm bg-zinc-50 p-4 rounded-xl border border-zinc-100">
                 Last Updated: August 25, 2026

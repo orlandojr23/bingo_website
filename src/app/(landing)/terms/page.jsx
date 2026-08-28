@@ -63,7 +63,7 @@ export default function TermsOfServicePage() {
             <h2 className="text-2xl font-bold text-zinc-900">3. Platform Misuse</h2>
             <div className="space-y-3 text-zinc-600 font-medium leading-relaxed">
               <p>
-                Any abuse of the reporting system, including submitting fake reports or spamming local government units, may result in the immediate suspension or termination of your account without prior notice.
+                Any abuse of the reporting system, including submitting fake reports or spamming the barangay or the Bin'Go team, may result in the immediate suspension or termination of your account without prior notice.
               </p>
               <p className="text-sm bg-zinc-50 p-4 rounded-xl border border-zinc-100">
                 Last Updated: August 25, 2026
