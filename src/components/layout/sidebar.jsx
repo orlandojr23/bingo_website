@@ -36,7 +36,7 @@ export default function Sidebar({ isOpen, onClose }) {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    router.replace("/");
+    router.replace("/admin-login");
   };
 
   const sidebarContent = (

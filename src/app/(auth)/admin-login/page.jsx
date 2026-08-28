@@ -2,24 +2,94 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Lock, Mail } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { Button } from "@/components/ui/button";
+import { inputClass, labelClass } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+
+const ADMIN_DOMAINS = ["bingo.com", "gmail.com", "yahoo.com", "outlook.com"];
+
+const getEmailSuggestionSuffix = (emailVal, domains = ADMIN_DOMAINS) => {
+  if (!emailVal || emailVal.includes(" ")) return "";
+  if (!emailVal.includes("@")) {
+    return "@" + domains[0];
+  }
+  const [prefix, domainPart] = emailVal.split("@");
+  if (!prefix) return "";
+  if (!domainPart) {
+    return domains[0];
+  }
+  const match = domains.find((d) => d.startsWith(domainPart.toLowerCase()));
+  if (match) {
+    return match.slice(domainPart.length);
+  }
+  return "";
+};
 
 export default function AdminLoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState({});
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
+  const emailSuggestionSuffix = getEmailSuggestionSuffix(email);
+
+  const handleEmailKeyDown = (e) => {
+    if ((e.key === "Tab" || e.key === "ArrowRight") && emailSuggestionSuffix) {
+      if (e.key === "ArrowRight" && e.target.selectionStart !== email.length) {
+        return;
+      }
+      e.preventDefault();
+      handleFieldChange("email", email + emailSuggestionSuffix, setEmail);
+    }
+  };
+
   useEffect(() => {
-    router.replace("/dashboard");
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user?.user_metadata?.role === "admin") {
+        router.replace("/dashboard");
+      }
+    });
   }, [router]);
+
+  const validateEmail = (emailStr) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailStr);
+  };
+
+  const handleFieldChange = (field, value, setter) => {
+    setter(value);
+    if (errors[field]) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
+    }
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
+
+    const newErrors = {};
+    if (!email.trim()) {
+      newErrors.email = "Please enter your email address.";
+    } else if (!validateEmail(email)) {
+      newErrors.email = "Please enter a valid email address.";
+    }
+    if (!password) {
+      newErrors.password = "Please enter your password.";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+    setErrors({});
     setIsLoading(true);
 
     const { data, error: signInError } = await supabase.auth.signInWithPassword({
@@ -45,89 +115,107 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-900 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-[url('/footer-bg.svg')] bg-cover bg-center relative">
-      <div className="mx-auto w-full max-w-sm relative z-10">
-        <h2 className="text-center text-3xl font-black tracking-tight text-white mb-6">
-          Admin Portal
-        </h2>
-      </div>
+    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-12">
+      <div className="w-full max-w-sm">
+        <div className="mb-6 flex flex-col items-center text-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo-green-v2.png"
+            alt="Bin-Go Logo"
+            className="h-24 w-auto object-contain"
+          />
+          <h1 className="mt-4 text-lg font-semibold tracking-tight text-foreground">
+            Admin Portal
+          </h1>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Sign in to manage the Barangay Tejero dashboard
+          </p>
+        </div>
 
-      <div className="mt-8 mx-auto w-full max-w-sm relative z-10">
-        <div className="bg-white/10 backdrop-blur-md py-8 px-4 sm:px-10 border border-white/20 rounded-3xl shadow-2xl">
-          <form className="space-y-6 mt-2" onSubmit={handleLogin}>
-
-            <div>
-              <label htmlFor="email" className="block text-sm font-bold text-zinc-300">
+        <div className="rounded-xl border border-border bg-card p-6 shadow-xs">
+          <form className="space-y-4" onSubmit={handleLogin} noValidate>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="email" className={labelClass}>
                 Email Address
               </label>
-              <div className="mt-2 relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-zinc-400" />
-                </div>
+              <div className="relative">
+                {emailSuggestionSuffix && (
+                  <div
+                    className="absolute inset-0 px-3 py-2 flex items-center pointer-events-none text-sm text-foreground whitespace-pre overflow-hidden z-10"
+                    aria-hidden="true"
+                  >
+                    <span className="opacity-0">{email}</span>
+                    <span className="text-muted-foreground/40 select-none">{emailSuggestionSuffix}</span>
+                  </div>
+                )}
                 <input
                   id="email"
                   type="email"
-                  required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => handleFieldChange("email", e.target.value, setEmail)}
+                  onKeyDown={handleEmailKeyDown}
                   autoCapitalize="none"
                   autoCorrect="off"
-                  className="appearance-none block w-full pl-11 pr-3 py-3 bg-zinc-900/50 border border-white/10 rounded-xl shadow-sm placeholder-zinc-500 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm font-medium transition-colors"
+                  className={cn(inputClass, errors.email && "border-rose-300")}
                   placeholder="admin@bingo.com"
                 />
               </div>
+              {errors.email && (
+                <p className="mt-0.5 text-xs text-rose-500">{errors.email}</p>
+              )}
             </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-bold text-zinc-300">
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="password" className={labelClass}>
                 Password
               </label>
-              <div className="mt-2 relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-zinc-400" />
-                </div>
+              <div className="relative">
                 <input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  required
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="appearance-none block w-full pl-11 pr-11 py-3 bg-zinc-900/50 border border-white/10 rounded-xl shadow-sm placeholder-zinc-500 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm font-medium transition-colors"
+                  onChange={(e) => handleFieldChange("password", e.target.value, setPassword)}
+                  className={cn(inputClass, "pr-9", errors.password && "border-rose-300")}
                   placeholder="••••••••"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-4 flex items-center justify-center text-zinc-400 hover:text-zinc-300 transition-colors"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
                 >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                 </button>
               </div>
+              {errors.password && (
+                <p className="mt-0.5 text-xs text-rose-500">{errors.password}</p>
+              )}
+              {error && (
+                <p className="mt-0.5 w-full text-center text-xs font-medium text-rose-500">{error}</p>
+              )}
             </div>
 
-            {error && (
-              <div className="text-center">
-                <p className="text-sm font-medium text-rose-400">{error}</p>
-              </div>
-            )}
-
-            <div className="pt-2">
-              <button
+            <div className="border-t border-border-subtle pt-4">
+              <Button
+                variant="primary"
                 type="submit"
                 disabled={isLoading}
-                className="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-lg shadow-emerald-900/50 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-zinc-900 focus:ring-emerald-500 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+                className="w-full py-2.5"
               >
                 {isLoading ? (
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
                     <span>Signing in...</span>
-                  </div>
+                  </>
                 ) : (
                   "Sign In"
                 )}
-              </button>
+              </Button>
             </div>
           </form>
+
+          <p className="mt-4 text-center text-xs text-muted-foreground">
+            Demo account: admin@bingo.com &middot; password: admin123
+          </p>
         </div>
       </div>
     </div>

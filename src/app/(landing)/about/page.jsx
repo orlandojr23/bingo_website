@@ -5,17 +5,17 @@ import { Leaf, Users, Map, ShieldCheck } from "lucide-react";
 
 export default function AboutPage() {
   return (
-    <div className="min-h-screen bg-zinc-50 pt-32 pb-24">
-      <div className="max-w-4xl mx-auto px-6 sm:px-12">
+    <div className="min-h-screen bg-zinc-50 pt-24 sm:pt-32 pb-16 sm:pb-24">
+      <div className="max-w-4xl mx-auto px-4 sm:px-12">
         
         {/* Header Section */}
-        <div className="text-center mb-20">
-          <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-zinc-900 mb-6 leading-[1.1]">
+        <div className="text-center mb-10 sm:mb-20">
+          <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-zinc-900 mb-4 sm:mb-6 leading-[1.15]">
             Building Cleaner Communities,{" "}
             <br className="hidden sm:block" />
             <span className="text-emerald-600">Together.</span>
           </h1>
-          <p className="text-lg text-zinc-600 font-medium max-w-2xl mx-auto leading-relaxed">
+          <p className="text-sm sm:text-lg text-zinc-600 font-medium max-w-2xl mx-auto leading-relaxed">
             Bin'Go was founded with a singular mission: to bridge the gap between citizens and local government units (LGUs) through transparent, real-time waste management technology.
           </p>
         </div>

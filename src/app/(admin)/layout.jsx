@@ -1,19 +1,39 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Menu } from "lucide-react";
 import Sidebar from "@/components/layout/sidebar";
+import { supabase } from "@/lib/supabase";
 
 export default function AdminLayout({ children }) {
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [checked, setChecked] = useState(false);
+  const [checking, setChecking] = useState(true);
+  const [authorized, setAuthorized] = useState(false);
 
   useEffect(() => {
-    // DEV BYPASS: Directly allow access to the admin dashboard
-    setChecked(true);
-  }, []);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user?.user_metadata?.role === "admin") {
+        setAuthorized(true);
+      } else {
+        router.replace("/admin-login");
+      }
+      setChecking(false);
+    });
 
-  if (!checked) {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      const isAdmin = session?.user?.user_metadata?.role === "admin";
+      setAuthorized(isAdmin);
+      if (!isAdmin) router.replace("/admin-login");
+    });
+
+    return () => subscription.unsubscribe();
+  }, [router]);
+
+  if (checking || !authorized) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="h-6 w-6 animate-spin rounded-full border-2 border-emerald-500/30 border-t-emerald-500" />
