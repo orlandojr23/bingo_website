@@ -21,7 +21,7 @@ export const viewport = {
 
 export const metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://simplybingo.onrender.com"),
-  title: "Bin'Go | Smart Waste Collection, Simplified.",
+  title: "Bin'Go | Smart Waste Collection, Simplified",
   description:
     "Smart Waste Collection, Simplified. Track garbage trucks live, receive instant arrival alerts, and help keep your community clean with Bin'Go.",
   keywords: [
@@ -32,13 +32,21 @@ export const metadata = {
     "civic tech",
     "community",
   ],
+  icons: {
+    icon: [
+      { url: "/icon.png" },
+      { url: "/favicon.ico" },
+    ],
+    shortcut: "/icon.png",
+    apple: "/icon.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
     title: "Bin'Go",
   },
   openGraph: {
-    title: "Bin'Go | Smart Waste Collection, Simplified.",
+    title: "Bin'Go | Smart Waste Collection, Simplified",
     description:
       "Smart Waste Collection, Simplified. Track garbage trucks live, receive instant arrival alerts, and help keep your community clean with Bin'Go.",
     type: "website",
@@ -46,7 +54,7 @@ export const metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Bin'Go | Smart Waste Collection, Simplified.",
+    title: "Bin'Go | Smart Waste Collection, Simplified",
     description:
       "Smart Waste Collection, Simplified. Track garbage trucks live, receive instant arrival alerts, and help keep your community clean with Bin'Go.",
   },
