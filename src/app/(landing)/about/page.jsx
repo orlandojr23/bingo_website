@@ -86,6 +86,9 @@ export default function AboutPage() {
               >
                 Request Demo
               </button>
+              <a href="/#home" className="w-full sm:w-auto px-8 py-3 bg-zinc-800 text-white rounded-xl font-bold hover:bg-zinc-700 transition-colors cursor-pointer">
+                Back to Home
+              </a>
             </div>
           </div>
         </div>

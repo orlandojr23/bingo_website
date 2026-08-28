@@ -137,22 +137,23 @@ export default function FaqsPage() {
         </div>
 
         {/* Still have questions CTA */}
-        <div className="mt-20 bg-emerald-900 rounded-3xl p-8 sm:p-12 text-center relative overflow-hidden">
-          <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent bg-[length:20px_20px]" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)" }} />
-          
+        <div className="mt-20 bg-zinc-900 rounded-3xl p-8 sm:p-12 text-center relative overflow-hidden">
           <div className="relative z-10">
             <h3 className="text-2xl sm:text-3xl font-black text-white mb-4">Still have questions?</h3>
-            <p className="text-emerald-100 font-medium mb-8 max-w-lg mx-auto">
+            <p className="text-zinc-400 font-medium mb-8 max-w-lg mx-auto">
               Can't find the answer you're looking for? Please chat to our friendly team or request a demo tailored to your municipality.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <button 
                 type="button"
                 onClick={() => window.dispatchEvent(new CustomEvent("openContactSheet"))}
-                className="w-full sm:w-auto px-8 py-3 bg-white text-emerald-900 rounded-xl font-bold hover:bg-zinc-100 transition-colors cursor-pointer"
+                className="w-full sm:w-auto px-8 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-500 transition-colors cursor-pointer"
               >
                 Contact Support
               </button>
+              <a href="/#home" className="w-full sm:w-auto px-8 py-3 bg-zinc-800 text-white rounded-xl font-bold hover:bg-zinc-700 transition-colors cursor-pointer">
+                Back to Home
+              </a>
             </div>
           </div>
         </div>
