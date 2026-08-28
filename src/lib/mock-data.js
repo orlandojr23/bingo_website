@@ -1,183 +1,183 @@
 export const mockTickets = [
   {
     id: "TKT-001",
-    location: "Osmeña Blvd",
-    barangay: "Capitol Site",
+    location: "Sitio Vilgon",
+    barangay: "Tejero",
     city: "Cebu City",
     reporter: "Juan Cruz",
     urgency: "High",
     status: "Pending",
     date: "2023-10-24",
     time: "08:42 AM",
-    lat: 10.3117,
-    lng: 123.8925,
+    lat: 10.3025,
+    lng: 123.9080,
     category: "Overflowing Bin",
-    description: "Overflowing commercial garbage bin near the intersection causing spillover into sidewalk.",
+    description: "Overflowing commercial garbage bin near the Sitio Vilgon community center, causing sidewalk spillover.",
   },
   {
     id: "TKT-002",
-    location: "IT Park",
-    barangay: "Apas",
+    location: "Sitio ICM",
+    barangay: "Tejero",
     city: "Cebu City",
     reporter: "Maria Santos",
     urgency: "Low",
     status: "Resolved",
     date: "2023-10-23",
     time: "02:15 PM",
-    lat: 10.3298,
-    lng: 123.9061,
+    lat: 10.3032,
+    lng: 123.9095,
     category: "Litter",
-    description: "Small food packaging litter scattered around park benches.",
+    description: "Small food packaging litter scattered around the Sitio ICM multi-purpose park benches.",
   },
   {
     id: "TKT-003",
-    location: "Colon St",
-    barangay: "Parian",
+    location: "Sitio Daclan",
+    barangay: "Tejero",
     city: "Cebu City",
     reporter: "Pedro Reyes",
     urgency: "Critical",
     status: "In Progress",
     date: "2023-10-24",
     time: "11:20 AM",
-    lat: 10.298,
-    lng: 123.9026,
+    lat: 10.2995,
+    lng: 123.9065,
     category: "Illegal Dumping",
-    description: "Large illegal dumping site blocking pedestrian sidewalk and drainage gutter.",
+    description: "Large illegal dumping site in Sitio Daclan blocking pedestrian sidewalk and drainage gutter.",
   },
   {
     id: "TKT-004",
-    location: "AS Fortuna",
-    barangay: "Banilad",
-    city: "Mandaue City",
+    location: "Sitio Sampaguita",
+    barangay: "Tejero",
+    city: "Cebu City",
     reporter: "Ana Lim",
     urgency: "Medium",
     status: "Pending",
     date: "2023-10-25",
     time: "09:30 AM",
-    lat: 10.34,
-    lng: 123.9213,
+    lat: 10.3008,
+    lng: 123.9078,
     category: "Uncollected Waste",
-    description: "Uncollected household trash bags sitting for 3 days attracting stray animals.",
+    description: "Uncollected household trash bags sitting in Sitio Sampaguita for 3 days attracting stray animals.",
   },
   {
     id: "TKT-005",
-    location: "Mactan Shrine",
-    barangay: "Mactan",
-    city: "Lapu-Lapu City",
+    location: "Sitio Looban",
+    barangay: "Tejero",
+    city: "Cebu City",
     reporter: "Carlos Gomez",
     urgency: "Medium",
     status: "Resolved",
     date: "2023-10-22",
     time: "04:10 PM",
-    lat: 10.3105,
-    lng: 124.0152,
+    lat: 10.3015,
+    lng: 123.9090,
     category: "Coastal Waste",
-    description: "Plastic bottles and single-use plastics along the coastal walkway.",
+    description: "Plastic bottles and single-use plastics along the coastal walkway near Sitio Looban.",
   },
   {
     id: "TKT-006",
-    location: "Talisay City Hall",
-    barangay: "Lawaan",
-    city: "Talisay City",
+    location: "Sitio Bacaros",
+    barangay: "Tejero",
+    city: "Cebu City",
     reporter: "Elena Tan",
     urgency: "High",
     status: "In Progress",
     date: "2023-10-25",
     time: "01:45 PM",
-    lat: 10.252,
-    lng: 123.8399,
+    lat: 10.3020,
+    lng: 123.9102,
     category: "Drainage Clog",
-    description: "Clogged drainage channel due to heavy solid waste accumulation.",
+    description: "Clogged drainage channel due to heavy solid waste accumulation in Sitio Bacaros.",
   },
   {
     id: "TKT-007",
-    location: "Fuente Osmeña Circle",
-    barangay: "Santa Cruz",
+    location: "Sitio Silangan",
+    barangay: "Tejero",
     city: "Cebu City",
     reporter: "Miguel Castro",
     urgency: "Low",
     status: "Pending",
     date: "2023-10-26",
     time: "07:15 AM",
-    lat: 10.3121,
-    lng: 123.8929,
+    lat: 10.3045,
+    lng: 123.9085,
     category: "Green Waste",
-    description: "Fallen tree branches and pruning waste after maintenance.",
+    description: "Fallen tree branches and pruning waste after maintenance in Sitio Silangan.",
   },
   {
     id: "TKT-008",
-    location: "Parkmall",
-    barangay: "Tipolo",
-    city: "Mandaue City",
+    location: "Sitio Mac Arthur",
+    barangay: "Tejero",
+    city: "Cebu City",
     reporter: "Rosa Diaz",
     urgency: "Critical",
     status: "Pending",
     date: "2023-10-26",
     time: "10:05 AM",
-    lat: 10.3228,
-    lng: 123.9317,
+    lat: 10.3010,
+    lng: 123.9060,
     category: "Hazardous Waste",
-    description: "Improperly disposed commercial chemical containers near service lane.",
+    description: "Improperly disposed commercial chemical containers near Sitio Mac Arthur service lane.",
   },
   {
     id: "TKT-009",
-    location: "Opon Mercado",
-    barangay: "Poblacion",
-    city: "Lapu-Lapu City",
+    location: "Sitio Vilgon",
+    barangay: "Tejero",
+    city: "Cebu City",
     reporter: "Luisa Perez",
     urgency: "High",
     status: "Resolved",
     date: "2023-10-21",
     time: "05:50 PM",
-    lat: 10.3129,
-    lng: 123.9511,
+    lat: 10.3028,
+    lng: 123.9082,
     category: "Organic Waste",
-    description: "Rotten organic produce waste accumulating outside market perimeter.",
+    description: "Rotten organic produce waste accumulating outside Sitio Vilgon market perimeter.",
   },
   {
     id: "TKT-010",
-    location: "SRP Coastal Road",
-    barangay: "San Roque",
-    city: "Talisay City",
+    location: "Sitio ICM",
+    barangay: "Tejero",
+    city: "Cebu City",
     reporter: "Victor Manuel",
     urgency: "Medium",
     status: "In Progress",
     date: "2023-10-25",
     time: "03:25 PM",
-    lat: 10.2647,
-    lng: 123.8568,
+    lat: 10.3035,
+    lng: 123.9092,
     category: "Debris",
-    description: "Construction debris and gravel spillage along emergency shoulder.",
+    description: "Construction debris and gravel spillage along Sitio ICM emergency shoulder.",
   },
   {
     id: "TKT-011",
-    location: "Carbon Market",
-    barangay: "Ermita",
+    location: "Sitio Daclan",
+    barangay: "Tejero",
     city: "Cebu City",
     reporter: "Sofia Fernandez",
     urgency: "Critical",
     status: "Pending",
     date: "2023-10-26",
     time: "06:40 AM",
-    lat: 10.2934,
-    lng: 123.8986,
+    lat: 10.2992,
+    lng: 123.9068,
     category: "Illegal Dumping",
-    description: "Massive mixed waste pile blocking vendor delivery pathway.",
+    description: "Massive mixed waste pile blocking vendor delivery pathway in Sitio Daclan.",
   },
   {
     id: "TKT-012",
-    location: "Ayala Center Cebu",
-    barangay: "Luz",
+    location: "Sitio Sampaguita",
+    barangay: "Tejero",
     city: "Cebu City",
     reporter: "Rafael Garcia",
     urgency: "Low",
     status: "Resolved",
     date: "2023-10-20",
     time: "01:10 PM",
-    lat: 10.3185,
-    lng: 123.9056,
+    lat: 10.3005,
+    lng: 123.9075,
     category: "Litter",
-    description: "Spilled liquid and cardboard cartons near transit terminal.",
+    description: "Spilled liquid and cardboard cartons near Sitio Sampaguita transit zone.",
   },
 ];
 
@@ -198,7 +198,7 @@ export const mockRecentActivity = [
     id: "ACT-01",
     type: "status_change",
     title: "TKT-003 escalated to In Progress",
-    description: "Truck 04 (Plate GW-8821) dispatched to Colon St, Brgy. Parian.",
+    description: "Truck 04 dispatched to Sitio Daclan, Brgy. Tejero.",
     timestamp: "12m ago",
     badge: "Dispatch",
   },
@@ -206,7 +206,7 @@ export const mockRecentActivity = [
     id: "ACT-02",
     type: "new_ticket",
     title: "New Incident Filed: TKT-011",
-    description: "Critical illegal dumping reported in Carbon Market, Brgy. Ermita.",
+    description: "Critical illegal dumping reported in Sitio Daclan, Brgy. Tejero.",
     timestamp: "38m ago",
     badge: "Alert",
   },
@@ -214,7 +214,7 @@ export const mockRecentActivity = [
     id: "ACT-03",
     type: "resolved",
     title: "TKT-002 Marked Resolved",
-    description: "Sanitation Team 2 completed cleanup at Cebu IT Park.",
+    description: "Sanitation Team 2 completed cleanup at Sitio ICM, Brgy. Tejero.",
     timestamp: "2h ago",
     badge: "Resolved",
   },
@@ -222,7 +222,7 @@ export const mockRecentActivity = [
     id: "ACT-04",
     type: "fleet",
     title: "Route Optimized for Sector 4",
-    description: "AI dispatcher re-routed Truck 02 to alleviate Guadalupe backlog.",
+    description: "AI dispatcher re-routed Truck 02 to alleviate Sitio Sampaguita backlog.",
     timestamp: "4h ago",
     badge: "System",
   },
@@ -254,28 +254,38 @@ export const mockAnalyticsData = {
 };
 
 export const mockPilotData = {
-  barangay: "Guadalupe",
+  barangay: "Tejero",
   city: "Cebu City",
-  center: [10.3236, 123.8814], // Approx Guadalupe center
+  center: [10.3016, 123.9086], // Approx Tejero center
   zones: [
     {
       id: "zone-a",
-      name: "North Sector (Sitio Kamagong, Banawa)",
+      name: "North-East Sector (Sitio Vilgon, Sitio Silangan)",
       coordinates: [
-        [10.325, 123.880],
-        [10.330, 123.880],
-        [10.330, 123.885],
-        [10.325, 123.885]
+        [10.302, 123.908],
+        [10.305, 123.908],
+        [10.305, 123.911],
+        [10.302, 123.911]
       ]
     },
     {
       id: "zone-b",
-      name: "South Sector (V. Rama, Riverfront)",
+      name: "South-West Sector (Sitio Daclan, Sitio Mac Arthur)",
       coordinates: [
-        [10.318, 123.880],
-        [10.322, 123.880],
-        [10.322, 123.885],
-        [10.318, 123.885]
+        [10.299, 123.906],
+        [10.302, 123.906],
+        [10.302, 123.909],
+        [10.299, 123.909]
+      ]
+    },
+    {
+      id: "zone-c",
+      name: "Commercial Sector (M.J. Cuenco Ave, Tejero Market)",
+      coordinates: [
+        [10.300, 123.909],
+        [10.303, 123.909],
+        [10.303, 123.912],
+        [10.300, 123.912]
       ]
     }
   ],
@@ -311,14 +321,50 @@ export const mockPilotData = {
       time: "01:00 PM - 04:00 PM",
       activeTruckId: "TRK-02",
       status: "Scheduled"
+    },
+    {
+      id: "SCH-003",
+      zoneId: "zone-c",
+      type: "Recyclable",
+      days: ["Saturday"],
+      time: "09:00 AM - 12:00 PM",
+      activeTruckId: "TRK-01",
+      status: "Scheduled"
     }
   ],
   activeTracking: {
     "TRK-01": {
-      lat: 10.3245,
-      lng: 123.8820,
+      lat: 10.3025,
+      lng: 123.9095,
       lastUpdated: "Just now",
       eta: "5 mins"
     }
+  }
+};
+
+export const getTicketPhoto = (category) => {
+  switch (category) {
+    case "Overflowing Bin":
+    case "Overflowing commercial garbage bin near the intersection causing spillover into sidewalk.":
+      return "https://images.unsplash.com/photo-1611284446314-60a58ac0deb9?w=600&auto=format&fit=crop&q=80";
+    case "Litter":
+      return "https://images.unsplash.com/photo-1595278069441-2cf29f8885b5?w=600&auto=format&fit=crop&q=80";
+    case "Illegal Dumping":
+      return "https://images.unsplash.com/photo-1530587191325-3db32d826c18?w=600&auto=format&fit=crop&q=80";
+    case "Uncollected Waste":
+      return "https://images.unsplash.com/photo-1518364538800-6bcb3f25da49?w=600&auto=format&fit=crop&q=80";
+    case "Coastal Waste":
+      return "https://images.unsplash.com/photo-1621451537084-482c73073a0f?w=600&auto=format&fit=crop&q=80";
+    case "Drainage Clog":
+      return "https://images.unsplash.com/photo-1504438612444-b2d1ecaa9ad6?w=600&auto=format&fit=crop&q=80";
+    case "Green Waste":
+      return "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=600&auto=format&fit=crop&q=80";
+    case "Hazardous Waste":
+      return "https://images.unsplash.com/photo-1584263347416-85a211352859?w=600&auto=format&fit=crop&q=80";
+    case "Organic Waste":
+      return "https://images.unsplash.com/photo-1582281227097-99a721868841?w=600&auto=format&fit=crop&q=80";
+    case "Debris":
+    default:
+      return "https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=600&auto=format&fit=crop&q=80";
   }
 };

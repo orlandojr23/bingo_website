@@ -1,37 +1,48 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import {
-  FileText,
-  Clock,
-  CheckCircle2,
-  Loader,
-  MapPin,
-  Plus,
-  ChevronRight,
-  Eye,
-} from "lucide-react";
-import { StatCard } from "@/components/ui/stat-card";
+import { useRouter } from "next/navigation";
+import { FileText, ChevronRight } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { mockDashboardStats, mockTickets } from "@/lib/mock-data";
+import { PageHeader } from "@/components/ui/page-header";
+import { InfoRow } from "@/components/ui/info-row";
+import { mockTickets } from "@/lib/mock-data";
 import TicketDetailsModal from "@/components/modals/ticket-details-modal";
 
+const hintTones = {
+  zinc: "text-muted-foreground",
+  rose: "text-rose-600",
+  blue: "text-blue-600",
+  emerald: "text-emerald-600",
+};
+
 export default function DashboardPage() {
-  const [tickets, setTickets] = useState(mockTickets);
+  const router = useRouter();
+  const [tickets, setTickets] = useState([]);
   const [statusFilter, setStatusFilter] = useState("All");
   const [selectedTicket, setSelectedTicket] = useState(null);
 
-  // Dynamic KPI counts based on live state
+  useEffect(() => {
+    setTickets(mockTickets);
+  }, []);
+
   const pendingCount = tickets.filter((t) => t.status === "Pending").length;
   const inProgressCount = tickets.filter((t) => t.status === "In Progress").length;
   const resolvedCount = tickets.filter((t) => t.status === "Resolved").length;
   const totalCount = tickets.length;
 
+  const kpis = [
+    { label: "Total Reports", value: totalCount, hint: "vs. last 30 days", tone: "zinc" },
+    { label: "Waiting", value: pendingCount, hint: "Ready for collection", tone: "rose" },
+    { label: "On the Way", value: inProgressCount, hint: "Truck dispatched", tone: "blue" },
+    { label: "Cleaned Up", value: resolvedCount, hint: "Average: 4 hours", tone: "emerald" },
+  ];
+
   const filteredTickets = tickets
     .filter((t) => (statusFilter === "All" ? true : t.status === statusFilter))
-    .slice(0, 6);
+    .slice(0, 8);
 
   const handleUpdateStatus = (ticketId, newStatus) => {
     setTickets((prev) =>
@@ -42,183 +53,163 @@ export default function DashboardPage() {
     }
   };
 
+  const handleDeleteTicket = (id, e) => {
+    e.stopPropagation();
+    setTickets((prev) => prev.filter((t) => t.id !== id));
+    if (selectedTicket?.id === id) {
+      setSelectedTicket(null);
+    }
+  };
+
+  const handleLocateOnMap = (t) => {
+    router.push(`/live-map?ticketId=${t.id}`);
+  };
+
+  const isSheetOpen = selectedTicket !== null;
+
   return (
-    <div className="flex flex-col gap-8 max-w-7xl mx-auto pb-8">
-      {/* KPI Cards Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-5">
-        <div className="rounded-2xl">
-          <StatCard
-            label="Total Reports"
-            value={totalCount}
-            icon={FileText}
-            description="vs. last 30 days"
-            className="p-6"
-          />
-        </div>
+    <div className="flex h-screen w-full overflow-hidden bg-background">
+      <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-6 [scrollbar-gutter:stable] lg:p-8">
+        <PageHeader
+          title="Good morning, Officer Santos"
+          description="Here's today's overview of waste reports in Barangay Tejero"
+        />
 
-        <div className="rounded-2xl">
-          <StatCard
-            label="Waiting"
-            value={pendingCount}
-            icon={Clock}
-            description="Ready for collection"
-            className="p-6"
-          />
-        </div>
-
-        <div className="rounded-2xl">
-          <StatCard
-            label="On the Way"
-            value={inProgressCount}
-            icon={Loader}
-            description="Truck dispatched"
-            className="p-6"
-          />
-        </div>
-
-        <div className="rounded-2xl">
-          <StatCard
-            label="Cleaned Up"
-            value={resolvedCount}
-            icon={CheckCircle2}
-            description="Average: 4 hours"
-            className="p-6"
-          />
-        </div>
-      </div>
-
-      {/* Main Content: Incident Reports Table */}
-      <div className="bg-white border-2 border-zinc-200 rounded-2xl overflow-hidden flex flex-col shadow-sm">
-        {/* Table Header */}
-        <div className="p-5 sm:p-6 border-b-2 border-zinc-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-zinc-50/50">
-            <div>
-              <h3 className="text-lg font-bold text-zinc-900">
-                Recent Reports
-              </h3>
+        <div className="grid shrink-0 grid-cols-2 gap-3 lg:grid-cols-4">
+          {kpis.map((kpi) => (
+            <div
+              key={kpi.label}
+              className="flex flex-col justify-between rounded-xl border border-border bg-card p-4"
+            >
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {kpi.label}
+              </span>
+              <span className="mt-1.5 font-mono text-2xl font-semibold leading-tight text-foreground">
+                {kpi.value}
+              </span>
+              <span className={`mt-2 text-xs font-medium ${hintTones[kpi.tone]}`}>
+                {kpi.hint}
+              </span>
             </div>
+          ))}
+        </div>
 
-            {/* Quick Status Filter Tabs */}
-            <div className="flex flex-nowrap items-center gap-1.5 bg-white border-2 border-zinc-200 rounded-xl p-1 self-start sm:self-auto overflow-x-auto scrollbar-hide max-w-full">
-              {["All", "Pending", "In Progress", "Resolved"].map((status) => {
-                const isActive = statusFilter === status;
-                let count = totalCount;
-                let displayLabel = "All";
-                if (status === "Pending") { count = pendingCount; displayLabel = "Waiting"; }
-                if (status === "In Progress") { count = inProgressCount; displayLabel = "On the Way"; }
-                if (status === "Resolved") { count = resolvedCount; displayLabel = "Cleaned Up"; }
+        <div className="flex shrink-0 items-center justify-between">
+          <h3 className="text-sm font-semibold text-foreground">Recent Reports</h3>
+
+          <div className="flex items-center gap-1 rounded-lg border border-border bg-muted p-0.5">
+            {["All", "Pending", "In Progress", "Resolved"].map((status) => {
+              const isActive = statusFilter === status;
+              let displayLabel = "All";
+              if (status === "Pending") displayLabel = "Waiting";
+              if (status === "In Progress") displayLabel = "On the Way";
+              if (status === "Resolved") displayLabel = "Cleaned Up";
+
+              return (
+                <button
+                  key={status}
+                  type="button"
+                  onClick={() => setStatusFilter(status)}
+                  className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                    isActive
+                      ? "bg-card text-foreground shadow-xs"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {displayLabel}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div>
+          {filteredTickets.length === 0 ? (
+            <div className="flex items-center justify-center rounded-xl border border-border bg-card p-8 text-center">
+              <div className="flex max-w-xs flex-col items-center">
+                <FileText className="mb-2.5 h-8 w-8 text-zinc-300" />
+                <h3 className="text-sm font-semibold text-foreground">No Recent Reports</h3>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  There are no reports matching this filter.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+              {filteredTickets.map((t) => {
+                const isSelected = selectedTicket?.id === t.id;
 
                 return (
-                  <button
-                    key={status}
-                    type="button"
-                    onClick={() => setStatusFilter(status)}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-bold transition-colors whitespace-nowrap shrink-0 ${
-                      isActive
-                        ? "bg-emerald-600 text-white shadow-sm"
-                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                  <div
+                    key={t.id}
+                    onClick={() => setSelectedTicket(t)}
+                    className={`group flex cursor-pointer select-none flex-col justify-between rounded-xl border bg-card p-4 transition-all ${
+                      isSelected
+                        ? "border-emerald-400 ring-1 ring-emerald-400/20"
+                        : "border-border hover:border-zinc-300 hover:bg-muted/40"
                     }`}
                   >
-                    <span>{displayLabel}</span>
-                    <span
-                      className={`text-xs font-bold ${
-                        isActive
-                          ? "text-emerald-100"
-                          : "text-slate-400"
-                      }`}
-                    >
-                      {count}
-                    </span>
-                  </button>
+                    <div className="flex shrink-0 flex-nowrap items-center justify-between gap-2">
+                      <span className="shrink-0 whitespace-nowrap font-mono text-xs font-semibold text-foreground">
+                        {t.id}
+                      </span>
+                      <UrgencyBadge urgency={t.urgency} />
+                    </div>
+
+                    <div className="mt-3.5">
+                      <div className="truncate text-sm font-semibold text-foreground" title={t.location}>
+                        {t.location}
+                      </div>
+                      <div className="mt-0.5 text-xs text-muted-foreground">
+                        {t.category || "Solid Waste"}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 border-t border-border-subtle pt-2">
+                      <InfoRow label="Status" value={<StatusBadge status={t.status} className="p-0" />} />
+                      <InfoRow
+                        label="Report Date"
+                        value={<span className="font-mono text-xs">{t.date}</span>}
+                      />
+                      <InfoRow label="Barangay Area" value={t.barangay} />
+                    </div>
+
+                    <div className="mt-2 flex shrink-0 items-center justify-end">
+                      <button
+                        onClick={(e) => handleDeleteTicket(t.id, e)}
+                        className="rounded-md border border-rose-200 bg-card px-2.5 py-1 text-xs font-medium text-rose-600 transition-colors hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700"
+                        title="Delete Report"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
                 );
               })}
             </div>
-          </div>
-
-          {/* Table Body */}
-          <div className="overflow-x-auto overflow-y-hidden flex-1">
-            <table className="w-full text-left text-sm text-zinc-700">
-              <thead className="text-zinc-600 font-bold border-b-2 border-zinc-200 bg-white uppercase text-xs tracking-wider">
-                <tr>
-                  <th className="px-5 py-4">Report ID</th>
-                  <th className="px-5 py-4">Location</th>
-                  <th className="px-5 py-4">Priority</th>
-                  <th className="px-5 py-4">Status</th>
-                  <th className="px-5 py-4 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody key={statusFilter} className="divide-y-2 divide-zinc-100 animate-in-fade">
-                {filteredTickets.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-5 py-12 text-center text-zinc-500 font-medium text-base">
-                      No reports found for status:{" "}
-                      <span className="font-bold text-zinc-900">{statusFilter}</span>
-                    </td>
-                  </tr>
-                ) : (
-                  filteredTickets.map((t) => (
-                    <tr
-                      key={t.id}
-                      onClick={() => setSelectedTicket(t)}
-                      className="hover:bg-emerald-50/50 transition-colors cursor-pointer group"
-                    >
-                      <td className="px-5 py-4 font-mono font-bold text-zinc-900 whitespace-nowrap">
-                        {t.id}
-                      </td>
-                      <td className="px-5 py-4 min-w-[200px]">
-                        <div className="font-bold text-base text-zinc-900 mb-0.5">
-                          {t.location}
-                        </div>
-                        <div className="text-sm font-medium text-zinc-500">{t.barangay}</div>
-                      </td>
-                      <td className="px-5 py-4 whitespace-nowrap">
-                        <UrgencyBadge urgency={t.urgency} />
-                      </td>
-                      <td className="px-5 py-4 whitespace-nowrap">
-                        <StatusBadge status={t.status} />
-                      </td>
-                      <td className="px-5 py-4 text-right whitespace-nowrap">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                             e.stopPropagation();
-                             setSelectedTicket(t);
-                          }}
-                          className="inline-flex items-center gap-1.5 text-sm font-bold text-zinc-700 hover:text-zinc-900 px-3 py-1.5 rounded-lg border-2 border-zinc-200 hover:border-zinc-300 transition-colors bg-white shadow-sm"
-                        >
-                          <Eye className="w-4 h-4 text-zinc-500" />
-                          <span>View Details</span>
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Table Footer Link */}
-          <div className="p-4 sm:px-6 border-t-2 border-zinc-200 bg-zinc-50/50 flex flex-wrap items-center justify-between gap-3">
-            <span className="text-sm font-medium text-zinc-500">
-              Showing {filteredTickets.length} of {tickets.length} total reports
-            </span>
-            <Link
-              href="/tickets"
-              className="text-sm font-bold text-zinc-700 hover:text-zinc-900 flex items-center gap-1 bg-white px-3 py-1.5 border-2 border-zinc-200 rounded-lg shadow-sm transition-colors whitespace-nowrap shrink-0"
-            >
-              <span>See all reports</span>
-              <ChevronRight className="w-4 h-4" />
-            </Link>
-          </div>
+          )}
         </div>
 
+        <div className="mt-2 flex shrink-0 items-center justify-between border-t border-border pt-3">
+          <span className="text-xs text-muted-foreground">
+            Showing {filteredTickets.length} of {tickets.length} total reports
+          </span>
+          <Link
+            href="/tickets"
+            className="flex items-center gap-1 text-xs font-semibold text-foreground transition-colors hover:text-accent-emerald"
+          >
+            <span>See all reports</span>
+            <ChevronRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+      </div>
 
-
-      {/* Ticket Details Inspector Modal */}
       <TicketDetailsModal
         ticket={selectedTicket}
         isOpen={!!selectedTicket}
         onClose={() => setSelectedTicket(null)}
         onUpdateStatus={handleUpdateStatus}
+        onLocateOnMap={handleLocateOnMap}
       />
     </div>
   );

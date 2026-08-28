@@ -1,8 +1,31 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, Eye, EyeOff, RefreshCw, Shield, Bell, Sliders, User } from "lucide-react";
+import { CheckCircle2, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
+import { inputClass, labelClass } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+
+function Toggle({ checked, onChange }) {
+  return (
+    <button
+      type="button"
+      onClick={onChange}
+      className={cn(
+        "relative h-5 w-9 shrink-0 rounded-full transition-colors cursor-pointer",
+        checked ? "bg-emerald-600" : "bg-zinc-200"
+      )}
+    >
+      <span
+        className={cn(
+          "absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-xs transition-transform",
+          checked && "translate-x-4"
+        )}
+      />
+    </button>
+  );
+}
 
 export default function SettingsPage() {
   const [toastMessage, setToastMessage] = useState(null);
@@ -14,13 +37,12 @@ export default function SettingsPage() {
     }, 3000);
   };
 
-  // 1. Profile State
   const [profile, setProfile] = useState({
     entityName: "LGU City of Cebu - Solid Waste Management Division",
     adminName: "Officer Maria Santos",
     email: "m.santos@cebucity.gov.ph",
     phone: "+63 (032) 253-1111",
-    jurisdiction: "Brgy. Guadalupe (Metro Cebu)",
+    jurisdiction: "Barangay Tejero (Cebu City)",
     officeAddress: "City Hall Bldg, M.C. Briones St, Cebu City",
   });
   const [savingProfile, setSavingProfile] = useState(false);
@@ -34,7 +56,6 @@ export default function SettingsPage() {
     }, 500);
   };
 
-  // 2. Notification Preferences State
   const [notifications, setNotifications] = useState({
     criticalAlerts: true,
     gpsWarnings: true,
@@ -51,7 +72,6 @@ export default function SettingsPage() {
     });
   };
 
-  // 3. Operational Parameters State
   const [params, setParams] = useState({
     geofenceRadius: "500",
     maxOpenTickets: "10",
@@ -65,11 +85,10 @@ export default function SettingsPage() {
     setSavingParams(true);
     setTimeout(() => {
       setSavingParams(false);
-      showToast("Operational parameters saved.");
+      showToast("Operations settings saved.");
     }, 500);
   };
 
-  // 4. Security & Password State
   const [passwords, setPasswords] = useState({
     currentPassword: "",
     newPassword: "",
@@ -101,372 +120,345 @@ export default function SettingsPage() {
     }, 600);
   };
 
+  const sectionCard = "flex flex-col gap-4 rounded-xl border border-border bg-card p-4 sm:p-5";
+  const sectionHeader = "flex items-center gap-2.5 border-b border-border-subtle pb-3";
+
   return (
-    <div className="flex flex-col gap-6 max-w-4xl mx-auto pb-8">
-      {/* Toast Feedback */}
+    <div className="flex h-screen w-full overflow-hidden bg-background">
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-2.5 bg-zinc-900 text-white rounded-lg shadow-lg border border-zinc-800 text-xs animate-in-fade">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+        <div className="fixed bottom-6 right-6 z-50 flex animate-in-fade items-center gap-2.5 rounded-lg border border-zinc-800 bg-zinc-900 px-4 py-2.5 text-xs text-white shadow-lg">
+          <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
           <span>{toastMessage}</span>
         </div>
       )}
 
-      {/* SECTION 1: Administrator Profile */}
-      <section className="bg-white border border-zinc-200 rounded-xl p-5 sm:p-6 flex flex-col gap-4">
-        <div className="flex items-center gap-2 pb-3 border-b border-zinc-200/80">
-          <User className="w-4 h-4 text-zinc-500" />
-          <div>
-            <h2 className="text-sm font-semibold text-zinc-900">
-              Administrator Profile & Jurisdiction
-            </h2>
-            <p className="text-xs text-zinc-500">
-              Official department credentials for LGU waste oversight
-            </p>
-          </div>
-        </div>
+      <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-6 [scrollbar-gutter:stable] lg:p-8">
+        <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
+          <PageHeader
+            title="Settings"
+            description="Manage your profile, preferences, and password"
+          />
 
-        <form onSubmit={handleProfileSave} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-zinc-700">LGU Entity Name</label>
-              <input
-                type="text"
-                value={profile.entityName}
-                onChange={(e) =>
-                  setProfile({ ...profile, entityName: e.target.value })
-                }
-                className="px-3 py-2 border border-zinc-200 rounded-lg text-xs sm:text-sm bg-white text-zinc-900 focus:border-zinc-900 focus:outline-none"
-                required
-              />
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-zinc-700">Administrator Name</label>
-              <input
-                type="text"
-                value={profile.adminName}
-                onChange={(e) =>
-                  setProfile({ ...profile, adminName: e.target.value })
-                }
-                className="px-3 py-2 border border-zinc-200 rounded-lg text-xs sm:text-sm bg-white text-zinc-900 focus:border-zinc-900 focus:outline-none"
-                required
-              />
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-zinc-700">Official Email</label>
-              <input
-                type="email"
-                value={profile.email}
-                onChange={(e) =>
-                  setProfile({ ...profile, email: e.target.value })
-                }
-                pattern="[^\s@]+@[^\s@]+\.[^\s@]+"
-                className="px-3 py-2 border border-zinc-200 rounded-lg text-xs sm:text-sm bg-white text-zinc-900 focus:border-zinc-900 focus:outline-none"
-                required
-              />
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-zinc-700">Contact Hotline</label>
-              <input
-                type="text"
-                value={profile.phone}
-                onChange={(e) =>
-                  setProfile({ ...profile, phone: e.target.value })
-                }
-                className="px-3 py-2 border border-zinc-200 rounded-lg text-xs sm:text-sm bg-white text-zinc-900 focus:border-zinc-900 focus:outline-none"
-                required
-              />
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-zinc-700">Barangay Jurisdiction</label>
-              <select
-                value={profile.jurisdiction}
-                onChange={(e) =>
-                  setProfile({ ...profile, jurisdiction: e.target.value })
-                }
-                className="px-3 py-2 border border-zinc-200 rounded-lg text-xs sm:text-sm bg-white text-zinc-900 focus:border-zinc-900 focus:outline-none font-medium"
-              >
-                <option value="Brgy. Guadalupe (Metro Cebu)">Brgy. Guadalupe (Metro Cebu)</option>
-                <option value="Brgy. Capitol Site (Metro Cebu)">Brgy. Capitol Site (Metro Cebu)</option>
-                <option value="Brgy. Lahug (Metro Cebu)">Brgy. Lahug (Metro Cebu)</option>
-                <option value="Brgy. Mabolo (Metro Cebu)">Brgy. Mabolo (Metro Cebu)</option>
-                <option value="Brgy. Banilad (Mandaue)">Brgy. Banilad (Mandaue)</option>
-                <option value="Brgy. Parian (Metro Cebu)">Brgy. Parian (Metro Cebu)</option>
-              </select>
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-zinc-700">Office Physical Address</label>
-              <input
-                type="text"
-                value={profile.officeAddress}
-                onChange={(e) =>
-                  setProfile({ ...profile, officeAddress: e.target.value })
-                }
-                className="px-3 py-2 border border-zinc-200 rounded-lg text-xs sm:text-sm bg-white text-zinc-900 focus:border-zinc-900 focus:outline-none"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end pt-2 border-t border-zinc-100">
-            <Button variant="primary" size="sm" type="submit" disabled={savingProfile}>
-              {savingProfile ? "Saving..." : "Save Profile"}
-            </Button>
-          </div>
-        </form>
-      </section>
-
-      {/* SECTION 2: Notification Preferences */}
-      <section className="bg-white border border-zinc-200 rounded-xl p-5 sm:p-6 flex flex-col gap-4">
-        <div className="flex items-center gap-2 pb-3 border-b border-zinc-200/80">
-          <Bell className="w-4 h-4 text-zinc-500" />
-          <div>
-            <h2 className="text-sm font-semibold text-zinc-900">
-              Notification Preferences
-            </h2>
-            <p className="text-xs text-zinc-500">
-              Control dispatch alert delivery and automated morning summaries
-            </p>
-          </div>
-        </div>
-
-        <div className="divide-y divide-zinc-100">
-          <div className="flex items-center justify-between py-3">
-            <div>
-              <h3 className="text-xs font-medium text-zinc-900">Critical Dumping Alerts</h3>
-              <p className="text-[11px] text-zinc-500">Immediate notifications for critical environmental hazards</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => toggleNotification("criticalAlerts")}
-              className={`w-9 h-5 rounded-full transition-colors relative ${
-                notifications.criticalAlerts ? "bg-emerald-600" : "bg-zinc-200"
-              }`}
-            >
-              <span
-                className={`w-3.5 h-3.5 rounded-full bg-white absolute top-0.75 transition-transform ${
-                  notifications.criticalAlerts ? "left-4.5" : "left-0.75"
-                }`}
-              />
-            </button>
-          </div>
-
-          <div className="flex items-center justify-between py-3">
-            <div>
-              <h3 className="text-xs font-medium text-zinc-900">Truck GPS & Telemetry Warnings</h3>
-              <p className="text-[11px] text-zinc-500">Alerts when compactor units lose signal or idle over 15 minutes</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => toggleNotification("gpsWarnings")}
-              className={`w-9 h-5 rounded-full transition-colors relative ${
-                notifications.gpsWarnings ? "bg-emerald-600" : "bg-zinc-200"
-              }`}
-            >
-              <span
-                className={`w-3.5 h-3.5 rounded-full bg-white absolute top-0.75 transition-transform ${
-                  notifications.gpsWarnings ? "left-4.5" : "left-0.75"
-                }`}
-              />
-            </button>
-          </div>
-
-          <div className="flex items-center justify-between py-3">
-            <div>
-              <h3 className="text-xs font-medium text-zinc-900">Daily Morning Briefing</h3>
-              <p className="text-[11px] text-zinc-500">Summary digest at 07:00 AM PHT</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => toggleNotification("dailySummary")}
-              className={`w-9 h-5 rounded-full transition-colors relative ${
-                notifications.dailySummary ? "bg-emerald-600" : "bg-zinc-200"
-              }`}
-            >
-              <span
-                className={`w-3.5 h-3.5 rounded-full bg-white absolute top-0.75 transition-transform ${
-                  notifications.dailySummary ? "left-4.5" : "left-0.75"
-                }`}
-              />
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* SECTION 3: Operational Parameters */}
-      <section className="bg-white border border-zinc-200 rounded-xl p-5 sm:p-6 flex flex-col gap-4">
-        <div className="flex items-center gap-2 pb-3 border-b border-zinc-200/80">
-          <Sliders className="w-4 h-4 text-zinc-500" />
-          <div>
-            <h2 className="text-sm font-semibold text-zinc-900">
-              LGU Operational Parameters
-            </h2>
-            <p className="text-xs text-zinc-500">
-              Geofence radii, auto-escalation SLA thresholds, and dispatch algorithm
-            </p>
-          </div>
-        </div>
-
-        <form onSubmit={handleParamsSave} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-zinc-700">Geofence Arrival Radius (meters)</label>
-              <input
-                type="number"
-                min="100"
-                max="2000"
-                step="50"
-                value={params.geofenceRadius}
-                onChange={(e) =>
-                  setParams({ ...params, geofenceRadius: e.target.value })
-                }
-                className="px-3 py-2 border border-zinc-200 rounded-lg text-xs sm:text-sm bg-white text-zinc-900 focus:border-zinc-900 focus:outline-none"
-                required
-              />
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-zinc-700">Max Open Incidents per Truck</label>
-              <input
-                type="number"
-                min="1"
-                max="30"
-                value={params.maxOpenTickets}
-                onChange={(e) =>
-                  setParams({ ...params, maxOpenTickets: e.target.value })
-                }
-                className="px-3 py-2 border border-zinc-200 rounded-lg text-xs sm:text-sm bg-white text-zinc-900 focus:border-zinc-900 focus:outline-none"
-                required
-              />
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-zinc-700">Auto-Escalation SLA (hours)</label>
-              <input
-                type="number"
-                min="1"
-                max="72"
-                value={params.slaEscalationHours}
-                onChange={(e) =>
-                  setParams({ ...params, slaEscalationHours: e.target.value })
-                }
-                className="px-3 py-2 border border-zinc-200 rounded-lg text-xs sm:text-sm bg-white text-zinc-900 focus:border-zinc-900 focus:outline-none"
-                required
-              />
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-zinc-700">Dispatch Routing Algorithm</label>
-              <select
-                value={params.routingMode}
-                onChange={(e) =>
-                  setParams({ ...params, routingMode: e.target.value })
-                }
-                className="px-3 py-2 border border-zinc-200 rounded-lg text-xs sm:text-sm bg-white text-zinc-900 focus:border-zinc-900 focus:outline-none font-medium"
-              >
-                <option value="auto-nearest">Auto-Assign Nearest Available Truck</option>
-                <option value="manual">Manual Command Center Allocation</option>
-                <option value="barangay-supervisor">Barangay Supervisor Approval</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="flex justify-end pt-2 border-t border-zinc-100">
-            <Button variant="primary" size="sm" type="submit" disabled={savingParams}>
-              {savingParams ? "Saving..." : "Save Parameters"}
-            </Button>
-          </div>
-        </form>
-      </section>
-
-      {/* SECTION 4: Security */}
-      <section className="bg-white border border-zinc-200 rounded-xl p-5 sm:p-6 flex flex-col gap-4">
-        <div className="flex items-center gap-2 pb-3 border-b border-zinc-200/80">
-          <Shield className="w-4 h-4 text-zinc-500" />
-          <div>
-            <h2 className="text-sm font-semibold text-zinc-900">
-              Security & Access Credentials
-            </h2>
-            <p className="text-xs text-zinc-500">
-              Update your administrator login password
-            </p>
-          </div>
-        </div>
-
-        <form onSubmit={handlePasswordUpdate} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-zinc-700">Current Password</label>
-              <div className="relative">
-                <input
-                  type={showCurrent ? "text" : "password"}
-                  required
-                  value={passwords.currentPassword}
-                  onChange={(e) =>
-                    setPasswords({ ...passwords, currentPassword: e.target.value })
-                  }
-                  placeholder="••••••••"
-                  className="w-full pl-3 pr-8 py-2 border border-zinc-200 rounded-lg text-xs sm:text-sm bg-white text-zinc-900 focus:border-zinc-900 focus:outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowCurrent(!showCurrent)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700"
-                >
-                  {showCurrent ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                </button>
+          <section className={sectionCard}>
+            <div className={sectionHeader}>
+              <div>
+                <h2 className="text-sm font-semibold text-foreground">
+                  Admin Profile & Office Details
+                </h2>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Your office&apos;s contact information and coverage area
+                </p>
               </div>
             </div>
 
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-zinc-700">New Password</label>
-              <div className="relative">
-                <input
-                  type={showNew ? "text" : "password"}
-                  required
-                  value={passwords.newPassword}
-                  onChange={(e) =>
-                    setPasswords({ ...passwords, newPassword: e.target.value })
-                  }
-                  placeholder="••••••••"
-                  className="w-full pl-3 pr-8 py-2 border border-zinc-200 rounded-lg text-xs sm:text-sm bg-white text-zinc-900 focus:border-zinc-900 focus:outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowNew(!showNew)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700"
-                >
-                  {showNew ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                </button>
+            <form onSubmit={handleProfileSave} className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="flex flex-col gap-1.5">
+                  <label className={labelClass}>Office / Department Name</label>
+                  <input
+                    type="text"
+                    value={profile.entityName}
+                    onChange={(e) =>
+                      setProfile({ ...profile, entityName: e.target.value })
+                    }
+                    className={inputClass}
+                    required
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className={labelClass}>Admin Name</label>
+                  <input
+                    type="text"
+                    value={profile.adminName}
+                    onChange={(e) =>
+                      setProfile({ ...profile, adminName: e.target.value })
+                    }
+                    className={inputClass}
+                    required
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className={labelClass}>Email Address</label>
+                  <input
+                    type="email"
+                    value={profile.email}
+                    onChange={(e) =>
+                      setProfile({ ...profile, email: e.target.value })
+                    }
+                    pattern="[^\s@]+@[^\s@]+\.[^\s@]+"
+                    className={inputClass}
+                    required
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className={labelClass}>Contact Number</label>
+                  <input
+                    type="text"
+                    value={profile.phone}
+                    onChange={(e) =>
+                      setProfile({ ...profile, phone: e.target.value })
+                    }
+                    className={inputClass}
+                    required
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className={labelClass}>Coverage Area (Barangay)</label>
+                  <select
+                    value={profile.jurisdiction}
+                    onChange={(e) =>
+                      setProfile({ ...profile, jurisdiction: e.target.value })
+                    }
+                    className={cn(inputClass, "cursor-pointer")}
+                  >
+                    <option value="Barangay Tejero (Cebu City)">Barangay Tejero (Cebu City)</option>
+                    <option value="Other parts of Metro Cebu (Coming Soon...)">
+                      Other parts of Metro Cebu (Coming Soon...)
+                    </option>
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className={labelClass}>Office Address</label>
+                  <input
+                    type="text"
+                    value={profile.officeAddress}
+                    onChange={(e) =>
+                      setProfile({ ...profile, officeAddress: e.target.value })
+                    }
+                    className={inputClass}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end border-t border-border-subtle pt-4">
+                <Button variant="primary" type="submit" disabled={savingProfile}>
+                  {savingProfile ? "Saving..." : "Save Profile"}
+                </Button>
+              </div>
+            </form>
+          </section>
+
+          <section className={sectionCard}>
+            <div className={sectionHeader}>
+              <div>
+                <h2 className="text-sm font-semibold text-foreground">Notification Preferences</h2>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Choose which alerts you want to receive
+                </p>
               </div>
             </div>
 
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-zinc-700">Confirm New Password</label>
-              <input
-                type="password"
-                required
-                value={passwords.confirmPassword}
-                onChange={(e) =>
-                  setPasswords({ ...passwords, confirmPassword: e.target.value })
-                }
-                placeholder="••••••••"
-                className="px-3 py-2 border border-zinc-200 rounded-lg text-xs sm:text-sm bg-white text-zinc-900 focus:border-zinc-900 focus:outline-none"
-              />
-            </div>
-          </div>
+            <div className="divide-y divide-border-subtle">
+              <div className="flex items-center justify-between gap-4 py-3">
+                <div>
+                  <h3 className="text-sm font-medium text-foreground">Critical Dumping Alerts</h3>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Get notified right away about serious dumping incidents
+                  </p>
+                </div>
+                <Toggle
+                  checked={notifications.criticalAlerts}
+                  onChange={() => toggleNotification("criticalAlerts")}
+                />
+              </div>
 
-          <div className="flex justify-end pt-2 border-t border-zinc-100">
-            <Button variant="primary" size="sm" type="submit" disabled={savingPassword}>
-              {savingPassword ? "Updating..." : "Update Password"}
-            </Button>
-          </div>
-        </form>
-      </section>
+              <div className="flex items-center justify-between gap-4 py-3">
+                <div>
+                  <h3 className="text-sm font-medium text-foreground">Truck GPS Warnings</h3>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Get an alert when a truck loses signal or stops for more than 15 minutes
+                  </p>
+                </div>
+                <Toggle
+                  checked={notifications.gpsWarnings}
+                  onChange={() => toggleNotification("gpsWarnings")}
+                />
+              </div>
+
+              <div className="flex items-center justify-between gap-4 py-3">
+                <div>
+                  <h3 className="text-sm font-medium text-foreground">Daily Morning Briefing</h3>
+                  <p className="mt-0.5 text-xs text-muted-foreground">Receive a daily summary at 7:00 AM</p>
+                </div>
+                <Toggle
+                  checked={notifications.dailySummary}
+                  onChange={() => toggleNotification("dailySummary")}
+                />
+              </div>
+            </div>
+          </section>
+
+          <section className={sectionCard}>
+            <div className={sectionHeader}>
+              <div>
+                <h2 className="text-sm font-semibold text-foreground">Operations Settings</h2>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Control how reports are handled and how trucks are assigned
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleParamsSave} className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="flex flex-col gap-1.5">
+                  <label className={labelClass}>Truck Arrival Radius (meters)</label>
+                  <input
+                    type="number"
+                    min="100"
+                    max="2000"
+                    step="50"
+                    value={params.geofenceRadius}
+                    onChange={(e) =>
+                      setParams({ ...params, geofenceRadius: e.target.value })
+                    }
+                    className={inputClass}
+                    required
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className={labelClass}>Max Reports per Truck at One Time</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="30"
+                    value={params.maxOpenTickets}
+                    onChange={(e) =>
+                      setParams({ ...params, maxOpenTickets: e.target.value })
+                    }
+                    className={inputClass}
+                    required
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className={labelClass}>Escalate Unresolved Reports After (hours)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="72"
+                    value={params.slaEscalationHours}
+                    onChange={(e) =>
+                      setParams({ ...params, slaEscalationHours: e.target.value })
+                    }
+                    className={inputClass}
+                    required
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className={labelClass}>How Trucks Are Assigned</label>
+                  <select
+                    value={params.routingMode}
+                    onChange={(e) =>
+                      setParams({ ...params, routingMode: e.target.value })
+                    }
+                    className={cn(inputClass, "cursor-pointer")}
+                  >
+                    <option value="auto-nearest">Auto-assign the nearest available truck</option>
+                    <option value="manual">Assign trucks manually</option>
+                    <option value="barangay-supervisor">Require barangay supervisor approval</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end border-t border-border-subtle pt-4">
+                <Button variant="primary" type="submit" disabled={savingParams}>
+                  {savingParams ? "Saving..." : "Save Settings"}
+                </Button>
+              </div>
+            </form>
+          </section>
+
+          <section className={sectionCard}>
+            <div className={sectionHeader}>
+              <div>
+                <h2 className="text-sm font-semibold text-foreground">Password & Security</h2>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Change the password you use to sign in
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handlePasswordUpdate} className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div className="flex flex-col gap-1.5">
+                  <label className={labelClass}>Current Password</label>
+                  <div className="relative">
+                    <input
+                      type={showCurrent ? "text" : "password"}
+                      required
+                      value={passwords.currentPassword}
+                      onChange={(e) =>
+                        setPasswords({ ...passwords, currentPassword: e.target.value })
+                      }
+                      placeholder="••••••••"
+                      className={cn(inputClass, "pr-9")}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowCurrent(!showCurrent)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      {showCurrent ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className={labelClass}>New Password</label>
+                  <div className="relative">
+                    <input
+                      type={showNew ? "text" : "password"}
+                      required
+                      value={passwords.newPassword}
+                      onChange={(e) =>
+                        setPasswords({ ...passwords, newPassword: e.target.value })
+                      }
+                      placeholder="••••••••"
+                      className={cn(inputClass, "pr-9")}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNew(!showNew)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      {showNew ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className={labelClass}>Confirm New Password</label>
+                  <input
+                    type="password"
+                    required
+                    value={passwords.confirmPassword}
+                    onChange={(e) =>
+                      setPasswords({ ...passwords, confirmPassword: e.target.value })
+                    }
+                    placeholder="••••••••"
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end border-t border-border-subtle pt-4">
+                <Button variant="primary" type="submit" disabled={savingPassword}>
+                  {savingPassword ? "Updating..." : "Update Password"}
+                </Button>
+              </div>
+            </form>
+          </section>
+        </div>
+      </div>
     </div>
   );
 }
+

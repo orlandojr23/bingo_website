@@ -74,7 +74,7 @@ export default function ContactSheet({ isOpen, onClose }) {
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
-            transition={{ type: "spring", stiffness: 65, damping: 20, mass: 0.8 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
             className="relative w-full max-w-[500px] h-full bg-white flex flex-col shadow-[-10px_0_40px_rgba(0,0,0,0.1)] z-10"
           >
             {/* Close Button */}

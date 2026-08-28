@@ -3,7 +3,7 @@ export default function manifest() {
     name: "Bin'Go Smart Waste Collection",
     short_name: "Bin'Go",
     description: "Track garbage compactors live, report issues, and keep your community clean.",
-    start_url: "/track", // Directly open the track/dashboard page when launching PWA
+    start_url: "/", // Directly open the home page
     display: "standalone",
     background_color: "#FAFAFA", // Minimalist zinc-50 light style
     theme_color: "#059669",      // Emerald-600 accent

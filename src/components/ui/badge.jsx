@@ -1,12 +1,13 @@
 import { cn } from "@/lib/utils";
-import { Clock, Loader, CheckCircle2, Circle, CalendarClock } from "lucide-react";
 
 const statusConfig = {
-  Resolved: { color: "text-emerald-700", icon: CheckCircle2 },
-  "In Progress": { color: "text-blue-700", icon: Loader },
-  Pending: { color: "text-amber-700", icon: Clock },
-  Scheduled: { color: "text-zinc-700", icon: CalendarClock },
-  Completed: { color: "text-emerald-700", icon: CheckCircle2 },
+  Resolved: { color: "text-emerald-700" },
+  "In Progress": { color: "text-blue-700" },
+  Pending: { color: "text-amber-700" },
+  Scheduled: { color: "text-zinc-700" },
+  Completed: { color: "text-emerald-700" },
+  Active: { color: "text-emerald-700" },
+  Suspended: { color: "text-zinc-600" },
 };
 
 const urgencyTextColors = {
@@ -17,8 +18,7 @@ const urgencyTextColors = {
 };
 
 export function StatusBadge({ status, className }) {
-  const config = statusConfig[status] || { color: "text-zinc-700", icon: Circle };
-  const Icon = config.icon;
+  const config = statusConfig[status] || { color: "text-zinc-700" };
   let displayStatus = status;
   if (status === "Pending") displayStatus = "Waiting";
   if (status === "In Progress") displayStatus = "On the Way";
@@ -27,12 +27,12 @@ export function StatusBadge({ status, className }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold",
+        "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap shrink-0",
         config.color,
         className
       )}
     >
-      <Icon className="w-3.5 h-3.5 shrink-0" strokeWidth={2.5} />
+      <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0 opacity-85" />
       {displayStatus}
     </span>
   );
@@ -46,7 +46,7 @@ export function UrgencyBadge({ urgency, className }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold",
+        "inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap shrink-0",
         textColor,
         className
       )}

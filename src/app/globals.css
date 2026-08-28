@@ -17,6 +17,8 @@
 }
 
 @theme inline {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -46,36 +48,6 @@ body {
   outline-offset: 1px;
 }
 
-/* Sleek, lowkey scrollbars */
-html {
-  scroll-behavior: smooth;
-  scrollbar-width: thin;
-  scrollbar-color: #d4d4d8 transparent;
-}
-
-::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #d4d4d8;
-  border-radius: 9999px;
-  transition: background 0.2s ease;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #a1a1aa;
-}
-
-::-webkit-scrollbar-corner {
-  background: transparent;
-}
-
 /* Minimalist Leaflet Overrides */
 .leaflet-container {
   font-family: inherit !important;
@@ -85,13 +57,13 @@ html {
   border-radius: 8px !important;
   overflow: hidden;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.08) !important;
-  border: 1px solid #E4E4E7 !important;
+  border: 1px solid var(--border) !important;
 }
 
 .leaflet-bar a {
-  background-color: #FFFFFF !important;
-  color: #18181B !important;
-  border-bottom: 1px solid #E4E4E7 !important;
+  background-color: var(--card) !important;
+  color: var(--primary) !important;
+  border-bottom: 1px solid var(--border) !important;
   width: 30px !important;
   height: 30px !important;
   line-height: 30px !important;
@@ -102,14 +74,14 @@ html {
 }
 
 .leaflet-bar a:hover {
-  background-color: #F4F4F5 !important;
+  background-color: var(--muted) !important;
 }
 
 .leaflet-popup-content-wrapper {
   border-radius: 12px !important;
   padding: 0 !important;
   box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.1) !important;
-  border: 1px solid #E4E4E7 !important;
+  border: 1px solid var(--border) !important;
 }
 
 .leaflet-popup-content {
@@ -118,8 +90,8 @@ html {
 }
 
 .leaflet-popup-tip {
-  background: #FFFFFF !important;
-  border: 1px solid #E4E4E7 !important;
+  background: var(--card) !important;
+  border: 1px solid var(--border) !important;
   box-shadow: none !important;
 }
 

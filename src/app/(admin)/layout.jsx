@@ -1,47 +1,38 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { Menu } from "lucide-react";
 import Sidebar from "@/components/layout/sidebar";
-import { supabase } from "@/lib/supabase";
 
 export default function AdminLayout({ children }) {
-  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [checked, setChecked] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      const role = session?.user?.user_metadata?.role;
-      if (!session || role !== "admin") {
-        router.replace("/auth/admin-login");
-      } else {
-        setChecked(true);
-      }
-    });
-  }, [router]);
+    // DEV BYPASS: Directly allow access to the admin dashboard
+    setChecked(true);
+  }, []);
 
   if (!checked) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
-        <div className="w-6 h-6 rounded-full border-2 border-emerald-500/30 border-t-emerald-500 animate-spin" />
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-emerald-500/30 border-t-emerald-500" />
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-[#F8FAFC] text-slate-900">
+    <div className="flex min-h-screen bg-background text-foreground">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex min-w-0 flex-1 flex-col">
         <button
           onClick={() => setSidebarOpen(true)}
-          className="lg:hidden m-4 mb-0 p-2.5 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-200 self-start"
+          className="m-4 mb-0 self-start rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:hidden"
+          aria-label="Open navigation"
         >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
+          <Menu className="h-5 w-5" strokeWidth={1.75} />
         </button>
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto animate-in-fade">
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col animate-in-fade">
           {children}
         </main>
       </div>

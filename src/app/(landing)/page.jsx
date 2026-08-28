@@ -104,7 +104,7 @@ export default function LandingPage() {
 function HomeContent() {
   return (
     <>
-      <h1 className="text-4xl sm:text-5xl lg:text-7xl [@media(max-height:800px)]:text-6xl [@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-6 [@media(max-height:800px)]:mb-4">
+      <h1 className="text-3xl sm:text-5xl lg:text-7xl [@media(max-height:800px)]:text-6xl [@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-6 [@media(max-height:800px)]:mb-4">
         <span className="text-[#0f172a]">
           Smart Waste <br className="hidden lg:block" /> Collection,
         </span>
@@ -134,7 +134,7 @@ function HomeContent() {
 function AboutContent() {
   return (
     <>
-      <h2 className="text-4xl sm:text-5xl lg:text-7xl [@media(max-height:800px)]:text-6xl [@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-6 [@media(max-height:800px)]:mb-4 text-[#0f172a]">
+      <h2 className="text-3xl sm:text-5xl lg:text-7xl [@media(max-height:800px)]:text-6xl [@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-6 [@media(max-height:800px)]:mb-4 text-[#0f172a]">
         Community Cleanups, <br className="hidden lg:block" />
         <span className="relative inline-block mt-1 px-2">
           <span className="relative z-10 text-white">Accelerated.</span>
@@ -161,7 +161,7 @@ function AboutContent() {
 function FeaturesContent() {
   return (
     <>
-      <h2 className="text-4xl sm:text-5xl lg:text-7xl [@media(max-height:800px)]:text-6xl [@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-6 [@media(max-height:800px)]:mb-4 text-[#0f172a]">
+      <h2 className="text-3xl sm:text-5xl lg:text-7xl [@media(max-height:800px)]:text-6xl [@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-6 [@media(max-height:800px)]:mb-4 text-[#0f172a]">
         Powerful Tools, <br className="hidden lg:block" />
         <span className="relative inline-block mt-1 px-2">
           <span className="relative z-10 text-white">Unleashed.</span>
@@ -188,7 +188,7 @@ function FeaturesContent() {
 function FaqContent() {
   return (
     <>
-      <h2 className="text-4xl sm:text-5xl lg:text-7xl [@media(max-height:800px)]:text-6xl [@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-6 [@media(max-height:800px)]:mb-4 text-[#0f172a]">
+      <h2 className="text-3xl sm:text-5xl lg:text-7xl [@media(max-height:800px)]:text-6xl [@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-6 [@media(max-height:800px)]:mb-4 text-[#0f172a]">
         Your Questions, <br className="hidden lg:block" />
         <span className="relative inline-block mt-1 px-2">
           <span className="relative z-10 text-white">Answered.</span>

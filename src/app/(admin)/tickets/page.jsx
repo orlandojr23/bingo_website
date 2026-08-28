@@ -1,17 +1,50 @@
 "use client";
 
-import { useState } from "react";
-import { Search, Filter, ArrowUpDown, Eye } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Search, FileText } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { mockTickets } from "@/lib/mock-data";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/ui/page-header";
+import { PanelStat } from "@/components/ui/panel-stat";
+import { InfoRow } from "@/components/ui/info-row";
+import { inputClass } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import TicketDetailsModal from "@/components/modals/ticket-details-modal";
 
 export default function TicketsPage() {
-  const [tickets, setTickets] = useState(mockTickets);
+  const router = useRouter();
+  const [tickets, setTickets] = useState([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [urgencyFilter, setUrgencyFilter] = useState("All");
   const [selectedTicket, setSelectedTicket] = useState(null);
+
+  useEffect(() => {
+    setTickets(mockTickets);
+  }, []);
+
+  const handleUpdateStatus = (ticketId, newStatus) => {
+    setTickets((prev) =>
+      prev.map((t) => (t.id === ticketId ? { ...t, status: newStatus } : t))
+    );
+    if (selectedTicket && selectedTicket.id === ticketId) {
+      setSelectedTicket((prev) => ({ ...prev, status: newStatus }));
+    }
+  };
+
+  const handleDeleteTicket = (id, e) => {
+    e.stopPropagation();
+    setTickets((prev) => prev.filter((t) => t.id !== id));
+    if (selectedTicket?.id === id) {
+      setSelectedTicket(null);
+    }
+  };
+
+  const handleLocateOnMap = (t) => {
+    router.push(`/live-map?ticketId=${t.id}`);
+  };
 
   const filteredTickets = tickets.filter((t) => {
     const matchSearch =
@@ -24,135 +57,144 @@ export default function TicketsPage() {
     return matchSearch && matchStatus && matchUrgency;
   });
 
-  const handleUpdateStatus = (ticketId, newStatus) => {
-    setTickets((prev) =>
-      prev.map((t) => (t.id === ticketId ? { ...t, status: newStatus } : t))
-    );
-    if (selectedTicket && selectedTicket.id === ticketId) {
-      setSelectedTicket((prev) => ({ ...prev, status: newStatus }));
-    }
-  };
+  const totalReports = tickets.length;
+  const pendingReports = tickets.filter((t) => t.status === "Pending").length;
+  const isSheetOpen = selectedTicket !== null;
 
   return (
-    <div className="flex flex-col gap-6 max-w-7xl mx-auto">
-      {/* Search & Filter Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-4 bg-white border border-zinc-200 rounded-xl">
-        <div className="relative flex-1">
-          <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Search reports by ID, address, barangay, or reporter..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 border border-zinc-200 rounded-lg text-xs sm:text-sm bg-white text-zinc-900 focus:border-zinc-900 focus:outline-none placeholder:text-zinc-400"
-          />
+    <div className="flex h-screen w-full overflow-hidden bg-background">
+      <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-6 [scrollbar-gutter:stable] lg:p-8">
+        <PageHeader
+          title="Reports"
+          description="All waste reports submitted by residents and their current status"
+        />
+
+        <div className="grid shrink-0 grid-cols-2 gap-3.5 max-w-sm sm:max-w-md">
+          <PanelStat label="Total Reports" value={totalReports} hint="All submitted reports" />
+          <PanelStat label="Waiting" value={pendingReports} hint="Needs attention" tone="rose" />
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3">
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="text-xs border border-zinc-200 rounded-lg px-3 py-2 bg-white text-zinc-900 focus:border-zinc-900 focus:outline-none font-medium"
-          >
-            <option value="All">All Statuses</option>
-            <option value="Pending">Waiting</option>
-            <option value="In Progress">On the Way</option>
-            <option value="Resolved">Cleaned Up</option>
-          </select>
+        <div className="flex shrink-0 flex-col items-center gap-3 sm:flex-row">
+          <div className="relative w-full flex-1">
+            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search reports by ID, location, or reporter..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className={cn(inputClass, "pl-9")}
+            />
+          </div>
 
-          <select
-            value={urgencyFilter}
-            onChange={(e) => setUrgencyFilter(e.target.value)}
-            className="text-xs border border-zinc-200 rounded-lg px-3 py-2 bg-white text-zinc-900 focus:border-zinc-900 focus:outline-none font-medium"
-          >
-            <option value="All">All Priorities</option>
-            <option value="Low">Low</option>
-            <option value="Medium">Medium</option>
-            <option value="High">High</option>
-            <option value="Critical">Emergency</option>
-          </select>
-        </div>
-      </div>
+          <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className={cn(inputClass, "cursor-pointer flex-1 sm:w-auto sm:flex-none")}
+            >
+              <option value="All">All Statuses</option>
+              <option value="Pending">Waiting</option>
+              <option value="In Progress">On the Way</option>
+              <option value="Resolved">Cleaned Up</option>
+            </select>
 
-      {/* Reports Master Table */}
-      <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden flex flex-col">
-        <div className="p-4 sm:p-5 border-b border-zinc-200/80 flex items-center justify-between">
-          <div>
-            <h2 className="text-sm sm:text-base font-semibold text-zinc-900">
-              Sanitation Reports Log ({filteredTickets.length} reports)
-            </h2>
-            <p className="text-xs text-zinc-500">
-              Complete report log and dispatch history for your area
-            </p>
+            <select
+              value={urgencyFilter}
+              onChange={(e) => setUrgencyFilter(e.target.value)}
+              className={cn(inputClass, "cursor-pointer flex-1 sm:w-auto sm:flex-none")}
+            >
+              <option value="All">All Priorities</option>
+              <option value="Low">Low</option>
+              <option value="Medium">Medium</option>
+              <option value="High">High</option>
+              <option value="Critical">Emergency</option>
+            </select>
           </div>
         </div>
 
-        <div className="overflow-x-auto overflow-y-hidden">
-          <table className="w-full text-left text-xs text-zinc-600">
-            <thead className="bg-zinc-50/80 text-zinc-700 font-medium border-b border-zinc-200/60">
-              <tr>
-                <th className="px-4 py-3 whitespace-nowrap">ID</th>
-                <th className="px-4 py-3 whitespace-nowrap min-w-[200px]">Location & Barangay</th>
-                <th className="px-4 py-3 whitespace-nowrap">Reporter</th>
-                <th className="px-4 py-3 whitespace-nowrap">Category</th>
-                <th className="px-4 py-3 whitespace-nowrap">Priority</th>
-                <th className="px-4 py-3 whitespace-nowrap">Status</th>
-                <th className="px-4 py-3 whitespace-nowrap">Date</th>
-                <th className="px-4 py-3 text-right whitespace-nowrap">Action</th>
-              </tr>
-            </thead>
-            <tbody key={`${statusFilter}-${urgencyFilter}-${search}`} className="divide-y divide-zinc-100 animate-in-fade">
-              {filteredTickets.map((t) => (
-                <tr
-                  key={t.id}
-                  className="hover:bg-zinc-50/70 transition-colors"
-                >
-                  <td className="px-4 py-3.5 font-mono font-medium text-zinc-900 whitespace-nowrap">
-                    {t.id}
-                  </td>
-                  <td className="px-4 py-3.5 min-w-[200px]">
-                    <div className="font-medium text-zinc-900">{t.location}</div>
-                    <div className="text-[11px] text-zinc-500">{t.barangay}</div>
-                  </td>
-                  <td className="px-4 py-3.5 font-medium text-zinc-800 whitespace-nowrap">
-                    {t.reporter}
-                  </td>
-                  <td className="px-4 py-3.5 text-zinc-500 whitespace-nowrap">
-                    {t.category || "Solid Waste"}
-                  </td>
-                  <td className="px-4 py-3.5 whitespace-nowrap">
-                    <UrgencyBadge urgency={t.urgency} />
-                  </td>
-                  <td className="px-4 py-3.5 whitespace-nowrap">
-                    <StatusBadge status={t.status} />
-                  </td>
-                  <td className="px-4 py-3.5 text-zinc-500 font-mono text-[11px] whitespace-nowrap">
-                    {t.date}
-                  </td>
-                  <td className="px-4 py-3.5 text-right whitespace-nowrap">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedTicket(t)}
-                      className="inline-flex items-center gap-1.5 text-sm font-bold text-zinc-700 hover:text-zinc-900 px-3 py-1.5 rounded-lg border-2 border-zinc-200 hover:border-zinc-300 transition-colors bg-white shadow-sm"
-                    >
-                      <Eye className="w-4 h-4 text-zinc-500" />
-                      <span>View Details</span>
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div>
+          {filteredTickets.length === 0 ? (
+            <div className="flex items-center justify-center rounded-xl border border-border bg-card p-8 text-center">
+              <div className="flex max-w-xs flex-col items-center">
+                <FileText className="mb-2.5 h-8 w-8 text-zinc-300" />
+                <h3 className="text-sm font-semibold text-foreground">No Reports Found</h3>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Try different search keywords or filters.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+              {filteredTickets.map((t) => {
+                const isSelected = selectedTicket?.id === t.id;
+
+                return (
+                  <div
+                    key={t.id}
+                    onClick={() => setSelectedTicket(t)}
+                    className={`group flex cursor-pointer select-none flex-col justify-between rounded-xl border bg-card p-4 transition-all ${
+                      isSelected
+                        ? "border-emerald-400 ring-1 ring-emerald-400/20"
+                        : "border-border hover:border-zinc-300 hover:bg-muted/40"
+                    }`}
+                  >
+                    <div className="flex shrink-0 flex-nowrap items-center justify-between gap-2">
+                      <span className="shrink-0 whitespace-nowrap font-mono text-xs font-semibold text-foreground">
+                        {t.id}
+                      </span>
+                      <UrgencyBadge urgency={t.urgency} />
+                    </div>
+
+                    <div className="mt-3.5">
+                      <div className="truncate text-sm font-semibold text-foreground" title={t.location}>
+                        {t.location}
+                      </div>
+                      <div className="mt-0.5 text-xs text-muted-foreground">
+                        {t.category || "Solid Waste"}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 border-t border-border-subtle pt-2">
+                      <InfoRow label="Status" value={<StatusBadge status={t.status} className="p-0" />} />
+                      <InfoRow
+                        label="Report Date"
+                        value={<span className="font-mono text-xs">{t.date}</span>}
+                      />
+                      <InfoRow label="Barangay Area" value={t.barangay} />
+                      <InfoRow label="Reported By" value={t.reporter} />
+                    </div>
+
+                    <div className="mt-2 flex shrink-0 items-center justify-end">
+                      <button
+                        onClick={(e) => handleDeleteTicket(t.id, e)}
+                        className="rounded-md border border-rose-200 bg-card px-2.5 py-1 text-xs font-medium text-rose-600 transition-colors hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700"
+                        title="Delete Report"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="mt-2 flex shrink-0 items-center justify-between border-t border-border pt-3">
+          <span className="text-xs text-muted-foreground">
+            Showing {filteredTickets.length} of {tickets.length} total reports
+          </span>
         </div>
       </div>
 
-      {/* Ticket Details Inspector Modal */}
       <TicketDetailsModal
         ticket={selectedTicket}
         isOpen={!!selectedTicket}
         onClose={() => setSelectedTicket(null)}
         onUpdateStatus={handleUpdateStatus}
+        onLocateOnMap={handleLocateOnMap}
       />
     </div>
   );
 }
+

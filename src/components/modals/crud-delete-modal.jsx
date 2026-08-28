@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { AlertTriangle, X } from "lucide-react";
+import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function CrudDeleteModal({ isOpen, onClose, onConfirm, record }) {
@@ -17,39 +17,37 @@ export default function CrudDeleteModal({ isOpen, onClose, onConfirm, record }) 
 
   const modalContent = (
     <div
-      className="fixed inset-0 bg-zinc-900/40 backdrop-blur-xs z-[100] flex items-center justify-center p-4"
+      className="fixed inset-0 bg-zinc-950/40 backdrop-blur-xs z-[100] flex items-center justify-center p-4 animate-in-fade"
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-xl shadow-xl max-w-sm w-full p-5 border border-zinc-200 animate-in-fade relative"
+        className="bg-card rounded-xl max-w-sm w-full p-5 border border-border relative shadow-none"
         onClick={(e) => e.stopPropagation()}
       >
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-900 p-1 transition-colors"
+          className="absolute top-4 right-4 text-muted-foreground hover:text-foreground p-1.5 transition-colors cursor-pointer"
+          aria-label="Close dialog"
         >
           <X className="w-4 h-4" />
         </button>
 
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-10 rounded-lg bg-rose-50 border border-rose-200/80 flex items-center justify-center text-rose-600 shrink-0">
-            <AlertTriangle className="w-5 h-5" />
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold text-zinc-900">
-              Delete Record
-            </h3>
-            <p className="text-xs font-mono text-zinc-500">{record.id}</p>
-          </div>
+        <div className="flex flex-col gap-1 mb-3">
+          <h3 className="text-sm font-semibold text-foreground">
+            Delete Record
+          </h3>
+          <span className="text-xs font-mono font-medium text-muted-foreground">
+            {record.id}
+          </span>
         </div>
 
-        <p className="text-xs text-zinc-600 mb-4 leading-relaxed">
-          Are you sure you want to permanently remove the incident report for{" "}
-          <strong className="text-zinc-900 font-semibold">{record.location}</strong> ({record.barangay})? This action cannot be undone.
+        <p className="text-sm text-muted-foreground mb-5 leading-relaxed">
+          Are you sure you want to permanently delete the report for{" "}
+          <strong className="text-foreground font-semibold">{record.location}</strong> ({record.barangay})? This action cannot be undone.
         </p>
 
-        <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-100">
-          <Button variant="secondary" size="sm" onClick={onClose}>
+        <div className="flex items-center justify-end gap-2 pt-3.5 border-t border-border-subtle mt-2">
+          <Button variant="ghost" size="sm" onClick={onClose}>
             Cancel
           </Button>
           <Button variant="danger-solid" size="sm" onClick={onConfirm}>

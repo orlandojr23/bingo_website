@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMap, ZoomControl } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
-import Link from "next/link";
-import { MapPin, Navigation } from "lucide-react";
+import { Navigation } from "lucide-react";
 
 // Fix default leaflet icons in Next.js
 delete L.Icon.Default.prototype._getIconUrl;
@@ -19,14 +18,14 @@ L.Icon.Default.mergeOptions({
 const getUrgencyColor = (urgency) => {
   switch (urgency) {
     case "Critical":
-      return "#E11D48"; // Rose-600
+      return "#E11D48";
     case "High":
-      return "#EA580C"; // Orange-600
+      return "#EA580C";
     case "Medium":
-      return "#D97706"; // Amber-600
+      return "#D97706";
     case "Low":
     default:
-      return "#10B981"; // Emerald-500
+      return "#059669";
   }
 };
 
@@ -36,19 +35,14 @@ const createCustomIcon = (urgency) => {
     className: "custom-pin bg-transparent border-0",
     html: `
       <div style="display: flex; align-items: center; justify-content: center;">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="${color}" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.3));">
-          <!-- Top tie/ruffle -->
-          <path d="M9 3l1 3h4l1-3l-2 1l-1-1l-1 1l-2-1z" />
-          <!-- Bag Body -->
-          <path d="M10 6c-3 0-4 2-5 6s-1 8 7 8 8-4 7-8-2-6-5-6h-4z" />
-          <!-- Tie string -->
-          <path d="M8 7h8" stroke-width="1.5" />
+        <svg width="18" height="18" viewBox="0 0 18 18" style="filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.3));">
+          <circle cx="9" cy="9" r="7" fill="${color}" stroke="#ffffff" stroke-width="2.5" />
         </svg>
       </div>
     `,
-    iconSize: [24, 24],
-    iconAnchor: [12, 16],
-    popupAnchor: [0, -14],
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
+    popupAnchor: [0, -9],
   });
 };
 
@@ -56,37 +50,55 @@ const createTruckIcon = () => {
   return L.divIcon({
     className: "custom-truck bg-transparent border-0",
     html: `
-      <div style="display: flex; align-items: center; justify-content: center; position: relative;">
-        <div class="animate-pulse" style="position: absolute; width: 44px; height: 44px; background-color: rgba(16, 185, 129, 0.25); border-radius: 50%; z-index: 1;"></div>
-        <div style="background-color: #059669; padding: 6px; border-radius: 50%; border: 2px solid white; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1); width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; position: relative; z-index: 2;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <rect width="14" height="10" x="2" y="6" rx="2" />
-            <path d="M16 8h4a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
-            <circle cx="6.5" cy="18.5" r="1.5" />
-            <circle cx="16.5" cy="18.5" r="1.5" />
-          </svg>
-        </div>
+      <div style="background-color: #059669; padding: 6px; border-radius: 50%; border: 2px solid white; box-shadow: 0 3px 6px rgba(0,0,0,0.25); width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect width="14" height="10" x="2" y="6" rx="2" />
+          <path d="M16 8h4a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+          <circle cx="6.5" cy="18.5" r="1.5" />
+          <circle cx="16.5" cy="18.5" r="1.5" />
+        </svg>
       </div>
     `,
-    iconSize: [36, 36],
-    iconAnchor: [18, 18],
-    popupAnchor: [0, -18],
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+    popupAnchor: [0, -16],
   });
 };
 
-function ChangeMapView({ center, zoom }) {
+function MapCameraController({ center, zoom }) {
   const map = useMap();
+  const isFirstRender = useRef(true);
+  const prevCenterRef = useRef(center);
+
   useEffect(() => {
-    map.setView(center, zoom);
+    // Invalidate container size on mount to ensure crisp, non-shaking layout
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [map]);
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    const [lat, lng] = center;
+    const [prevLat, prevLng] = prevCenterRef.current || [];
+    if (lat !== prevLat || lng !== prevLng) {
+      prevCenterRef.current = center;
+      map.panTo([lat, lng], { animate: true, duration: 0.4 });
+    }
   }, [center, zoom, map]);
+
   return null;
 }
 
-export default function MapCanvas({ tickets = [], trucks = [], mapMode = "pins", center }) {
+export default function MapCanvas({ tickets = [], trucks = [], mapMode = "pins", center, highlightedTicketId, onSelectTicket }) {
   const [mounted, setMounted] = useState(false);
-  const cebuCenter = [10.3157, 123.8854];
-  const mapCenter = center || cebuCenter;
-  const zoom = center ? 15 : 13;
+  const tejeroCenter = [10.3016, 123.9086];
+  const mapCenter = center || tejeroCenter;
+  const zoom = center ? 16 : 14;
 
   useEffect(() => {
     const t = setTimeout(() => setMounted(true), 0);
@@ -104,18 +116,20 @@ export default function MapCanvas({ tickets = [], trucks = [], mapMode = "pins",
     );
   }
 
+  const highlightedTicket = highlightedTicketId ? tickets.find(t => t.id === highlightedTicketId) : null;
+
   return (
     <div className="w-full h-full relative">
       <MapContainer
         center={mapCenter}
         zoom={zoom}
-        scrollWheelZoom={false}
+        scrollWheelZoom={true}
         attributionControl={false}
         zoomControl={false}
         className="w-full h-full z-10"
       >
-        <ChangeMapView center={mapCenter} zoom={zoom} />
-        <ZoomControl position="topright" />
+        <MapCameraController center={mapCenter} zoom={zoom} />
+        <ZoomControl position="topleft" />
         
         {/* Crisp clean CartoDB Voyager tiles forced to Retina @2x for ultra-sharp rendering */}
         <TileLayer
@@ -124,66 +138,95 @@ export default function MapCanvas({ tickets = [], trucks = [], mapMode = "pins",
           maxZoom={19}
         />
 
+
+
         {/* Heatmap / Accumulation Density Circles */}
         {(mapMode === "heatmap" || mapMode === "combined") &&
           tickets.map((t) => {
             const color = getUrgencyColor(t.urgency);
-            const radius = t.urgency === "Critical" ? 900 : t.urgency === "High" ? 700 : 500;
+            const radius = t.urgency === "Critical" ? 150 : t.urgency === "High" ? 120 : t.urgency === "Medium" ? 100 : 80;
             return (
-              <Circle
-                key={`heat-${t.id}`}
-                center={[t.lat, t.lng]}
-                radius={radius}
-                pathOptions={{
-                  stroke: false,
-                  fillColor: color,
-                  fillOpacity: t.urgency === "Critical" ? 0.3 : 0.15,
-                  className: "blur-[4px] mix-blend-multiply",
-                }}
-              />
+              <span key={`heat-group-${t.id}`}>
+                {/* Outer Glow Circle */}
+                <Circle
+                  center={[t.lat, t.lng]}
+                  radius={radius}
+                  pathOptions={{
+                    stroke: false,
+                    fillColor: color,
+                    fillOpacity: 0.06,
+                    interactive: false,
+                  }}
+                />
+                {/* Inner Core Circle */}
+                <Circle
+                  center={[t.lat, t.lng]}
+                  radius={radius * 0.4}
+                  pathOptions={{
+                    stroke: false,
+                    fillColor: color,
+                    fillOpacity: 0.18,
+                    interactive: false,
+                  }}
+                />
+              </span>
             );
           })}
 
         {/* Point Markers */}
         {(mapMode === "pins" || mapMode === "combined") &&
-          tickets.map((t) => (
-            <Marker
-              key={`pin-${t.id}`}
-              position={[t.lat, t.lng]}
-              icon={createCustomIcon(t.urgency)}
-            >
-              <Popup>
-                <div className="p-3.5 flex flex-col gap-2 min-w-[220px] max-w-[260px] text-zinc-900 font-sans">
-                  <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-zinc-100">
-                    <span className="font-mono font-semibold text-xs text-zinc-900">
-                      {t.id}
-                    </span>
-                    <UrgencyBadge urgency={t.urgency} />
-                  </div>
+          tickets.map((t) => {
+            const isHighlighted = highlightedTicketId === t.id;
+            return (
+              <Marker
+                key={`pin-${t.id}`}
+                position={[t.lat, t.lng]}
+                icon={createCustomIcon(t.urgency)}
+                zIndexOffset={isHighlighted ? 1000 : 0}
+              >
+                <Popup>
+                  <div className="p-3.5 flex flex-col gap-2 min-w-[220px] max-w-[260px] text-zinc-900 font-sans">
+                    <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-zinc-100">
+                      <span className="font-mono font-semibold text-xs text-zinc-900">
+                        {t.id}
+                      </span>
+                      <UrgencyBadge urgency={t.urgency} />
+                    </div>
 
-                  <div className="flex flex-col">
-                    <span className="font-semibold text-xs text-zinc-900">
-                      {t.location}
-                    </span>
-                    <span className="text-[11px] text-zinc-500">
-                      {t.barangay}, {t.city || "Cebu City"}
-                    </span>
-                  </div>
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-xs text-zinc-900">
+                        {t.location}
+                      </span>
+                      <span className="text-xs text-zinc-500">
+                        {t.barangay}, {t.city || "Cebu City"}
+                      </span>
+                    </div>
 
-                  <p className="text-[11px] text-zinc-600 line-clamp-2 leading-relaxed">
-                    {t.description}
-                  </p>
+                    <p className="text-xs text-zinc-600 line-clamp-2 leading-relaxed">
+                      {t.description}
+                    </p>
 
-                  <div className="flex items-center justify-between pt-2 border-t border-zinc-100 mt-0.5">
-                    <StatusBadge status={t.status} />
-                    <span className="text-[10px] text-zinc-400 font-mono">
-                      {t.date}
-                    </span>
+                    <div className="flex items-center justify-between pt-2 border-t border-zinc-100 mt-0.5">
+                      <StatusBadge status={t.status} />
+                      <span className="text-xs text-zinc-400 font-mono">
+                        {t.date}
+                      </span>
+                    </div>
+
+                    {onSelectTicket && (
+                      <button
+                        type="button"
+                        onClick={() => onSelectTicket(t)}
+                        className="w-full text-center mt-1 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-lg transition-colors shadow-xs"
+                      >
+                        View Details & Photo
+                      </button>
+                    )}
                   </div>
-                </div>
-              </Popup>
-            </Marker>
-          ))}
+                </Popup>
+              </Marker>
+            );
+          })}
 
         {/* Truck Markers */}
         {trucks &&
@@ -196,18 +239,18 @@ export default function MapCanvas({ tickets = [], trucks = [], mapMode = "pins",
               <Popup>
                 <div className="p-3 flex flex-col gap-1.5 min-w-[200px] text-zinc-900 font-sans">
                   <div className="flex items-center gap-1.5 pb-1 border-b border-zinc-100">
-                    <span className="font-bold text-xs text-zinc-900">
-                      Compactor {trk.id}
+                    <span className="font-semibold text-xs text-zinc-900">
+                      Truck {trk.id}
                     </span>
-                    <span className="text-[10px] bg-emerald-50 text-emerald-700 font-bold px-1.5 py-0.5 rounded-sm">
-                      Live
+                    <span className="text-xs text-emerald-600 font-semibold">
+                      • On Duty
                     </span>
                   </div>
-                  <div className="flex flex-col text-[11px] text-zinc-600 gap-0.5">
+                  <div className="flex flex-col text-xs text-zinc-600 gap-0.5">
                     <div><span className="font-semibold text-zinc-700">Driver:</span> {trk.driver}</div>
                     <div><span className="font-semibold text-zinc-700">Plate:</span> {trk.plate}</div>
-                    {trk.capacity && <div><span className="font-semibold text-zinc-700">Capacity:</span> {trk.capacity}</div>}
-                    {trk.eta && <div className="text-emerald-600 font-bold mt-1">ETA: {trk.eta}</div>}
+                    {trk.capacity && <div><span className="font-semibold text-zinc-700">Load:</span> {trk.capacity}</div>}
+                    {trk.eta && <div className="text-emerald-600 font-bold mt-1">Arriving in: {trk.eta}</div>}
                   </div>
                 </div>
               </Popup>

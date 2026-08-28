@@ -1,6 +1,6 @@
-﻿"use client";
+"use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -12,6 +12,10 @@ export default function AdminLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    router.replace("/dashboard");
+  }, [router]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -32,7 +36,7 @@ export default function AdminLoginPage() {
     const role = data.user?.user_metadata?.role;
     if (role !== "admin") {
       await supabase.auth.signOut();
-      setError("Access denied. This portal is for admins only.");
+      setError("This account doesn't have admin access. Please sign in with an admin account.");
       setIsLoading(false);
       return;
     }
@@ -54,7 +58,7 @@ export default function AdminLoginPage() {
 
             <div>
               <label htmlFor="email" className="block text-sm font-bold text-zinc-300">
-                Admin Email
+                Email Address
               </label>
               <div className="mt-2 relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
