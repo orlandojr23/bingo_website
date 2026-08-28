@@ -61,8 +61,9 @@ function FaqItem({ question, answer, isOpen, onClick }) {
   return (
     <div className="border border-zinc-200 rounded-2xl overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow">
       <button
+        type="button"
         onClick={onClick}
-        className="w-full flex items-center justify-between p-6 text-left focus:outline-none"
+        className="w-full flex items-center justify-between p-6 text-left focus:outline-none cursor-pointer"
       >
         <h4 className="text-lg font-bold text-zinc-900 pr-8">{question}</h4>
         <motion.div
@@ -146,8 +147,9 @@ export default function FaqsPage() {
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <button 
+                type="button"
                 onClick={() => window.dispatchEvent(new CustomEvent("openContactSheet"))}
-                className="w-full sm:w-auto px-8 py-3 bg-white text-emerald-900 rounded-xl font-bold hover:bg-zinc-100 transition-colors"
+                className="w-full sm:w-auto px-8 py-3 bg-white text-emerald-900 rounded-xl font-bold hover:bg-zinc-100 transition-colors cursor-pointer"
               >
                 Contact Support
               </button>

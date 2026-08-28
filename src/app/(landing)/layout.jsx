@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ArrowRight, ChevronDown, Play, Apple, Menu, X } from "lucide-react";
-import RegisterSheet from "./RegisterSheet";
 import { AnimatePresence, motion } from "framer-motion";
 import ContactSheet from "./ContactSheet";
 import { supabase } from "@/lib/supabase";
@@ -12,7 +11,6 @@ export default function LandingLayout({ children }) {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [hideLogo, setHideLogo] = useState(false);
-  const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [isContactOpen, setIsContactOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [sessionUser, setSessionUser] = useState(null);
@@ -158,10 +156,10 @@ export default function LandingLayout({ children }) {
           
           <div className="flex-1 md:flex-none shrink-0 flex justify-end items-center gap-3">
             <button 
-              onClick={() => { setIsRegisterOpen(true); }} 
-              className="group flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm"
+              onClick={() => setIsContactOpen(true)} 
+              className="group flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm cursor-pointer"
             >
-              Get Started <ArrowRight className="hidden sm:block w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
+              Contact Us <ArrowRight className="hidden sm:block w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
             </button>
             <button 
               onClick={() => setIsMobileMenuOpen(true)}
@@ -175,7 +173,6 @@ export default function LandingLayout({ children }) {
       <main className="flex-1">
         {children}
       </main>
-      <RegisterSheet isOpen={isRegisterOpen} onClose={() => setIsRegisterOpen(false)} />
       <ContactSheet isOpen={isContactOpen} onClose={() => setIsContactOpen(false)} />
       <footer className="relative pt-20 pb-12 overflow-hidden border-t border-emerald-900/30 bg-[url('/footer-bg.svg')] bg-cover bg-top bg-no-repeat text-emerald-100">
         {/* Subtle dark overlay to ensure text contrast */}
@@ -264,10 +261,10 @@ export default function LandingLayout({ children }) {
                 <a href="/#faq" onClick={() => setIsMobileMenuOpen(false)} className={`transition-all px-6 py-2 rounded-2xl ${activeSection === "faq" ? "bg-emerald-50 text-emerald-700" : "text-zinc-900 hover:text-emerald-600 hover:bg-zinc-50"}`}>FAQ</a>
 
                 <button 
-                  onClick={() => { setIsMobileMenuOpen(false); setIsRegisterOpen(true); }} 
-                  className="transition-all px-6 py-2 rounded-2xl text-emerald-600 hover:bg-emerald-50 text-left"
+                  onClick={() => { setIsMobileMenuOpen(false); setIsContactOpen(true); }} 
+                  className="transition-all px-6 py-2 rounded-2xl text-emerald-600 hover:bg-emerald-50 text-left cursor-pointer"
                 >
-                  Get Started
+                  Contact Us
                 </button>
               </nav>
             </div>
@@ -296,3 +293,4 @@ export default function LandingLayout({ children }) {
     </div>
   );
 }
+

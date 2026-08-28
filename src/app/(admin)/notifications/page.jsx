@@ -184,7 +184,7 @@ export default function NotificationsPage() {
                   key={tab}
                   type="button"
                   onClick={() => setActiveTab(tab)}
-                  className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                  className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
                     isActive
                       ? "bg-card text-foreground shadow-xs"
                       : "text-muted-foreground hover:text-foreground"
@@ -271,8 +271,9 @@ export default function NotificationsPage() {
 
                     <div className="mt-3 flex shrink-0 items-center justify-end">
                       <button
+                        type="button"
                         onClick={(e) => deleteNotification(n.id, e)}
-                        className="text-xs font-medium text-rose-600 transition-colors hover:text-rose-700"
+                        className="text-xs font-medium text-rose-600 transition-colors hover:text-rose-700 cursor-pointer"
                         title="Dismiss Alert"
                       >
                         Dismiss
@@ -329,7 +330,7 @@ export default function NotificationsPage() {
                     <button
                       type="button"
                       onClick={() => setSelectedNotif(null)}
-                      className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                      className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer"
                       aria-label="Back to list"
                     >
                       <X className="h-4 w-4" />
@@ -375,7 +376,7 @@ export default function NotificationsPage() {
                       <button
                         type="button"
                         onClick={() => markAsUnread(selectedNotif.id)}
-                        className={`rounded-md py-1.5 text-xs font-medium transition-colors ${
+                        className={`rounded-md py-1.5 text-xs font-medium transition-colors cursor-pointer ${
                           !selectedNotif.isRead
                             ? "bg-card text-foreground shadow-xs"
                             : "text-muted-foreground hover:text-foreground"
@@ -386,7 +387,7 @@ export default function NotificationsPage() {
                       <button
                         type="button"
                         onClick={() => markAsRead(selectedNotif.id)}
-                        className={`rounded-md py-1.5 text-xs font-medium transition-colors ${
+                        className={`rounded-md py-1.5 text-xs font-medium transition-colors cursor-pointer ${
                           selectedNotif.isRead
                             ? "bg-card text-foreground shadow-xs"
                             : "text-muted-foreground hover:text-foreground"

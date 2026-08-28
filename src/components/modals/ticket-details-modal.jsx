@@ -35,7 +35,7 @@ function StatusSelector({ selectedStatus, onSelect, size = "sm" }) {
           key={opt.value}
           type="button"
           onClick={() => onSelect(opt.value)}
-          className={`inline-flex items-center justify-center rounded-lg border px-1 text-xs font-medium transition-colors ${
+          className={`inline-flex items-center justify-center rounded-lg border px-1 text-xs font-medium transition-colors cursor-pointer ${
             size === "sm" ? "py-2" : "py-2.5 px-2"
           } ${
             selectedStatus === opt.value
@@ -101,8 +101,9 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
             </div>
 
             <button
+              type="button"
               onClick={onClose}
-              className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer"
               aria-label="Back to list"
             >
               <X className="h-4 w-4" />
@@ -201,8 +202,9 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
                 </div>
 
                 <button
+                  type="button"
                   onClick={onClose}
-                  className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer"
                   aria-label="Close sheet"
                 >
                   <X className="h-5 w-5" />

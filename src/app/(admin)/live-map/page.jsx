@@ -154,8 +154,9 @@ function LiveMapContent() {
         <div className="flex shrink-0 items-center gap-2 border-b border-border-subtle px-4 py-3">
           <div className="flex flex-1 gap-0.5 rounded-lg bg-muted p-0.5">
             <button
+              type="button"
               onClick={() => handleSwitchView("reports")}
-              className={`flex flex-1 items-center justify-center rounded-md py-1.5 text-xs font-medium transition-colors ${
+              className={`flex flex-1 items-center justify-center rounded-md py-1.5 text-xs font-medium transition-colors cursor-pointer ${
                 mapView === "reports"
                   ? "bg-card text-foreground shadow-xs"
                   : "text-muted-foreground hover:text-foreground"
@@ -164,8 +165,9 @@ function LiveMapContent() {
               Reports
             </button>
             <button
+              type="button"
               onClick={() => handleSwitchView("trucks")}
-              className={`flex flex-1 items-center justify-center rounded-md py-1.5 text-xs font-medium transition-colors ${
+              className={`flex flex-1 items-center justify-center rounded-md py-1.5 text-xs font-medium transition-colors cursor-pointer ${
                 mapView === "trucks"
                   ? "bg-card text-foreground shadow-xs"
                   : "text-muted-foreground hover:text-foreground"
@@ -235,8 +237,9 @@ function LiveMapContent() {
                   ].map(({ key, label }) => (
                     <button
                       key={key}
+                      type="button"
                       onClick={() => setMapMode(key)}
-                      className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                      className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer ${
                         mapMode === key
                           ? "bg-card text-foreground shadow-xs"
                           : "text-muted-foreground hover:text-foreground"

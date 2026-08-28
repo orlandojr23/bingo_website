@@ -122,7 +122,8 @@ function HomeContent() {
       <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto mt-2">
         <button
           type="button"
-          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3.5 rounded-xl text-sm sm:text-base font-bold transition-all shadow-lg shadow-emerald-600/20 hover:shadow-xl hover:-translate-y-0.5"
+          onClick={() => window.dispatchEvent(new CustomEvent("openContactSheet"))}
+          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3.5 rounded-xl text-sm sm:text-base font-bold transition-all shadow-lg shadow-emerald-600/20 hover:shadow-xl hover:-translate-y-0.5 cursor-pointer"
         >
           Request a Demo
         </button>

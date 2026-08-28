@@ -228,15 +228,17 @@ export default function CrudPage() {
                         <td className="p-3.5 pr-5 text-right">
                           <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                             <button
+                              type="button"
                               onClick={() => handleEdit(r)}
-                              className="font-medium text-emerald-600 transition-colors hover:text-emerald-700"
+                              className="font-medium text-emerald-600 transition-colors hover:text-emerald-700 cursor-pointer"
                             >
                               Edit
                             </button>
                             <span className="text-border">|</span>
                             <button
+                              type="button"
                               onClick={() => setRecordToDelete(r)}
-                              className="font-medium text-rose-600 transition-colors hover:text-rose-700"
+                              className="font-medium text-rose-600 transition-colors hover:text-rose-700 cursor-pointer"
                             >
                               Delete
                             </button>
@@ -286,7 +288,7 @@ export default function CrudPage() {
                     <button
                       type="button"
                       onClick={resetForm}
-                      className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                      className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer"
                       aria-label="Close sheet"
                     >
                       <X className="h-4 w-4" />

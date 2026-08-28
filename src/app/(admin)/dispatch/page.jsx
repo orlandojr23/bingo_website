@@ -284,8 +284,9 @@ export default function DispatchPage() {
 
                     <div className="mt-2 flex shrink-0 items-center justify-end">
                       <button
+                        type="button"
                         onClick={(e) => handleDeleteSchedule(sch.id, e)}
-                        className="rounded-md border border-rose-200 bg-card px-2.5 py-1 text-xs font-medium text-rose-600 transition-colors hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700"
+                        className="rounded-md border border-rose-200 bg-card px-2.5 py-1 text-xs font-medium text-rose-600 transition-colors hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 cursor-pointer"
                         title="Delete Assignment"
                       >
                         Delete
@@ -335,7 +336,7 @@ export default function DispatchPage() {
                     <button
                       type="button"
                       onClick={() => (isAdding ? setIsAdding(false) : setSelectedSchedule(null))}
-                      className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                      className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer"
                       aria-label="Close panel"
                     >
                       <X className="h-4 w-4" />

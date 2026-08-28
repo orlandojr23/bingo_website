@@ -74,7 +74,14 @@ export default function FeaturesPage() {
               Request a live demo to see how Bin'Go can transform your municipality's waste management workflow.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <a href="/#home" className="w-full sm:w-auto px-8 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-500 transition-colors">
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent("openContactSheet"))}
+                className="w-full sm:w-auto px-8 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-500 transition-colors cursor-pointer"
+              >
+                Request Demo
+              </button>
+              <a href="/#home" className="w-full sm:w-auto px-8 py-3 bg-zinc-800 text-white rounded-xl font-bold hover:bg-zinc-700 transition-colors cursor-pointer">
                 Back to Home
               </a>
             </div>

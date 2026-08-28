@@ -79,9 +79,10 @@ export default function ContactSheet({ isOpen, onClose }) {
           >
             {/* Close Button */}
             <button 
+              type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="absolute top-6 right-6 p-2 transition-colors text-zinc-400 hover:text-zinc-900 z-20 disabled:opacity-50"
+              className="absolute top-6 right-6 p-2 transition-colors text-zinc-400 hover:text-zinc-900 z-20 disabled:opacity-50 cursor-pointer"
             >
               <X className="w-6 h-6" />
             </button>
@@ -176,7 +177,7 @@ export default function ContactSheet({ isOpen, onClose }) {
                     <button 
                       type="submit"
                       disabled={isSubmitting || !!success}
-                      className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-600/70 text-white py-4 rounded-xl text-sm font-bold transition-all shadow-lg shadow-emerald-600/20 hover:shadow-xl hover:-translate-y-0.5 disabled:transform-none"
+                      className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-600/70 text-white py-4 rounded-xl text-sm font-bold transition-all shadow-lg shadow-emerald-600/20 hover:shadow-xl hover:-translate-y-0.5 disabled:transform-none cursor-pointer"
                     >
                       {isSubmitting ? (
                         <>
