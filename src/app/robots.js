@@ -5,7 +5,21 @@ export default function robots() {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/admin-login", "/login", "/dashboard", "/dispatch", "/tickets", "/live-map", "/analytics", "/notifications", "/staff", "/crud", "/settings"],
+      disallow: [
+        "/driver",
+        "/report",
+        "/admin-login",
+        "/login",
+        "/dashboard",
+        "/dispatch",
+        "/tickets",
+        "/live-map",
+        "/analytics",
+        "/notifications",
+        "/staff",
+        "/crud",
+        "/settings",
+      ],
     },
     sitemap: `${BASE_URL}/sitemap.xml`,
   };

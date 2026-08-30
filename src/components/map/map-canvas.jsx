@@ -46,36 +46,85 @@ const createCustomIcon = (urgency) => {
   });
 };
 
-const createTruckIcon = () => {
+const createTruckIcon = (heading = 90) => {
   return L.divIcon({
     className: "custom-truck bg-transparent border-0",
     html: `
-      <div style="background-color: #059669; padding: 6px; border-radius: 50%; border: 2px solid white; box-shadow: 0 3px 6px rgba(0,0,0,0.25); width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <rect width="14" height="10" x="2" y="6" rx="2" />
-          <path d="M16 8h4a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
-          <circle cx="6.5" cy="18.5" r="1.5" />
-          <circle cx="16.5" cy="18.5" r="1.5" />
+      <div style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.3)); transform: rotate(${heading - 90}deg); transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);">
+        <svg width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+          {/* 4 Side Tires */}
+          <rect x="7" y="9" width="3.5" height="7" rx="1.5" fill="#18181b" />
+          <rect x="33.5" y="9" width="3.5" height="7" rx="1.5" fill="#18181b" />
+          <rect x="6.5" y="27" width="4" height="8" rx="1.5" fill="#18181b" />
+          <rect x="33.5" y="27" width="4" height="8" rx="1.5" fill="#18181b" />
+
+          {/* Compactor Main Container Box */}
+          <rect x="10" y="16" width="24" height="20" rx="3" fill="#10b981" stroke="#059669" stroke-width="1" />
+          {/* Container Top 3D Roof Highlight */}
+          <rect x="13" y="18" width="18" height="14" rx="2" fill="#34d399" opacity="0.9" />
+          <line x1="10" y1="21" x2="34" y2="21" stroke="#047857" stroke-width="1.2" />
+          <line x1="10" y1="26" x2="34" y2="26" stroke="#047857" stroke-width="1.2" />
+          <line x1="10" y1="31" x2="34" y2="31" stroke="#047857" stroke-width="1.2" />
+
+          {/* Rear Hopper Loader */}
+          <rect x="12" y="35" width="20" height="3" rx="1" fill="#064e3b" />
+          <rect x="15" y="35.5" width="4" height="2" fill="#facc15" />
+          <rect x="25" y="35.5" width="4" height="2" fill="#facc15" />
+
+          {/* 3D Cab Front Hood */}
+          <path d="M 12 16 H 32 V 9 C 32 6.5 29.5 5 27 5 H 17 C 14.5 5 12 6.5 12 9 V 16 Z" fill="#059669" stroke="#047857" stroke-width="1" />
+
+          {/* Side Mirrors */}
+          <rect x="7.5" y="11" width="3" height="2" rx="0.5" fill="#047857" />
+          <rect x="33.5" y="11" width="3" height="2" rx="0.5" fill="#047857" />
+
+          {/* Glossy Sky Blue Curved Windshield */}
+          <path d="M 14 11 H 30 L 28 14.5 H 16 L 14 11 Z" fill="#38bdf8" stroke="#e0f2fe" stroke-width="0.8" />
+          <line x1="20" y1="11.5" x2="22" y2="14" stroke="#ffffff" stroke-width="1" opacity="0.8" />
+
+          {/* LED Headlights */}
+          <rect x="13.5" y="5" width="3.5" height="1.8" rx="0.5" fill="#facc15" />
+          <rect x="27" y="5" width="3.5" height="1.8" rx="0.5" fill="#facc15" />
         </svg>
       </div>
     `,
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
-    popupAnchor: [0, -16],
+    iconSize: [44, 44],
+    iconAnchor: [22, 22],
+    popupAnchor: [0, -22],
   });
 };
 
-function MapCameraController({ center, zoom }) {
+function MapCameraController({ center, zoom, onMapDrag }) {
   const map = useMap();
   const isFirstRender = useRef(true);
   const prevCenterRef = useRef(center);
 
   useEffect(() => {
-    // Invalidate container size on mount to ensure crisp, non-shaking layout
-    const timer = setTimeout(() => {
-      map.invalidateSize();
-    }, 100);
-    return () => clearTimeout(timer);
+    if (!onMapDrag) return;
+    const handleDragStart = () => {
+      onMapDrag();
+    };
+    map.on("dragstart", handleDragStart);
+    return () => {
+      map.off("dragstart", handleDragStart);
+    };
+  }, [map, onMapDrag]);
+
+  useEffect(() => {
+    // Multi-phase invalidateSize to handle tab transitions and mobile shell animations
+    const t1 = setTimeout(() => map.invalidateSize(), 50);
+    const t2 = setTimeout(() => map.invalidateSize(), 250);
+    const t3 = setTimeout(() => map.invalidateSize(), 600);
+
+    const handleResize = () => map.invalidateSize();
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      window.removeEventListener("resize", handleResize);
+    };
   }, [map]);
 
   useEffect(() => {
@@ -94,7 +143,7 @@ function MapCameraController({ center, zoom }) {
   return null;
 }
 
-export default function MapCanvas({ tickets = [], trucks = [], mapMode = "pins", center, highlightedTicketId, onSelectTicket }) {
+export default function MapCanvas({ tickets = [], trucks = [], mapMode = "pins", center, highlightedTicketId, onSelectTicket, onMapDrag }) {
   const [mounted, setMounted] = useState(false);
   const tejeroCenter = [10.3016, 123.9086];
   const mapCenter = center || tejeroCenter;
@@ -107,11 +156,8 @@ export default function MapCanvas({ tickets = [], trucks = [], mapMode = "pins",
 
   if (!mounted) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-zinc-50 text-zinc-400 text-xs">
-        <div className="flex items-center gap-2">
-          <Navigation className="w-4 h-4 animate-spin text-zinc-400" />
-          <span>Loading Metro Cebu Geospatial Canvas...</span>
-        </div>
+      <div className="w-full h-full flex items-center justify-center bg-card/60 backdrop-blur-sm">
+        <div className="h-7 w-7 rounded-full border-2 border-emerald-500/20 border-t-emerald-600 animate-spin" />
       </div>
     );
   }
@@ -128,14 +174,15 @@ export default function MapCanvas({ tickets = [], trucks = [], mapMode = "pins",
         zoomControl={false}
         className="w-full h-full z-10"
       >
-        <MapCameraController center={mapCenter} zoom={zoom} />
-        <ZoomControl position="topleft" />
+        <MapCameraController center={mapCenter} zoom={zoom} onMapDrag={onMapDrag} />
         
-        {/* Crisp clean CartoDB Voyager tiles forced to Retina @2x for ultra-sharp rendering */}
+        {/* High-DPI Retina Razor-Sharp CartoDB Voyager tiles */}
         <TileLayer
           attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png"
-          maxZoom={19}
+          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+          detectRetina={true}
+          subdomains="abcd"
+          maxZoom={20}
         />
 
 
@@ -234,7 +281,7 @@ export default function MapCanvas({ tickets = [], trucks = [], mapMode = "pins",
             <Marker
               key={`truck-${trk.id}`}
               position={[trk.lat, trk.lng]}
-              icon={createTruckIcon()}
+              icon={createTruckIcon(trk.heading ?? 90)}
             >
               <Popup>
                 <div className="p-3 flex flex-col gap-1.5 min-w-[200px] text-zinc-900 font-sans">

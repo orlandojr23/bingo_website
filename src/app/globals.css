@@ -40,6 +40,20 @@ body {
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  overscroll-behavior-y: none;
+}
+
+/* Prevent accidental blue highlight on mobile taps */
+button, a, input, select, textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Dynamic viewport height lock for mobile PWA shells */
+.app-viewport {
+  height: 100vh;
+  height: 100dvh;
 }
 
 /* Crisp focus indicators */
@@ -116,6 +130,7 @@ body {
     transform: translateX(100%);
   }
   to {
+    opacity: 1;
     transform: translateX(0);
   }
 }
@@ -126,8 +141,8 @@ body {
 
 /* Sleek, Minimalist Scrollbar (Chrome, Safari, Edge) */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -135,18 +150,18 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(161, 161, 170, 0.4); /* zinc-400 at 40% */
+  background: rgba(161, 161, 170, 0.3);
   border-radius: 6px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(161, 161, 170, 0.7);
+  background: rgba(161, 161, 170, 0.6);
 }
 
-/* Sleek, Minimalist Scrollbar (Firefox) */
+/* Firefox scrollbars */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(161, 161, 170, 0.4) transparent;
+  scrollbar-color: rgba(161, 161, 170, 0.3) transparent;
 }
 
 @supports (padding-top: env(safe-area-inset-top)) {
@@ -154,11 +169,17 @@ body {
   .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
 }
 
-/* Utility to completely hide scrollbars but allow scrolling */
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
 .scrollbar-hide {
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
+
+/* Hide Next.js dev indicator badge overlay on mobile test shells */
+nextjs-portal,
+[data-nextjs-toast] {
+  display: none !important;
+}
+
