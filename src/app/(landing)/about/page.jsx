@@ -7,7 +7,7 @@ import { Leaf, Users, Map, ShieldCheck } from "lucide-react";
 export default function AboutPage() {
   return (
     <div className="min-h-screen bg-zinc-50 pt-24 sm:pt-32 pb-16 sm:pb-24">
-      <div className="max-w-4xl mx-auto px-4 sm:px-12">
+      <div className="max-w-4xl mx-auto px-6 sm:px-12">
         
         {/* Header Section */}
         <div className="text-center mb-10 sm:mb-20">

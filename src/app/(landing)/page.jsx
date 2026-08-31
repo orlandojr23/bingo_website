@@ -45,7 +45,7 @@ export default function LandingPage() {
         {/* Overlay to prevent background from overwhelming hero content */}
         <div className="absolute inset-0 bg-white/40 -z-10" />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative w-full z-10">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 relative w-full z-10">
           
           {/* Single Grid switching between left and right layout orders */}
           <div className={`w-full flex flex-col lg:flex-row items-center justify-center gap-12 lg:gap-16 xl:gap-20 ${
@@ -104,7 +104,7 @@ export default function LandingPage() {
 function HomeContent() {
   return (
     <>
-      <h1 className="text-2xl sm:text-5xl lg:text-7xl [@media(max-height:800px)]:text-6xl [@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-6 [@media(max-height:800px)]:mb-4">
+      <h1 className="text-2xl sm:text-5xl lg:text-7xl lg:[@media(max-height:800px)]:text-6xl lg:[@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-6 lg:[@media(max-height:800px)]:mb-4">
         <span className="text-[#0f172a]">
           Smart Waste <br className="hidden lg:block" /> Collection,
         </span>
@@ -115,7 +115,7 @@ function HomeContent() {
         </span>
       </h1>
 
-      <p className="text-sm sm:text-lg [@media(max-height:800px)]:text-base text-zinc-700 font-medium mb-8 [@media(max-height:800px)]:mb-5 max-w-md leading-relaxed">
+      <p className="text-sm sm:text-lg lg:[@media(max-height:800px)]:text-base text-zinc-700 font-medium mb-8 lg:[@media(max-height:800px)]:mb-5 max-w-md leading-relaxed">
         Never miss a collection day again. Track garbage trucks live, get instant arrival alerts, and help keep your community clean.
       </p>
 
@@ -135,7 +135,7 @@ function HomeContent() {
 function AboutContent() {
   return (
     <>
-      <h2 className="text-2xl sm:text-5xl lg:text-7xl [@media(max-height:800px)]:text-6xl [@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-6 [@media(max-height:800px)]:mb-4 text-[#0f172a]">
+      <h2 className="text-2xl sm:text-5xl lg:text-7xl lg:[@media(max-height:800px)]:text-6xl lg:[@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-6 lg:[@media(max-height:800px)]:mb-4 text-[#0f172a]">
         Community Cleanups, <br className="hidden lg:block" />
         <span className="relative inline-block mt-2 px-2">
           <span className="relative z-10 text-white">Accelerated.</span>
@@ -143,7 +143,7 @@ function AboutContent() {
         </span>
       </h2>
 
-      <p className="text-sm sm:text-lg [@media(max-height:800px)]:text-base text-zinc-700 font-medium mb-8 [@media(max-height:800px)]:mb-5 max-w-md leading-relaxed">
+      <p className="text-sm sm:text-lg lg:[@media(max-height:800px)]:text-base text-zinc-700 font-medium mb-8 lg:[@media(max-height:800px)]:mb-5 max-w-md leading-relaxed">
         Connect waste collection services directly with local neighborhoods. Track routes, log waste reports in real-time, and ensure quick cleanups.
       </p>
 
@@ -162,7 +162,7 @@ function AboutContent() {
 function FeaturesContent() {
   return (
     <>
-      <h2 className="text-2xl sm:text-5xl lg:text-7xl [@media(max-height:800px)]:text-6xl [@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-6 [@media(max-height:800px)]:mb-4 text-[#0f172a]">
+      <h2 className="text-2xl sm:text-5xl lg:text-7xl lg:[@media(max-height:800px)]:text-6xl lg:[@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-6 lg:[@media(max-height:800px)]:mb-4 text-[#0f172a]">
         Powerful Tools, <br className="hidden lg:block" />
         <span className="relative inline-block mt-2 px-2">
           <span className="relative z-10 text-white">Unleashed.</span>
@@ -170,7 +170,7 @@ function FeaturesContent() {
         </span>
       </h2>
 
-      <p className="text-sm sm:text-lg [@media(max-height:800px)]:text-base text-zinc-700 font-medium mb-8 [@media(max-height:800px)]:mb-5 max-w-md leading-relaxed">
+      <p className="text-sm sm:text-lg lg:[@media(max-height:800px)]:text-base text-zinc-700 font-medium mb-8 lg:[@media(max-height:800px)]:mb-5 max-w-md leading-relaxed">
         Experience real-time tracking, smart truck routing, and community-driven waste reports in one beautifully designed platform.
       </p>
 
@@ -189,7 +189,7 @@ function FeaturesContent() {
 function FaqContent() {
   return (
     <>
-      <h2 className="text-2xl sm:text-5xl lg:text-7xl [@media(max-height:800px)]:text-6xl [@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-6 [@media(max-height:800px)]:mb-4 text-[#0f172a]">
+      <h2 className="text-2xl sm:text-5xl lg:text-7xl lg:[@media(max-height:800px)]:text-6xl lg:[@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-6 lg:[@media(max-height:800px)]:mb-4 text-[#0f172a]">
         Your Questions, <br className="hidden lg:block" />
         <span className="relative inline-block mt-2 px-2">
           <span className="relative z-10 text-white">Answered.</span>
@@ -197,7 +197,7 @@ function FaqContent() {
         </span>
       </h2>
 
-      <p className="text-sm sm:text-lg [@media(max-height:800px)]:text-base text-zinc-700 font-medium mb-8 [@media(max-height:800px)]:mb-5 max-w-md leading-relaxed">
+      <p className="text-sm sm:text-lg lg:[@media(max-height:800px)]:text-base text-zinc-700 font-medium mb-8 lg:[@media(max-height:800px)]:mb-5 max-w-md leading-relaxed">
         Everything you need to know about using Bin'Go in your community.
       </p>
 

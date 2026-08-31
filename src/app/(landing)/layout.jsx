@@ -87,7 +87,7 @@ export default function LandingLayout({ children }) {
     <div className="min-h-screen flex flex-col font-sans bg-white">
       {/* Floating Sticky Logo */}
       <div className="fixed top-2 z-50 pointer-events-none w-full">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[72px] flex items-center">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 h-[72px] flex items-center">
           <a 
             href="/#home" 
             className="inline-flex items-center group pointer-events-auto transition-all duration-500 ease-out"
@@ -108,7 +108,7 @@ export default function LandingLayout({ children }) {
       </div>
 
       <header className="absolute top-0 left-0 w-full z-40 bg-transparent">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[72px] flex items-center justify-between relative">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 h-[72px] flex items-center justify-between relative">
           {/* Spacer to match the logo width on the left */}
           <div className="hidden md:block w-[230px] shrink-0" />
           
@@ -171,7 +171,7 @@ export default function LandingLayout({ children }) {
       <footer className="relative pt-20 pb-12 overflow-hidden border-t border-emerald-900/30 bg-[url('/footer-bg.svg')] bg-cover bg-top bg-no-repeat text-emerald-100">
         {/* Subtle dark overlay to ensure text contrast */}
         <div className="absolute inset-0 bg-[#0b1e19]/30 -z-0" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 relative z-10">
           
           {/* Top Section */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-12 pb-16 border-b border-emerald-800/20">
