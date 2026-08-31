@@ -381,7 +381,7 @@ export default function RegisterSheet({ isOpen, onClose }) {
                               onClick={() => setShowPassword(!showPassword)}
                               className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
                             >
-                              {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                              {showPassword ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
                             </button>
                           </div>
                           {password && (
@@ -434,7 +434,7 @@ export default function RegisterSheet({ isOpen, onClose }) {
                               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                               className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
                             >
-                              {showConfirmPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                              {showConfirmPassword ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
                             </button>
                           </div>
                           {errors.confirmPassword && (

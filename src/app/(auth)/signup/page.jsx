@@ -1,14 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
+import { User, Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { getResidentSession, setResidentSession } from "@/lib/resident-session";
-import { getAccount } from "@/lib/resident-accounts";
+import { setResidentSession } from "@/lib/resident-session";
+import { getAccount, createAccount } from "@/lib/resident-accounts";
 import { Button } from "@/components/ui/button";
-import InstallAppButton from "@/components/pwa/InstallAppButton";
 
 const PUBLIC_DOMAINS = ["gmail.com", "yahoo.com", "outlook.com", "hotmail.com", "icloud.com"];
 
@@ -31,12 +30,6 @@ const getEmailSuggestionSuffix = (emailVal, domains = PUBLIC_DOMAINS) => {
   return "";
 };
 
-const nameFromEmail = (email) => {
-  const local = email.split("@")[0] || "Resident";
-  const token = local.split(/[._\-+]/)[0] || "Resident";
-  return token.charAt(0).toUpperCase() + token.slice(1);
-};
-
 const fieldClass = (hasError) =>
   `w-full rounded-xl border bg-card pl-10 pr-4 py-3 text-sm font-medium text-foreground placeholder:text-muted-foreground/50 outline-none transition-colors ${
     hasError
@@ -44,19 +37,35 @@ const fieldClass = (hasError) =>
       : "border-border hover:border-zinc-300 focus:border-zinc-400"
   }`;
 
-export default function ResidentLoginPage() {
+function ErrorLine({ message }) {
+  return (
+    <AnimatePresence initial={false}>
+      {message && (
+        <motion.p
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: "auto", opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          transition={{ duration: 0.25, ease: "easeInOut" }}
+          className="overflow-hidden text-xs font-medium text-rose-500"
+        >
+          {message}
+        </motion.p>
+      )}
+    </AnimatePresence>
+  );
+}
+
+export default function SignupPage() {
   const router = useRouter();
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
 
   const emailSuggestionSuffix = getEmailSuggestionSuffix(email);
-
-  useEffect(() => {
-    if (getResidentSession()) router.replace("/report");
-  }, [router]);
 
   const handleFieldChange = (field, value, setter) => {
     setter(value);
@@ -79,65 +88,89 @@ export default function ResidentLoginPage() {
     }
   };
 
-  const handleLogin = (e) => {
+  const handleSignup = (e) => {
     e.preventDefault();
 
     const newErrors = {};
+    if (name.trim().length < 2) {
+      newErrors.name = "Please enter your full name (at least 2 characters).";
+    }
     if (!email.trim()) {
       newErrors.email = "Please enter your email address.";
     } else if (!validateEmail(email)) {
       newErrors.email = "Please enter a valid email address.";
+    } else if (getAccount(email)) {
+      newErrors.email = "An account with this email already exists. Try signing in.";
     }
     if (!password) {
-      newErrors.password = "Please enter your password.";
+      newErrors.password = "Please create a password.";
     } else if (password.length < 6) {
       newErrors.password = "Password must be at least 6 characters.";
+    }
+    if (!confirm) {
+      newErrors.confirm = "Please re-enter your password.";
+    } else if (password && confirm !== password) {
+      newErrors.confirm = "Passwords do not match.";
     }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
     }
-
-    const account = getAccount(email);
-    if (account && account.password !== password) {
-      setErrors({ password: "Incorrect password. Try again or use Forgot Password." });
-      return;
-    }
-
     setErrors({});
     setIsLoading(true);
 
     setTimeout(() => {
       const trimmedEmail = email.trim().toLowerCase();
-      setResidentSession({
-        email: trimmedEmail,
-        name: account?.name || nameFromEmail(trimmedEmail),
-      });
+      createAccount({ name: name.trim(), email: trimmedEmail, password });
+      setResidentSession({ email: trimmedEmail, name: name.trim() });
       router.replace("/report");
     }, 900);
   };
 
   return (
-    <div className="relative flex min-h-screen flex-col bg-background">
-      <InstallAppButton className="absolute right-4 top-4 z-20" />
+    <div className="flex min-h-screen flex-col bg-background">
       <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-6 py-12">
-        <div className="mb-10 flex flex-col items-center text-center">
+        <div className="mb-8 flex flex-col items-center text-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/logo-green-v2.png"
             alt="Bin'Go Logo"
-            className="h-32 w-32 object-contain"
+            className="h-28 w-28 object-contain"
           />
           <h1 className="mt-5 text-2xl font-black tracking-tight text-foreground">
-            Welcome back!
+            Create your account
           </h1>
           <p className="mt-1.5 text-sm font-medium text-muted-foreground">
-            Sign in to continue to Bin&apos;Go
+            Join Bin&apos;Go to track collections in your barangay
           </p>
         </div>
 
-        <form className="flex flex-col gap-4" onSubmit={handleLogin} noValidate>
+        <form className="flex flex-col gap-4" onSubmit={handleSignup} noValidate>
+          <div className="flex flex-col gap-1.5">
+            <div className="relative">
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-muted-foreground/70">
+                <User className="h-4 w-4" />
+              </div>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) =>
+                  handleFieldChange(
+                    "name",
+                    e.target.value.replace(/[^a-zA-ZÀ-ÿÑñ'’ .-]/g, "").replace(/\s{2,}/g, " "),
+                    setName
+                  )
+                }
+                maxLength={60}
+                autoComplete="name"
+                className={fieldClass(!!errors.name)}
+                placeholder="Full name"
+              />
+            </div>
+            <ErrorLine message={errors.name} />
+          </div>
+
           <div className="flex flex-col gap-1.5">
             <div className="relative">
               <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-muted-foreground/70">
@@ -166,19 +199,7 @@ export default function ResidentLoginPage() {
                 placeholder="you@gmail.com"
               />
             </div>
-            <AnimatePresence initial={false}>
-              {errors.email && (
-                <motion.p
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.25, ease: "easeInOut" }}
-                  className="overflow-hidden text-xs font-medium text-rose-500"
-                >
-                  {errors.email}
-                </motion.p>
-              )}
-            </AnimatePresence>
+            <ErrorLine message={errors.email} />
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -191,9 +212,9 @@ export default function ResidentLoginPage() {
                 value={password}
                 onChange={(e) => handleFieldChange("password", e.target.value.replace(/\s/g, ""), setPassword)}
                 maxLength={64}
-                autoComplete="current-password"
+                autoComplete="new-password"
                 className={fieldClass(!!errors.password) + " pr-11"}
-                placeholder="Your password"
+                placeholder="Create a password"
               />
               <button
                 type="button"
@@ -204,28 +225,25 @@ export default function ResidentLoginPage() {
                 {showPassword ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
               </button>
             </div>
-            <AnimatePresence initial={false}>
-              {errors.password && (
-                <motion.p
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.25, ease: "easeInOut" }}
-                  className="overflow-hidden text-xs font-medium text-rose-500"
-                >
-                  {errors.password}
-                </motion.p>
-              )}
-            </AnimatePresence>
+            <ErrorLine message={errors.password} />
           </div>
 
-          <div className="flex justify-end">
-            <Link
-              href="/forgot-password"
-              className="text-xs font-semibold text-emerald-600 transition-colors hover:text-emerald-700"
-            >
-              Forgot Password?
-            </Link>
+          <div className="flex flex-col gap-1.5">
+            <div className="relative">
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-muted-foreground/70">
+                <Lock className="h-4 w-4" />
+              </div>
+              <input
+                type={showPassword ? "text" : "password"}
+                value={confirm}
+                onChange={(e) => handleFieldChange("confirm", e.target.value.replace(/\s/g, ""), setConfirm)}
+                maxLength={64}
+                autoComplete="new-password"
+                className={fieldClass(!!errors.confirm)}
+                placeholder="Re-enter your password"
+              />
+            </div>
+            <ErrorLine message={errors.confirm} />
           </div>
 
           <Button
@@ -238,27 +256,22 @@ export default function ResidentLoginPage() {
             {isLoading ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Signing in...</span>
+                <span>Creating account...</span>
               </>
             ) : (
-              "Sign In"
+              "Create Account"
             )}
           </Button>
         </form>
 
         <p className="mt-6 text-center text-xs font-medium text-muted-foreground">
-          Don&apos;t have an account?{" "}
+          Already have an account?{" "}
           <Link
-            href="/signup"
+            href="/login"
             className="font-semibold text-emerald-600 transition-colors hover:text-emerald-700"
           >
-            Sign Up
+            Sign In
           </Link>
-        </p>
-
-        <p className="mt-4 text-center text-xs text-muted-foreground/80">
-          Demo mode: any email with a 6+ character password works. Accounts
-          created via Sign Up must use their own password.
         </p>
       </div>
 

@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import { Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getDriverSession, setDriverSession } from "@/lib/driver-session";
+import { getDriverAccount, saveDriverAccount } from "@/lib/driver-accounts";
 import { Button } from "@/components/ui/button";
+import InstallAppButton from "@/components/pwa/InstallAppButton";
 
 const PUBLIC_DOMAINS = ["gmail.com", "yahoo.com", "outlook.com", "hotmail.com", "icloud.com"];
 
@@ -96,17 +98,30 @@ export default function DriverLoginPage() {
       return;
     }
     setErrors({});
+
+    const account = getDriverAccount(email);
+    if (account && account.password !== password) {
+      setErrors({ password: "Incorrect password. Please try again." });
+      return;
+    }
+
     setIsLoading(true);
 
     setTimeout(() => {
       const trimmedEmail = email.trim().toLowerCase();
-      setDriverSession({ email: trimmedEmail, name: nameFromEmail(trimmedEmail) });
+      saveDriverAccount({
+        email: trimmedEmail,
+        name: account?.name || nameFromEmail(trimmedEmail),
+        password,
+      });
+      setDriverSession({ email: trimmedEmail, name: account?.name || nameFromEmail(trimmedEmail) });
       router.replace("/driver");
     }, 900);
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="relative flex min-h-screen flex-col bg-background">
+      <InstallAppButton className="absolute right-4 top-4 z-20" />
       <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-6 py-12">
         <div className="mb-10 flex flex-col items-center text-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -141,10 +156,13 @@ export default function DriverLoginPage() {
               <input
                 type="email"
                 value={email}
-                onChange={(e) => handleFieldChange("email", e.target.value, setEmail)}
+                onChange={(e) => handleFieldChange("email", e.target.value.replace(/\s/g, ""), setEmail)}
                 onKeyDown={handleEmailKeyDown}
                 autoCapitalize="none"
                 autoCorrect="off"
+                spellCheck={false}
+                maxLength={254}
+                autoComplete="email"
                 className={fieldClass(!!errors.email)}
                 placeholder="you@gmail.com"
               />
@@ -172,7 +190,9 @@ export default function DriverLoginPage() {
               <input
                 type={showPassword ? "text" : "password"}
                 value={password}
-                onChange={(e) => handleFieldChange("password", e.target.value, setPassword)}
+                onChange={(e) => handleFieldChange("password", e.target.value.replace(/\s/g, ""), setPassword)}
+                maxLength={64}
+                autoComplete="current-password"
                 className={fieldClass(!!errors.password) + " pr-11"}
                 placeholder="Your password"
               />
@@ -182,7 +202,7 @@ export default function DriverLoginPage() {
                 className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-muted-foreground/70 transition-colors hover:text-foreground"
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                {showPassword ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
               </button>
             </div>
             <AnimatePresence initial={false}>
@@ -219,7 +239,8 @@ export default function DriverLoginPage() {
         </form>
 
         <p className="mt-8 text-center text-xs text-muted-foreground/80">
-          Demo mode: sign in with any email and a password of 6+ characters.
+          Driver accounts are created by the barangay admin. You can change
+          your password anytime in the Driver Terminal settings.
         </p>
       </div>
 

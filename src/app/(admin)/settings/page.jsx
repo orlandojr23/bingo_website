@@ -406,7 +406,7 @@ export default function SettingsPage() {
                       onClick={() => setShowCurrent(!showCurrent)}
                       className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
                     >
-                      {showCurrent ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                      {showCurrent ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
                     </button>
                   </div>
                 </div>
@@ -429,7 +429,7 @@ export default function SettingsPage() {
                       onClick={() => setShowNew(!showNew)}
                       className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
                     >
-                      {showNew ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                      {showNew ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
                     </button>
                   </div>
                 </div>

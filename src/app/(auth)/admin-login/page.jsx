@@ -123,7 +123,7 @@ export default function AdminLoginPage() {
           <img
             src="/logo-green-v2.png"
             alt="Bin-Go Logo"
-            className="h-24 w-auto object-contain"
+            className="h-32 w-32 object-contain"
           />
           <h1 className="mt-4 text-lg font-semibold tracking-tight text-foreground">
             Admin Portal
@@ -195,7 +195,7 @@ export default function AdminLoginPage() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
                 >
-                  {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  {showPassword ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
                 </button>
               </div>
               <AnimatePresence initial={false}>

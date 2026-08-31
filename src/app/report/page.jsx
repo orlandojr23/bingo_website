@@ -464,7 +464,10 @@ export default function ResidentMobilePWA() {
 
   const residentSession = useMemo(() => getResidentSession(), []);
   const greetingTitle = useMemo(
-    () => getTimeBasedGreeting(residentSession?.name || "Resident"),
+    () =>
+      getTimeBasedGreeting(
+        residentSession?.name?.trim().split(/\s+/)[0] || "Resident"
+      ),
     [residentSession]
   );
 
@@ -590,6 +593,12 @@ export default function ResidentMobilePWA() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showSignOutModal, setShowSignOutModal] = useState(false);
+
+  const closeAllSheets = () => {
+    setSelectedTicket(null);
+    setShowNotifications(false);
+    setShowProfile(false);
+  };
   const [mapCenter, setMapCenter] = useState([10.3025, 123.9095]);
   const [mapZoom, setMapZoom] = useState(16);
   const [unreadNotifications, setUnreadNotifications] = useState(2);
@@ -678,30 +687,30 @@ export default function ResidentMobilePWA() {
     }
   };
 
-  const handleGetLocation = () => {
-    if ("geolocation" in navigator) {
-      setIsLocating(true);
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          setGpsCoords({ lat: latitude, lng: longitude });
-          if (!locationName) {
-            setLocationName(`Near Sitio Vilgon, ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
-          }
-          setIsLocating(false);
-          haptic();
-          toast("GPS coordinates attached.");
-        },
-        (error) => {
-          console.warn("GPS location error:", error);
-          setIsLocating(false);
-          toast("Unable to fetch GPS location. Please enter the street name.", {
-            variant: "error",
-          });
-        },
-        { enableHighAccuracy: true, timeout: 10000 }
-      );
-    }
+  const handleGetLocation = (onSuccess) => {
+    if (!("geolocation" in navigator)) return;
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setGpsCoords({ lat: latitude, lng: longitude });
+        if (!locationName) {
+          setLocationName(`Near Sitio Vilgon, ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+        }
+        setIsLocating(false);
+        haptic();
+        toast("GPS coordinates attached.");
+        onSuccess?.({ lat: latitude, lng: longitude });
+      },
+      (error) => {
+        console.warn("GPS location error:", error);
+        setIsLocating(false);
+        toast("Unable to fetch GPS location. Please enter the street name.", {
+          variant: "error",
+        });
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
   };
 
   const handleSubmitReport = (e) => {
@@ -779,6 +788,7 @@ export default function ResidentMobilePWA() {
             highlightedTicketId={selectedTicket?.id}
             onMapReady={handleMapReady}
             onSelectTicket={(t) => {
+              closeAllSheets();
               setSelectedTicket(t);
               setMapZoom(17);
               haptic();
@@ -859,6 +869,8 @@ export default function ResidentMobilePWA() {
             type="button"
             onClick={() => {
               setIsMapSheetExpanded(false);
+              setSelectedTicket(null);
+              setShowNotifications(false);
               setShowProfile(true);
               haptic();
             }}
@@ -876,12 +888,12 @@ export default function ResidentMobilePWA() {
         <button
           type="button"
           onClick={() => {
+            closeAllSheets();
+            setIsMapSheetExpanded(false);
             const activeTruck = activeTrucks && activeTrucks[0];
-            if (activeTruck) {
-              setMapCenter([activeTruck.lat, activeTruck.lng]);
-            } else {
-              setMapCenter([10.3025, 123.9095]);
-            }
+            setMapCenter(
+              activeTruck ? [activeTruck.lat, activeTruck.lng] : [10.3025, 123.9095]
+            );
             setMapZoom(17);
             haptic();
           }}
@@ -895,9 +907,17 @@ export default function ResidentMobilePWA() {
         <button
           type="button"
           onClick={() => {
-            handleGetLocation();
-            setMapCenter([10.3025, 123.9095]);
-            setMapZoom(17);
+            closeAllSheets();
+            setIsMapSheetExpanded(false);
+            const centerOn = (coords) => {
+              setMapCenter([coords.lat, coords.lng]);
+              setMapZoom(17);
+            };
+            if (gpsCoords) {
+              centerOn(gpsCoords);
+            } else {
+              handleGetLocation((coords) => centerOn(coords));
+            }
             haptic();
           }}
           className="pointer-events-auto absolute bottom-[164px] right-4 z-20 flex h-12 w-12 items-center justify-center rounded-full bg-card/95 border border-border text-foreground shadow-lg backdrop-blur-md transition-all hover:scale-105 active:scale-95"
@@ -1481,6 +1501,7 @@ export default function ResidentMobilePWA() {
                             key={t.id}
                             type="button"
                             onClick={() => {
+                              closeAllSheets();
                               setSelectedTicket(t);
                               switchTab("map");
                               haptic();
@@ -1526,7 +1547,7 @@ export default function ResidentMobilePWA() {
         title="Report Details"
       >
         {selectedTicket && (
-          <div className="h-[340px] overflow-y-auto space-y-4 pr-0.5 scrollbar-hide select-text">
+          <div className="h-[423px] overflow-y-auto space-y-4 pr-0.5 scrollbar-hide select-text">
             {selectedTicket.photo ? (
               <img
                 src={selectedTicket.photo}

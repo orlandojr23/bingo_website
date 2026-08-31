@@ -8,6 +8,9 @@ import {
   Play,
   CheckCircle2,
   LogOut,
+  Eye,
+  EyeOff,
+  Loader2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { mockPilotData, mockTickets } from "@/lib/mock-data";
@@ -26,6 +29,7 @@ import { Button } from "@/components/ui/button";
 import { useRoutePath } from "@/lib/use-route-path";
 import { useFleet } from "@/lib/fleet";
 import { getDriverSession, clearDriverSession } from "@/lib/driver-session";
+import { changeDriverPassword } from "@/lib/driver-accounts";
 import { MapSkeleton } from "@/components/ui/skeletons";
 import { useToast } from "@/components/pwa/Toast";
 import BottomSheet from "@/components/pwa/BottomSheet";
@@ -218,6 +222,16 @@ export default function DriverPage() {
   const [showProfile, setShowProfile] = useState(false);
   const [showSignOutModal, setShowSignOutModal] = useState(false);
 
+  // Change Password (settings sheet)
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [pwErrors, setPwErrors] = useState({});
+  const [pwSaving, setPwSaving] = useState(false);
+
   const router = useRouter();
   const [sessionReady, setSessionReady] = useState(false);
   useEffect(() => {
@@ -249,6 +263,64 @@ export default function DriverPage() {
   const wakeLockRef = useRef(null);
   const lastPushRef = useRef(0);
   const { toast, ToastViewport } = useToast();
+
+  const handlePwFieldChange = (field, value, setter) => {
+    setter(value);
+    if (pwErrors[field]) {
+      setPwErrors((prev) => {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
+    }
+  };
+
+  const handleChangePassword = () => {
+    const newErrors = {};
+    if (!currentPassword) {
+      newErrors.current = "Please enter your current password.";
+    }
+    if (!newPassword) {
+      newErrors.newPassword = "Please enter a new password.";
+    } else if (newPassword.length < 6) {
+      newErrors.newPassword = "Password must be at least 6 characters.";
+    } else if (currentPassword && newPassword === currentPassword) {
+      newErrors.newPassword = "New password must be different from your current password.";
+    }
+    if (!confirmNewPassword) {
+      newErrors.confirm = "Please re-enter your new password.";
+    } else if (newPassword && confirmNewPassword !== newPassword) {
+      newErrors.confirm = "Passwords do not match.";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setPwErrors(newErrors);
+      return;
+    }
+    setPwErrors({});
+    setPwSaving(true);
+
+    setTimeout(() => {
+      const result = changeDriverPassword(driverSession?.email || "", currentPassword, newPassword);
+      setPwSaving(false);
+      if (result === "wrong-current") {
+        setPwErrors({ current: "Your current password is incorrect." });
+        return;
+      }
+      if (result === "no-account") {
+        setPwErrors({ current: "Account not found. Please sign out and sign in again." });
+        return;
+      }
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmNewPassword("");
+      setShowCurrent(false);
+      setShowNew(false);
+      setShowConfirm(false);
+      toast("Password changed successfully.");
+      haptic();
+    }, 700);
+  };
 
   const live = useLiveRoute();
   const fleet = useFleet();
@@ -705,7 +777,15 @@ export default function DriverPage() {
         <button
           type="button"
           onClick={() => {
-            setMapCenter([coords.lat, coords.lng]);
+            setIsMapSheetExpanded(false);
+            const tracking = truckState?.tracking;
+            if (tracking?.lat != null && tracking?.lng != null) {
+              setMapCenter([tracking.lat, tracking.lng]);
+            } else if (coords?.lat != null && coords?.lng != null) {
+              setMapCenter([coords.lat, coords.lng]);
+            } else {
+              setMapCenter([10.3025, 123.9095]);
+            }
             setMapZoom(17);
             haptic();
           }}
@@ -719,15 +799,27 @@ export default function DriverPage() {
         <button
           type="button"
           onClick={() => {
-            if ("geolocation" in navigator) {
-              navigator.geolocation.getCurrentPosition((pos) => {
-                const { latitude, longitude } = pos.coords;
-                setMapCenter([latitude, longitude]);
-                setMapZoom(17);
-              });
-            } else {
-              setMapCenter([10.3025, 123.9095]);
+            setIsMapSheetExpanded(false);
+            const fallback = () => {
+              if (coords?.lat != null && coords?.lng != null) {
+                setMapCenter([coords.lat, coords.lng]);
+              } else {
+                setMapCenter([10.3025, 123.9095]);
+              }
               setMapZoom(17);
+            };
+            if ("geolocation" in navigator) {
+              navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                  const { latitude, longitude } = pos.coords;
+                  setMapCenter([latitude, longitude]);
+                  setMapZoom(17);
+                },
+                () => fallback(),
+                { enableHighAccuracy: true, timeout: 10000 }
+              );
+            } else {
+              fallback();
             }
             haptic();
           }}
@@ -951,6 +1043,96 @@ export default function DriverPage() {
             <InfoRow label="Network Status" value={isOnline ? <span className="text-emerald-600 font-bold">Online</span> : <span className="text-rose-600 font-bold">Offline</span>} />
             <InfoRow label="Device Battery" value={`${batteryLevel ?? 100}% ${isCharging ? "(Charging)" : ""}`} />
             <InfoRow label="GPS Telemetry Status" value={<span className="text-emerald-600 font-bold">{broadcastStatus}</span>} />
+          </div>
+
+          {/* Change Password */}
+          <div className="rounded-xl border border-border bg-card p-3.5 space-y-2.5">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Change Password
+            </h4>
+
+            {[
+              {
+                field: "current",
+                value: currentPassword,
+                setter: setCurrentPassword,
+                show: showCurrent,
+                setShow: setShowCurrent,
+                placeholder: "Current password",
+              },
+              {
+                field: "newPassword",
+                value: newPassword,
+                setter: setNewPassword,
+                show: showNew,
+                setShow: setShowNew,
+                placeholder: "New password",
+              },
+              {
+                field: "confirm",
+                value: confirmNewPassword,
+                setter: setConfirmNewPassword,
+                show: showConfirm,
+                setShow: setShowConfirm,
+                placeholder: "Re-enter new password",
+              },
+            ].map((f) => (
+              <div key={f.field} className="flex flex-col gap-1">
+                <div className="relative">
+                  <input
+                    type={f.show ? "text" : "password"}
+                    value={f.value}
+                    onChange={(e) => handlePwFieldChange(f.field, e.target.value.replace(/\s/g, ""), f.setter)}
+                    maxLength={64}
+                    autoComplete={f.field === "current" ? "current-password" : "new-password"}
+                    className={`w-full rounded-lg border bg-card px-3 py-2 pr-9 text-xs font-medium text-foreground placeholder:text-muted-foreground/50 outline-none transition-colors ${
+                      pwErrors[f.field]
+                        ? "border-rose-300 focus:border-rose-400"
+                        : "border-border hover:border-zinc-300 focus:border-zinc-400"
+                    }`}
+                    placeholder={f.placeholder}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => f.setShow(!f.show)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 cursor-pointer text-muted-foreground/70 transition-colors hover:text-foreground"
+                    aria-label={f.show ? "Hide password" : "Show password"}
+                  >
+                    {f.show ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                  </button>
+                </div>
+                <AnimatePresence initial={false}>
+                  {pwErrors[f.field] && (
+                    <motion.p
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.25, ease: "easeInOut" }}
+                      className="overflow-hidden text-[11px] font-medium text-rose-500"
+                    >
+                      {pwErrors[f.field]}
+                    </motion.p>
+                  )}
+                </AnimatePresence>
+              </div>
+            ))}
+
+            <Button
+              variant="primary"
+              size="md"
+              disabled={pwSaving}
+              onClick={handleChangePassword}
+              className="w-full"
+            >
+              {pwSaving ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Changing...</span>
+                </>
+              ) : (
+                "Change Password"
+              )}
+            </Button>
           </div>
 
           {/* Actions */}
