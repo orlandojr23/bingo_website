@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Link from "next/link";
 import { ChevronDown, MessageCircleQuestion, Settings, ShieldCheck, MapPin, Smartphone } from "lucide-react";
 import { useState } from "react";
 
@@ -144,10 +145,16 @@ export default function FaqsPage() {
               Can't find the answer you're looking for? Send us a message or request a demo tailored to your barangay.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <button 
+              <Link
+                href="/demo"
+                className="w-full sm:w-auto px-8 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-500 transition-colors cursor-pointer text-center"
+              >
+                Request a Demo
+              </Link>
+              <button
                 type="button"
                 onClick={() => window.dispatchEvent(new CustomEvent("openContactSheet"))}
-                className="w-full sm:w-auto px-8 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-500 transition-colors cursor-pointer"
+                className="w-full sm:w-auto px-8 py-3 bg-zinc-800 text-white rounded-xl font-bold hover:bg-zinc-700 transition-colors cursor-pointer"
               >
                 Contact Support
               </button>

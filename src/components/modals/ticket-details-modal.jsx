@@ -130,7 +130,7 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
 
             <DetailBlock label="Assigned Team">
               <span className="text-xs font-semibold text-foreground">{assignedUnit}</span>
-              <span className="text-xs text-muted-foreground">Sector 4</span>
+              <span className="text-xs text-muted-foreground">Brgy. Tejero</span>
             </DetailBlock>
           </div>
 
@@ -233,7 +233,7 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
 
                 <DetailBlock label="Assigned Team">
                   <span className="text-sm font-semibold text-foreground">{assignedUnit}</span>
-                  <span className="text-xs text-muted-foreground">Sector 4</span>
+                  <span className="text-xs text-muted-foreground">Brgy. Tejero</span>
                 </DetailBlock>
               </div>
 

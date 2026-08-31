@@ -104,29 +104,29 @@ export default function LandingPage() {
 function HomeContent() {
   return (
     <>
-      <h1 className="text-3xl sm:text-5xl lg:text-7xl [@media(max-height:800px)]:text-6xl [@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-6 [@media(max-height:800px)]:mb-4">
+      <h1 className="text-2xl sm:text-5xl lg:text-7xl [@media(max-height:800px)]:text-6xl [@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-6 [@media(max-height:800px)]:mb-4">
         <span className="text-[#0f172a]">
           Smart Waste <br className="hidden lg:block" /> Collection,
         </span>
         <br className="hidden lg:block" />
-        <span className="relative inline-block mt-1 px-2">
+        <span className="relative inline-block mt-2 px-2">
           <span className="relative z-10 text-white">Simplified.</span>
           <span className="absolute inset-0 bg-emerald-500 rounded-xl -rotate-2 scale-[1.05] shadow-sm"></span>
         </span>
       </h1>
 
-      <p className="text-base sm:text-lg [@media(max-height:800px)]:text-base text-zinc-700 font-medium mb-8 [@media(max-height:800px)]:mb-5 max-w-md leading-relaxed">
+      <p className="text-sm sm:text-lg [@media(max-height:800px)]:text-base text-zinc-700 font-medium mb-8 [@media(max-height:800px)]:mb-5 max-w-md leading-relaxed">
         Never miss a collection day again. Track garbage trucks live, get instant arrival alerts, and help keep your community clean.
       </p>
 
       <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto mt-2">
-        <button
-          type="button"
-          onClick={() => window.dispatchEvent(new CustomEvent("openContactSheet"))}
-          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3.5 rounded-xl text-sm sm:text-base font-bold transition-all shadow-lg shadow-emerald-600/20 hover:shadow-xl hover:-translate-y-0.5 cursor-pointer"
+        <Link
+          href="/demo"
+          className="group flex items-center justify-center bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3.5 rounded-xl text-sm sm:text-base font-bold transition-all shadow-lg shadow-emerald-600/20 hover:shadow-xl hover:-translate-y-0.5 cursor-pointer"
         >
           Request a Demo
-        </button>
+          <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 max-w-0 opacity-0 transition-all duration-300 group-hover:max-w-4 group-hover:ml-2 group-hover:opacity-100 sm:group-hover:max-w-5" />
+        </Link>
       </div>
     </>
   );
@@ -135,24 +135,24 @@ function HomeContent() {
 function AboutContent() {
   return (
     <>
-      <h2 className="text-3xl sm:text-5xl lg:text-7xl [@media(max-height:800px)]:text-6xl [@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-6 [@media(max-height:800px)]:mb-4 text-[#0f172a]">
+      <h2 className="text-2xl sm:text-5xl lg:text-7xl [@media(max-height:800px)]:text-6xl [@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-6 [@media(max-height:800px)]:mb-4 text-[#0f172a]">
         Community Cleanups, <br className="hidden lg:block" />
-        <span className="relative inline-block mt-1 px-2">
+        <span className="relative inline-block mt-2 px-2">
           <span className="relative z-10 text-white">Accelerated.</span>
           <span className="absolute inset-0 bg-emerald-500 rounded-xl -rotate-2 scale-[1.05] shadow-sm"></span>
         </span>
       </h2>
 
-      <p className="text-base sm:text-lg [@media(max-height:800px)]:text-base text-zinc-700 font-medium mb-8 [@media(max-height:800px)]:mb-5 max-w-md leading-relaxed">
+      <p className="text-sm sm:text-lg [@media(max-height:800px)]:text-base text-zinc-700 font-medium mb-8 [@media(max-height:800px)]:mb-5 max-w-md leading-relaxed">
         Connect waste collection services directly with local neighborhoods. Track routes, log waste reports in real-time, and ensure quick cleanups.
       </p>
 
       <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
         <Link
           href="/about"
-          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl text-sm sm:text-base font-bold transition-all shadow-lg shadow-emerald-600/20 hover:shadow-xl hover:-translate-y-0.5"
+          className="group flex items-center justify-center bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl text-sm sm:text-base font-bold transition-all shadow-lg shadow-emerald-600/20 hover:shadow-xl hover:-translate-y-0.5"
         >
-          Learn More <ArrowRight className="w-4 h-4" />
+          Learn More <ArrowRight className="h-4 w-4 max-w-0 opacity-0 transition-all duration-300 group-hover:max-w-4 group-hover:ml-2 group-hover:opacity-100" />
         </Link>
       </div>
     </>
@@ -162,24 +162,24 @@ function AboutContent() {
 function FeaturesContent() {
   return (
     <>
-      <h2 className="text-3xl sm:text-5xl lg:text-7xl [@media(max-height:800px)]:text-6xl [@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-6 [@media(max-height:800px)]:mb-4 text-[#0f172a]">
+      <h2 className="text-2xl sm:text-5xl lg:text-7xl [@media(max-height:800px)]:text-6xl [@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-6 [@media(max-height:800px)]:mb-4 text-[#0f172a]">
         Powerful Tools, <br className="hidden lg:block" />
-        <span className="relative inline-block mt-1 px-2">
+        <span className="relative inline-block mt-2 px-2">
           <span className="relative z-10 text-white">Unleashed.</span>
           <span className="absolute inset-0 bg-emerald-500 rounded-xl -rotate-2 scale-[1.05] shadow-sm"></span>
         </span>
       </h2>
 
-      <p className="text-base sm:text-lg [@media(max-height:800px)]:text-base text-zinc-700 font-medium mb-8 [@media(max-height:800px)]:mb-5 max-w-md leading-relaxed">
+      <p className="text-sm sm:text-lg [@media(max-height:800px)]:text-base text-zinc-700 font-medium mb-8 [@media(max-height:800px)]:mb-5 max-w-md leading-relaxed">
         Experience real-time tracking, smart truck routing, and community-driven waste reports in one beautifully designed platform.
       </p>
 
       <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
         <Link
           href="/features"
-          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl text-sm sm:text-base font-bold transition-all shadow-lg shadow-emerald-600/20 hover:shadow-xl hover:-translate-y-0.5"
+          className="group flex items-center justify-center bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl text-sm sm:text-base font-bold transition-all shadow-lg shadow-emerald-600/20 hover:shadow-xl hover:-translate-y-0.5"
         >
-          Explore Features <ArrowRight className="w-4 h-4" />
+          Explore Features <ArrowRight className="h-4 w-4 max-w-0 opacity-0 transition-all duration-300 group-hover:max-w-4 group-hover:ml-2 group-hover:opacity-100" />
         </Link>
       </div>
     </>
@@ -189,24 +189,24 @@ function FeaturesContent() {
 function FaqContent() {
   return (
     <>
-      <h2 className="text-3xl sm:text-5xl lg:text-7xl [@media(max-height:800px)]:text-6xl [@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-6 [@media(max-height:800px)]:mb-4 text-[#0f172a]">
+      <h2 className="text-2xl sm:text-5xl lg:text-7xl [@media(max-height:800px)]:text-6xl [@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-6 [@media(max-height:800px)]:mb-4 text-[#0f172a]">
         Your Questions, <br className="hidden lg:block" />
-        <span className="relative inline-block mt-1 px-2">
+        <span className="relative inline-block mt-2 px-2">
           <span className="relative z-10 text-white">Answered.</span>
           <span className="absolute inset-0 bg-emerald-500 rounded-xl -rotate-2 scale-[1.05] shadow-sm"></span>
         </span>
       </h2>
 
-      <p className="text-base sm:text-lg [@media(max-height:800px)]:text-base text-zinc-700 font-medium mb-8 [@media(max-height:800px)]:mb-5 max-w-md leading-relaxed">
+      <p className="text-sm sm:text-lg [@media(max-height:800px)]:text-base text-zinc-700 font-medium mb-8 [@media(max-height:800px)]:mb-5 max-w-md leading-relaxed">
         Everything you need to know about using Bin'Go in your community.
       </p>
 
       <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
         <Link
           href="/faqs"
-          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl text-sm sm:text-base font-bold transition-all shadow-lg shadow-emerald-600/20 hover:shadow-xl hover:-translate-y-0.5"
+          className="group flex items-center justify-center bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl text-sm sm:text-base font-bold transition-all shadow-lg shadow-emerald-600/20 hover:shadow-xl hover:-translate-y-0.5"
         >
-          View All FAQs <ArrowRight className="w-4 h-4" />
+          View All FAQs <ArrowRight className="h-4 w-4 max-w-0 opacity-0 transition-all duration-300 group-hover:max-w-4 group-hover:ml-2 group-hover:opacity-100" />
         </Link>
       </div>
     </>

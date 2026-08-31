@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Calendar, Plus, X, Search } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { mockPilotData } from "@/lib/mock-data";
+import { useLiveRoute, setScheduleStatus } from "@/lib/live-route";
 import { StatusBadge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
 import { PanelStat } from "@/components/ui/panel-stat";
@@ -26,6 +27,13 @@ export default function DispatchPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSchedule, setSelectedSchedule] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
+
+  const live = useLiveRoute();
+  const effStatus = (sch) => live.scheduleStatus[sch.id] ?? sch.status;
+  const driverOf = (truckId) =>
+    live.driverByTruck[truckId] ??
+    mockPilotData.trucks.find((t) => t.id === truckId)?.driver ??
+    null;
 
   const [zoneId, setZoneId] = useState("");
   const [truckId, setTruckId] = useState("");
@@ -58,7 +66,7 @@ export default function DispatchPage() {
       setType(selectedSchedule.type);
       setDays(selectedSchedule.days.join(", "));
       setTime(selectedSchedule.time);
-      setStatus(selectedSchedule.status);
+      setStatus(live.scheduleStatus[selectedSchedule.id] ?? selectedSchedule.status);
     } else {
       setZoneId("");
       setTruckId("");
@@ -89,6 +97,7 @@ export default function DispatchPage() {
     const newSch = { id: `SCH-${String(nextIdNum).padStart(3, "0")}`, ...buildScheduleFields() };
 
     setSchedules((prev) => [...prev, newSch]);
+    setScheduleStatus(newSch.id, newSch.status);
     setIsAdding(false);
   };
 
@@ -99,6 +108,7 @@ export default function DispatchPage() {
     setSchedules((prev) =>
       prev.map((s) => (s.id === selectedSchedule.id ? { ...s, ...buildScheduleFields() } : s))
     );
+    setScheduleStatus(selectedSchedule.id, status);
     setSelectedSchedule(null);
   };
 
@@ -118,18 +128,18 @@ export default function DispatchPage() {
     return (
       sch.id.toLowerCase().includes(query) ||
       (zone?.name || "").toLowerCase().includes(query) ||
-      (truck?.driver || "").toLowerCase().includes(query) ||
+      (driverOf(sch.activeTruckId) || "").toLowerCase().includes(query) ||
       (truck?.id || "").toLowerCase().includes(query) ||
       sch.type.toLowerCase().includes(query)
     );
   });
 
   const totalSchedules = schedules.length;
-  const activeDispatches = schedules.filter((s) => s.status === "In Progress").length;
+  const activeDispatches = schedules.filter((s) => effStatus(s) === "In Progress").length;
 
   const formFields = (
     <>
-      <Field label="Collection Zone">
+      <Field label="Sitio Coverage">
         <select
           value={zoneId}
           onChange={(e) => setZoneId(e.target.value)}
@@ -148,7 +158,7 @@ export default function DispatchPage() {
           className={cn(inputClass, "cursor-pointer")}
         >
           {mockPilotData.trucks.map((t) => (
-            <option key={t.id} value={t.id}>{t.id} ({t.plate}) - {t.driver}</option>
+            <option key={t.id} value={t.id}>{t.id} ({t.plate}) - {driverOf(t.id) || "Unassigned"}</option>
           ))}
         </select>
       </Field>
@@ -227,7 +237,7 @@ export default function DispatchPage() {
             <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <input
               type="text"
-              placeholder="Search schedule, zone, or truck..."
+              placeholder="Search schedule, sitio, or truck..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className={cn(inputClass, "pl-9")}
@@ -264,7 +274,7 @@ export default function DispatchPage() {
                     <div>
                       <div className="mb-2 flex items-center justify-between">
                         <span className="font-mono text-xs font-semibold text-foreground">{sch.id}</span>
-                        <StatusBadge status={sch.status} />
+                        <StatusBadge status={effStatus(sch)} />
                       </div>
 
                       <div className="text-sm font-semibold leading-tight text-foreground">
@@ -276,7 +286,7 @@ export default function DispatchPage() {
                         <InfoRow label="Collection Time" value={sch.time} />
                         <InfoRow
                           label="Assigned Truck"
-                          value={`${truck?.id || sch.activeTruckId} (${truck?.driver || "Driver"})`}
+                          value={`${truck?.id || sch.activeTruckId} (${driverOf(sch.activeTruckId) || "Driver"})`}
                         />
                         <InfoRow label="Waste Type" value={sch.type} />
                       </div>
@@ -330,7 +340,7 @@ export default function DispatchPage() {
                         <span className="font-mono text-xs font-semibold text-foreground">
                           {selectedSchedule?.id}
                         </span>
-                        <StatusBadge status={selectedSchedule?.status || "Scheduled"} />
+                        <StatusBadge status={selectedSchedule ? effStatus(selectedSchedule) : "Scheduled"} />
                       </div>
                     )}
                     <button

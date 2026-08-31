@@ -4,9 +4,9 @@ const cspHeader = `
   default-src 'self';
   script-src 'self' 'unsafe-eval' 'unsafe-inline';
   style-src 'self' 'unsafe-inline';
-  img-src 'self' blob: data: https://picsum.photos https://*.basemaps.cartocdn.com https://cdnjs.cloudflare.com;
+  img-src 'self' blob: data: https://picsum.photos https://tile.openstreetmap.org https://cdnjs.cloudflare.com;
   font-src 'self' data:;
-  connect-src 'self' https://*.supabase.co;
+  connect-src 'self' https://*.supabase.co https://api.openrouteservice.org;
   object-src 'none';
   base-uri 'self';
   form-action 'self';

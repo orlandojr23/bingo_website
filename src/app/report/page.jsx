@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
@@ -29,8 +29,12 @@ import {
   Search,
 } from "lucide-react";
 import { mockTickets, mockPilotData } from "@/lib/mock-data";
+import { useLiveRoute, getSchedule } from "@/lib/live-route";
+import { useRoutePath } from "@/lib/use-route-path";
 import { cn, haptic } from "@/lib/utils";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { MapSkeleton } from "@/components/ui/skeletons";
 import { InfoRow } from "@/components/ui/info-row";
 import AppHeader from "@/components/pwa/AppHeader";
 import BottomNav from "@/components/pwa/BottomNav";
@@ -39,11 +43,7 @@ import { useToast } from "@/components/pwa/Toast";
 
 const MapCanvas = dynamic(() => import("@/components/map/map-canvas"), {
   ssr: false,
-  loading: () => (
-    <div className="flex h-full w-full items-center justify-center bg-card/60 backdrop-blur-sm">
-      <div className="h-7 w-7 rounded-full border-2 border-emerald-500/20 border-t-emerald-600 animate-spin" />
-    </div>
-  ),
+  loading: () => <MapSkeleton />,
 });
 
 const TAB_IDS = ["schedule", "map", "report", "tickets"];
@@ -433,6 +433,7 @@ function getTimeBasedGreeting(name = "Orlando") {
   } else if (hour >= 17 && hour < 22) {
     return `Good evening, ${name}!`;
   }
+  return `Hello, ${name}!`;
 }
 
 export default function ResidentMobilePWA() {
@@ -445,8 +446,83 @@ export default function ResidentMobilePWA() {
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [isMapSheetExpanded, setIsMapSheetExpanded] = useState(false);
   const [bannerIndex, setBannerIndex] = useState(0);
+  const [mapReady, setMapReady] = useState(false);
+  const handleMapReady = useCallback(() => setMapReady(true), []);
 
   const greetingTitle = useMemo(() => getTimeBasedGreeting("Orlando"), []);
+
+  const live = useLiveRoute();
+
+  // The truck currently running a route (any truck past idle with an assignment)
+  const activeTs = useMemo(
+    () =>
+      Object.values(live.trucks).find(
+        (ts) => ts.phase !== "idle" && ts.scheduleId
+      ) || null,
+    [live]
+  );
+  const activeSchedule = activeTs ? getSchedule(activeTs.scheduleId) : null;
+  const displaySchedule = activeSchedule || mockPilotData.schedules[0];
+  const routePoints = displaySchedule.routePoints ?? [];
+  const stopIndex = activeTs ? activeTs.stopIndex : 0;
+  const onsiteNow = activeTs?.onsite ?? false;
+  const routeCompleted = activeTs?.phase === "completed";
+
+  const routePath = useRoutePath({
+    scheduleId: displaySchedule.id,
+    stopIndex,
+    origin:
+      activeTs && !routeCompleted
+        ? { lat: activeTs.tracking.lat, lng: activeTs.tracking.lng }
+        : null,
+    points: routeCompleted ? [] : routePoints.slice(stopIndex),
+  });
+
+  const stepperStops = useMemo(
+    () =>
+      routePoints.map((p, i) => {
+        let status;
+        if (routeCompleted) {
+          status = i === routePoints.length - 1 ? "destination" : "completed";
+        } else if (i < stopIndex) {
+          status = "completed";
+        } else if (i === stopIndex) {
+          status = "current";
+        } else if (i === routePoints.length - 1) {
+          status = "destination";
+        } else {
+          status = "upcoming";
+        }
+        return { id: i + 1, name: p.name, time: p.time, status };
+      }),
+    [routePoints, stopIndex, routeCompleted]
+  );
+
+  const progressFraction = routeCompleted
+    ? 1
+    : routePoints.length > 1
+      ? stopIndex / (routePoints.length - 1)
+      : 0;
+
+  // Live truck banner entry derived from the shared route store
+  const liveBanner = useMemo(() => {
+    if (!activeTs || !activeSchedule || activeTs.phase === "completed") return null;
+    const point = activeSchedule.routePoints?.[activeTs.stopIndex];
+    if (activeTs.onsite) {
+      return {
+        id: "truck-live",
+        Icon: Waze3DTruckIcon,
+        title: "Truck arrived",
+        subtitle: `Collecting at ${point?.name ?? "your stop"}`,
+      };
+    }
+    return {
+      id: "truck-live",
+      Icon: Waze3DTurnArrow,
+      title: `Truck is ${activeTs.tracking.eta} away`,
+      subtitle: `Approaching ${point?.name ?? "your stop"}`,
+    };
+  }, [activeTs, activeSchedule]);
 
   const dynamicBannerMessages = useMemo(
     () => [
@@ -456,28 +532,11 @@ export default function ResidentMobilePWA() {
         title: greetingTitle,
         subtitle: "",
       },
-      {
-        id: "truck-15m",
-        Icon: Waze3DTurnArrow,
-        title: "Truck is 15 mins away",
-        subtitle: "Approaching Sitio Vilgon",
-      },
-      {
-        id: "truck-5m",
-        Icon: Waze3DTurnArrow,
-        title: "Truck is 5 mins away",
-        subtitle: "Arriving at Sitio Vilgon",
-      },
-      {
-        id: "truck-arrived",
-        Icon: Waze3DTruckIcon,
-        title: "Truck arrived",
-        subtitle: "Collecting at Sitio Vilgon",
-      },
+      ...(liveBanner ? [liveBanner] : []),
       {
         id: "announcement",
         Icon: Waze3DBellIcon,
-        title: "Sector A collection active",
+        title: "Sitio Vilgon collection active",
         subtitle: "Prepare biodegradable waste",
       },
       {
@@ -487,7 +546,7 @@ export default function ResidentMobilePWA() {
         subtitle: "Next: Tomorrow at 8:00 AM",
       },
     ],
-    [greetingTitle]
+    [greetingTitle, liveBanner]
   );
 
   const [hasNewAnnouncement, setHasNewAnnouncement] = useState(true);
@@ -498,13 +557,14 @@ export default function ResidentMobilePWA() {
       setBannerIndex(0);
       return;
     }
+    if (!mapReady) return;
 
     const interval = setInterval(() => {
       setBannerIndex((prev) => (prev + 1) % dynamicBannerMessages.length);
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [hasNewAnnouncement, dynamicBannerMessages.length]);
+  }, [hasNewAnnouncement, dynamicBannerMessages.length, mapReady]);
 
   const currentBanner = dynamicBannerMessages[bannerIndex] || dynamicBannerMessages[0];
 
@@ -526,7 +586,7 @@ export default function ResidentMobilePWA() {
     {
       id: 2,
       title: "Biodegradable Pickup Active",
-      message: "Collection is currently ongoing in Barangay Tejero Sector A.",
+      message: "Collection is currently ongoing in Sitio Vilgon & Sitio Silangan, Brgy. Tejero.",
       time: "30m ago",
       unread: true,
     },
@@ -567,21 +627,29 @@ export default function ResidentMobilePWA() {
     window.history.replaceState(null, "", `?tab=${id}`);
   };
 
-  // Active trucks for live tracking map
-  const activeTrucks = mockPilotData.trucks.map((t) => {
-    const track = mockPilotData.activeTracking[t.id] || {};
-    return {
-      id: t.id,
-      plate: t.plate,
-      driver: t.driver,
-      capacity: t.capacity,
-      lat: track.lat || 10.3025,
-      lng: track.lng || 123.9095,
-      heading: track.heading || 90,
-      eta: track.eta || "5 mins",
-      isActive: true,
-    };
-  });
+  // Active trucks for live tracking map (Only show trucks whose drivers started their route!)
+  const activeTrucks = useMemo(() => {
+    return mockPilotData.trucks
+      .map((t) => {
+        const ts = live.trucks[t.id];
+        if (!ts || !ts.tracking.isActive) return null;
+        return {
+          id: t.id,
+          plate: t.plate,
+          driver: t.driver,
+          capacity: t.capacity,
+          lat: ts.tracking.lat || 10.3025,
+          lng: ts.tracking.lng || 123.9095,
+          heading:
+            t.id === activeTs?.truckId && routePath.heading != null
+              ? routePath.heading
+              : ts.tracking.heading || 90,
+          eta: ts.tracking.eta || "5 mins",
+          isActive: true,
+        };
+      })
+      .filter(Boolean);
+  }, [live, routePath, activeTs]);
 
   const handlePhotoChange = (e) => {
     const file = e.target.files?.[0];
@@ -678,10 +746,12 @@ export default function ResidentMobilePWA() {
           <MapCanvas
             tickets={selectedTicket ? [selectedTicket] : []}
             trucks={activeTrucks}
+            routes={routePath.positions.length ? [{ id: displaySchedule.id, ...routePath }] : []}
             mapMode="pins"
             center={selectedTicket ? [selectedTicket.lat, selectedTicket.lng] : mapCenter}
             zoom={mapZoom}
             highlightedTicketId={selectedTicket?.id}
+            onMapReady={handleMapReady}
             onSelectTicket={(t) => {
               setSelectedTicket(t);
               setMapZoom(17);
@@ -719,6 +789,15 @@ export default function ResidentMobilePWA() {
         <div className="pointer-events-auto absolute top-0 inset-x-0 z-20 w-full border-b border-border bg-card/98 px-5 py-3 text-foreground backdrop-blur-md flex items-center justify-between gap-3.5 select-none overflow-hidden h-16 shadow-sm">
           {/* Left: Dynamic 3D Vector SVG Icon & Dynamic Slide-from-Top Readout */}
           <div className="min-w-0 flex-1 overflow-hidden relative h-11 flex items-center">
+            {!mapReady ? (
+              <div className="flex items-center gap-3.5 w-full">
+                <div className="h-10 w-10 shrink-0 rounded-xl bg-foreground/10 animate-pulse" />
+                <div className="flex-1 flex flex-col gap-1.5">
+                  <div className="h-3.5 w-2/5 rounded-full bg-foreground/10 animate-pulse" />
+                  <div className="h-2.5 w-3/5 rounded-full bg-foreground/10 animate-pulse" />
+                </div>
+              </div>
+            ) : (
             <AnimatePresence mode="wait">
               <motion.div
                 key={currentBanner.id}
@@ -746,6 +825,7 @@ export default function ResidentMobilePWA() {
                 </div>
               </motion.div>
             </AnimatePresence>
+            )}
           </div>
 
           {/* Right: Top-Right Circular Profile Button with Initial Letter "O" */}
@@ -950,7 +1030,11 @@ export default function ResidentMobilePWA() {
                           Truck Status
                         </span>
                         <span className="font-mono text-xs font-bold text-foreground">
-                          5 mins away
+                          {routeCompleted
+                            ? "Route Done"
+                            : activeTs
+                              ? activeTs.tracking.eta
+                              : "Standby"}
                         </span>
                       </div>
                     </div>
@@ -962,7 +1046,9 @@ export default function ResidentMobilePWA() {
                           Route Progress
                         </span>
                         <span className="font-semibold text-emerald-700 text-xs">
-                          Stop 2 of 4 &bull; On Site
+                          {routeCompleted
+                            ? "Route Completed"
+                            : `Stop ${Math.min(stopIndex + 1, routePoints.length)} of ${routePoints.length} \u2022 ${onsiteNow ? "On Site" : "En Route"}`}
                         </span>
                       </div>
 
@@ -970,16 +1056,18 @@ export default function ResidentMobilePWA() {
                       <div className="relative px-0 pt-1 pb-0.5">
                         {/* Track Lines: Spans from center of first node, trailing to the rear bumper of the active truck */}
                         <div className="absolute top-4 left-[32px] right-[32px] h-0.5 rounded-full bg-border z-0" />
-                        <div className="absolute top-4 left-[32px] w-[calc(33%-14px)] h-0.5 rounded-full bg-emerald-600 z-0" />
+                        <div
+                          className="absolute top-4 left-[32px] h-0.5 rounded-full bg-emerald-600 z-0"
+                          style={{
+                            width: routeCompleted
+                              ? "calc(100% - 64px)"
+                              : `calc(${Math.round(progressFraction * 100)}% - 14px)`,
+                          }}
+                        />
 
                         {/* Waypoint Nodes */}
                         <div className="relative z-10 flex items-center justify-between">
-                          {[
-                            { id: 1, name: "Sector A", time: "8:00 AM", status: "completed" },
-                            { id: 2, name: "Sitio Vilgon", time: "8:45 AM", status: "current" },
-                            { id: 3, name: "Tejero Chapel", time: "9:30 AM", status: "upcoming" },
-                            { id: 4, name: "MRF Facility", time: "10:30 AM", status: "destination" },
-                          ].map((stop, idx) => (
+                          {stepperStops.map((stop, idx) => (
                             <div key={stop.id} className="flex flex-col items-center w-16 text-center shrink-0">
                               {/* Node Badge */}
                               {stop.status === "completed" && (
@@ -1040,12 +1128,10 @@ export default function ResidentMobilePWA() {
                           : "border border-border bg-card text-muted-foreground hover:bg-muted"
                       )}
                     >
-                      All Zones
+                      All Sitios
                     </button>
                     {mockPilotData.zones.map((z) => {
-                      const shortName = z.name.includes("Sector")
-                        ? z.name.split(" Sector")[0]
-                        : z.name.split(" (")[0];
+                      const shortName = z.name.split(" &")[0];
 
                       return (
                         <button
@@ -1072,9 +1158,7 @@ export default function ResidentMobilePWA() {
                       const isBiodegradable = sch.type.includes("Nabubulok");
                       const isRecyclable = sch.type.includes("Recyclable");
 
-                      const nameParts = zone?.name ? zone.name.split(" (") : ["Barangay Sector", ""];
-                      const sectorTitle = nameParts[0];
-                      const sitiosList = nameParts[1] ? nameParts[1].replace(")", "") : "";
+                      const areaTitle = zone?.name ?? "Barangay Tejero";
 
                       const DAY_ABBR = {
                         Monday: "Mon",
@@ -1101,13 +1185,8 @@ export default function ResidentMobilePWA() {
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0 flex-1">
                               <h3 className="text-sm font-bold text-foreground truncate">
-                                {sectorTitle}
+                                {areaTitle}
                               </h3>
-                              {sitiosList && (
-                                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                                  {sitiosList}
-                                </p>
-                              )}
                             </div>
                             <span
                               className={cn(
@@ -1420,7 +1499,7 @@ export default function ResidentMobilePWA() {
         title="Report Details"
       >
         {selectedTicket && (
-          <div className="space-y-4 select-text">
+          <div className="h-[340px] overflow-y-auto space-y-4 pr-0.5 scrollbar-hide select-text">
             {selectedTicket.photo ? (
               <img
                 src={selectedTicket.photo}
@@ -1456,7 +1535,6 @@ export default function ResidentMobilePWA() {
                 label="Barangay"
                 value={`${selectedTicket.barangay}, ${selectedTicket.city}`}
               />
-              <InfoRow label="Reported By" value={selectedTicket.reporter} />
               <InfoRow
                 label="Date"
                 value={<span className="font-mono">{selectedTicket.date}</span>}
@@ -1483,8 +1561,7 @@ export default function ResidentMobilePWA() {
               }}
               className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 text-sm font-semibold text-white transition-all hover:bg-emerald-700 active:scale-[0.98] cursor-pointer"
             >
-              <Map className="h-4 w-4" strokeWidth={1.75} />
-              View on Live Map
+              View on Map
             </button>
           </div>
         )}
@@ -1542,7 +1619,7 @@ export default function ResidentMobilePWA() {
         onClose={() => setShowProfile(false)}
         title="Profile & Settings"
       >
-        <div className="h-[340px] overflow-y-auto space-y-4 pr-0.5 pt-2 scrollbar-hide">
+        <div className="h-[423px] overflow-y-auto space-y-4 pr-0.5 pt-2 scrollbar-hide">
           {/* User Profile Summary Header */}
           <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4">
             <div className="flex h-13 w-13 items-center justify-center rounded-full bg-emerald-600 font-black text-white text-xl shadow-sm shrink-0">
@@ -1558,7 +1635,6 @@ export default function ResidentMobilePWA() {
           {/* Account Info Details */}
           <div className="rounded-xl border border-border bg-card p-3.5 space-y-2">
             <InfoRow label="Mobile Phone" value="+63 917 888 1923" />
-            <InfoRow label="Barangay Sector" value="Sector A (Sitio Vilgon)" />
             <InfoRow label="Reports Filed" value={`${tickets.length} tickets`} />
             <InfoRow label="Account Status" value={<span className="text-emerald-600 font-bold">Active / Verified</span>} />
           </div>
@@ -1615,9 +1691,9 @@ export default function ResidentMobilePWA() {
                 setShowSignOutModal(true);
                 haptic();
               }}
-              className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 text-xs font-bold text-rose-600 transition-colors hover:bg-rose-100 hover:border-rose-300 cursor-pointer active:scale-[0.98]"
+              className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-border bg-card text-xs font-medium text-zinc-700 transition-colors hover:border-rose-300 hover:text-rose-600 active:scale-[0.98]"
             >
-              <LogOut className="h-4 w-4" />
+              <LogOut className="h-3.5 w-3.5 text-muted-foreground" strokeWidth={1.75} />
               <span>Sign Out</span>
             </button>
           </div>
@@ -1627,7 +1703,7 @@ export default function ResidentMobilePWA() {
       {/* Admin Dashboard Style Sign Out Confirmation Modal */}
       {showSignOutModal && (
         <div
-          className="fixed inset-0 z-[1000] flex items-center justify-center bg-zinc-950/40 p-4 backdrop-blur-xs select-none"
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-zinc-950/40 p-4 backdrop-blur-sm"
           onClick={() => setShowSignOutModal(false)}
         >
           <motion.div
@@ -1635,27 +1711,27 @@ export default function ResidentMobilePWA() {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="flex w-full max-w-xs flex-col gap-4 rounded-2xl border border-border bg-card p-5 shadow-xl"
+            className="flex w-full max-w-xs flex-col gap-4 rounded-xl border border-border bg-card p-5 shadow-sm"
             onClick={(e) => e.stopPropagation()}
           >
             <div>
-              <h3 className="text-sm font-bold text-foreground">Sign Out</h3>
-              <p className="mt-1 text-xs font-medium text-muted-foreground leading-relaxed">
+              <h3 className="text-sm font-semibold text-foreground">Sign Out</h3>
+              <p className="mt-1 text-xs font-medium text-muted-foreground">
                 You will need to log back in to access the portal.
               </p>
             </div>
-            <div className="flex justify-end gap-2 pt-1">
-              <button
-                type="button"
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setShowSignOutModal(false)}
-                className="rounded-xl border border-border bg-card px-3.5 py-2 text-xs font-bold text-muted-foreground hover:bg-muted transition-colors cursor-pointer"
               >
                 Cancel
-              </button>
+              </Button>
               <Link
                 href="/"
                 onClick={() => setShowSignOutModal(false)}
-                className="inline-flex items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-xs font-bold text-rose-600 hover:bg-rose-100 hover:border-rose-300 active:scale-95 transition-all cursor-pointer"
+                className="inline-flex select-none items-center justify-center gap-1.5 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-medium text-rose-600 shadow-xs transition-all duration-150 hover:border-rose-300 hover:bg-rose-50/50 hover:text-rose-700 active:scale-[0.98] cursor-pointer"
               >
                 Sign Out
               </Link>

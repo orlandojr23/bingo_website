@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { MapContainer, TileLayer, Marker, Popup, Circle, useMap, ZoomControl } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline, useMap, ZoomControl } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
+import { MapSkeleton } from "@/components/ui/skeletons";
 import { Navigation } from "lucide-react";
 
 // Fix default leaflet icons in Next.js
@@ -14,6 +15,8 @@ L.Icon.Default.mergeOptions({
   iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
   shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
 });
+
+const OSM_TILE_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 
 const getUrgencyColor = (urgency) => {
   switch (urgency) {
@@ -47,10 +50,21 @@ const createCustomIcon = (urgency) => {
 };
 
 const createTruckIcon = (heading = 90) => {
+  const rotationDeg = heading - 90;
   return L.divIcon({
     className: "custom-truck bg-transparent border-0",
     html: `
-      <div style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.3)); transform: rotate(${heading - 90}deg); transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);">
+      <div style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.3)); transform: rotate(${rotationDeg}deg); transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease-in-out; animation: truckPopIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;">
+        <style>
+          @keyframes truckPopIn {
+            0% { opacity: 0; transform: scale(0) rotate(${rotationDeg}deg); }
+            100% { opacity: 1; transform: scale(1) rotate(${rotationDeg}deg); }
+          }
+          @keyframes truckFadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+          }
+        </style>
         <svg width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
           {/* 4 Side Tires */}
           <rect x="7" y="9" width="3.5" height="7" rx="1.5" fill="#18181b" />
@@ -93,6 +107,45 @@ const createTruckIcon = (heading = 90) => {
     popupAnchor: [0, -22],
   });
 };
+
+function TruckMarker({ trk, fading }) {
+  const markerRef = useRef(null);
+
+  useEffect(() => {
+    const inner = markerRef.current?.getElement()?.firstElementChild;
+    if (!inner) return;
+    inner.style.animation = fading
+      ? "truckFadeOut 0.45s ease-in forwards"
+      : "";
+  }, [fading]);
+
+  return (
+    <Marker
+      ref={markerRef}
+      position={[trk.lat, trk.lng]}
+      icon={createTruckIcon(trk.heading ?? 90)}
+    >
+      <Popup>
+        <div className="p-3 flex flex-col gap-1.5 min-w-[200px] text-zinc-900 font-sans">
+          <div className="flex items-center gap-1.5 pb-1 border-b border-zinc-100">
+            <span className="font-semibold text-xs text-zinc-900">
+              Truck {trk.id}
+            </span>
+            <span className="text-xs text-emerald-600 font-semibold">
+              • On Duty
+            </span>
+          </div>
+          <div className="flex flex-col text-xs text-zinc-600 gap-0.5">
+            <div><span className="font-semibold text-zinc-700">Driver:</span> {trk.driver}</div>
+            <div><span className="font-semibold text-zinc-700">Plate:</span> {trk.plate}</div>
+            {trk.capacity && <div><span className="font-semibold text-zinc-700">Load:</span> {trk.capacity}</div>}
+            {trk.eta && <div className="text-emerald-600 font-bold mt-1">Arriving in: {trk.eta}</div>}
+          </div>
+        </div>
+      </Popup>
+    </Marker>
+  );
+}
 
 function MapCameraController({ center, zoom, onMapDrag }) {
   const map = useMap();
@@ -143,11 +196,53 @@ function MapCameraController({ center, zoom, onMapDrag }) {
   return null;
 }
 
-export default function MapCanvas({ tickets = [], trucks = [], mapMode = "pins", center, highlightedTicketId, onSelectTicket, onMapDrag }) {
+function MapReadyNotifier({ onReady, tileRef }) {
+  const map = useMap();
+  useEffect(() => {
+    let done = false;
+    const fire = () => {
+      if (done) return;
+      done = true;
+      onReady();
+    };
+    const tl = tileRef.current;
+    tl?.on("load", fire);
+    const fallback = setTimeout(fire, 3000);
+    return () => {
+      clearTimeout(fallback);
+      tl?.off("load", fire);
+    };
+  }, [map, onReady, tileRef]);
+  return null;
+}
+
+export default function MapCanvas({ tickets = [], trucks = [], routes = [], mapMode = "pins", center, highlightedTicketId, onSelectTicket, onMapDrag, onMapReady }) {
   const [mounted, setMounted] = useState(false);
+  const tileRef = useRef(null);
   const tejeroCenter = [10.3016, 123.9086];
   const mapCenter = center || tejeroCenter;
   const zoom = center ? 16 : 14;
+
+  const activeTrucks = (trucks || []).filter((trk) => trk && trk.isActive !== false);
+  const [fadingTrucks, setFadingTrucks] = useState([]);
+  const prevActiveRef = useRef(activeTrucks);
+
+  useEffect(() => {
+    const prev = prevActiveRef.current;
+    prevActiveRef.current = activeTrucks;
+    const currentIds = new Set(activeTrucks.map((t) => t.id));
+    const removed = prev.filter((t) => !currentIds.has(t.id));
+    if (!removed.length) return;
+    setFadingTrucks((f) => [...f, ...removed]);
+    const removedIds = new Set(removed.map((t) => t.id));
+    setTimeout(() => {
+      setFadingTrucks((f) => f.filter((x) => !removedIds.has(x.id)));
+    }, 500);
+  }, [trucks]);
+
+  const activeIds = new Set(activeTrucks.map((t) => t.id));
+  const fadingOnly = fadingTrucks.filter((t) => !activeIds.has(t.id));
+  const fadingIds = new Set(fadingOnly.map((t) => t.id));
 
   useEffect(() => {
     const t = setTimeout(() => setMounted(true), 0);
@@ -155,11 +250,7 @@ export default function MapCanvas({ tickets = [], trucks = [], mapMode = "pins",
   }, []);
 
   if (!mounted) {
-    return (
-      <div className="w-full h-full flex items-center justify-center bg-card/60 backdrop-blur-sm">
-        <div className="h-7 w-7 rounded-full border-2 border-emerald-500/20 border-t-emerald-600 animate-spin" />
-      </div>
-    );
+    return <MapSkeleton />;
   }
 
   const highlightedTicket = highlightedTicketId ? tickets.find(t => t.id === highlightedTicketId) : null;
@@ -176,14 +267,15 @@ export default function MapCanvas({ tickets = [], trucks = [], mapMode = "pins",
       >
         <MapCameraController center={mapCenter} zoom={zoom} onMapDrag={onMapDrag} />
         
-        {/* High-DPI Retina Razor-Sharp CartoDB Voyager tiles */}
+        {/* OpenStreetMap standard tiles (no API key required) */}
         <TileLayer
-          attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+          ref={tileRef}
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url={OSM_TILE_URL}
+          maxZoom={19}
           detectRetina={true}
-          subdomains="abcd"
-          maxZoom={20}
         />
+        {onMapReady && <MapReadyNotifier onReady={onMapReady} tileRef={tileRef} />}
 
 
 
@@ -219,6 +311,20 @@ export default function MapCanvas({ tickets = [], trucks = [], mapMode = "pins",
               </span>
             );
           })}
+
+        {/* Route Trajectories (white casing under emerald line, beneath markers) */}
+        {(routes || []).map((r) => r.positions.length >= 2 && (
+          <span key={`route-${r.id}`}>
+            <Polyline
+              positions={r.positions}
+              pathOptions={{ color: "#ffffff", weight: 7, opacity: 0.9, interactive: false }}
+            />
+            <Polyline
+              positions={r.positions}
+              pathOptions={{ color: "#059669", weight: 4, opacity: 0.9, lineCap: "round", lineJoin: "round", interactive: false }}
+            />
+          </span>
+        ))}
 
         {/* Point Markers */}
         {(mapMode === "pins" || mapMode === "combined") &&
@@ -275,35 +381,29 @@ export default function MapCanvas({ tickets = [], trucks = [], mapMode = "pins",
             );
           })}
 
-        {/* Truck Markers */}
-        {trucks &&
-          trucks.map((trk) => (
-            <Marker
-              key={`truck-${trk.id}`}
-              position={[trk.lat, trk.lng]}
-              icon={createTruckIcon(trk.heading ?? 90)}
-            >
-              <Popup>
-                <div className="p-3 flex flex-col gap-1.5 min-w-[200px] text-zinc-900 font-sans">
-                  <div className="flex items-center gap-1.5 pb-1 border-b border-zinc-100">
-                    <span className="font-semibold text-xs text-zinc-900">
-                      Truck {trk.id}
-                    </span>
-                    <span className="text-xs text-emerald-600 font-semibold">
-                      • On Duty
-                    </span>
-                  </div>
-                  <div className="flex flex-col text-xs text-zinc-600 gap-0.5">
-                    <div><span className="font-semibold text-zinc-700">Driver:</span> {trk.driver}</div>
-                    <div><span className="font-semibold text-zinc-700">Plate:</span> {trk.plate}</div>
-                    {trk.capacity && <div><span className="font-semibold text-zinc-700">Load:</span> {trk.capacity}</div>}
-                    {trk.eta && <div className="text-emerald-600 font-bold mt-1">Arriving in: {trk.eta}</div>}
-                  </div>
-                </div>
-              </Popup>
-            </Marker>
-          ))}
+        {/* Truck Markers (Only render active trucks on route; fading ones finish their fade-out) */}
+        {[...activeTrucks, ...fadingOnly].map((trk) => (
+          <TruckMarker
+            key={`truck-${trk.id}`}
+            trk={trk}
+            fading={fadingIds.has(trk.id)}
+          />
+        ))}
       </MapContainer>
+
+      {/* OSM requires visible attribution; the Leaflet attribution control is disabled */}
+      <div className="absolute bottom-0 right-0 z-[1000] px-1.5 py-0.5 bg-white/70 text-[10px] text-zinc-600 rounded-tl pointer-events-none">
+        &copy;{" "}
+        <a
+          href="https://www.openstreetmap.org/copyright"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline pointer-events-auto"
+        >
+          OpenStreetMap
+        </a>{" "}
+        contributors
+      </div>
     </div>
   );
 }

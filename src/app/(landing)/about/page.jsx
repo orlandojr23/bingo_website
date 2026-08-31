@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Link from "next/link";
 import { Leaf, Users, Map, ShieldCheck } from "lucide-react";
 
 export default function AboutPage() {
@@ -79,13 +80,12 @@ export default function AboutPage() {
               Whether you're a resident waiting to try the app, or a barangay official ready to use the dashboard, we'd love to help you get started.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <button
-                type="button"
-                onClick={() => window.dispatchEvent(new CustomEvent("openContactSheet"))}
-                className="w-full sm:w-auto px-8 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-500 transition-colors cursor-pointer"
+              <Link
+                href="/demo"
+                className="w-full sm:w-auto px-8 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-500 transition-colors cursor-pointer text-center"
               >
                 Request a Demo
-              </button>
+              </Link>
               <a href="/#home" className="w-full sm:w-auto px-8 py-3 bg-zinc-800 text-white rounded-xl font-bold hover:bg-zinc-700 transition-colors cursor-pointer">
                 Back to Home
               </a>

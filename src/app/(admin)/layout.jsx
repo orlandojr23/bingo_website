@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Menu } from "lucide-react";
 import Sidebar from "@/components/layout/sidebar";
+import { AdminShellSkeleton } from "@/components/ui/skeletons";
 import { supabase } from "@/lib/supabase";
 
 export default function AdminLayout({ children }) {
@@ -34,11 +35,7 @@ export default function AdminLayout({ children }) {
   }, [router]);
 
   if (checking || !authorized) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-emerald-500/30 border-t-emerald-500" />
-      </div>
-    );
+    return <AdminShellSkeleton />;
   }
 
   return (

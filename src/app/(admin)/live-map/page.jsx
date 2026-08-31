@@ -4,19 +4,18 @@ import { useState, useEffect, Suspense } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { mockTickets, mockPilotData } from "@/lib/mock-data";
+import { useLiveRoute, getSchedule } from "@/lib/live-route";
+import { useTruckRoutes } from "@/lib/use-route-path";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
 import TicketDetailsModal from "@/components/modals/ticket-details-modal";
 import { inputClass } from "@/components/ui/input";
+import { MapSkeleton } from "@/components/ui/skeletons";
 import { cn } from "@/lib/utils";
 import { Search, MapPin, Truck as TruckIcon } from "lucide-react";
 
 const MapCanvas = dynamic(() => import("@/components/map/map-canvas"), {
   ssr: false,
-  loading: () => (
-    <div className="flex h-full w-full items-center justify-center bg-background text-xs text-muted-foreground">
-      Loading live map...
-    </div>
-  ),
+  loading: () => <MapSkeleton />,
 });
 
 function LiveMapContent() {
@@ -47,17 +46,22 @@ function LiveMapContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const live = useLiveRoute();
+  const truckRoutes = useTruckRoutes(live);
+
   const trucksData = mockPilotData.trucks.map((t) => {
-    const track = mockPilotData.activeTracking[t.id] || {};
+    const ts = live.trucks[t.id];
+    const route = truckRoutes.find((r) => r.id === t.id);
     return {
       id: t.id,
       plate: t.plate,
-      driver: t.driver,
+      driver: live.driverByTruck[t.id] ?? t.driver,
       capacity: t.capacity,
-      lat: track.lat || 10.3016,
-      lng: track.lng || 123.9086,
-      eta: track.eta,
-      isActive: !!mockPilotData.activeTracking[t.id],
+      lat: ts?.tracking.lat || 10.3016,
+      lng: ts?.tracking.lng || 123.9086,
+      heading: route?.heading ?? ts?.tracking.heading ?? 0,
+      eta: ts?.tracking.eta,
+      isActive: !!ts?.tracking.isActive,
     };
   });
 
@@ -139,6 +143,7 @@ function LiveMapContent() {
         <MapCanvas
           tickets={mapView === "reports" ? filteredTickets : []}
           trucks={mapView === "trucks" ? trucksData : []}
+          routes={mapView === "trucks" ? truckRoutes : []}
           mapMode={mapView === "reports" ? mapMode : "pins"}
           center={mapCenter}
           highlightedTicketId={mapView === "reports" ? activeTicketId : null}
@@ -332,12 +337,22 @@ function LiveMapContent() {
             {trucksData.filter((t) => t.isActive).length === 1 &&
               (() => {
                 const activeTruck = trucksData.find((t) => t.isActive);
+                const ts = live.trucks[activeTruck.id];
+                const sch = ts?.scheduleId ? getSchedule(ts.scheduleId) : null;
+                const point = sch?.routePoints?.[ts?.stopIndex];
                 return (
                   <div className="mx-4 mb-2 shrink-0 rounded-xl border border-border bg-muted/40 p-3 text-xs leading-relaxed text-zinc-600">
                     <p className="mb-0.5 font-semibold text-foreground">Live Tracking</p>
                     Truck <strong className="font-semibold text-foreground">{activeTruck.id}</strong> is
-                    currently on its collection route. Next stop: Sector B (arriving in{" "}
-                    {activeTruck.eta || "5 mins"}).
+                    currently on its collection route.{" "}
+                    {ts?.onsite ? (
+                      <>Currently collecting at {point?.name ?? "a stop"}.</>
+                    ) : (
+                      <>
+                        Next stop: {point?.name ?? "route end"} (arriving in{" "}
+                        {activeTruck.eta || "5 mins"}).
+                      </>
+                    )}
                   </div>
                 );
               })()}
@@ -404,13 +419,7 @@ function LiveMapContent() {
 
 export default function LiveMapPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex h-full w-full items-center justify-center bg-background text-xs text-muted-foreground">
-          Loading live map...
-        </div>
-      }
-    >
+    <Suspense fallback={<MapSkeleton />}>
       <LiveMapContent />
     </Suspense>
   );

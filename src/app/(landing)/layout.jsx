@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowRight, ChevronDown, Play, Apple, Menu, X } from "lucide-react";
+import { ChevronDown, Play, Apple, Menu, X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import ContactSheet from "./ContactSheet";
 import { supabase } from "@/lib/supabase";
@@ -114,10 +114,10 @@ export default function LandingLayout({ children }) {
           
           {/* Centered Navigation Links */}
           <nav className="absolute left-1/2 -translate-x-1/2 hidden md:flex items-center justify-center gap-2">
-            <a href="/#home" className={`text-sm font-bold transition-all px-4 py-2 rounded-xl ${activeSection === "home" ? "bg-emerald-50 text-emerald-700" : "text-zinc-600 hover:text-emerald-700 hover:bg-zinc-50"}`}>Home</a>
-            <a href="/#about" className={`text-sm font-bold transition-all px-4 py-2 rounded-xl ${activeSection === "about" ? "bg-emerald-50 text-emerald-700" : "text-zinc-600 hover:text-emerald-700 hover:bg-zinc-50"}`}>About</a>
-            <a href="/#features" className={`text-sm font-bold transition-all px-4 py-2 rounded-xl ${activeSection === "features" ? "bg-emerald-50 text-emerald-700" : "text-zinc-600 hover:text-emerald-700 hover:bg-zinc-50"}`}>Features</a>
-            <a href="/#faq" className={`text-sm font-bold transition-all px-4 py-2 rounded-xl ${activeSection === "faq" ? "bg-emerald-50 text-emerald-700" : "text-zinc-600 hover:text-emerald-700 hover:bg-zinc-50"}`}>FAQ</a>
+            <a href="/#home" className={`text-sm font-bold transition-all px-4 py-2 rounded-xl ${activeSection === "home" ? "text-emerald-700" : "text-zinc-600 hover:text-emerald-700 hover:bg-zinc-50"}`}>Home</a>
+            <a href="/#about" className={`text-sm font-bold transition-all px-4 py-2 rounded-xl ${activeSection === "about" ? "text-emerald-700" : "text-zinc-600 hover:text-emerald-700 hover:bg-zinc-50"}`}>About</a>
+            <a href="/#features" className={`text-sm font-bold transition-all px-4 py-2 rounded-xl ${activeSection === "features" ? "text-emerald-700" : "text-zinc-600 hover:text-emerald-700 hover:bg-zinc-50"}`}>Features</a>
+            <a href="/#faq" className={`text-sm font-bold transition-all px-4 py-2 rounded-xl ${activeSection === "faq" ? "text-emerald-700" : "text-zinc-600 hover:text-emerald-700 hover:bg-zinc-50"}`}>FAQ</a>
             
             {/* Download Dropdown */}
             <div className="relative group">
@@ -155,15 +155,9 @@ export default function LandingLayout({ children }) {
           </nav>
           
           <div className="flex-1 md:flex-none shrink-0 flex justify-end items-center gap-3">
-            <button 
-              onClick={() => setIsContactOpen(true)} 
-              className="group flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm cursor-pointer"
-            >
-              Contact Us <ArrowRight className="hidden sm:block w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
-            </button>
-            <button 
+            <button
               onClick={() => setIsMobileMenuOpen(true)}
-              className="md:hidden flex items-center justify-center w-10 h-10 rounded-xl bg-zinc-100 text-zinc-600 hover:bg-zinc-200 transition-colors"
+              className="md:hidden flex items-center justify-center w-10 h-10 rounded-xl text-zinc-600 transition-colors"
             >
               <Menu className="w-5 h-5" />
             </button>
@@ -236,14 +230,7 @@ export default function LandingLayout({ children }) {
             className="fixed inset-0 z-[100] bg-white flex flex-col px-6 md:hidden"
           >
             {/* Top Bar inside Menu */}
-            <div className="flex items-center justify-between h-[72px] mt-2 shrink-0">
-              <a href="/#home" onClick={() => setIsMobileMenuOpen(false)}>
-                <img 
-                  src="/logo-green-v2.png" 
-                  alt="Bin-Go Logo" 
-                  className="h-14 w-auto object-contain origin-left scale-[1.3] mix-blend-multiply" 
-                />
-              </a>
+            <div className="flex items-center justify-end pt-4 shrink-0">
               <button 
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="w-10 h-10 flex items-center justify-center text-zinc-400 hover:text-zinc-900 transition-colors"
@@ -255,10 +242,10 @@ export default function LandingLayout({ children }) {
             {/* Centered Navigation */}
             <div className="flex-1 flex flex-col justify-center items-center">
               <nav className="flex flex-col gap-6 text-3xl font-black tracking-tight text-center">
-                <a href="/#home" onClick={() => setIsMobileMenuOpen(false)} className={`transition-all px-6 py-2 rounded-2xl ${activeSection === "home" ? "bg-emerald-50 text-emerald-700" : "text-zinc-900 hover:text-emerald-600 hover:bg-zinc-50"}`}>Home</a>
-                <a href="/#about" onClick={() => setIsMobileMenuOpen(false)} className={`transition-all px-6 py-2 rounded-2xl ${activeSection === "about" ? "bg-emerald-50 text-emerald-700" : "text-zinc-900 hover:text-emerald-600 hover:bg-zinc-50"}`}>About</a>
-                <a href="/#features" onClick={() => setIsMobileMenuOpen(false)} className={`transition-all px-6 py-2 rounded-2xl ${activeSection === "features" ? "bg-emerald-50 text-emerald-700" : "text-zinc-900 hover:text-emerald-600 hover:bg-zinc-50"}`}>Features</a>
-                <a href="/#faq" onClick={() => setIsMobileMenuOpen(false)} className={`transition-all px-6 py-2 rounded-2xl ${activeSection === "faq" ? "bg-emerald-50 text-emerald-700" : "text-zinc-900 hover:text-emerald-600 hover:bg-zinc-50"}`}>FAQ</a>
+                <a href="/#home" onClick={() => setIsMobileMenuOpen(false)} className={`transition-all px-6 py-2 rounded-2xl ${activeSection === "home" ? "text-emerald-700" : "text-zinc-900 hover:text-emerald-600 hover:bg-zinc-50"}`}>Home</a>
+                <a href="/#about" onClick={() => setIsMobileMenuOpen(false)} className={`transition-all px-6 py-2 rounded-2xl ${activeSection === "about" ? "text-emerald-700" : "text-zinc-900 hover:text-emerald-600 hover:bg-zinc-50"}`}>About</a>
+                <a href="/#features" onClick={() => setIsMobileMenuOpen(false)} className={`transition-all px-6 py-2 rounded-2xl ${activeSection === "features" ? "text-emerald-700" : "text-zinc-900 hover:text-emerald-600 hover:bg-zinc-50"}`}>Features</a>
+                <a href="/#faq" onClick={() => setIsMobileMenuOpen(false)} className={`transition-all px-6 py-2 rounded-2xl ${activeSection === "faq" ? "text-emerald-700" : "text-zinc-900 hover:text-emerald-600 hover:bg-zinc-50"}`}>FAQ</a>
 
                 <button 
                   onClick={() => { setIsMobileMenuOpen(false); setIsContactOpen(true); }} 

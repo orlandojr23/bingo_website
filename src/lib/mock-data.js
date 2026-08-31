@@ -221,7 +221,7 @@ export const mockRecentActivity = [
   {
     id: "ACT-04",
     type: "fleet",
-    title: "Route Optimized for Sector 4",
+    title: "Route Optimized for Sitio Sampaguita",
     description: "AI dispatcher re-routed Truck 02 to alleviate Sitio Sampaguita backlog.",
     timestamp: "4h ago",
     badge: "System",
@@ -260,7 +260,7 @@ export const mockPilotData = {
   zones: [
     {
       id: "zone-a",
-      name: "North-East Sector (Sitio Vilgon, Sitio Silangan)",
+      name: "Sitio Vilgon & Sitio Silangan",
       coordinates: [
         [10.302, 123.908],
         [10.305, 123.908],
@@ -270,7 +270,7 @@ export const mockPilotData = {
     },
     {
       id: "zone-b",
-      name: "South-West Sector (Sitio Daclan, Sitio Mac Arthur)",
+      name: "Sitio Daclan & Sitio Mac Arthur",
       coordinates: [
         [10.299, 123.906],
         [10.302, 123.906],
@@ -280,7 +280,7 @@ export const mockPilotData = {
     },
     {
       id: "zone-c",
-      name: "Commercial Sector (M.J. Cuenco Ave, Tejero Market)",
+      name: "Sitio ICM & Tejero Market",
       coordinates: [
         [10.300, 123.909],
         [10.303, 123.909],
@@ -301,6 +301,18 @@ export const mockPilotData = {
       plate: "XYZ-1234",
       capacity: "12 Tons",
       driver: "Pedro Reyes"
+    },
+    {
+      id: "TRK-03",
+      plate: "ABC-3345",
+      capacity: "8 Tons",
+      driver: null
+    },
+    {
+      id: "TRK-04",
+      plate: "DEF-7789",
+      capacity: "10 Tons",
+      driver: null
     }
   ],
   schedules: [
@@ -311,7 +323,13 @@ export const mockPilotData = {
       days: ["Monday", "Wednesday", "Friday"],
       time: "08:00 AM - 11:00 AM",
       activeTruckId: "TRK-01",
-      status: "In Progress" // Could be Scheduled, In Progress, Completed
+      status: "In Progress", // Could be Scheduled, In Progress, Completed
+      routePoints: [
+        { name: "Sitio Silangan", time: "8:00 AM", lat: 10.3024, lng: 123.9084 },
+        { name: "Sitio Vilgon", time: "8:45 AM", lat: 10.3029, lng: 123.9095 },
+        { name: "Tejero Chapel", time: "9:30 AM", lat: 10.3039, lng: 123.9102 },
+        { name: "MRF Facility", time: "10:30 AM", lat: 10.3048, lng: 123.9108 },
+      ],
     },
     {
       id: "SCH-002",
@@ -320,7 +338,13 @@ export const mockPilotData = {
       days: ["Tuesday", "Thursday"],
       time: "01:00 PM - 04:00 PM",
       activeTruckId: "TRK-02",
-      status: "Scheduled"
+      status: "Scheduled",
+      routePoints: [
+        { name: "Sitio Mac Arthur", time: "1:00 PM", lat: 10.2995, lng: 123.9065 },
+        { name: "Sitio Daclan", time: "1:45 PM", lat: 10.3002, lng: 123.9072 },
+        { name: "Sitio Sampaguita", time: "2:30 PM", lat: 10.3011, lng: 123.9081 },
+        { name: "MRF Facility", time: "3:45 PM", lat: 10.3048, lng: 123.9108 },
+      ],
     },
     {
       id: "SCH-003",
@@ -329,15 +353,31 @@ export const mockPilotData = {
       days: ["Saturday"],
       time: "09:00 AM - 12:00 PM",
       activeTruckId: "TRK-01",
-      status: "Scheduled"
+      status: "Scheduled",
+      routePoints: [
+        { name: "Tejero Market", time: "9:00 AM", lat: 10.3005, lng: 123.9095 },
+        { name: "M.J. Cuenco Ave", time: "9:40 AM", lat: 10.3013, lng: 123.9102 },
+        { name: "Sitio ICM", time: "10:20 AM", lat: 10.3022, lng: 123.9111 },
+        { name: "MRF Facility", time: "11:30 AM", lat: 10.3048, lng: 123.9108 },
+      ],
     }
   ],
   activeTracking: {
     "TRK-01": {
       lat: 10.3025,
       lng: 123.9095,
+      heading: 90,
       lastUpdated: "Just now",
-      eta: "5 mins"
+      eta: "5 mins",
+      isActive: true,
+    },
+    "TRK-02": {
+      lat: 10.3016,
+      lng: 123.9086,
+      heading: 0,
+      lastUpdated: "Standby",
+      eta: "Parked",
+      isActive: false,
     }
   }
 };

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, ShieldAlert, Plus, X } from "lucide-react";
+import { Search, ShieldAlert, Plus, X, ArrowLeftRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { StatusBadge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
@@ -10,17 +10,12 @@ import { InfoRow } from "@/components/ui/info-row";
 import { Button } from "@/components/ui/button";
 import { inputClass, labelClass } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { mockPilotData } from "@/lib/mock-data";
+import { useLiveRoute, assignDriver, swapDrivers } from "@/lib/live-route";
 
 const initialStaff = [
-  { id: "DRV-001", name: "Juan Dela Cruz", role: "Driver", truck: "Truck 01 (GW-8821)", username: "juan.driver", status: "Active" },
-  { id: "DRV-002", name: "Pedro Reyes", role: "Driver", truck: "Truck 02 (XYZ-1234)", username: "pedro.driver", status: "Active" },
-];
-
-const truckOptions = [
-  "Truck 01 (GW-8821)",
-  "Truck 02 (XYZ-1234)",
-  "Truck 03 (Unassigned)",
-  "Truck 04 (Unassigned)",
+  { id: "DRV-001", name: "Juan Dela Cruz", role: "Driver", username: "juan.driver", status: "Active" },
+  { id: "DRV-002", name: "Pedro Reyes", role: "Driver", username: "pedro.driver", status: "Active" },
 ];
 
 function Field({ label, children, hint }) {
@@ -34,22 +29,28 @@ function Field({ label, children, hint }) {
 }
 
 export default function StaffPage() {
+  const live = useLiveRoute();
   const [staff, setStaff] = useState(initialStaff);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDriver, setSelectedDriver] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
+  const [swapSource, setSwapSource] = useState(null);
 
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [truck, setTruck] = useState("Truck 03 (Unassigned)");
+  const [truck, setTruck] = useState("");
   const [status, setStatus] = useState("Active");
+
+  const truckOf = (driverName) =>
+    mockPilotData.trucks.find((t) => live.driverByTruck[t.id] === driverName) || null;
+  const truckLabel = (t) => `${t.id} (${t.plate})`;
 
   const resetForm = () => {
     setName("");
     setUsername("");
     setPassword("");
-    setTruck("Truck 03 (Unassigned)");
+    setTruck("");
     setStatus("Active");
   };
 
@@ -57,13 +58,14 @@ export default function StaffPage() {
     if (selectedDriver) {
       setName(selectedDriver.name);
       setUsername(selectedDriver.username);
-      setTruck(selectedDriver.truck);
+      setTruck(truckOf(selectedDriver.name)?.id ?? "");
       setStatus(selectedDriver.status || "Active");
       setPassword("");
       setIsAdding(false);
     } else {
       resetForm();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDriver]);
 
   useEffect(() => {
@@ -81,11 +83,11 @@ export default function StaffPage() {
       id: `DRV-00${staff.length + 1}`,
       name,
       role: "Driver",
-      truck,
       username,
       status,
     };
 
+    if (truck) assignDriver(truck, name);
     setStaff([...staff, newDriver]);
     setIsAdding(false);
     resetForm();
@@ -95,10 +97,14 @@ export default function StaffPage() {
     e.preventDefault();
     if (!name || !username) return;
 
+    const prevTruck = truckOf(selectedDriver.name);
+    if (prevTruck && prevTruck.id !== truck) assignDriver(prevTruck.id, null);
+    if (truck) assignDriver(truck, name);
+
     setStaff(
       staff.map((drv) =>
         drv.id === selectedDriver.id
-          ? { ...drv, name, username, truck, status }
+          ? { ...drv, name, username, status }
           : drv
       )
     );
@@ -108,20 +114,50 @@ export default function StaffPage() {
 
   const handleDeleteDriver = (id, e) => {
     e.stopPropagation();
+    const person = staff.find((drv) => drv.id === id);
+    if (person) {
+      const held = truckOf(person.name);
+      if (held) assignDriver(held.id, null);
+    }
     setStaff(staff.filter((drv) => drv.id !== id));
     if (selectedDriver?.id === id) {
       setSelectedDriver(null);
     }
+    if (swapSource?.id === id) {
+      setSwapSource(null);
+    }
+  };
+
+  const handleSwapClick = (person, personTruck) => {
+    if (!swapSource) {
+      setSwapSource(person);
+      return;
+    }
+    if (swapSource.id === person.id) {
+      setSwapSource(null);
+      return;
+    }
+    const sourceTruck = truckOf(swapSource.name);
+    if (sourceTruck && personTruck) {
+      swapDrivers(sourceTruck.id, personTruck.id);
+    } else if (sourceTruck && !personTruck) {
+      assignDriver(sourceTruck.id, person.name);
+    }
+    setSwapSource(null);
   };
 
   const filteredStaff = staff.filter(
     (person) =>
       person.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      person.truck.toLowerCase().includes(searchQuery.toLowerCase())
+      (truckOf(person.name)
+        ? truckLabel(truckOf(person.name)).toLowerCase().includes(searchQuery.toLowerCase())
+        : "unassigned".includes(searchQuery.toLowerCase()))
   );
 
   const totalDrivers = staff.length;
-  const assignedCompactors = staff.filter((d) => !d.truck.includes("Unassigned")).length;
+  const assignedCompactors = mockPilotData.trucks.filter(
+    (t) => live.driverByTruck[t.id]
+  ).length;
 
   const formOpen = isAdding || selectedDriver !== null;
 
@@ -157,6 +193,22 @@ export default function StaffPage() {
           </div>
         </div>
 
+        {swapSource && (
+          <div className="flex shrink-0 items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5">
+            <p className="text-xs font-semibold text-amber-800">
+              Select a driver to swap trucks with {swapSource.name} (
+              {truckOf(swapSource.name) ? truckLabel(truckOf(swapSource.name)) : "Unassigned"}).
+            </p>
+            <button
+              type="button"
+              onClick={() => setSwapSource(null)}
+              className="shrink-0 rounded-md border border-amber-300 bg-card px-2.5 py-1 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 cursor-pointer"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+
         {filteredStaff.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-border bg-card p-10 text-center">
             <ShieldAlert className="mb-2.5 h-8 w-8 text-zinc-300" />
@@ -169,15 +221,23 @@ export default function StaffPage() {
           <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filteredStaff.map((person) => {
               const isSelected = selectedDriver?.id === person.id;
+              const personTruck = truckOf(person.name);
+              const isSwapSource = swapSource?.id === person.id;
 
               return (
                 <div
                   key={person.id}
-                  onClick={() => setSelectedDriver(person)}
+                  onClick={() =>
+                    swapSource
+                      ? handleSwapClick(person, personTruck)
+                      : setSelectedDriver(person)
+                  }
                   className={`group flex w-full cursor-pointer select-none flex-col justify-between rounded-xl border bg-card p-4 text-left transition-all ${
-                    isSelected
-                      ? "border-emerald-400 shadow-xs ring-1 ring-emerald-400/20"
-                      : "border-border hover:border-zinc-300 hover:bg-muted/40"
+                    isSwapSource
+                      ? "border-amber-400 shadow-xs ring-1 ring-amber-400/20"
+                      : isSelected
+                        ? "border-emerald-400 shadow-xs ring-1 ring-emerald-400/20"
+                        : "border-border hover:border-zinc-300 hover:bg-muted/40"
                   }`}
                 >
                   <div>
@@ -194,7 +254,10 @@ export default function StaffPage() {
                     </div>
 
                     <div className="mt-4 border-t border-border-subtle pt-2">
-                      <InfoRow label="Assigned Truck" value={person.truck} />
+                      <InfoRow
+                        label="Assigned Truck"
+                        value={personTruck ? truckLabel(personTruck) : "Unassigned"}
+                      />
                       <InfoRow
                         label="Username"
                         value={<span className="font-mono text-xs">{person.username}</span>}
@@ -202,7 +265,20 @@ export default function StaffPage() {
                     </div>
                   </div>
 
-                  <div className="mt-2 flex shrink-0 items-center justify-end">
+                  <div className="mt-2 flex shrink-0 items-center justify-end gap-1.5">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSwapClick(person, personTruck);
+                      }}
+                      disabled={!personTruck && !swapSource}
+                      className="flex items-center gap-1 rounded-md border border-amber-200 bg-card px-2.5 py-1 text-xs font-medium text-amber-600 transition-colors hover:border-amber-300 hover:bg-amber-50 hover:text-amber-700 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+                      title="Swap Truck Assignment"
+                    >
+                      <ArrowLeftRight className="h-3 w-3" />
+                      Swap
+                    </button>
                     <button
                       type="button"
                       onClick={(e) => handleDeleteDriver(person.id, e)}
@@ -280,8 +356,12 @@ export default function StaffPage() {
                         onChange={(e) => setTruck(e.target.value)}
                         className={cn(inputClass, "cursor-pointer")}
                       >
-                        {truckOptions.map((option) => (
-                          <option key={option}>{option}</option>
+                        <option value="">Unassigned</option>
+                        {mockPilotData.trucks.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {truckLabel(t)}
+                            {live.driverByTruck[t.id] ? ` — ${live.driverByTruck[t.id]}` : ""}
+                          </option>
                         ))}
                       </select>
                     </Field>

@@ -92,7 +92,7 @@ export default function ContactSheet({ isOpen, onClose }) {
     }
 
     setIsSubmitting(true);
-    
+
     // Simulate sending
     setTimeout(() => {
       setIsSubmitting(false);

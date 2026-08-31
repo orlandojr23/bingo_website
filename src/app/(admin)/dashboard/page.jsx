@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
 import { InfoRow } from "@/components/ui/info-row";
+import { DashboardSkeleton } from "@/components/ui/skeletons";
 import { mockTickets } from "@/lib/mock-data";
 import TicketDetailsModal from "@/components/modals/ticket-details-modal";
 
@@ -23,9 +24,11 @@ export default function DashboardPage() {
   const [tickets, setTickets] = useState([]);
   const [statusFilter, setStatusFilter] = useState("All");
   const [selectedTicket, setSelectedTicket] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setTickets(mockTickets);
+    setLoading(false);
   }, []);
 
   const pendingCount = tickets.filter((t) => t.status === "Pending").length;
@@ -75,6 +78,10 @@ export default function DashboardPage() {
           description="Here's today's overview of waste reports in Barangay Tejero"
         />
 
+        {loading ? (
+          <DashboardSkeleton />
+        ) : (
+          <>
         <div className="grid shrink-0 grid-cols-2 gap-3 lg:grid-cols-4">
           {kpis.map((kpi) => (
             <div
@@ -203,6 +210,8 @@ export default function DashboardPage() {
             <ChevronRight className="h-3.5 w-3.5" />
           </Link>
         </div>
+          </>
+        )}
       </div>
 
       <TicketDetailsModal
