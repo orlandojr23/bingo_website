@@ -70,7 +70,7 @@ function FaqItem({ question, answer, isOpen, onClick }) {
         <motion.div
           animate={{ rotate: isOpen ? 180 : 0 }}
           transition={{ duration: 0.2 }}
-          className="shrink-0 text-emerald-600 bg-emerald-50 w-8 h-8 rounded-xl flex items-center justify-center"
+          className="shrink-0 text-emerald-600 w-8 h-8 flex items-center justify-center"
         >
           <ChevronDown className="w-5 h-5" />
         </motion.div>
@@ -93,7 +93,7 @@ function FaqItem({ question, answer, isOpen, onClick }) {
 }
 
 export default function FaqsPage() {
-  const [openIndex, setOpenIndex] = useState("0-0");
+  const [openIndex, setOpenIndex] = useState(null);
 
   return (
     <div className="min-h-screen bg-zinc-50 pt-24 sm:pt-32 pb-16 sm:pb-24">
@@ -147,18 +147,18 @@ export default function FaqsPage() {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
                 href="/demo"
-                className="w-48 sm:w-auto px-8 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-500 transition-colors cursor-pointer text-center"
+                className="w-48 sm:w-auto px-8 py-3 bg-emerald-600 text-white rounded-xl text-sm sm:text-base font-bold hover:bg-emerald-500 transition-colors cursor-pointer text-center"
               >
                 Request a Demo
               </Link>
               <button
                 type="button"
                 onClick={() => window.dispatchEvent(new CustomEvent("openContactSheet"))}
-                className="w-48 sm:w-auto px-8 py-3 bg-zinc-800 text-white rounded-xl font-bold hover:bg-zinc-700 transition-colors cursor-pointer"
+                className="w-48 sm:w-auto px-8 py-3 bg-zinc-800 text-white rounded-xl text-sm sm:text-base font-bold hover:bg-zinc-700 transition-colors cursor-pointer"
               >
                 Contact Support
               </button>
-              <a href="/#home" className="w-48 sm:w-auto px-8 py-3 bg-zinc-800 text-white rounded-xl font-bold hover:bg-zinc-700 transition-colors cursor-pointer">
+              <a href="/#home" className="w-48 sm:w-auto px-8 py-3 bg-zinc-800 text-white rounded-xl text-sm sm:text-base font-bold hover:bg-zinc-700 transition-colors cursor-pointer">
                 Back to Home
               </a>
             </div>

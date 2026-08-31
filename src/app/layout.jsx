@@ -2,8 +2,8 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import PWARegistration from "@/components/pwa/PWARegistration";
-import PWAInstallPrompt from "@/components/pwa/PWAInstallPrompt";
 import PrivatePilotGate from "@/components/auth/PrivatePilotGate";
+import ScrollReset from "@/components/ScrollReset";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -94,8 +94,8 @@ export default function RootLayout({ children }) {
       <body className="min-h-screen bg-zinc-50 text-zinc-900 font-sans selection:bg-emerald-100 selection:text-emerald-900">
         <AuthProvider>
           <PWARegistration />
+          <ScrollReset />
           {children}
-          <PWAInstallPrompt />
         </AuthProvider>
       </body>
     </html>

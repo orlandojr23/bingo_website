@@ -5,8 +5,21 @@ import Link from "next/link";
 import { ArrowRight, ShieldCheck, Clock, Wifi, Battery, MapPin, Download } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
+function useMediaQuery(query) {
+  const [matches, setMatches] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    setMatches(mq.matches);
+    const onChange = (e) => setMatches(e.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, [query]);
+  return matches;
+}
+
 export default function LandingPage() {
   const [activeSection, setActiveSection] = useState("home");
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
 
   useEffect(() => {
     const handleHashChange = (e) => {
@@ -41,14 +54,14 @@ export default function LandingPage() {
     <div className="flex flex-col w-full overflow-hidden">
       
       {/* Hero Section */}
-      <section className="relative pt-24 pb-16 lg:py-0 lg:h-screen lg:min-h-[640px] flex items-center overflow-hidden bg-[url('/hero-bg.svg')] bg-cover bg-center bg-no-repeat">
+      <section className="relative pt-24 pb-10 sm:pb-16 lg:py-0 lg:h-screen lg:min-h-[640px] flex items-center overflow-hidden bg-[url('/hero-bg.svg')] bg-cover bg-center bg-no-repeat">
         {/* Overlay to prevent background from overwhelming hero content */}
         <div className="absolute inset-0 bg-white/40 -z-10" />
 
         <div className="max-w-7xl mx-auto px-6 lg:px-8 relative w-full z-10">
           
           {/* Single Grid switching between left and right layout orders */}
-          <div className={`w-full flex flex-col lg:flex-row items-center justify-center gap-12 lg:gap-16 xl:gap-20 ${
+          <div className={`w-full flex flex-col lg:flex-row items-center justify-center gap-8 sm:gap-12 lg:gap-16 xl:gap-20 ${
             activeSection === "about" || activeSection === "faq" ? "lg:flex-row-reverse" : "lg:flex-row"
           }`}>
             
@@ -85,7 +98,7 @@ export default function LandingPage() {
             <motion.div
               layout
               initial={false}
-              animate={{ rotateY: activeSection === "about" || activeSection === "faq" ? 360 : 0 }}
+              animate={{ rotateY: isDesktop && (activeSection === "about" || activeSection === "faq") ? 360 : 0 }}
               transition={{ type: "spring", stiffness: 50, damping: 20 }}
               style={{ perspective: 1200 }}
               className="flex justify-center shrink-0 z-20"
@@ -104,9 +117,9 @@ export default function LandingPage() {
 function HomeContent() {
   return (
     <>
-      <h1 className="text-2xl sm:text-5xl lg:text-7xl lg:[@media(max-height:800px)]:text-6xl lg:[@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-6 lg:[@media(max-height:800px)]:mb-4">
+      <h1 className="text-4xl sm:text-5xl lg:text-7xl lg:[@media(max-height:800px)]:text-6xl lg:[@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-4 sm:mb-6 lg:[@media(max-height:800px)]:mb-4">
         <span className="text-[#0f172a]">
-          Smart Waste <br className="hidden lg:block" /> Collection,
+          Smart Waste <br className="hidden lg:block" />Collection,
         </span>
         <br className="hidden lg:block" />
         <span className="relative inline-block mt-2 px-2">
@@ -115,7 +128,7 @@ function HomeContent() {
         </span>
       </h1>
 
-      <p className="text-sm sm:text-lg lg:[@media(max-height:800px)]:text-base text-zinc-700 font-medium mb-8 lg:[@media(max-height:800px)]:mb-5 max-w-md leading-relaxed">
+      <p className="text-sm sm:text-lg lg:[@media(max-height:800px)]:text-base text-zinc-700 font-medium mb-6 sm:mb-8 lg:[@media(max-height:800px)]:mb-5 max-w-md leading-relaxed">
         Never miss a collection day again. Track garbage trucks live, get instant arrival alerts, and help keep your community clean.
       </p>
 
@@ -135,7 +148,7 @@ function HomeContent() {
 function AboutContent() {
   return (
     <>
-      <h2 className="text-2xl sm:text-5xl lg:text-7xl lg:[@media(max-height:800px)]:text-6xl lg:[@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-6 lg:[@media(max-height:800px)]:mb-4 text-[#0f172a]">
+      <h2 className="text-4xl sm:text-5xl lg:text-7xl lg:[@media(max-height:800px)]:text-6xl lg:[@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-4 sm:mb-6 lg:[@media(max-height:800px)]:mb-4 text-[#0f172a]">
         Community Cleanups, <br className="hidden lg:block" />
         <span className="relative inline-block mt-2 px-2">
           <span className="relative z-10 text-white">Accelerated.</span>
@@ -143,7 +156,7 @@ function AboutContent() {
         </span>
       </h2>
 
-      <p className="text-sm sm:text-lg lg:[@media(max-height:800px)]:text-base text-zinc-700 font-medium mb-8 lg:[@media(max-height:800px)]:mb-5 max-w-md leading-relaxed">
+      <p className="text-sm sm:text-lg lg:[@media(max-height:800px)]:text-base text-zinc-700 font-medium mb-6 sm:mb-8 lg:[@media(max-height:800px)]:mb-5 max-w-md leading-relaxed">
         Connect waste collection services directly with local neighborhoods. Track routes, log waste reports in real-time, and ensure quick cleanups.
       </p>
 
@@ -162,7 +175,7 @@ function AboutContent() {
 function FeaturesContent() {
   return (
     <>
-      <h2 className="text-2xl sm:text-5xl lg:text-7xl lg:[@media(max-height:800px)]:text-6xl lg:[@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-6 lg:[@media(max-height:800px)]:mb-4 text-[#0f172a]">
+      <h2 className="text-4xl sm:text-5xl lg:text-7xl lg:[@media(max-height:800px)]:text-6xl lg:[@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-4 sm:mb-6 lg:[@media(max-height:800px)]:mb-4 text-[#0f172a]">
         Powerful Tools, <br className="hidden lg:block" />
         <span className="relative inline-block mt-2 px-2">
           <span className="relative z-10 text-white">Unleashed.</span>
@@ -170,7 +183,7 @@ function FeaturesContent() {
         </span>
       </h2>
 
-      <p className="text-sm sm:text-lg lg:[@media(max-height:800px)]:text-base text-zinc-700 font-medium mb-8 lg:[@media(max-height:800px)]:mb-5 max-w-md leading-relaxed">
+      <p className="text-sm sm:text-lg lg:[@media(max-height:800px)]:text-base text-zinc-700 font-medium mb-6 sm:mb-8 lg:[@media(max-height:800px)]:mb-5 max-w-md leading-relaxed">
         Experience real-time tracking, smart truck routing, and community-driven waste reports in one beautifully designed platform.
       </p>
 
@@ -189,7 +202,7 @@ function FeaturesContent() {
 function FaqContent() {
   return (
     <>
-      <h2 className="text-2xl sm:text-5xl lg:text-7xl lg:[@media(max-height:800px)]:text-6xl lg:[@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-6 lg:[@media(max-height:800px)]:mb-4 text-[#0f172a]">
+      <h2 className="text-4xl sm:text-5xl lg:text-7xl lg:[@media(max-height:800px)]:text-6xl lg:[@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-4 sm:mb-6 lg:[@media(max-height:800px)]:mb-4 text-[#0f172a]">
         Your Questions, <br className="hidden lg:block" />
         <span className="relative inline-block mt-2 px-2">
           <span className="relative z-10 text-white">Answered.</span>
@@ -197,8 +210,8 @@ function FaqContent() {
         </span>
       </h2>
 
-      <p className="text-sm sm:text-lg lg:[@media(max-height:800px)]:text-base text-zinc-700 font-medium mb-8 lg:[@media(max-height:800px)]:mb-5 max-w-md leading-relaxed">
-        Everything you need to know about using Bin'Go in your community.
+      <p className="text-sm sm:text-lg lg:[@media(max-height:800px)]:text-base text-zinc-700 font-medium mb-6 sm:mb-8 lg:[@media(max-height:800px)]:mb-5 max-w-md leading-relaxed">
+        Everything you need to know about using Bin&apos;Go in your community.
       </p>
 
       <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
@@ -215,7 +228,7 @@ function FaqContent() {
 
 function PhoneMockup({ activeSection }) {
   return (
-    <div className="relative w-[280px] sm:w-[320px] md:w-[280px] lg:w-[300px] xl:w-[340px] h-[580px] xl:h-[620px] z-10 transition-transform duration-700 hover:-translate-y-2 scale-90 sm:scale-95 lg:scale-90 xl:scale-95 [@media(max-height:800px)]:scale-[0.8] [@media(max-height:720px)]:scale-[0.7] origin-top -mb-[60px] sm:-mb-[30px] lg:-mb-[60px] xl:-mb-[30px] [@media(max-height:800px)]:-mb-[120px] [@media(max-height:720px)]:-mb-[170px]">
+    <div className="relative w-[240px] sm:w-[280px] md:w-[280px] lg:w-[300px] xl:w-[340px] h-[500px] sm:h-[580px] xl:h-[620px] z-10 transition-transform duration-700 hover:-translate-y-2 scale-[0.78] sm:scale-95 lg:scale-90 xl:scale-95 [@media(max-height:800px)]:scale-[0.8] [@media(max-height:720px)]:scale-[0.7] origin-top -mb-[80px] sm:-mb-[30px] lg:-mb-[60px] xl:-mb-[30px] [@media(max-height:800px)]:-mb-[120px] [@media(max-height:720px)]:-mb-[170px]">
       {/* Outer Phone Bezel */}
       <div className="absolute inset-0 bg-slate-900 rounded-[2.5rem] sm:rounded-[3rem] shadow-2xl overflow-hidden border-[6px] sm:border-[8px] border-slate-900 flex flex-col pointer-events-auto">
         
@@ -223,13 +236,13 @@ function PhoneMockup({ activeSection }) {
         <div className="flex-1 bg-white relative w-full h-full overflow-hidden rounded-[2rem] sm:rounded-[2.5rem] flex flex-col justify-between">
           
           {/* Top Status Bar & Dynamic Island */}
-          <div className="pt-3 px-6 flex justify-between items-center shrink-0 z-30 bg-white">
+          <div className="pt-3 px-4 sm:px-6 flex justify-between items-center shrink-0 z-30 bg-white">
             <span className="text-[10px] font-semibold tracking-wide text-slate-900">
               12:00
             </span>
             
             {/* Dynamic Island */}
-            <div className="absolute left-1/2 -translate-x-1/2 top-2.5 w-[85px] h-[22px] bg-black rounded-full flex items-center justify-between px-2">
+            <div className="absolute left-1/2 -translate-x-1/2 top-2.5 w-[70px] sm:w-[85px] h-[22px] bg-black rounded-full flex items-center justify-between px-2">
               <div className="w-1.5 h-1.5 rounded-full bg-slate-800/80"></div>
               <div className="w-2.5 h-2.5 rounded-full bg-slate-800/80 border-[0.5px] border-slate-700/50"></div>
             </div>

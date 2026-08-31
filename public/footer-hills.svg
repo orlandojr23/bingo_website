@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 100 1440 500" width="100%" height="100%" preserveAspectRatio="xMidYMax slice">
+  <defs>
+    <!-- Deep Mist Gradients to create depth -->
+    <linearGradient id="footerMist" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#021410" stop-opacity="0" />
+      <stop offset="100%" stop-color="#082b21" stop-opacity="0.75" />
+    </linearGradient>
+
+    <linearGradient id="footerMistDense" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#021410" stop-opacity="0" />
+      <stop offset="100%" stop-color="#041c16" stop-opacity="0.95" />
+    </linearGradient>
+  </defs>
+
+  <!-- 1. Distant Dark Mountain Range -->
+  <path d="M-100,600 L-100,320 L220,180 L480,270 L750,140 L1020,240 L1300,110 L1600,220 L1600,600 Z" fill="#0b2e24" opacity="0.5" />
+
+  <!-- Mist 1 -->
+  <rect x="0" y="150" width="1440" height="200" fill="url(#footerMist)" opacity="0.8" />
+
+  <!-- 2. Mid Dark Mountain Range -->
+  <path d="M-100,600 L-100,380 L350,260 L680,340 L980,200 L1240,300 L1600,170 L1600,600 Z" fill="#0f3c30" opacity="0.7" />
+
+  <!-- Mist 2 -->
+  <rect x="0" y="250" width="1440" height="250" fill="url(#footerMist)" opacity="0.8" />
+
+  <!-- 3. Near Dark Hills -->
+  <path d="M-100,600 L-100,470 Q250,350 600,440 T1300,400 L1600,480 L1600,600 Z" fill="#134f3f" opacity="0.85" />
+
+  <!-- Gentle Foreground Slope -->
+  <path d="M-100,600 L-100,530 Q350,470 780,540 T1600,510 L1600,600 Z" fill="#18624e" />
+
+  <!-- Dense Bottom Mist to ground the footer content -->
+  <rect x="0" y="520" width="1440" height="80" fill="url(#footerMistDense)" />
+</svg>

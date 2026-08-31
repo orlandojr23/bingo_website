@@ -7,6 +7,52 @@ import { AnimatePresence, motion } from "framer-motion";
 import ContactSheet from "./ContactSheet";
 import { supabase } from "@/lib/supabase";
 
+function useMediaQuery(query) {
+  const [matches, setMatches] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    setMatches(mq.matches);
+    const onChange = (e) => setMatches(e.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, [query]);
+  return matches;
+}
+
+function FooterColumn({ title, isOpen, onToggle, children }) {
+  const isDesktop = useMediaQuery("(min-width: 768px)");
+  return (
+    <div className="flex flex-col md:items-start border-t border-emerald-800/20 md:border-t-0">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex items-center justify-between w-full py-4 md:py-0 md:pointer-events-none cursor-pointer md:cursor-default"
+      >
+        <span className="font-bold text-xs uppercase tracking-wider text-emerald-400 font-mono">{title}</span>
+        <motion.div
+          animate={{ rotate: isOpen ? 180 : 0 }}
+          transition={{ duration: 0.2 }}
+          className="md:hidden text-emerald-400"
+        >
+          <ChevronDown className="w-4 h-4" />
+        </motion.div>
+      </button>
+      {isDesktop ? (
+        <div className="flex flex-col gap-3 items-start md:mt-3">{children}</div>
+      ) : (
+        <motion.div
+          initial={false}
+          animate={{ height: isOpen ? "auto" : 0, opacity: isOpen ? 1 : 0 }}
+          transition={{ duration: 0.25, ease: "easeInOut" }}
+          className="overflow-hidden"
+        >
+          <div className="flex flex-col gap-3 items-start pb-5">{children}</div>
+        </motion.div>
+      )}
+    </div>
+  );
+}
+
 export default function LandingLayout({ children }) {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
@@ -16,6 +62,7 @@ export default function LandingLayout({ children }) {
   const [sessionUser, setSessionUser] = useState(null);
   const [sessionRole, setSessionRole] = useState(null);
   const [activeSection, setActiveSection] = useState("home");
+  const [openFooterCol, setOpenFooterCol] = useState(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -60,6 +107,13 @@ export default function LandingLayout({ children }) {
     window.addEventListener("openContactSheet", handleOpenContact);
     return () => window.removeEventListener("openContactSheet", handleOpenContact);
   }, []);
+
+  useEffect(() => {
+    document.body.style.overflow = isMobileMenuOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isMobileMenuOpen]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -168,43 +222,49 @@ export default function LandingLayout({ children }) {
         {children}
       </main>
       <ContactSheet isOpen={isContactOpen} onClose={() => setIsContactOpen(false)} />
-      <footer className="relative pt-20 pb-12 overflow-hidden border-t border-emerald-900/30 bg-[url('/footer-bg.svg')] bg-cover bg-top bg-no-repeat text-emerald-100">
+      <footer className="relative pt-20 pb-12 overflow-hidden border-t border-emerald-900/30 text-emerald-100">
+        {/* Mobile: gradient sky + fixed-aspect hills so accordion toggling never rescales the art */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#021410] via-[#051e18] to-[#082b21] md:hidden" />
+        <div className="absolute inset-x-0 bottom-0 h-[170px] md:hidden bg-[url('/footer-hills.svg')] bg-no-repeat bg-bottom [background-size:100%_auto]" />
+        {/* Desktop: original full scene */}
+        <div className="absolute inset-0 hidden md:block bg-[url('/footer-bg.svg')] bg-cover bg-top bg-no-repeat" />
         {/* Subtle dark overlay to ensure text contrast */}
         <div className="absolute inset-0 bg-[#0b1e19]/30 -z-0" />
         <div className="max-w-7xl mx-auto px-6 lg:px-8 relative z-10">
           
           {/* Top Section */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-12 pb-16 border-b border-emerald-800/20">
+          <div className="grid grid-cols-1 md:grid-cols-4 md:gap-12 pb-16 border-b border-emerald-800/20">
             {/* Brand / Info Column */}
-            <div className="md:col-span-2 flex flex-col gap-5 items-center md:items-start text-center md:text-left">
-              <div className="flex items-center gap-3">
-                <img 
-                  src="/logo-green-v2.png" 
-                  alt="Bin-Go Logo" 
-                  className="h-20 w-auto object-contain brightness-0 invert origin-left scale-[1.3]" 
-                />
-              </div>
-              <p className="text-sm text-emerald-300/80 max-w-sm leading-relaxed font-medium">
-                Helping barangays manage waste collection with live truck tracking, easy waste reporting, and fast cleanups.
-              </p>
+            <div className="mb-10 md:mb-0 md:col-span-2 flex flex-col items-start">
+              <img 
+                src="/logo-green-v2.png" 
+                alt="Bin-Go Logo" 
+                className="h-16 w-auto object-contain origin-left scale-[1.65] brightness-0 invert" 
+              />
             </div>
             
-            {/* Platform links column matching bin-go-website */}
-            <div className="flex flex-col gap-3 items-center md:items-start">
-              <span className="font-bold text-xs uppercase tracking-wider text-emerald-400 font-mono">Platform</span>
+            {/* Platform links column — accordion on mobile, static column on desktop */}
+            <FooterColumn
+              title="Platform"
+              isOpen={openFooterCol === "platform"}
+              onToggle={() => setOpenFooterCol(openFooterCol === "platform" ? null : "platform")}
+            >
               <a href="#" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">Home</a>
               <a href="#about" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">About</a>
               <a href="#features" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">Features</a>
               <a href="#faq" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">FAQ</a>
-            </div>
+            </FooterColumn>
 
-            {/* Legal Links Column matching bin-go-website */}
-            <div className="flex flex-col gap-3 items-center md:items-start">
-              <span className="font-bold text-xs uppercase tracking-wider text-emerald-400 font-mono">Legal & Support</span>
+            {/* Legal Links Column — accordion on mobile, static column on desktop */}
+            <FooterColumn
+              title="Legal & Support"
+              isOpen={openFooterCol === "legal"}
+              onToggle={() => setOpenFooterCol(openFooterCol === "legal" ? null : "legal")}
+            >
               <Link href="/privacy" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">Privacy Policy</Link>
               <Link href="/terms" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">Terms of Service</Link>
-              <button onClick={() => setIsContactOpen(true)} className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">Contact Support</button>
-            </div>
+              <button onClick={() => setIsContactOpen(true)} className="text-sm text-emerald-200 hover:text-white transition-colors font-medium text-left">Contact Support</button>
+            </FooterColumn>
           </div>
 
           {/* Bottom Section with Giant Brand Text */}
@@ -260,13 +320,13 @@ export default function LandingLayout({ children }) {
             <div className="pb-8 shrink-0">
               <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-4 text-center">Coming Soon to Mobile</p>
               <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-3 px-4 py-3 text-zinc-500 rounded-2xl bg-zinc-50 border border-zinc-100 justify-center">
+                <div className="w-48 mx-auto flex items-center gap-3 px-4 py-3 text-zinc-500 rounded-2xl bg-zinc-50 border border-zinc-100 justify-center">
                   <Play className="w-5 h-5 text-zinc-400 fill-zinc-400" />
                   <div className="text-left">
                     <p className="font-bold text-zinc-700 text-sm leading-none mb-1">Google Play</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 px-4 py-3 text-zinc-500 rounded-2xl bg-zinc-50 border border-zinc-100 justify-center">
+                <div className="w-48 mx-auto flex items-center gap-3 px-4 py-3 text-zinc-500 rounded-2xl bg-zinc-50 border border-zinc-100 justify-center">
                   <Apple className="w-5 h-5 text-zinc-400" />
                   <div className="text-left">
                     <p className="font-bold text-zinc-700 text-sm leading-none mb-1">App Store</p>
