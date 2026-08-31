@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { CheckCircle2, Plus, X } from "lucide-react";
+import { CheckCircle2, Plus, X, FilePlus2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
@@ -199,8 +199,14 @@ export default function CrudPage() {
               <tbody className="divide-y divide-border-subtle">
                 {records.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="p-8 text-center text-muted-foreground">
-                      No records found. Click &quot;Create New Report&quot; to add one.
+                    <td colSpan={7} className="p-10">
+                      <div className="flex flex-col items-center text-center">
+                        <FilePlus2 className="mb-2.5 h-8 w-8 text-zinc-300" />
+                        <h3 className="text-sm font-semibold text-foreground">No Reports Yet</h3>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Click &quot;Create New Report&quot; to add your first record.
+                        </p>
+                      </div>
                     </td>
                   </tr>
                 ) : (
@@ -288,7 +294,7 @@ export default function CrudPage() {
                     <button
                       type="button"
                       onClick={resetForm}
-                      className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer"
+                      className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
                       aria-label="Close sheet"
                     >
                       <X className="h-4 w-4" />

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FileText, ChevronRight } from "lucide-react";
+import { FileText, ChevronRight, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
@@ -11,6 +11,7 @@ import { InfoRow } from "@/components/ui/info-row";
 import { DashboardSkeleton } from "@/components/ui/skeletons";
 import { mockTickets } from "@/lib/mock-data";
 import TicketDetailsModal from "@/components/modals/ticket-details-modal";
+import ConfirmModal from "@/components/ui/confirm-modal";
 
 const hintTones = {
   zinc: "text-muted-foreground",
@@ -24,6 +25,7 @@ export default function DashboardPage() {
   const [tickets, setTickets] = useState([]);
   const [statusFilter, setStatusFilter] = useState("All");
   const [selectedTicket, setSelectedTicket] = useState(null);
+  const [ticketToDelete, setTicketToDelete] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -56,12 +58,12 @@ export default function DashboardPage() {
     }
   };
 
-  const handleDeleteTicket = (id, e) => {
-    e.stopPropagation();
+  const handleDeleteTicket = (id) => {
     setTickets((prev) => prev.filter((t) => t.id !== id));
     if (selectedTicket?.id === id) {
       setSelectedTicket(null);
     }
+    setTicketToDelete(null);
   };
 
   const handleLocateOnMap = (t) => {
@@ -134,10 +136,12 @@ export default function DashboardPage() {
           {filteredTickets.length === 0 ? (
             <div className="flex items-center justify-center rounded-xl border border-border bg-card p-8 text-center">
               <div className="flex max-w-xs flex-col items-center">
-                <FileText className="mb-2.5 h-8 w-8 text-zinc-300" />
+                <Trash2 className="mb-2.5 h-8 w-8 text-zinc-300" />
                 <h3 className="text-sm font-semibold text-foreground">No Recent Reports</h3>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  There are no reports matching this filter.
+                  {statusFilter === "All"
+                    ? "New waste reports from residents will appear here."
+                    : `There are no reports with a "${statusFilter}" status right now.`}
                 </p>
               </div>
             </div>
@@ -184,7 +188,10 @@ export default function DashboardPage() {
                     <div className="mt-2 flex shrink-0 items-center justify-end">
                       <button
                         type="button"
-                        onClick={(e) => handleDeleteTicket(t.id, e)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setTicketToDelete(t);
+                        }}
                         className="rounded-md border border-rose-200 bg-card px-2.5 py-1 text-xs font-medium text-rose-600 transition-colors hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 cursor-pointer"
                         title="Delete Report"
                       >
@@ -220,6 +227,14 @@ export default function DashboardPage() {
         onClose={() => setSelectedTicket(null)}
         onUpdateStatus={handleUpdateStatus}
         onLocateOnMap={handleLocateOnMap}
+      />
+
+      <ConfirmModal
+        open={!!ticketToDelete}
+        title="Delete Report"
+        description={`Are you sure you want to remove report ${ticketToDelete?.id} (${ticketToDelete?.location})? This cannot be undone.`}
+        onConfirm={() => handleDeleteTicket(ticketToDelete?.id)}
+        onCancel={() => setTicketToDelete(null)}
       />
     </div>
   );

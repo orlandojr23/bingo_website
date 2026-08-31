@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronDown, Play, Apple, Menu, X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import ContactSheet from "./ContactSheet";
 import { supabase } from "@/lib/supabase";
 
 function useMediaQuery(query) {
@@ -57,7 +56,6 @@ export default function LandingLayout({ children }) {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [hideLogo, setHideLogo] = useState(false);
-  const [isContactOpen, setIsContactOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [sessionUser, setSessionUser] = useState(null);
   const [sessionRole, setSessionRole] = useState(null);
@@ -101,12 +99,6 @@ export default function LandingLayout({ children }) {
       window.removeEventListener("popstate", handleHashChange);
     };
   }, [pathname]);
-
-  useEffect(() => {
-    const handleOpenContact = () => setIsContactOpen(true);
-    window.addEventListener("openContactSheet", handleOpenContact);
-    return () => window.removeEventListener("openContactSheet", handleOpenContact);
-  }, []);
 
   useEffect(() => {
     document.body.style.overflow = isMobileMenuOpen ? "hidden" : "";
@@ -221,7 +213,6 @@ export default function LandingLayout({ children }) {
       <main className="flex-1">
         {children}
       </main>
-      <ContactSheet isOpen={isContactOpen} onClose={() => setIsContactOpen(false)} />
       <footer className="relative pt-20 pb-12 overflow-hidden border-t border-emerald-900/30 text-emerald-100">
         {/* Mobile: gradient sky + fixed-aspect hills so accordion toggling never rescales the art */}
         <div className="absolute inset-0 bg-gradient-to-b from-[#021410] via-[#051e18] to-[#082b21] md:hidden" />
@@ -263,7 +254,7 @@ export default function LandingLayout({ children }) {
             >
               <Link href="/privacy" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">Privacy Policy</Link>
               <Link href="/terms" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">Terms of Service</Link>
-              <button onClick={() => setIsContactOpen(true)} className="text-sm text-emerald-200 hover:text-white transition-colors font-medium text-left">Contact Support</button>
+              <Link href="/support" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium text-left">Contact Support</Link>
             </FooterColumn>
           </div>
 

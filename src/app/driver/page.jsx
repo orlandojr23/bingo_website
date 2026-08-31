@@ -23,6 +23,7 @@ import {
 import { cn, haptic } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useRoutePath } from "@/lib/use-route-path";
+import { useFleet } from "@/lib/fleet";
 import { MapSkeleton } from "@/components/ui/skeletons";
 import { useToast } from "@/components/pwa/Toast";
 import BottomSheet from "@/components/pwa/BottomSheet";
@@ -236,6 +237,7 @@ export default function DriverPage() {
   const { toast, ToastViewport } = useToast();
 
   const live = useLiveRoute();
+  const fleet = useFleet();
   const truckState = live.trucks[selectedTruckId];
   const isOnDuty =
     !!truckState &&
@@ -243,7 +245,7 @@ export default function DriverPage() {
     truckState.tracking.isActive;
 
   const currentTruck =
-    mockPilotData.trucks.find((t) => t.id === selectedTruckId) || mockPilotData.trucks[0];
+    fleet.find((t) => t.id === selectedTruckId) || fleet[0];
 
   const liveDriver = live.driverByTruck[selectedTruckId] ?? currentTruck.driver;
 

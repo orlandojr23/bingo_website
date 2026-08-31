@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useLayoutEffect, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { ArrowRight, ShieldCheck, Clock, Wifi, Battery, MapPin, Download } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -17,36 +17,49 @@ function useMediaQuery(query) {
   return matches;
 }
 
+const SECTION_BY_HASH = { "#about": "about", "#features": "features", "#faq": "faq" };
+
+const getSectionFromHash = () => SECTION_BY_HASH[window.location.hash] ?? "home";
+
+function subscribeToHash(callback) {
+  window.addEventListener("hashchange", callback);
+  window.addEventListener("popstate", callback);
+  return () => {
+    window.removeEventListener("hashchange", callback);
+    window.removeEventListener("popstate", callback);
+  };
+}
+
 export default function LandingPage() {
-  const [activeSection, setActiveSection] = useState("home");
+  // Read the section straight from the URL hash so loads of /#about etc.
+  // never flash the home layout (phone on the right) before jumping into place.
+  const activeSection = useSyncExternalStore(subscribeToHash, getSectionFromHash, () => "home");
+  // False until just after mount, so a page refresh snaps the phone to the
+  // section's orientation instead of replaying the spin.
+  const [hashInitialized, setHashInitialized] = useState(false);
+  // The SSR markup always renders the home layout, and it paints before the
+  // hash-driven section switch commits. Keep the hero invisible until
+  // hydration completes with the correct section so section-hash loads never
+  // flash the phone on the wrong side.
+  const [hydrated, setHydrated] = useState(false);
+  useLayoutEffect(() => { setHydrated(true); }, []);
+  const sectionSettled = hydrated && activeSection === getSectionFromHash();
   const isDesktop = useMediaQuery("(min-width: 1024px)");
 
   useEffect(() => {
-    const handleHashChange = (e) => {
-      const hash = window.location.hash;
-      if (hash === "#about") {
-        setActiveSection("about");
-      } else if (hash === "#features") {
-        setActiveSection("features");
-      } else if (hash === "#faq") {
-        setActiveSection("faq");
-      } else {
-        setActiveSection("home");
-      }
-      
-      // If triggered by a user clicking a link (event exists), scroll back to top
-      // so they can see the new section content instead of staring at the footer!
-      if (e) {
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      }
-    };
-    window.addEventListener("hashchange", handleHashChange);
-    window.addEventListener("popstate", handleHashChange);
-    handleHashChange();
+    // Section links scroll back to the top so the hero is visible
+    // instead of staying down near the footer.
+    const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
+    window.addEventListener("hashchange", scrollToTop);
+    window.addEventListener("popstate", scrollToTop);
+    // Enable the spring transition only after the initial hash-driven
+    // orientation snap has committed, so reloads never replay the spin.
+    const t = setTimeout(() => setHashInitialized(true), 100);
 
     return () => {
-      window.removeEventListener("hashchange", handleHashChange);
-      window.removeEventListener("popstate", handleHashChange);
+      window.removeEventListener("hashchange", scrollToTop);
+      window.removeEventListener("popstate", scrollToTop);
+      clearTimeout(t);
     };
   }, []);
 
@@ -61,7 +74,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8 relative w-full z-10">
           
           {/* Single Grid switching between left and right layout orders */}
-          <div className={`w-full flex flex-col lg:flex-row items-center justify-center gap-8 sm:gap-12 lg:gap-16 xl:gap-20 ${
+          <div className={`w-full flex flex-col lg:flex-row items-center justify-center gap-8 sm:gap-12 lg:gap-16 xl:gap-20 ${sectionSettled ? "" : "invisible"} ${
             activeSection === "about" || activeSection === "faq" ? "lg:flex-row-reverse" : "lg:flex-row"
           }`}>
             
@@ -99,7 +112,7 @@ export default function LandingPage() {
               layout
               initial={false}
               animate={{ rotateY: isDesktop && (activeSection === "about" || activeSection === "faq") ? 360 : 0 }}
-              transition={{ type: "spring", stiffness: 50, damping: 20 }}
+              transition={hashInitialized ? { type: "spring", stiffness: 50, damping: 20 } : { duration: 0 }}
               style={{ perspective: 1200 }}
               className="flex justify-center shrink-0 z-20"
             >
@@ -117,7 +130,7 @@ export default function LandingPage() {
 function HomeContent() {
   return (
     <>
-      <h1 className="text-4xl sm:text-5xl lg:text-7xl lg:[@media(max-height:800px)]:text-6xl lg:[@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-4 sm:mb-6 lg:[@media(max-height:800px)]:mb-4">
+      <h1 className="text-[clamp(1.875rem,min(9vw,8vh),2.25rem)] sm:text-5xl max-lg:[@media(max-height:480px)]:text-3xl lg:text-7xl lg:[@media(max-height:800px)]:text-6xl lg:[@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-4 sm:mb-6 lg:[@media(max-height:800px)]:mb-4">
         <span className="text-[#0f172a]">
           Smart Waste <br className="hidden lg:block" />Collection,
         </span>
@@ -148,7 +161,7 @@ function HomeContent() {
 function AboutContent() {
   return (
     <>
-      <h2 className="text-4xl sm:text-5xl lg:text-7xl lg:[@media(max-height:800px)]:text-6xl lg:[@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-4 sm:mb-6 lg:[@media(max-height:800px)]:mb-4 text-[#0f172a]">
+      <h2 className="text-[clamp(1.875rem,min(9vw,8vh),2.25rem)] sm:text-5xl max-lg:[@media(max-height:480px)]:text-3xl lg:text-7xl lg:[@media(max-height:800px)]:text-6xl lg:[@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-4 sm:mb-6 lg:[@media(max-height:800px)]:mb-4 text-[#0f172a]">
         Community Cleanups, <br className="hidden lg:block" />
         <span className="relative inline-block mt-2 px-2">
           <span className="relative z-10 text-white">Accelerated.</span>
@@ -175,7 +188,7 @@ function AboutContent() {
 function FeaturesContent() {
   return (
     <>
-      <h2 className="text-4xl sm:text-5xl lg:text-7xl lg:[@media(max-height:800px)]:text-6xl lg:[@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-4 sm:mb-6 lg:[@media(max-height:800px)]:mb-4 text-[#0f172a]">
+      <h2 className="text-[clamp(1.875rem,min(9vw,8vh),2.25rem)] sm:text-5xl max-lg:[@media(max-height:480px)]:text-3xl lg:text-7xl lg:[@media(max-height:800px)]:text-6xl lg:[@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-4 sm:mb-6 lg:[@media(max-height:800px)]:mb-4 text-[#0f172a]">
         Powerful Tools, <br className="hidden lg:block" />
         <span className="relative inline-block mt-2 px-2">
           <span className="relative z-10 text-white">Unleashed.</span>
@@ -202,7 +215,7 @@ function FeaturesContent() {
 function FaqContent() {
   return (
     <>
-      <h2 className="text-4xl sm:text-5xl lg:text-7xl lg:[@media(max-height:800px)]:text-6xl lg:[@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-4 sm:mb-6 lg:[@media(max-height:800px)]:mb-4 text-[#0f172a]">
+      <h2 className="text-[clamp(1.875rem,min(9vw,8vh),2.25rem)] sm:text-5xl max-lg:[@media(max-height:480px)]:text-3xl lg:text-7xl lg:[@media(max-height:800px)]:text-6xl lg:[@media(max-height:720px)]:text-5xl font-black tracking-tight leading-[1.1] mb-4 sm:mb-6 lg:[@media(max-height:800px)]:mb-4 text-[#0f172a]">
         Your Questions, <br className="hidden lg:block" />
         <span className="relative inline-block mt-2 px-2">
           <span className="relative z-10 text-white">Answered.</span>

@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { mockPilotData } from "@/lib/mock-data";
 import { getSchedule } from "@/lib/live-route";
 
 const ORS_URL = "https://api.openrouteservice.org/v2/directions/driving-car/geojson";
@@ -151,21 +150,78 @@ export function useRoutePath({ scheduleId, stopIndex = 0, origin = null, points 
   };
 }
 
-export function useTruckRoutes(live) {
-  const perTruck = mockPilotData.trucks.map((t) => {
-    const ts = live.trucks[t.id];
-    const sched = ts?.scheduleId ? getSchedule(ts.scheduleId) : null;
-    const active = !!ts && (ts.phase === "enroute" || ts.phase === "onsite") && !!ts.tracking?.isActive;
-    const route = useRoutePath({
-      scheduleId: sched?.id ?? null,
-      stopIndex: ts?.stopIndex ?? 0,
-      origin: active ? { lat: ts.tracking.lat, lng: ts.tracking.lng } : null,
-      points: active && sched ? sched.routePoints.slice(ts.stopIndex) : [],
-      enabled: active,
-    });
-    return { id: t.id, route };
-  });
-  return perTruck
-    .filter((r) => r.route.positions.length >= 2)
-    .map((r) => ({ id: r.id, positions: r.route.positions, source: r.route.source, heading: r.route.heading }));
+export function useTruckRoutes(live, fleet) {
+  const [routes, setRoutes] = useState([]);
+
+  const fleetKey = (fleet || []).map((t) => t.id).join(",");
+  const liveKey = Object.entries(live.trucks || {})
+    .map(([id, ts]) => [
+      id,
+      ts?.phase,
+      ts?.stopIndex,
+      ts?.tracking?.isActive ? 1 : 0,
+      round4(ts?.tracking?.lat || 0),
+      round4(ts?.tracking?.lng || 0),
+    ].join(":"))
+    .join("|");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      const results = [];
+      for (const t of fleet || []) {
+        const ts = live.trucks[t.id];
+        const sched = ts?.scheduleId ? getSchedule(ts.scheduleId) : null;
+        const active = !!ts && (ts.phase === "enroute" || ts.phase === "onsite") && !!ts.tracking?.isActive;
+        if (!active || !sched) continue;
+
+        const origin = { lat: ts.tracking.lat, lng: ts.tracking.lng };
+        const waypoints = buildWaypoints(origin, sched.routePoints.slice(ts.stopIndex));
+        if (waypoints.length < 2) continue;
+
+        const cacheKey = cacheKeyFor(sched.id, ts.stopIndex, origin, waypoints.length);
+        let positions = routeCache.get(cacheKey);
+        if (!positions) {
+          positions = waypoints.map((p) => [p.lat, p.lng]);
+          if (ORS_KEY && Date.now() >= backoffUntil) {
+            let job = inflight.get(cacheKey);
+            if (!job) {
+              job = fetchOrs(waypoints)
+                .then((orsPositions) => {
+                  routeCache.set(cacheKey, orsPositions);
+                  return orsPositions;
+                })
+                .finally(() => inflight.delete(cacheKey));
+              inflight.set(cacheKey, job);
+            }
+            try {
+              positions = await job;
+            } catch (err) {
+              const now = Date.now();
+              if (err.status === 401 || err.status === 403) backoffUntil = now + 5 * 60 * 1000;
+              else if (err.status === 429) backoffUntil = now + 60 * 1000;
+              else backoffUntil = now + 30 * 1000;
+            }
+          }
+        }
+
+        const withOrigin = [[origin.lat, origin.lng], ...positions.slice(1)];
+        results.push({
+          id: t.id,
+          positions: withOrigin,
+          source: routeCache.has(cacheKey) ? "ors" : "straight",
+          heading: headingAlong(withOrigin),
+        });
+      }
+      if (!cancelled) setRoutes(results);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fleetKey, liveKey]);
+
+  return routes;
 }

@@ -62,6 +62,13 @@ button, a, input, select, textarea {
   outline-offset: 1px;
 }
 
+/* Form fields skip the bright outline; their border darkens subtly on focus */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+}
+
 /* Minimalist Leaflet Overrides */
 .leaflet-container {
   font-family: inherit !important;

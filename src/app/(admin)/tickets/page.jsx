@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Search, FileText } from "lucide-react";
+import { Search, Inbox } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { mockTickets } from "@/lib/mock-data";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
@@ -12,6 +12,7 @@ import { InfoRow } from "@/components/ui/info-row";
 import { inputClass } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import TicketDetailsModal from "@/components/modals/ticket-details-modal";
+import ConfirmModal from "@/components/ui/confirm-modal";
 
 export default function TicketsPage() {
   const router = useRouter();
@@ -20,6 +21,7 @@ export default function TicketsPage() {
   const [statusFilter, setStatusFilter] = useState("All");
   const [urgencyFilter, setUrgencyFilter] = useState("All");
   const [selectedTicket, setSelectedTicket] = useState(null);
+  const [ticketToDelete, setTicketToDelete] = useState(null);
 
   useEffect(() => {
     setTickets(mockTickets);
@@ -34,12 +36,12 @@ export default function TicketsPage() {
     }
   };
 
-  const handleDeleteTicket = (id, e) => {
-    e.stopPropagation();
+  const handleDeleteTicket = (id) => {
     setTickets((prev) => prev.filter((t) => t.id !== id));
     if (selectedTicket?.id === id) {
       setSelectedTicket(null);
     }
+    setTicketToDelete(null);
   };
 
   const handleLocateOnMap = (t) => {
@@ -116,10 +118,12 @@ export default function TicketsPage() {
           {filteredTickets.length === 0 ? (
             <div className="flex items-center justify-center rounded-xl border border-border bg-card p-8 text-center">
               <div className="flex max-w-xs flex-col items-center">
-                <FileText className="mb-2.5 h-8 w-8 text-zinc-300" />
+                <Inbox className="mb-2.5 h-8 w-8 text-zinc-300" />
                 <h3 className="text-sm font-semibold text-foreground">No Reports Found</h3>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Try different search keywords or filters.
+                  {search || statusFilter !== "All" || urgencyFilter !== "All"
+                    ? "Try different search keywords or filters."
+                    : "No waste reports have been submitted yet. Resident reports will appear here."}
                 </p>
               </div>
             </div>
@@ -167,7 +171,10 @@ export default function TicketsPage() {
                     <div className="mt-2 flex shrink-0 items-center justify-end">
                       <button
                         type="button"
-                        onClick={(e) => handleDeleteTicket(t.id, e)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setTicketToDelete(t);
+                        }}
                         className="rounded-md border border-rose-200 bg-card px-2.5 py-1 text-xs font-medium text-rose-600 transition-colors hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 cursor-pointer"
                         title="Delete Report"
                       >
@@ -194,6 +201,14 @@ export default function TicketsPage() {
         onClose={() => setSelectedTicket(null)}
         onUpdateStatus={handleUpdateStatus}
         onLocateOnMap={handleLocateOnMap}
+      />
+
+      <ConfirmModal
+        open={!!ticketToDelete}
+        title="Delete Report"
+        description={`Are you sure you want to remove report ${ticketToDelete?.id} (${ticketToDelete?.location})? This cannot be undone.`}
+        onConfirm={() => handleDeleteTicket(ticketToDelete?.id)}
+        onCancel={() => setTicketToDelete(null)}
       />
     </div>
   );

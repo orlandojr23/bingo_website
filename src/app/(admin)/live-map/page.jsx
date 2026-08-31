@@ -3,9 +3,10 @@
 import { useState, useEffect, Suspense } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
-import { mockTickets, mockPilotData } from "@/lib/mock-data";
+import { mockTickets } from "@/lib/mock-data";
 import { useLiveRoute, getSchedule } from "@/lib/live-route";
 import { useTruckRoutes } from "@/lib/use-route-path";
+import { useFleet } from "@/lib/fleet";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
 import TicketDetailsModal from "@/components/modals/ticket-details-modal";
 import { inputClass } from "@/components/ui/input";
@@ -32,6 +33,7 @@ function LiveMapContent() {
   const [activeTruckId, setActiveTruckId] = useState(null);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [mapCenter, setMapCenter] = useState([10.3016, 123.9086]);
+  const [mapZoom, setMapZoom] = useState(null);
 
   useEffect(() => {
     if (urlTicketId) {
@@ -40,6 +42,7 @@ function LiveMapContent() {
         setMapView("reports");
         setActiveTicketId(ticket.id);
         setMapCenter([ticket.lat, ticket.lng]);
+        setMapZoom(18);
         setSelectedTicket(ticket);
       }
     }
@@ -47,9 +50,10 @@ function LiveMapContent() {
   }, []);
 
   const live = useLiveRoute();
-  const truckRoutes = useTruckRoutes(live);
+  const fleet = useFleet();
+  const truckRoutes = useTruckRoutes(live, fleet);
 
-  const trucksData = mockPilotData.trucks.map((t) => {
+  const trucksData = fleet.map((t) => {
     const ts = live.trucks[t.id];
     const route = truckRoutes.find((r) => r.id === t.id);
     return {
@@ -127,6 +131,7 @@ function LiveMapContent() {
     setActiveTruckId(null);
     setSelectedTicket(null);
     setMapCenter([10.3016, 123.9086]);
+    setMapZoom(null);
   };
 
   return (
@@ -146,6 +151,7 @@ function LiveMapContent() {
           routes={mapView === "trucks" ? truckRoutes : []}
           mapMode={mapView === "reports" ? mapMode : "pins"}
           center={mapCenter}
+          zoom={mapZoom}
           highlightedTicketId={mapView === "reports" ? activeTicketId : null}
           onSelectTicket={mapView === "reports" ? handlePinClick : undefined}
         />
@@ -358,7 +364,16 @@ function LiveMapContent() {
               })()}
 
             <div className="flex flex-1 flex-col gap-2 overflow-y-auto px-4 pb-3">
-              {trucksData.map((trk) => (
+              {trucksData.length === 0 ? (
+                <div className="flex flex-1 flex-col items-center justify-center py-12 text-center">
+                  <TruckIcon className="h-6 w-6 text-zinc-300" />
+                  <span className="mt-2 text-xs font-semibold text-foreground">No Trucks in Fleet</span>
+                  <span className="mt-0.5 max-w-[200px] text-xs text-muted-foreground">
+                    Add trucks in Fleet Dispatch to start tracking them on the map.
+                  </span>
+                </div>
+              ) : (
+              trucksData.map((trk) => (
                 <button
                   key={trk.id}
                   onClick={() => handleSelectTruck(trk)}
@@ -402,7 +417,8 @@ function LiveMapContent() {
                     )}
                   </div>
                 </button>
-              ))}
+              ))
+              )}
             </div>
 
             <div className="shrink-0 border-t border-border px-4 py-3">

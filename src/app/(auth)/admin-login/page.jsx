@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { inputClass, labelClass } from "@/components/ui/input";
@@ -160,9 +161,20 @@ export default function AdminLoginPage() {
                   placeholder="admin@bingo.com"
                 />
               </div>
-              {errors.email && (
-                <p className="mt-0.5 text-xs text-rose-500">{errors.email}</p>
-              )}
+              <AnimatePresence initial={false}>
+                {errors.email && (
+                  <motion.p
+                    key="email-error"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.25, ease: "easeInOut" }}
+                    className="overflow-hidden text-xs text-rose-500"
+                  >
+                    {errors.email}
+                  </motion.p>
+                )}
+              </AnimatePresence>
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -186,12 +198,34 @@ export default function AdminLoginPage() {
                   {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                 </button>
               </div>
-              {errors.password && (
-                <p className="mt-0.5 text-xs text-rose-500">{errors.password}</p>
-              )}
-              {error && (
-                <p className="mt-0.5 w-full text-center text-xs font-medium text-rose-500">{error}</p>
-              )}
+              <AnimatePresence initial={false}>
+                {errors.password && (
+                  <motion.p
+                    key="password-error"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.25, ease: "easeInOut" }}
+                    className="overflow-hidden text-xs text-rose-500"
+                  >
+                    {errors.password}
+                  </motion.p>
+                )}
+              </AnimatePresence>
+              <AnimatePresence initial={false}>
+                {error && (
+                  <motion.p
+                    key="form-error"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.25, ease: "easeInOut" }}
+                    className="w-full overflow-hidden text-center text-xs font-medium text-rose-500"
+                  >
+                    {error}
+                  </motion.p>
+                )}
+              </AnimatePresence>
             </div>
 
             <div className="border-t border-border-subtle pt-4">

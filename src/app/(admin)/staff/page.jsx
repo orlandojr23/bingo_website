@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, ShieldAlert, Plus, X, ArrowLeftRight } from "lucide-react";
+import { Search, Users, Plus, X, ArrowLeftRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { StatusBadge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
@@ -10,8 +10,9 @@ import { InfoRow } from "@/components/ui/info-row";
 import { Button } from "@/components/ui/button";
 import { inputClass, labelClass } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { mockPilotData } from "@/lib/mock-data";
+import { useFleet } from "@/lib/fleet";
 import { useLiveRoute, assignDriver, swapDrivers } from "@/lib/live-route";
+import ConfirmModal from "@/components/ui/confirm-modal";
 
 const initialStaff = [
   { id: "DRV-001", name: "Juan Dela Cruz", role: "Driver", username: "juan.driver", status: "Active" },
@@ -30,11 +31,14 @@ function Field({ label, children, hint }) {
 
 export default function StaffPage() {
   const live = useLiveRoute();
+  const fleet = useFleet();
   const [staff, setStaff] = useState(initialStaff);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDriver, setSelectedDriver] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
   const [swapSource, setSwapSource] = useState(null);
+  const [pendingSwap, setPendingSwap] = useState(null);
+  const [driverToDelete, setDriverToDelete] = useState(null);
 
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
@@ -43,7 +47,7 @@ export default function StaffPage() {
   const [status, setStatus] = useState("Active");
 
   const truckOf = (driverName) =>
-    mockPilotData.trucks.find((t) => live.driverByTruck[t.id] === driverName) || null;
+    fleet.find((t) => live.driverByTruck[t.id] === driverName) || null;
   const truckLabel = (t) => `${t.id} (${t.plate})`;
 
   const resetForm = () => {
@@ -112,8 +116,7 @@ export default function StaffPage() {
     resetForm();
   };
 
-  const handleDeleteDriver = (id, e) => {
-    e.stopPropagation();
+  const handleDeleteDriver = (id) => {
     const person = staff.find((drv) => drv.id === id);
     if (person) {
       const held = truckOf(person.name);
@@ -126,6 +129,7 @@ export default function StaffPage() {
     if (swapSource?.id === id) {
       setSwapSource(null);
     }
+    setDriverToDelete(null);
   };
 
   const handleSwapClick = (person, personTruck) => {
@@ -137,14 +141,34 @@ export default function StaffPage() {
       setSwapSource(null);
       return;
     }
-    const sourceTruck = truckOf(swapSource.name);
-    if (sourceTruck && personTruck) {
-      swapDrivers(sourceTruck.id, personTruck.id);
-    } else if (sourceTruck && !personTruck) {
-      assignDriver(sourceTruck.id, person.name);
+    setPendingSwap({ source: swapSource, target: person });
+  };
+
+  const handleSwapConfirm = () => {
+    if (!pendingSwap) return;
+    const { source, target } = pendingSwap;
+    const sourceTruck = truckOf(source.name);
+    const targetTruck = truckOf(target.name);
+    if (sourceTruck && targetTruck) {
+      swapDrivers(sourceTruck.id, targetTruck.id);
+    } else if (sourceTruck && !targetTruck) {
+      assignDriver(sourceTruck.id, target.name);
     }
+    setPendingSwap(null);
     setSwapSource(null);
   };
+
+  const swapDescription = (() => {
+    if (!pendingSwap) return "";
+    const s = pendingSwap.source;
+    const t = pendingSwap.target;
+    const st = truckOf(s.name);
+    const tt = truckOf(t.name);
+    if (st && tt) {
+      return `${s.name} (${truckLabel(st)}) will swap trucks with ${t.name} (${truckLabel(tt)}).`;
+    }
+    return `${s.name}'s truck (${truckLabel(st)}) will be reassigned to ${t.name}.`;
+  })();
 
   const filteredStaff = staff.filter(
     (person) =>
@@ -155,7 +179,7 @@ export default function StaffPage() {
   );
 
   const totalDrivers = staff.length;
-  const assignedCompactors = mockPilotData.trucks.filter(
+  const assignedCompactors = fleet.filter(
     (t) => live.driverByTruck[t.id]
   ).length;
 
@@ -193,28 +217,45 @@ export default function StaffPage() {
           </div>
         </div>
 
-        {swapSource && (
-          <div className="flex shrink-0 items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5">
-            <p className="text-xs font-semibold text-amber-800">
-              Select a driver to swap trucks with {swapSource.name} (
-              {truckOf(swapSource.name) ? truckLabel(truckOf(swapSource.name)) : "Unassigned"}).
-            </p>
-            <button
-              type="button"
-              onClick={() => setSwapSource(null)}
-              className="shrink-0 rounded-md border border-amber-300 bg-card px-2.5 py-1 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 cursor-pointer"
+        <AnimatePresence>
+          {swapSource && (
+            <motion.div
+              key="swap-banner"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.25, ease: "easeInOut" }}
+              className="shrink-0 overflow-hidden"
             >
-              Cancel
-            </button>
-          </div>
-        )}
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5">
+                <p className="text-xs font-semibold text-amber-800">
+                  Select a driver to swap trucks with {swapSource.name} (
+                  {truckOf(swapSource.name) ? truckLabel(truckOf(swapSource.name)) : "Unassigned"}).
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setSwapSource(null)}
+                  className="shrink-0 rounded-md border border-amber-300 bg-card px-2.5 py-1 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {filteredStaff.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-border bg-card p-10 text-center">
-            <ShieldAlert className="mb-2.5 h-8 w-8 text-zinc-300" />
-            <h3 className="text-sm font-semibold text-foreground">No Drivers Found</h3>
-            <p className="mt-1 max-w-[220px] text-xs text-muted-foreground">
-              We couldn&apos;t find any drivers matching &quot;{searchQuery}&quot;.
+            <Users className="mb-2.5 h-8 w-8 text-zinc-300" />
+            <h3 className="text-sm font-semibold text-foreground">
+              {searchQuery ? "No Drivers Found" : "No Drivers Yet"}
+            </h3>
+            <p className="mt-1 max-w-[240px] text-xs text-muted-foreground">
+              {searchQuery ? (
+                <>We couldn&apos;t find any drivers matching &quot;{searchQuery}&quot;.</>
+              ) : (
+                "Add your first driver to start assigning trucks and managing collections."
+              )}
             </p>
           </div>
         ) : (
@@ -281,7 +322,10 @@ export default function StaffPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={(e) => handleDeleteDriver(person.id, e)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDriverToDelete(person);
+                      }}
                       className="rounded-md border border-rose-200 bg-card px-2.5 py-1 text-xs font-medium text-rose-600 transition-colors hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 cursor-pointer"
                       title="Delete Driver"
                     >
@@ -331,7 +375,7 @@ export default function StaffPage() {
                     <button
                       type="button"
                       onClick={() => (isAdding ? setIsAdding(false) : setSelectedDriver(null))}
-                      className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer"
+                      className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
                       aria-label="Close panel"
                     >
                       <X className="h-4 w-4" />
@@ -357,7 +401,7 @@ export default function StaffPage() {
                         className={cn(inputClass, "cursor-pointer")}
                       >
                         <option value="">Unassigned</option>
-                        {mockPilotData.trucks.map((t) => (
+                        {fleet.map((t) => (
                           <option key={t.id} value={t.id}>
                             {truckLabel(t)}
                             {live.driverByTruck[t.id] ? ` — ${live.driverByTruck[t.id]}` : ""}
@@ -435,6 +479,23 @@ export default function StaffPage() {
           </div>
         )}
       </AnimatePresence>
+
+      <ConfirmModal
+        open={!!driverToDelete}
+        title="Delete Driver"
+        description={`This will permanently remove ${driverToDelete?.name} and unassign their truck. This action cannot be undone.`}
+        onConfirm={() => handleDeleteDriver(driverToDelete?.id)}
+        onCancel={() => setDriverToDelete(null)}
+      />
+
+      <ConfirmModal
+        open={!!pendingSwap}
+        title="Swap Truck Assignment"
+        description={swapDescription}
+        confirmLabel="Swap"
+        onConfirm={handleSwapConfirm}
+        onCancel={() => setPendingSwap(null)}
+      />
     </div>
   );
 }

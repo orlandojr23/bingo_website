@@ -151,6 +151,7 @@ function MapCameraController({ center, zoom, onMapDrag }) {
   const map = useMap();
   const isFirstRender = useRef(true);
   const prevCenterRef = useRef(center);
+  const prevZoomRef = useRef(zoom);
 
   useEffect(() => {
     if (!onMapDrag) return;
@@ -183,12 +184,19 @@ function MapCameraController({ center, zoom, onMapDrag }) {
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
+      prevCenterRef.current = center;
+      prevZoomRef.current = zoom;
       return;
     }
     const [lat, lng] = center;
     const [prevLat, prevLng] = prevCenterRef.current || [];
-    if (lat !== prevLat || lng !== prevLng) {
-      prevCenterRef.current = center;
+    const centerChanged = lat !== prevLat || lng !== prevLng;
+    const zoomChanged = zoom !== prevZoomRef.current;
+    if (centerChanged) prevCenterRef.current = center;
+    if (zoomChanged) prevZoomRef.current = zoom;
+    if (zoomChanged) {
+      map.flyTo([lat, lng], zoom, { animate: true, duration: 0.8 });
+    } else if (centerChanged) {
       map.panTo([lat, lng], { animate: true, duration: 0.4 });
     }
   }, [center, zoom, map]);
@@ -216,12 +224,12 @@ function MapReadyNotifier({ onReady, tileRef }) {
   return null;
 }
 
-export default function MapCanvas({ tickets = [], trucks = [], routes = [], mapMode = "pins", center, highlightedTicketId, onSelectTicket, onMapDrag, onMapReady }) {
+export default function MapCanvas({ tickets = [], trucks = [], routes = [], mapMode = "pins", center, zoom, highlightedTicketId, onSelectTicket, onMapDrag, onMapReady }) {
   const [mounted, setMounted] = useState(false);
   const tileRef = useRef(null);
   const tejeroCenter = [10.3016, 123.9086];
   const mapCenter = center || tejeroCenter;
-  const zoom = center ? 16 : 14;
+  const mapZoom = zoom ?? (center ? 16 : 14);
 
   const activeTrucks = (trucks || []).filter((trk) => trk && trk.isActive !== false);
   const [fadingTrucks, setFadingTrucks] = useState([]);
@@ -259,13 +267,13 @@ export default function MapCanvas({ tickets = [], trucks = [], routes = [], mapM
     <div className="w-full h-full relative">
       <MapContainer
         center={mapCenter}
-        zoom={zoom}
+        zoom={mapZoom}
         scrollWheelZoom={true}
         attributionControl={false}
         zoomControl={false}
         className="w-full h-full z-10"
       >
-        <MapCameraController center={mapCenter} zoom={zoom} onMapDrag={onMapDrag} />
+        <MapCameraController center={mapCenter} zoom={mapZoom} onMapDrag={onMapDrag} />
         
         {/* OpenStreetMap standard tiles (no API key required) */}
         <TileLayer
@@ -390,20 +398,6 @@ export default function MapCanvas({ tickets = [], trucks = [], routes = [], mapM
           />
         ))}
       </MapContainer>
-
-      {/* OSM requires visible attribution; the Leaflet attribution control is disabled */}
-      <div className="absolute bottom-0 right-0 z-[1000] px-1.5 py-0.5 bg-white/70 text-[10px] text-zinc-600 rounded-tl pointer-events-none">
-        &copy;{" "}
-        <a
-          href="https://www.openstreetmap.org/copyright"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline pointer-events-auto"
-        >
-          OpenStreetMap
-        </a>{" "}
-        contributors
-      </div>
     </div>
   );
 }

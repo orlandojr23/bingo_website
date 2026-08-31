@@ -330,7 +330,7 @@ export default function NotificationsPage() {
                     <button
                       type="button"
                       onClick={() => setSelectedNotif(null)}
-                      className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer"
+                      className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
                       aria-label="Back to list"
                     >
                       <X className="h-4 w-4" />

@@ -127,7 +127,7 @@ function GateContent({ children }) {
                     setPasscode(e.target.value);
                     setErrorMsg("");
                   }}
-                  className="w-full rounded-lg border border-zinc-700 bg-zinc-950 pl-10 pr-4 py-3 text-sm font-mono font-medium text-white placeholder:text-zinc-600 focus:border-emerald-500 focus:outline-none transition-colors uppercase"
+                  className="w-full rounded-lg border border-zinc-700 bg-zinc-950 pl-10 pr-4 py-3 text-sm font-mono font-medium text-white placeholder:text-zinc-600 focus:border-zinc-500 focus:outline-none transition-colors uppercase"
                   autoFocus
                 />
               </div>

@@ -151,13 +151,12 @@ export default function FaqsPage() {
               >
                 Request a Demo
               </Link>
-              <button
-                type="button"
-                onClick={() => window.dispatchEvent(new CustomEvent("openContactSheet"))}
-                className="w-48 sm:w-auto px-8 py-3 bg-zinc-800 text-white rounded-xl text-sm sm:text-base font-bold hover:bg-zinc-700 transition-colors cursor-pointer"
+              <Link
+                href="/support"
+                className="w-48 sm:w-auto px-8 py-3 bg-zinc-800 text-white rounded-xl text-sm sm:text-base font-bold hover:bg-zinc-700 transition-colors cursor-pointer text-center"
               >
                 Contact Support
-              </button>
+              </Link>
               <a href="/#home" className="w-48 sm:w-auto px-8 py-3 bg-zinc-800 text-white rounded-xl text-sm sm:text-base font-bold hover:bg-zinc-700 transition-colors cursor-pointer">
                 Back to Home
               </a>

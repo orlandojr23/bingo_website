@@ -31,6 +31,7 @@ import {
 import { mockTickets, mockPilotData } from "@/lib/mock-data";
 import { useLiveRoute, getSchedule } from "@/lib/live-route";
 import { useRoutePath } from "@/lib/use-route-path";
+import { useFleet } from "@/lib/fleet";
 import { cn, haptic } from "@/lib/utils";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -452,6 +453,7 @@ export default function ResidentMobilePWA() {
   const greetingTitle = useMemo(() => getTimeBasedGreeting("Orlando"), []);
 
   const live = useLiveRoute();
+  const fleet = useFleet();
 
   // The truck currently running a route (any truck past idle with an assignment)
   const activeTs = useMemo(
@@ -537,7 +539,7 @@ export default function ResidentMobilePWA() {
         id: "announcement",
         Icon: Waze3DBellIcon,
         title: "Sitio Vilgon collection active",
-        subtitle: "Prepare biodegradable waste",
+        subtitle: "Prepare your malata waste",
       },
       {
         id: "off-schedule",
@@ -585,7 +587,7 @@ export default function ResidentMobilePWA() {
     },
     {
       id: 2,
-      title: "Biodegradable Pickup Active",
+      title: "Malata Pickup Active",
       message: "Collection is currently ongoing in Sitio Vilgon & Sitio Silangan, Brgy. Tejero.",
       time: "30m ago",
       unread: true,
@@ -629,7 +631,7 @@ export default function ResidentMobilePWA() {
 
   // Active trucks for live tracking map (Only show trucks whose drivers started their route!)
   const activeTrucks = useMemo(() => {
-    return mockPilotData.trucks
+    return fleet
       .map((t) => {
         const ts = live.trucks[t.id];
         if (!ts || !ts.tracking.isActive) return null;
@@ -649,7 +651,7 @@ export default function ResidentMobilePWA() {
         };
       })
       .filter(Boolean);
-  }, [live, routePath, activeTs]);
+  }, [live, routePath, activeTs, fleet]);
 
   const handlePhotoChange = (e) => {
     const file = e.target.files?.[0];
@@ -917,7 +919,7 @@ export default function ResidentMobilePWA() {
                   setSearchQuery(e.target.value);
                   if (!isMapSheetExpanded) setIsMapSheetExpanded(true);
                 }}
-                className="w-full rounded-2xl border border-border bg-muted/40 pl-9 pr-8 py-2.5 text-xs font-medium text-foreground placeholder:text-muted-foreground/70 focus:border-emerald-500 focus:bg-card focus:outline-none transition-colors"
+                className="w-full rounded-2xl border border-border bg-muted/40 pl-9 pr-8 py-2.5 text-xs font-medium text-foreground placeholder:text-muted-foreground/70 focus:border-zinc-400 focus:bg-card focus:outline-none transition-colors"
               />
               {searchQuery && (
                 <button
@@ -1021,7 +1023,7 @@ export default function ResidentMobilePWA() {
                           8:00 AM – 11:00 AM
                         </h2>
                         <p className="text-xs font-semibold text-emerald-700 mt-0.5">
-                          Biodegradable (Nabubulok)
+                          Malata (Nabubulok)
                         </p>
                       </div>
 
@@ -1155,8 +1157,9 @@ export default function ResidentMobilePWA() {
                   <div className="space-y-3">
                     {filteredSchedules.map((sch) => {
                       const zone = mockPilotData.zones.find((z) => z.id === sch.zoneId);
-                      const isBiodegradable = sch.type.includes("Nabubulok");
                       const isRecyclable = sch.type.includes("Recyclable");
+                      const isDiliMalata = sch.type.includes("Dili Malata");
+                      const isBiodegradable = !isRecyclable && !isDiliMalata;
 
                       const areaTitle = zone?.name ?? "Barangay Tejero";
 
@@ -1172,10 +1175,10 @@ export default function ResidentMobilePWA() {
                       const formattedDays = sch.days.map((d) => DAY_ABBR[d] || d).join(", ");
 
                       const categoryBadgeLabel = isBiodegradable
-                        ? "Biodegradable"
+                        ? "Malata"
                         : isRecyclable
                         ? "Recyclable"
-                        : "Non-Biodegradable";
+                        : "Dili Malata";
 
                       return (
                         <div
@@ -1326,7 +1329,7 @@ export default function ResidentMobilePWA() {
                             <select
                               value={category}
                               onChange={(e) => setCategory(e.target.value)}
-                              className="w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-xs font-semibold text-foreground focus:border-emerald-500 focus:outline-none transition-colors"
+                              className="w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-xs font-semibold text-foreground focus:border-zinc-400 focus:outline-none transition-colors"
                             >
                               <option value="Overflowing Bin">Overflowing Bin</option>
                               <option value="Illegal Dumping">Illegal Dumping</option>
@@ -1385,7 +1388,7 @@ export default function ResidentMobilePWA() {
                               placeholder="e.g. Sitio Vilgon, near Chapel"
                               value={locationName}
                               onChange={(e) => setLocationName(e.target.value)}
-                              className="w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-xs font-semibold text-foreground focus:border-emerald-500 focus:outline-none transition-colors"
+                              className="w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-xs font-semibold text-foreground focus:border-zinc-400 focus:outline-none transition-colors"
                               required
                             />
                           </div>

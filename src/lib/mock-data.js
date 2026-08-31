@@ -319,7 +319,7 @@ export const mockPilotData = {
     {
       id: "SCH-001",
       zoneId: "zone-a",
-      type: "Biodegradable (Nabubulok)",
+      type: "Malata (Nabubulok)",
       days: ["Monday", "Wednesday", "Friday"],
       time: "08:00 AM - 11:00 AM",
       activeTruckId: "TRK-01",
@@ -334,7 +334,7 @@ export const mockPilotData = {
     {
       id: "SCH-002",
       zoneId: "zone-b",
-      type: "Non-Biodegradable (Di-Nabubulok)",
+      type: "Dili Malata (Di-Nabubulok)",
       days: ["Tuesday", "Thursday"],
       time: "01:00 PM - 04:00 PM",
       activeTruckId: "TRK-02",
