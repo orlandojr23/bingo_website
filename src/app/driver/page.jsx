@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Play,
   CheckCircle2,
@@ -24,6 +25,7 @@ import { cn, haptic } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useRoutePath } from "@/lib/use-route-path";
 import { useFleet } from "@/lib/fleet";
+import { getDriverSession, clearDriverSession } from "@/lib/driver-session";
 import { MapSkeleton } from "@/components/ui/skeletons";
 import { useToast } from "@/components/pwa/Toast";
 import BottomSheet from "@/components/pwa/BottomSheet";
@@ -215,6 +217,18 @@ export default function DriverPage() {
   // Profile & Logout Modals
   const [showProfile, setShowProfile] = useState(false);
   const [showSignOutModal, setShowSignOutModal] = useState(false);
+
+  const router = useRouter();
+  const [sessionReady, setSessionReady] = useState(false);
+  useEffect(() => {
+    if (!getDriverSession()) {
+      router.replace("/driver-login");
+      return;
+    }
+    setSessionReady(true);
+  }, [router]);
+
+  const driverSession = useMemo(() => getDriverSession(), []);
 
   // Live Driver Tickets State
   const [driverTickets, setDriverTickets] = useState(mockTickets);
@@ -580,6 +594,14 @@ export default function DriverPage() {
     ];
   }, [currentTruck, truckState, isOnDuty]);
 
+  if (!sessionReady) {
+    return (
+      <div className="flex h-dvh w-full items-center justify-center bg-background">
+        <div className="h-7 w-7 animate-spin rounded-full border-2 border-emerald-500/30 border-t-emerald-500" />
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-dvh w-full flex-col bg-background text-foreground font-sans selection:bg-emerald-100 selection:text-emerald-900 overflow-hidden select-none">
 
@@ -674,7 +696,7 @@ export default function DriverPage() {
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-xs font-black text-white shadow-xs hover:bg-emerald-700 active:scale-95 transition-all cursor-pointer border border-emerald-500/30"
             title="Driver Terminal Settings"
           >
-            D
+            {driverSession?.name?.charAt(0)?.toUpperCase() || "D"}
           </button>
         </div>
 
@@ -914,10 +936,10 @@ export default function DriverPage() {
           {/* Driver Profile Summary Card */}
           <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4">
             <div className="flex h-13 w-13 items-center justify-center rounded-full bg-emerald-600 font-black text-white text-xl shadow-sm shrink-0">
-              D
+              {driverSession?.name?.charAt(0)?.toUpperCase() || "D"}
             </div>
             <div className="min-w-0 flex-1">
-              <h3 className="text-base font-bold text-foreground truncate">Orlando Jr.</h3>
+              <h3 className="text-base font-bold text-foreground truncate">{driverSession?.name || "Driver"}</h3>
               <p className="text-xs font-semibold text-foreground mt-0.5">Compactor Operator (TRK-01)</p>
               <p className="text-[11px] text-muted-foreground">Plate: CEB-9912 &bull; Sitio Vilgon, Brgy. Tejero</p>
             </div>
@@ -978,8 +1000,11 @@ export default function DriverPage() {
                 Cancel
               </Button>
               <Link
-                href="/"
-                onClick={() => setShowSignOutModal(false)}
+                href="/driver-login"
+                onClick={() => {
+                  clearDriverSession();
+                  setShowSignOutModal(false);
+                }}
                 className="inline-flex select-none items-center justify-center gap-1.5 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-medium text-rose-600 shadow-xs transition-all duration-150 hover:border-rose-300 hover:bg-rose-50/50 hover:text-rose-700 active:scale-[0.98] cursor-pointer"
               >
                 Sign Out

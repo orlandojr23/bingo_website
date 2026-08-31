@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -32,6 +33,7 @@ import { mockTickets, mockPilotData } from "@/lib/mock-data";
 import { useLiveRoute, getSchedule } from "@/lib/live-route";
 import { useRoutePath } from "@/lib/use-route-path";
 import { useFleet } from "@/lib/fleet";
+import { getResidentSession, clearResidentSession } from "@/lib/resident-session";
 import { cn, haptic } from "@/lib/utils";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -450,7 +452,21 @@ export default function ResidentMobilePWA() {
   const [mapReady, setMapReady] = useState(false);
   const handleMapReady = useCallback(() => setMapReady(true), []);
 
-  const greetingTitle = useMemo(() => getTimeBasedGreeting("Orlando"), []);
+  const router = useRouter();
+  const [sessionReady, setSessionReady] = useState(false);
+  useEffect(() => {
+    if (!getResidentSession()) {
+      router.replace("/login");
+      return;
+    }
+    setSessionReady(true);
+  }, [router]);
+
+  const residentSession = useMemo(() => getResidentSession(), []);
+  const greetingTitle = useMemo(
+    () => getTimeBasedGreeting(residentSession?.name || "Resident"),
+    [residentSession]
+  );
 
   const live = useLiveRoute();
   const fleet = useFleet();
@@ -736,6 +752,14 @@ export default function ResidentMobilePWA() {
     return matchesZone && matchesQuery;
   });
 
+  if (!sessionReady) {
+    return (
+      <div className="flex h-dvh w-full items-center justify-center bg-background">
+        <div className="h-7 w-7 animate-spin rounded-full border-2 border-emerald-500/30 border-t-emerald-500" />
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-dvh w-full flex-col bg-background text-foreground font-sans selection:bg-emerald-100 selection:text-emerald-900 overflow-hidden select-none">
 
@@ -841,7 +865,7 @@ export default function ResidentMobilePWA() {
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-xs font-black text-white shadow-xs hover:bg-emerald-700 active:scale-95 transition-all cursor-pointer border border-emerald-500/30"
             title="Profile & Settings"
           >
-            O
+            {residentSession?.name?.charAt(0)?.toUpperCase() || "R"}
           </button>
         </div>
 
@@ -1626,10 +1650,10 @@ export default function ResidentMobilePWA() {
           {/* User Profile Summary Header */}
           <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4">
             <div className="flex h-13 w-13 items-center justify-center rounded-full bg-emerald-600 font-black text-white text-xl shadow-sm shrink-0">
-              O
+              {residentSession?.name?.charAt(0)?.toUpperCase() || "R"}
             </div>
             <div className="min-w-0 flex-1">
-              <h3 className="text-base font-bold text-foreground truncate">Orlando Jr.</h3>
+              <h3 className="text-base font-bold text-foreground truncate">{residentSession?.name || "Resident"}</h3>
               <p className="text-xs font-semibold text-foreground mt-0.5">Sitio Vilgon</p>
               <p className="text-[11px] text-muted-foreground">Brgy. Tejero, Cebu City</p>
             </div>
@@ -1637,6 +1661,7 @@ export default function ResidentMobilePWA() {
 
           {/* Account Info Details */}
           <div className="rounded-xl border border-border bg-card p-3.5 space-y-2">
+            <InfoRow label="Email" value={residentSession?.email || "—"} />
             <InfoRow label="Mobile Phone" value="+63 917 888 1923" />
             <InfoRow label="Reports Filed" value={`${tickets.length} tickets`} />
             <InfoRow label="Account Status" value={<span className="text-emerald-600 font-bold">Active / Verified</span>} />
@@ -1732,8 +1757,11 @@ export default function ResidentMobilePWA() {
                 Cancel
               </Button>
               <Link
-                href="/"
-                onClick={() => setShowSignOutModal(false)}
+                href="/login"
+                onClick={() => {
+                  clearResidentSession();
+                  setShowSignOutModal(false);
+                }}
                 className="inline-flex select-none items-center justify-center gap-1.5 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-medium text-rose-600 shadow-xs transition-all duration-150 hover:border-rose-300 hover:bg-rose-50/50 hover:text-rose-700 active:scale-[0.98] cursor-pointer"
               >
                 Sign Out

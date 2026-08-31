@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { getResidentSession, setResidentSession } from "@/lib/resident-session";
+import { getDriverSession, setDriverSession } from "@/lib/driver-session";
 import { Button } from "@/components/ui/button";
 
 const PUBLIC_DOMAINS = ["gmail.com", "yahoo.com", "outlook.com", "hotmail.com", "icloud.com"];
@@ -29,8 +29,8 @@ const getEmailSuggestionSuffix = (emailVal, domains = PUBLIC_DOMAINS) => {
 };
 
 const nameFromEmail = (email) => {
-  const local = email.split("@")[0] || "Resident";
-  const token = local.split(/[._\-+]/)[0] || "Resident";
+  const local = email.split("@")[0] || "Driver";
+  const token = local.split(/[._\-+]/)[0] || "Driver";
   return token.charAt(0).toUpperCase() + token.slice(1);
 };
 
@@ -41,7 +41,7 @@ const fieldClass = (hasError) =>
       : "border-border hover:border-zinc-300 focus:border-zinc-400"
   }`;
 
-export default function ResidentLoginPage() {
+export default function DriverLoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -52,7 +52,7 @@ export default function ResidentLoginPage() {
   const emailSuggestionSuffix = getEmailSuggestionSuffix(email);
 
   useEffect(() => {
-    if (getResidentSession()) router.replace("/report");
+    if (getDriverSession()) router.replace("/driver");
   }, [router]);
 
   const handleFieldChange = (field, value, setter) => {
@@ -100,8 +100,8 @@ export default function ResidentLoginPage() {
 
     setTimeout(() => {
       const trimmedEmail = email.trim().toLowerCase();
-      setResidentSession({ email: trimmedEmail, name: nameFromEmail(trimmedEmail) });
-      router.replace("/report");
+      setDriverSession({ email: trimmedEmail, name: nameFromEmail(trimmedEmail) });
+      router.replace("/driver");
     }, 900);
   };
 
@@ -119,7 +119,7 @@ export default function ResidentLoginPage() {
             Welcome back!
           </h1>
           <p className="mt-1.5 text-sm font-medium text-muted-foreground">
-            Sign in to continue to Bin&apos;Go
+            Sign in to continue to the Driver Terminal
           </p>
         </div>
 
@@ -224,7 +224,7 @@ export default function ResidentLoginPage() {
       </div>
 
       <p className="pb-6 text-center text-xs font-medium text-muted-foreground/60">
-        Bin&apos;Go &middot; Barangay Tejero Waste Collection
+        Bin&apos;Go &middot; Barangay Tejero Driver Terminal
       </p>
     </div>
   );

@@ -134,7 +134,7 @@ function HomeContent() {
         <span className="text-[#0f172a]">
           Smart Waste <br className="hidden lg:block" />Collection,
         </span>
-        <br className="hidden lg:block" />
+        <br />
         <span className="relative inline-block mt-2 px-2">
           <span className="relative z-10 text-white">Simplified.</span>
           <span className="absolute inset-0 bg-emerald-500 rounded-xl -rotate-2 scale-[1.05] shadow-sm"></span>
