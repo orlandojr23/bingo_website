@@ -27,6 +27,14 @@ export default function InstallAppButton({ className = "" }) {
       return;
     }
 
+    // The event often fires before React hydrates; the inline script in the
+    // root layout caches it on window.__bingoInstallPrompt for us.
+    const cached = window.__bingoInstallPrompt;
+    if (cached) {
+      setDeferredPrompt(cached);
+      setHidden(false);
+    }
+
     const onBeforeInstall = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);

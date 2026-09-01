@@ -92,6 +92,12 @@ export default function RootLayout({ children }) {
       className={`${inter.variable} ${jetbrainsMono.variable} antialiased`}
     >
       <body className="min-h-screen bg-zinc-50 text-zinc-900 font-sans selection:bg-emerald-100 selection:text-emerald-900">
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();if(!window.__bingoInstallPrompt){window.__bingoInstallPrompt=e;}});",
+          }}
+        />
         <AuthProvider>
           <PWARegistration />
           <ScrollReset />
