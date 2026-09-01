@@ -9,7 +9,7 @@ import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
 import { InfoRow } from "@/components/ui/info-row";
 import { DashboardSkeleton } from "@/components/ui/skeletons";
-import { mockTickets } from "@/lib/mock-data";
+import { useTickets, updateTicket, removeTicket } from "@/lib/tickets";
 import TicketDetailsModal from "@/components/modals/ticket-details-modal";
 import ConfirmModal from "@/components/ui/confirm-modal";
 
@@ -22,14 +22,13 @@ const hintTones = {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [tickets, setTickets] = useState([]);
+  const tickets = useTickets();
   const [statusFilter, setStatusFilter] = useState("All");
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [ticketToDelete, setTicketToDelete] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setTickets(mockTickets);
     setLoading(false);
   }, []);
 
@@ -50,16 +49,14 @@ export default function DashboardPage() {
     .slice(0, 8);
 
   const handleUpdateStatus = (ticketId, newStatus) => {
-    setTickets((prev) =>
-      prev.map((t) => (t.id === ticketId ? { ...t, status: newStatus } : t))
-    );
+    updateTicket(ticketId, { status: newStatus });
     if (selectedTicket && selectedTicket.id === ticketId) {
       setSelectedTicket((prev) => ({ ...prev, status: newStatus }));
     }
   };
 
   const handleDeleteTicket = (id) => {
-    setTickets((prev) => prev.filter((t) => t.id !== id));
+    removeTicket(id);
     if (selectedTicket?.id === id) {
       setSelectedTicket(null);
     }

@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Inbox } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { mockTickets } from "@/lib/mock-data";
+import { useTickets, updateTicket, removeTicket } from "@/lib/tickets";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
 import { PanelStat } from "@/components/ui/panel-stat";
@@ -16,28 +16,22 @@ import ConfirmModal from "@/components/ui/confirm-modal";
 
 export default function TicketsPage() {
   const router = useRouter();
-  const [tickets, setTickets] = useState([]);
+  const tickets = useTickets();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [urgencyFilter, setUrgencyFilter] = useState("All");
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [ticketToDelete, setTicketToDelete] = useState(null);
 
-  useEffect(() => {
-    setTickets(mockTickets);
-  }, []);
-
   const handleUpdateStatus = (ticketId, newStatus) => {
-    setTickets((prev) =>
-      prev.map((t) => (t.id === ticketId ? { ...t, status: newStatus } : t))
-    );
+    updateTicket(ticketId, { status: newStatus });
     if (selectedTicket && selectedTicket.id === ticketId) {
       setSelectedTicket((prev) => ({ ...prev, status: newStatus }));
     }
   };
 
   const handleDeleteTicket = (id) => {
-    setTickets((prev) => prev.filter((t) => t.id !== id));
+    removeTicket(id);
     if (selectedTicket?.id === id) {
       setSelectedTicket(null);
     }

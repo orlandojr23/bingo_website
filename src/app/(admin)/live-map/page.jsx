@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
-import { mockTickets } from "@/lib/mock-data";
+import { useTickets, updateTicket } from "@/lib/tickets";
 import { useLiveRoute, getSchedule } from "@/lib/live-route";
 import { useTruckRoutes } from "@/lib/use-route-path";
 import { useFleet } from "@/lib/fleet";
@@ -23,7 +23,7 @@ function LiveMapContent() {
   const searchParams = useSearchParams();
   const urlTicketId = searchParams.get("ticketId");
 
-  const [tickets, setTickets] = useState(mockTickets);
+  const tickets = useTickets();
   const [mapView, setMapView] = useState("reports");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -117,9 +117,7 @@ function LiveMapContent() {
   };
 
   const handleUpdateStatus = (ticketId, newStatus) => {
-    setTickets((prev) =>
-      prev.map((t) => (t.id === ticketId ? { ...t, status: newStatus } : t))
-    );
+    updateTicket(ticketId, { status: newStatus });
     if (selectedTicket?.id === ticketId) {
       setSelectedTicket((prev) => ({ ...prev, status: newStatus }));
     }

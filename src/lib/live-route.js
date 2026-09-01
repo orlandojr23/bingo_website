@@ -2,11 +2,14 @@ import { useSyncExternalStore } from "react";
 import { mockPilotData } from "@/lib/mock-data";
 
 const STORAGE_KEY = "bingo-live-route-v1";
-const STORE_VERSION = 2;
+const STORE_VERSION = 3;
 
 function buildSeed() {
   const scheduleStatus = {};
   for (const s of mockPilotData.schedules) scheduleStatus[s.id] = s.status;
+
+  const schedules = {};
+  for (const s of mockPilotData.schedules) schedules[s.id] = { ...s };
 
   const trucks = {};
   for (const t of mockPilotData.trucks) {
@@ -47,7 +50,7 @@ function buildSeed() {
   const driverByTruck = {};
   for (const t of mockPilotData.trucks) driverByTruck[t.id] = t.driver ?? null;
 
-  return { v: STORE_VERSION, rev: 0, trucks, scheduleStatus, driverByTruck };
+  return { v: STORE_VERSION, rev: 0, trucks, schedules, scheduleStatus, driverByTruck };
 }
 
 const SEED = buildSeed();
@@ -65,7 +68,7 @@ function readStore() {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed && parsed.v === STORE_VERSION && parsed.trucks && parsed.scheduleStatus && parsed.driverByTruck) {
+      if (parsed && parsed.v === STORE_VERSION && parsed.trucks && parsed.schedules && parsed.scheduleStatus && parsed.driverByTruck) {
         return parsed;
       }
     }
@@ -114,8 +117,99 @@ function write(mutator) {
   return result;
 }
 
+export function getSchedules() {
+  return Object.values(getSnapshot().schedules || {}).sort((a, b) =>
+    a.id.localeCompare(b.id)
+  );
+}
+
 export function getSchedule(id) {
-  return mockPilotData.schedules.find((s) => s.id === id) || null;
+  return getSnapshot().schedules?.[id] || null;
+}
+
+export function nextScheduleId() {
+  const max = getSchedules().reduce((acc, s) => {
+    const n = Number(String(s.id || "").replace(/\D/g, ""));
+    return Number.isFinite(n) ? Math.max(acc, n) : acc;
+  }, 0);
+  return `SCH-${String(max + 1).padStart(3, "0")}`;
+}
+
+// Parses the start time out of a range like "08:00 AM - 11:00 AM"
+function parseStartMinutes(timeStr) {
+  const m = String(timeStr || "").match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+  if (!m) return null;
+  let h = Number(m[1]);
+  const min = Number(m[2]);
+  const mer = (m[3] || "").toUpperCase();
+  if (mer === "PM" && h !== 12) h += 12;
+  if (mer === "AM" && h === 12) h = 0;
+  return h * 60 + min;
+}
+
+function minutesToLabel(total) {
+  const h24 = Math.floor(total / 60) % 24;
+  const min = total % 60;
+  const mer = h24 >= 12 ? "PM" : "AM";
+  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+  return `${h12}:${String(min).padStart(2, "0")} ${mer}`;
+}
+
+// New dispatch assignments get stops traced along their zone's corners so
+// drivers and residents immediately see a real route trajectory.
+function buildZoneRoutePoints(zoneId, timeStr) {
+  const zone = mockPilotData.zones.find((z) => z.id === zoneId);
+  const corners = zone?.coordinates ?? [];
+  const start = parseStartMinutes(timeStr);
+  const label = (zone?.name || "Zone").split("&")[0].trim();
+  return corners.map(([lat, lng], i) => ({
+    name: `${label} Stop ${i + 1}`,
+    time: start != null ? minutesToLabel(start + i * 45) : "TBD",
+    lat,
+    lng,
+  }));
+}
+
+export function addSchedule(fields) {
+  return write((next) => {
+    const id = nextScheduleId();
+    const schedule = {
+      ...fields,
+      id,
+      routePoints: fields.routePoints?.length
+        ? fields.routePoints
+        : buildZoneRoutePoints(fields.zoneId, fields.time),
+    };
+    next.schedules = { ...next.schedules, [id]: schedule };
+    next.scheduleStatus = { ...next.scheduleStatus, [id]: schedule.status || "Scheduled" };
+    return schedule;
+  });
+}
+
+export function updateSchedule(id, patch) {
+  return write((next) => {
+    const current = next.schedules?.[id];
+    if (!current) return;
+    const updated = { ...current, ...patch };
+    if (patch.zoneId && patch.zoneId !== current.zoneId && !patch.routePoints) {
+      updated.routePoints = buildZoneRoutePoints(patch.zoneId, updated.time);
+    }
+    next.schedules = { ...next.schedules, [id]: updated };
+    if (patch.status) {
+      next.scheduleStatus = { ...next.scheduleStatus, [id]: patch.status };
+    }
+  });
+}
+
+export function removeSchedule(id) {
+  return write((next) => {
+    const schedules = { ...next.schedules };
+    delete schedules[id];
+    next.schedules = schedules;
+    const status = { ...next.scheduleStatus };
+    delete status[id];
+    next.scheduleStatus = status;
+  });
 }
 
 export function startRoute(truckId) {
@@ -124,7 +218,7 @@ export function startRoute(truckId) {
     if (!ts) return null;
 
     const status = next.scheduleStatus;
-    const mine = mockPilotData.schedules.filter((s) => s.activeTruckId === truckId);
+    const mine = Object.values(next.schedules || {}).filter((s) => s.activeTruckId === truckId);
 
     // Resume only if the held route is still open (a completed route must
     // never be re-activated — Start then picks the next assignment instead)

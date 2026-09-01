@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { CheckCircle2, Plus, X, FilePlus2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -10,11 +10,10 @@ import { PanelStat } from "@/components/ui/panel-stat";
 import { inputClass, labelClass } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import CrudDeleteModal from "@/components/modals/crud-delete-modal";
-import { supabase } from "@/lib/supabase";
-import { mockTickets as initialTestRecords } from "@/lib/mock-data";
+import { useTickets, addTicket, updateTicket, removeTicket, nextTicketId } from "@/lib/tickets";
 
 export default function CrudPage() {
-  const [records, setRecords] = useState(initialTestRecords);
+  const records = useTickets();
   const [editingId, setEditingId] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
   const [recordToDelete, setRecordToDelete] = useState(null);
@@ -35,22 +34,6 @@ export default function CrudPage() {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  useEffect(() => {
-    const fetchSupabase = async () => {
-      const client = supabase;
-      if (!client) return;
-      try {
-        const { data, error } = await client.from("crud_tickets").select("*");
-        if (!error && data && data.length > 0) {
-          setRecords(data);
-        }
-      } catch (err) {
-        console.warn("Supabase fetch failed, utilizing local state:", err);
-      }
-    };
-    fetchSupabase();
-  }, []);
-
   const handleSave = async (e) => {
     e.preventDefault();
     if (!form.location || !form.barangay || !form.reporter) {
@@ -59,30 +42,21 @@ export default function CrudPage() {
       return;
     }
 
-    const payload = {
-      ...form,
-      id: form.id || `TKT-${Math.floor(100 + Math.random() * 900)}`,
-      created_at: new Date().toISOString(),
-    };
-
-    const client = supabase;
-    if (client) {
-      try {
-        if (editingId) {
-          await client.from("crud_tickets").update(payload).eq("id", editingId);
-        } else {
-          await client.from("crud_tickets").insert([payload]);
-        }
-      } catch (err) {
-        console.warn("Supabase sync error:", err);
-      }
-    }
-
     if (editingId) {
-      setRecords((prev) => prev.map((r) => (r.id === editingId ? payload : r)));
+      updateTicket(editingId, { ...form });
       showToast(`Record ${editingId} updated.`);
     } else {
-      setRecords((prev) => [payload, ...prev]);
+      const payload = {
+        ...form,
+        id: nextTicketId(),
+        city: "Cebu City",
+        date: new Date().toISOString().split("T")[0],
+        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        lat: form.lat ?? 10.3016,
+        lng: form.lng ?? 123.9086,
+        category: form.category || "Solid Waste",
+      };
+      addTicket(payload);
       showToast(`Record ${payload.id} created.`);
     }
 
@@ -113,16 +87,7 @@ export default function CrudPage() {
     if (!recordToDelete) return;
     const id = recordToDelete.id;
 
-    const client = supabase;
-    if (client) {
-      try {
-        await client.from("crud_tickets").delete().eq("id", id);
-      } catch (err) {
-        console.warn("Supabase delete failed:", err);
-      }
-    }
-
-    setRecords((prev) => prev.filter((r) => r.id !== id));
+    removeTicket(id);
     showToast(`Record ${id} deleted.`);
     setRecordToDelete(null);
   };

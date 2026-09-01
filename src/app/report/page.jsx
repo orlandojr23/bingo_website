@@ -29,8 +29,9 @@ import {
   Menu,
   Search,
 } from "lucide-react";
-import { mockTickets, mockPilotData } from "@/lib/mock-data";
-import { useLiveRoute, getSchedule } from "@/lib/live-route";
+import { mockPilotData } from "@/lib/mock-data";
+import { useTickets, addTicket, nextTicketId } from "@/lib/tickets";
+import { useLiveRoute, getSchedule, getSchedules } from "@/lib/live-route";
 import { useRoutePath } from "@/lib/use-route-path";
 import { useFleet } from "@/lib/fleet";
 import { getResidentSession, clearResidentSession } from "@/lib/resident-session";
@@ -441,7 +442,7 @@ function getTimeBasedGreeting(name = "Orlando") {
 
 export default function ResidentMobilePWA() {
   const [activeTab, setActiveTab] = useState("schedule"); // "schedule" | "map" | "report" | "tickets"
-  const [tickets, setTickets] = useState(mockTickets);
+  const tickets = useTickets();
   const [ticketFilter, setTicketFilter] = useState("all");
   const [selectedZone, setSelectedZone] = useState("all");
   const [notifyZone, setNotifyZone] = useState(false);
@@ -483,7 +484,7 @@ export default function ResidentMobilePWA() {
     [live]
   );
   const activeSchedule = activeTs ? getSchedule(activeTs.scheduleId) : null;
-  const displaySchedule = activeSchedule || mockPilotData.schedules[0];
+  const displaySchedule = activeSchedule || getSchedules()[0] || { id: null, routePoints: [] };
   const routePoints = displaySchedule.routePoints ?? [];
   const stopIndex = activeTs ? activeTs.stopIndex : 0;
   const onsiteNow = activeTs?.onsite ?? false;
@@ -723,7 +724,7 @@ export default function ResidentMobilePWA() {
     setIsSubmitting(true);
 
     setTimeout(() => {
-      const newId = `TKT-${String(tickets.length + 1).padStart(3, "0")}`;
+      const newId = nextTicketId();
       const created = {
         id: newId,
         location: locationName || "Near Collection Point",
@@ -741,14 +742,14 @@ export default function ResidentMobilePWA() {
         photo: photoPreview,
       };
 
-      setTickets((prev) => [created, ...prev]);
+      addTicket(created);
       setSubmittedTicket(created);
       setIsSubmitting(false);
       haptic(20);
     }, 600);
   };
 
-  const filteredSchedules = mockPilotData.schedules.filter((s) => {
+  const filteredSchedules = getSchedules().filter((s) => {
     const matchesZone = selectedZone === "all" || s.zoneId === selectedZone;
     const matchesQuery =
       !searchQuery ||

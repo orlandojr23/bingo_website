@@ -49,3 +49,26 @@ export function changeDriverPassword(email, currentPassword, newPassword) {
   writeAccounts(accounts);
   return true;
 }
+
+export function removeDriverAccount(email) {
+  const key = email.trim().toLowerCase();
+  const accounts = readAccounts();
+  if (!(key in accounts)) return false;
+  delete accounts[key];
+  writeAccounts(accounts);
+  return true;
+}
+
+// Moves an account to a new email key while keeping its password/history
+export function renameDriverAccount(oldEmail, newEmail, name) {
+  const oldKey = oldEmail.trim().toLowerCase();
+  const newKey = newEmail.trim().toLowerCase();
+  if (oldKey === newKey) return true;
+  const accounts = readAccounts();
+  const account = accounts[oldKey];
+  if (!account) return false;
+  delete accounts[oldKey];
+  accounts[newKey] = { ...account, email: newKey, name: name ?? account.name };
+  writeAccounts(accounts);
+  return true;
+}

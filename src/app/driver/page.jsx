@@ -23,6 +23,7 @@ import {
   endRoute,
   updateTracking,
   getSchedule,
+  getSchedules,
 } from "@/lib/live-route";
 import { cn, haptic } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -337,7 +338,7 @@ export default function DriverPage() {
 
   const assignedSchedule = useMemo(() => {
     const status = live.scheduleStatus;
-    const mine = mockPilotData.schedules.filter(
+    const mine = getSchedules().filter(
       (s) => s.activeTruckId === selectedTruckId
     );
     return (
@@ -621,7 +622,7 @@ export default function DriverPage() {
 
     completeRoute(selectedTruckId);
     await stopGpsWatch();
-    const next = mockPilotData.schedules.find(
+    const next = getSchedules().find(
       (s) =>
         s.activeTruckId === selectedTruckId &&
         (live.scheduleStatus[s.id] ?? s.status) === "Scheduled"

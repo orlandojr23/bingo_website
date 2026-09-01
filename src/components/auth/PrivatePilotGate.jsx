@@ -26,7 +26,7 @@ function GateContent({ children }) {
 
     if (urlAccess) {
       const normalizedToken = urlAccess.trim().toUpperCase();
-      if (VALID_PILOT_TOKENS.includes(normalizedToken) || normalizedToken.length >= 6) {
+      if (VALID_PILOT_TOKENS.includes(normalizedToken)) {
         localStorage.setItem(STORAGE_KEY, "true");
         localStorage.setItem(STORAGE_TOKEN_NAME, normalizedToken);
         setIsAuthorized(true);
@@ -63,7 +63,7 @@ function GateContent({ children }) {
       return;
     }
 
-    if (VALID_PILOT_TOKENS.includes(inputToken) || inputToken.length >= 6) {
+    if (VALID_PILOT_TOKENS.includes(inputToken)) {
       localStorage.setItem(STORAGE_KEY, "true");
       localStorage.setItem(STORAGE_TOKEN_NAME, inputToken);
       setIsAuthorized(true);

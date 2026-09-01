@@ -12,12 +12,31 @@ import { inputClass, labelClass } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useFleet } from "@/lib/fleet";
 import { useLiveRoute, assignDriver, swapDrivers } from "@/lib/live-route";
+import {
+  getDriverAccount,
+  saveDriverAccount,
+  removeDriverAccount,
+  renameDriverAccount,
+} from "@/lib/driver-accounts";
 import ConfirmModal from "@/components/ui/confirm-modal";
 
 const initialStaff = [
   { id: "DRV-001", name: "Juan Dela Cruz", role: "Driver", username: "juan.driver", status: "Active" },
   { id: "DRV-002", name: "Pedro Reyes", role: "Driver", username: "pedro.driver", status: "Active" },
 ];
+
+const STAFF_KEY = "bingo-staff-v1";
+
+function loadStaff() {
+  try {
+    const raw = window.localStorage.getItem(STAFF_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    if (Array.isArray(parsed) && parsed.every((p) => p && p.id)) {
+      return parsed;
+    }
+  } catch {}
+  return initialStaff;
+}
 
 function Field({ label, children, hint }) {
   return (
@@ -32,8 +51,14 @@ function Field({ label, children, hint }) {
 export default function StaffPage() {
   const live = useLiveRoute();
   const fleet = useFleet();
-  const [staff, setStaff] = useState(initialStaff);
+  const [staff, setStaff] = useState(loadStaff);
   const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(STAFF_KEY, JSON.stringify(staff));
+    } catch {}
+  }, [staff]);
   const [selectedDriver, setSelectedDriver] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
   const [swapSource, setSwapSource] = useState(null);
@@ -56,6 +81,7 @@ export default function StaffPage() {
     setPassword("");
     setTruck("");
     setStatus("Active");
+    setFormError("");
   };
 
   useEffect(() => {
@@ -79,19 +105,33 @@ export default function StaffPage() {
     }
   }, [isAdding]);
 
+  const [formError, setFormError] = useState("");
+
   const handleAddDriver = (e) => {
     e.preventDefault();
-    if (!name || !username) return;
+    setFormError("");
+    const loginEmail = username.trim().toLowerCase();
+    if (!name.trim() || !loginEmail) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginEmail)) {
+      setFormError("Login email must be a valid email address.");
+      return;
+    }
+    if (!password || password.length < 6) {
+      setFormError("Temporary password must be at least 6 characters.");
+      return;
+    }
+
+    saveDriverAccount({ name: name.trim(), email: loginEmail, password });
 
     const newDriver = {
-      id: `DRV-00${staff.length + 1}`,
-      name,
+      id: `DRV-${String(staff.length + 1).padStart(3, "0")}`,
+      name: name.trim(),
       role: "Driver",
-      username,
+      username: loginEmail,
       status,
     };
 
-    if (truck) assignDriver(truck, name);
+    if (truck) assignDriver(truck, newDriver.name);
     setStaff([...staff, newDriver]);
     setIsAdding(false);
     resetForm();
@@ -99,16 +139,26 @@ export default function StaffPage() {
 
   const handleUpdateDriver = (e) => {
     e.preventDefault();
-    if (!name || !username) return;
+    setFormError("");
+    const loginEmail = username.trim().toLowerCase();
+    if (!name.trim() || !loginEmail) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginEmail)) {
+      setFormError("Login email must be a valid email address.");
+      return;
+    }
+
+    if (getDriverAccount(selectedDriver.username)) {
+      renameDriverAccount(selectedDriver.username, loginEmail, name.trim());
+    }
 
     const prevTruck = truckOf(selectedDriver.name);
     if (prevTruck && prevTruck.id !== truck) assignDriver(prevTruck.id, null);
-    if (truck) assignDriver(truck, name);
+    if (truck) assignDriver(truck, name.trim());
 
     setStaff(
       staff.map((drv) =>
         drv.id === selectedDriver.id
-          ? { ...drv, name, username, status }
+          ? { ...drv, name: name.trim(), username: loginEmail, status }
           : drv
       )
     );
@@ -121,6 +171,7 @@ export default function StaffPage() {
     if (person) {
       const held = truckOf(person.name);
       if (held) assignDriver(held.id, null);
+      removeDriverAccount(person.username);
     }
     setStaff(staff.filter((drv) => drv.id !== id));
     if (selectedDriver?.id === id) {
@@ -300,7 +351,7 @@ export default function StaffPage() {
                         value={personTruck ? truckLabel(personTruck) : "Unassigned"}
                       />
                       <InfoRow
-                        label="Username"
+                        label="Login Email"
                         value={<span className="font-mono text-xs">{person.username}</span>}
                       />
                     </div>
@@ -411,13 +462,13 @@ export default function StaffPage() {
                     </Field>
 
                     <div className={cn("flex flex-col gap-4", isAdding && "border-t border-border-subtle pt-4")}>
-                      <Field label="Username">
+                      <Field label="Login Email">
                         <input
                           required
                           type="text"
                           value={username}
                           onChange={(e) => setUsername(e.target.value)}
-                          placeholder={isAdding ? "e.g. maria.driver" : undefined}
+                          placeholder={isAdding ? "e.g. maria.santos@example.com" : undefined}
                           className={cn(inputClass, "font-mono")}
                         />
                       </Field>
@@ -461,18 +512,25 @@ export default function StaffPage() {
                   </div>
                 </div>
 
-                <div className="mt-6 flex shrink-0 items-center justify-end gap-2 border-t border-border-subtle pt-4">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    type="button"
-                    onClick={() => (isAdding ? setIsAdding(false) : setSelectedDriver(null))}
-                  >
-                    Cancel
-                  </Button>
-                  <Button variant="primary" size="sm" type="submit">
-                    {isAdding ? "Create" : "Save"}
-                  </Button>
+                <div className="mt-6 flex shrink-0 flex-col gap-3 border-t border-border-subtle pt-4">
+                  {formError && (
+                    <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-600">
+                      {formError}
+                    </p>
+                  )}
+                  <div className="flex items-center justify-end gap-2">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      type="button"
+                      onClick={() => (isAdding ? setIsAdding(false) : setSelectedDriver(null))}
+                    >
+                      Cancel
+                    </Button>
+                    <Button variant="primary" size="sm" type="submit">
+                      {isAdding ? "Create" : "Save"}
+                    </Button>
+                  </div>
                 </div>
               </form>
             </motion.div>

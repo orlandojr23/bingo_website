@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Calendar, Plus, X, Search, Truck } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { mockPilotData } from "@/lib/mock-data";
-import { useLiveRoute, setScheduleStatus } from "@/lib/live-route";
+import { useLiveRoute, getSchedules, addSchedule, updateSchedule, removeSchedule } from "@/lib/live-route";
 import { useFleet, addTruck, updateTruck, removeTruck } from "@/lib/fleet";
 import ConfirmModal from "@/components/ui/confirm-modal";
 import { StatusBadge } from "@/components/ui/badge";
@@ -25,7 +25,6 @@ function Field({ label, children }) {
 }
 
 export default function DispatchPage() {
-  const [schedules, setSchedules] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSchedule, setSelectedSchedule] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -37,6 +36,7 @@ export default function DispatchPage() {
 
   const live = useLiveRoute();
   const fleet = useFleet();
+  const schedules = getSchedules();
   const effStatus = (sch) => live.scheduleStatus[sch.id] ?? sch.status;
   const driverOf = (truckId) =>
     live.driverByTruck[truckId] ??
@@ -49,10 +49,6 @@ export default function DispatchPage() {
   const [days, setDays] = useState("");
   const [time, setTime] = useState("");
   const [status, setStatus] = useState("");
-
-  useEffect(() => {
-    setSchedules(mockPilotData.schedules);
-  }, []);
 
   useEffect(() => {
     if (isAdding) {
@@ -98,14 +94,7 @@ export default function DispatchPage() {
     e.preventDefault();
     if (!zoneId || !truckId || !type || !days || !time) return;
 
-    const nextIdNum =
-      schedules.length > 0
-        ? Math.max(...schedules.map((s) => parseInt(s.id.split("-")[1]))) + 1
-        : 1;
-    const newSch = { id: `SCH-${String(nextIdNum).padStart(3, "0")}`, ...buildScheduleFields() };
-
-    setSchedules((prev) => [...prev, newSch]);
-    setScheduleStatus(newSch.id, newSch.status);
+    addSchedule(buildScheduleFields());
     setIsAdding(false);
   };
 
@@ -113,15 +102,12 @@ export default function DispatchPage() {
     e.preventDefault();
     if (!selectedSchedule || !zoneId || !truckId || !type || !days || !time) return;
 
-    setSchedules((prev) =>
-      prev.map((s) => (s.id === selectedSchedule.id ? { ...s, ...buildScheduleFields() } : s))
-    );
-    setScheduleStatus(selectedSchedule.id, status);
+    updateSchedule(selectedSchedule.id, buildScheduleFields());
     setSelectedSchedule(null);
   };
 
   const handleDeleteSchedule = (id) => {
-    setSchedules((prev) => prev.filter((s) => s.id !== id));
+    removeSchedule(id);
     if (selectedSchedule?.id === id) {
       setSelectedSchedule(null);
     }
