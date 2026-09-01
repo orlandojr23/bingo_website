@@ -33,7 +33,7 @@ export default function ConfirmModal({
             variant="secondary"
             size="sm"
             onClick={onConfirm}
-            className="border-rose-200 text-rose-600 hover:border-rose-300 hover:bg-rose-50/50 hover:text-rose-700"
+            className="border-rose-200 text-rose-600 hover:border-rose-600 hover:bg-rose-600 hover:text-white"
           >
             {confirmLabel}
           </Button>

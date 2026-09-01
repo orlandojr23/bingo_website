@@ -91,8 +91,8 @@ export default function Sidebar({ isOpen, onClose }) {
                 <span>{item.name}</span>
               </div>
               {item.badge && (
-                <span className="rounded-full bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-600">
-                  {item.badge} unread
+                <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-emerald-600 px-1.5 text-[10px] font-bold leading-none text-white">
+                  {item.badge}
                 </span>
               )}
             </Link>
@@ -176,7 +176,7 @@ export default function Sidebar({ isOpen, onClose }) {
                 variant="secondary"
                 size="sm"
                 onClick={handleSignOut}
-                className="border-rose-200 text-rose-600 hover:border-rose-300 hover:bg-rose-50/50 hover:text-rose-700"
+                className="border-rose-200 text-rose-600 hover:border-rose-600 hover:bg-rose-600 hover:text-white"
               >
                 Sign Out
               </Button>

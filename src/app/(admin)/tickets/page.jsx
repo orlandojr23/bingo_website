@@ -155,8 +155,13 @@ export default function TicketsPage() {
                     <div className="mt-4 border-t border-border-subtle pt-2">
                       <InfoRow label="Status" value={<StatusBadge status={t.status} className="p-0" />} />
                       <InfoRow
-                        label="Report Date"
-                        value={<span className="font-mono text-xs">{t.date}</span>}
+                        label="Reported"
+                        value={
+                          <span className="font-mono text-xs">
+                            {t.date}
+                            {t.time ? ` · ${t.time}` : ""}
+                          </span>
+                        }
                       />
                       <InfoRow label="Barangay Area" value={t.barangay} />
                       <InfoRow label="Reported By" value={t.reporter} />
@@ -172,7 +177,7 @@ export default function TicketsPage() {
                         className="rounded-md border border-rose-200 bg-card px-2.5 py-1 text-xs font-medium text-rose-600 transition-colors hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 cursor-pointer"
                         title="Delete Report"
                       >
-                        Delete
+                        Delete Report
                       </button>
                     </div>
                   </div>

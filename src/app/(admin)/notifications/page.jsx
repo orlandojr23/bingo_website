@@ -9,6 +9,7 @@ import {
   Ticket as TicketIcon,
   Info,
   CheckCheck,
+  MapPin,
   X,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -40,7 +41,7 @@ const initialNotifications = [
     location: "Sitio ICM, Brgy. Tejero",
     barangay: "Tejero",
     timestamp: "25m ago",
-    actionUrl: "/live-map",
+    actionUrl: "/live-map?truckId=TRK-04",
     actionLabel: "View Live Map",
     isRead: false,
   },
@@ -52,7 +53,7 @@ const initialNotifications = [
     location: "Sitio Daclan, Brgy. Tejero",
     barangay: "Tejero",
     timestamp: "1h ago",
-    actionUrl: "/live-map",
+    actionUrl: "/live-map?truckId=TRK-02",
     actionLabel: "Track Truck",
     isRead: true,
   },
@@ -73,22 +74,22 @@ const initialNotifications = [
 
 const typeStyles = {
   Emergency: {
-    icon: <AlertTriangle className="h-3.5 w-3.5 text-rose-600" />,
+    icon: <AlertTriangle className="h-4 w-4 text-rose-600" />,
     pill: "text-rose-600 bg-transparent",
     label: "Emergency",
   },
   Dispatch: {
-    icon: <Truck className="h-3.5 w-3.5 text-blue-600" />,
+    icon: <Truck className="h-4 w-4 text-blue-600" />,
     pill: "text-blue-600 bg-transparent",
     label: "Dispatch",
   },
   Ticket: {
-    icon: <TicketIcon className="h-3.5 w-3.5 text-amber-600" />,
+    icon: <TicketIcon className="h-4 w-4 text-amber-600" />,
     pill: "text-amber-600 bg-transparent",
     label: "Resident Report",
   },
   System: {
-    icon: <Info className="h-3.5 w-3.5 text-zinc-600" />,
+    icon: <Info className="h-4 w-4 text-zinc-600" />,
     pill: "text-zinc-600 bg-transparent",
     label: "System Alert",
   },
@@ -113,22 +114,10 @@ export default function NotificationsPage() {
     }
   };
 
-  const markAsRead = (id) => {
+  const markRead = (id) => {
     setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+      prev.map((n) => (n.id === id && !n.isRead ? { ...n, isRead: true } : n))
     );
-    if (selectedNotif?.id === id) {
-      setSelectedNotif((prev) => ({ ...prev, isRead: true }));
-    }
-  };
-
-  const markAsUnread = (id) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, isRead: false } : n))
-    );
-    if (selectedNotif?.id === id) {
-      setSelectedNotif((prev) => ({ ...prev, isRead: false }));
-    }
   };
 
   const markAllAsRead = () => {
@@ -174,7 +163,7 @@ export default function NotificationsPage() {
           <div className="flex items-center gap-1 rounded-lg border border-border bg-muted p-0.5">
             {["All", "Emergency", "System", "Ticket"].map((tab) => {
               const isActive = activeTab === tab;
-              let displayLabel = "All";
+              let displayLabel = "All Alerts";
               if (tab === "Emergency") displayLabel = "Emergency";
               if (tab === "System") displayLabel = "Truck & System";
               if (tab === "Ticket") displayLabel = "Reports";
@@ -217,7 +206,10 @@ export default function NotificationsPage() {
                 return (
                   <div
                     key={n.id}
-                    onClick={() => setSelectedNotif(n)}
+                    onClick={() => {
+                      setSelectedNotif(n);
+                      markRead(n.id);
+                    }}
                     className={`flex cursor-pointer select-none flex-col justify-between rounded-xl border bg-card p-4 transition-all ${
                       isSelected
                         ? "border-emerald-400 ring-1 ring-emerald-400/20"
@@ -233,10 +225,11 @@ export default function NotificationsPage() {
                       </div>
                       <span
                         className={cn(
-                          "shrink-0 whitespace-nowrap text-xs font-semibold",
+                          "flex shrink-0 items-center gap-1 whitespace-nowrap text-xs font-semibold",
                           typeInfo.pill
                         )}
                       >
+                        {typeInfo.icon}
                         {typeInfo.label}
                       </span>
                     </div>
@@ -259,24 +252,16 @@ export default function NotificationsPage() {
                         label="Received"
                         value={<span className="font-mono text-xs">{n.timestamp}</span>}
                       />
-                      <InfoRow
-                        label="Status"
-                        value={
-                          <span className={n.isRead ? "text-muted-foreground" : "font-semibold text-emerald-600"}>
-                            {n.isRead ? "Read" : "Unread"}
-                          </span>
-                        }
-                      />
                     </div>
 
                     <div className="mt-3 flex shrink-0 items-center justify-end">
                       <button
                         type="button"
                         onClick={(e) => deleteNotification(n.id, e)}
-                        className="text-xs font-medium text-rose-600 transition-colors hover:text-rose-700 cursor-pointer"
-                        title="Dismiss Alert"
+                        className="rounded-md border border-rose-200 bg-card px-2.5 py-1 text-xs font-medium text-rose-600 transition-colors hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 cursor-pointer"
+                        title="Delete Alert"
                       >
-                        Dismiss
+                        Delete Alert
                       </button>
                     </div>
                   </div>
@@ -319,10 +304,11 @@ export default function NotificationsPage() {
                       </span>
                       <span
                         className={cn(
-                          "shrink-0 whitespace-nowrap text-xs font-semibold",
+                          "flex shrink-0 items-center gap-1 whitespace-nowrap text-xs font-semibold",
                           getTypeStyle(selectedNotif.type).pill
                         )}
                       >
+                        {getTypeStyle(selectedNotif.type).icon}
                         {getTypeStyle(selectedNotif.type).label}
                       </span>
                     </div>
@@ -366,37 +352,14 @@ export default function NotificationsPage() {
 
                   <Link href={selectedNotif.actionUrl}>
                     <Button variant="secondary" className="w-full">
+                      {/Map|Track/.test(selectedNotif.actionLabel) ? (
+                        <MapPin className="h-3.5 w-3.5" />
+                      ) : (
+                        <TicketIcon className="h-3.5 w-3.5" />
+                      )}
                       {selectedNotif.actionLabel}
                     </Button>
                   </Link>
-
-                  <div className="mt-2 flex flex-col gap-2 border-t border-border-subtle pt-4">
-                    <span className="text-xs font-medium text-muted-foreground">Mark as</span>
-                    <div className="grid grid-cols-2 gap-0.5 rounded-lg bg-muted p-0.5">
-                      <button
-                        type="button"
-                        onClick={() => markAsUnread(selectedNotif.id)}
-                        className={`rounded-md py-1.5 text-xs font-medium transition-colors cursor-pointer ${
-                          !selectedNotif.isRead
-                            ? "bg-card text-foreground shadow-xs"
-                            : "text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        Unread
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => markAsRead(selectedNotif.id)}
-                        className={`rounded-md py-1.5 text-xs font-medium transition-colors cursor-pointer ${
-                          selectedNotif.isRead
-                            ? "bg-card text-foreground shadow-xs"
-                            : "text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        Read
-                      </button>
-                    </div>
-                  </div>
                 </div>
 
                 <div className="mt-6 flex shrink-0 items-center justify-end border-t border-border-subtle pt-4">

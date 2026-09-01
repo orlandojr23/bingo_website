@@ -13,17 +13,17 @@ const statusOptions = [
   {
     label: "Waiting",
     value: "Pending",
-    active: "border-amber-400 bg-amber-50 text-amber-700",
+    active: "border-amber-600 bg-amber-600 text-white shadow-xs",
   },
   {
     label: "On the Way",
     value: "In Progress",
-    active: "border-blue-400 bg-blue-50 text-blue-700",
+    active: "border-blue-600 bg-blue-600 text-white shadow-xs",
   },
   {
     label: "Cleaned Up",
     value: "Resolved",
-    active: "border-emerald-400 bg-emerald-50 text-emerald-700",
+    active: "border-emerald-600 bg-emerald-600 text-white shadow-xs",
   },
 ];
 
@@ -103,7 +103,7 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
             <button
               type="button"
               onClick={onClose}
-              className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer"
+              className="shrink-0 p-1.5 text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
               aria-label="Back to list"
             >
               <X className="h-4 w-4" />
@@ -120,7 +120,6 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
 
             <DetailBlock label="Reporter">
               <span className="text-xs font-semibold text-foreground">{ticket.reporter}</span>
-              <span className="text-xs font-medium text-emerald-600">Verified Resident</span>
             </DetailBlock>
 
             <DetailBlock label="Date & Time">
@@ -221,7 +220,6 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
 
                 <DetailBlock label="Reporter">
                   <span className="text-sm font-semibold text-foreground">{ticket.reporter}</span>
-                  <span className="text-xs font-medium text-emerald-600">Verified Resident</span>
                 </DetailBlock>
 
                 <DetailBlock label="Date & Time">

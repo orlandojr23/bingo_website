@@ -4,8 +4,9 @@ import { useState, useEffect } from "react";
 import { Calendar, Plus, X, Search, Truck } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { mockPilotData } from "@/lib/mock-data";
-import { useLiveRoute, getSchedules, addSchedule, updateSchedule, removeSchedule } from "@/lib/live-route";
+import { useLiveRoute, getSchedules, addSchedule, updateSchedule, removeSchedule, assignDriver } from "@/lib/live-route";
 import { useFleet, addTruck, updateTruck, removeTruck } from "@/lib/fleet";
+import { loadStaffRoster } from "@/lib/staff";
 import ConfirmModal from "@/components/ui/confirm-modal";
 import { StatusBadge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
@@ -33,6 +34,11 @@ export default function DispatchPage() {
   const [truckError, setTruckError] = useState("");
   const [scheduleToDelete, setScheduleToDelete] = useState(null);
   const [truckToRemove, setTruckToRemove] = useState(null);
+  const [driverRoster, setDriverRoster] = useState([]);
+
+  useEffect(() => {
+    setDriverRoster(loadStaffRoster());
+  }, []);
 
   const live = useLiveRoute();
   const fleet = useFleet();
@@ -124,7 +130,12 @@ export default function DispatchPage() {
         }, 0) + 1;
       setTruckForm({ id: `TRK-${String(nextNum).padStart(2, "0")}`, plate: "", driver: "", capacity: "" });
     } else {
-      setTruckForm({ id: truck.id, plate: truck.plate, driver: truck.driver || "", capacity: truck.capacity || "" });
+      setTruckForm({
+        id: truck.id,
+        plate: truck.plate,
+        driver: live.driverByTruck[truck.id] ?? truck.driver ?? "",
+        capacity: truck.capacity || "",
+      });
     }
     setTruckSheet({ mode, truck: truck ?? null });
   };
@@ -139,6 +150,7 @@ export default function DispatchPage() {
       setTruckError(res.error);
       return;
     }
+    assignDriver(truckForm.id, truckForm.driver || null);
     setTruckSheet(null);
   };
 
@@ -301,6 +313,11 @@ export default function DispatchPage() {
                 className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-xs transition-colors hover:border-zinc-300 hover:bg-muted/40 cursor-pointer"
                 title={`Edit ${t.id}`}
               >
+                <Truck
+                  className={`h-3.5 w-3.5 ${
+                    live.trucks[t.id]?.tracking?.isActive ? "text-emerald-600" : "text-zinc-400"
+                  }`}
+                />
                 <span
                   className={`h-1.5 w-1.5 rounded-full ${
                     live.trucks[t.id]?.tracking?.isActive ? "bg-emerald-500" : "bg-zinc-300"
@@ -391,7 +408,7 @@ export default function DispatchPage() {
                         className="rounded-md border border-rose-200 bg-card px-2.5 py-1 text-xs font-medium text-rose-600 transition-colors hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 cursor-pointer"
                         title="Delete Assignment"
                       >
-                        Delete
+                        Delete Assignment
                       </button>
                     </div>
                   </div>
@@ -457,7 +474,7 @@ export default function DispatchPage() {
                     Cancel
                   </Button>
                   <Button variant="primary" type="submit">
-                    {isAdding ? "Create" : "Save"}
+                    {isAdding ? "Create Schedule" : "Save Changes"}
                   </Button>
                 </div>
               </form>
@@ -520,14 +537,25 @@ export default function DispatchPage() {
                         required
                       />
                     </Field>
-                    <Field label="Driver (optional)">
-                      <input
-                        type="text"
+                    <Field label="Assign Driver (optional)">
+                      <select
                         value={truckForm.driver}
                         onChange={(e) => setTruckForm({ ...truckForm, driver: e.target.value })}
-                        placeholder="e.g. Juan Dela Cruz"
-                        className={inputClass}
-                      />
+                        className={cn(inputClass, "cursor-pointer")}
+                      >
+                        <option value="">Unassigned</option>
+                        {driverRoster
+                          .filter((p) => p.status === "Active")
+                          .map((p) => (
+                            <option key={p.id} value={p.name}>
+                              {p.name}
+                            </option>
+                          ))}
+                        {truckForm.driver &&
+                          !driverRoster.some((p) => p.name === truckForm.driver) && (
+                            <option value={truckForm.driver}>{truckForm.driver}</option>
+                          )}
+                      </select>
                     </Field>
                     <Field label="Capacity (optional)">
                       <input
@@ -550,7 +578,7 @@ export default function DispatchPage() {
                   <div>
                     {truckSheet.mode === "edit" && (
                       <Button variant="secondary" type="button" onClick={handleTruckDeleteRequest} className="text-rose-600">
-                        Remove
+                        Remove Truck
                       </Button>
                     )}
                   </div>
@@ -559,7 +587,7 @@ export default function DispatchPage() {
                       Cancel
                     </Button>
                     <Button variant="primary" type="submit">
-                      {truckSheet.mode === "add" ? "Add Truck" : "Save"}
+                      {truckSheet.mode === "add" ? "Add Truck" : "Save Changes"}
                     </Button>
                   </div>
                 </div>

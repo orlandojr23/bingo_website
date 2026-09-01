@@ -161,11 +161,22 @@ function TruckMarker({ trk, fading }) {
   );
 }
 
-function MapCameraController({ center, zoom, onMapDrag }) {
+function MapCameraController({ center, zoom, onMapDrag, onBoundsChange, flySignal }) {
   const map = useMap();
   const isFirstRender = useRef(true);
   const prevCenterRef = useRef(center);
   const prevZoomRef = useRef(zoom);
+  const centerRef = useRef(center);
+  const zoomRef = useRef(zoom);
+  centerRef.current = center;
+  zoomRef.current = zoom;
+
+  // A manual drag moves the map without updating React state, so re-clicking a
+  // recenter button sends identical center/zoom values; flySignal forces the fly.
+  useEffect(() => {
+    if (!flySignal) return;
+    map.flyTo(centerRef.current, zoomRef.current, { animate: true, duration: 0.8 });
+  }, [flySignal, map]);
 
   useEffect(() => {
     if (!onMapDrag) return;
@@ -177,6 +188,24 @@ function MapCameraController({ center, zoom, onMapDrag }) {
       map.off("dragstart", handleDragStart);
     };
   }, [map, onMapDrag]);
+
+  useEffect(() => {
+    if (!onBoundsChange) return;
+    const report = () => {
+      const b = map.getBounds();
+      onBoundsChange({
+        north: b.getNorth(),
+        south: b.getSouth(),
+        east: b.getEast(),
+        west: b.getWest(),
+      });
+    };
+    report();
+    map.on("moveend", report);
+    return () => {
+      map.off("moveend", report);
+    };
+  }, [map, onBoundsChange]);
 
   useEffect(() => {
     // Multi-phase invalidateSize to handle tab transitions and mobile shell animations
@@ -238,7 +267,7 @@ function MapReadyNotifier({ onReady, tileRef }) {
   return null;
 }
 
-export default function MapCanvas({ tickets = [], trucks = [], routes = [], mapMode = "pins", center, zoom, highlightedTicketId, onSelectTicket, onMapDrag, onMapReady }) {
+export default function MapCanvas({ tickets = [], trucks = [], routes = [], mapMode = "pins", center, zoom, highlightedTicketId, onSelectTicket, onMapDrag, onBoundsChange, flySignal, onMapReady, showZoomControl = false, showTicketPopup = true }) {
   const [mounted, setMounted] = useState(false);
   const tileRef = useRef(null);
   const tejeroCenter = [10.3016, 123.9086];
@@ -287,7 +316,8 @@ export default function MapCanvas({ tickets = [], trucks = [], routes = [], mapM
         zoomControl={false}
         className="w-full h-full z-10"
       >
-        <MapCameraController center={mapCenter} zoom={mapZoom} onMapDrag={onMapDrag} />
+        <MapCameraController center={mapCenter} zoom={mapZoom} onMapDrag={onMapDrag} onBoundsChange={onBoundsChange} flySignal={flySignal} />
+        {showZoomControl && <ZoomControl position="topleft" />}
         
         {/* OpenStreetMap standard tiles (no API key required) */}
         <TileLayer
@@ -358,7 +388,13 @@ export default function MapCanvas({ tickets = [], trucks = [], routes = [], mapM
                 position={[t.lat, t.lng]}
                 icon={createCustomIcon(t.urgency)}
                 zIndexOffset={isHighlighted ? 1000 : 0}
+                eventHandlers={
+                  !showTicketPopup && onSelectTicket
+                    ? { click: () => onSelectTicket(t) }
+                    : undefined
+                }
               >
+                {showTicketPopup && (
                 <Popup>
                   <div className="p-3.5 flex flex-col gap-2 min-w-[220px] max-w-[260px] text-zinc-900 font-sans">
                     <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-zinc-100">
@@ -399,6 +435,7 @@ export default function MapCanvas({ tickets = [], trucks = [], routes = [], mapM
                     )}
                   </div>
                 </Popup>
+                )}
               </Marker>
             );
           })}

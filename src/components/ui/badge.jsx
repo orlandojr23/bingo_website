@@ -7,7 +7,7 @@ const statusConfig = {
   Scheduled: { color: "text-zinc-700" },
   Completed: { color: "text-emerald-700" },
   Active: { color: "text-emerald-700" },
-  Suspended: { color: "text-zinc-600" },
+  Suspended: { color: "text-rose-700" },
 };
 
 const urgencyTextColors = {

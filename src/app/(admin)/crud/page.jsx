@@ -50,7 +50,7 @@ export default function CrudPage() {
         ...form,
         id: nextTicketId(),
         city: "Cebu City",
-        date: new Date().toISOString().split("T")[0],
+        date: new Date().toLocaleDateString("en-CA"),
         time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         lat: form.lat ?? 10.3016,
         lng: form.lng ?? 123.9086,
@@ -203,7 +203,7 @@ export default function CrudPage() {
                               onClick={() => handleEdit(r)}
                               className="font-medium text-emerald-600 transition-colors hover:text-emerald-700 cursor-pointer"
                             >
-                              Edit
+                              Edit Record
                             </button>
                             <span className="text-border">|</span>
                             <button
@@ -211,7 +211,7 @@ export default function CrudPage() {
                               onClick={() => setRecordToDelete(r)}
                               className="font-medium text-rose-600 transition-colors hover:text-rose-700 cursor-pointer"
                             >
-                              Delete
+                              Delete Record
                             </button>
                           </div>
                         </td>

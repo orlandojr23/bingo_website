@@ -22,13 +22,13 @@ const MapCanvas = dynamic(() => import("@/components/map/map-canvas"), {
 function LiveMapContent() {
   const searchParams = useSearchParams();
   const urlTicketId = searchParams.get("ticketId");
+  const urlTruckId = searchParams.get("truckId");
 
   const tickets = useTickets();
   const [mapView, setMapView] = useState("reports");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [urgencyFilter, setUrgencyFilter] = useState("All");
-  const [mapMode, setMapMode] = useState("combined");
   const [activeTicketId, setActiveTicketId] = useState(null);
   const [activeTruckId, setActiveTruckId] = useState(null);
   const [selectedTicket, setSelectedTicket] = useState(null);
@@ -70,14 +70,28 @@ function LiveMapContent() {
   });
 
   useEffect(() => {
+    if (urlTruckId) {
+      const truck = trucksData.find((t) => t.id === urlTruckId);
+      if (truck) {
+        setMapView("trucks");
+        setActiveTruckId(truck.id);
+        setMapCenter([truck.lat, truck.lng]);
+        setMapZoom(16);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
     if (mapView === "trucks") {
+      if (activeTruckId) return;
       const activeTrucks = trucksData.filter((t) => t.isActive);
       if (activeTrucks.length === 1) {
         const singleTruck = activeTrucks[0];
         setMapCenter([singleTruck.lat, singleTruck.lng]);
         setActiveTruckId(singleTruck.id);
       }
-    } else {
+    } else if (!urlTruckId) {
       setActiveTruckId(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -135,23 +149,17 @@ function LiveMapContent() {
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background">
       <div className="relative h-full flex-1 overflow-hidden">
-        {/* Floating Map Status Overlay */}
-        <div className="absolute top-4 right-4 z-20 flex items-center gap-2 rounded-xl border border-border bg-card/90 px-3.5 py-2 text-xs font-medium text-foreground shadow-md backdrop-blur-xs">
-          <span className="h-2 w-2 rounded-full bg-emerald-500" />
-          <span>
-            Showing {mapView === "reports" ? `${filteredTickets.length} of ${tickets.length}` : `${trucksData.filter((t) => t.isActive).length} of ${trucksData.length}`} {mapView === "reports" ? "reports" : "active trucks"}
-          </span>
-        </div>
-
         <MapCanvas
           tickets={mapView === "reports" ? filteredTickets : []}
           trucks={mapView === "trucks" ? trucksData : []}
           routes={mapView === "trucks" ? truckRoutes : []}
-          mapMode={mapView === "reports" ? mapMode : "pins"}
+          mapMode="pins"
           center={mapCenter}
           zoom={mapZoom}
           highlightedTicketId={mapView === "reports" ? activeTicketId : null}
           onSelectTicket={mapView === "reports" ? handlePinClick : undefined}
+          showZoomControl
+          showTicketPopup={false}
         />
       </div>
 
@@ -237,27 +245,9 @@ function LiveMapContent() {
               </div>
 
               <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border-subtle px-4 pb-3">
-                <span className="text-xs text-muted-foreground">Map View</span>
-                <div className="flex w-fit gap-0.5 rounded-lg bg-muted p-0.5">
-                  {[
-                    { key: "pins", label: "Pins" },
-                    { key: "heatmap", label: "Heatmap" },
-                    { key: "combined", label: "Both" },
-                  ].map(({ key, label }) => (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => setMapMode(key)}
-                      className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer ${
-                        mapMode === key
-                          ? "bg-card text-foreground shadow-xs"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
+                <span className="text-xs text-muted-foreground">
+                  Showing {filteredTickets.length} of {tickets.length} reports
+                </span>
               </div>
 
               <div className="mb-2 flex shrink-0 flex-col gap-2 border-b border-border-subtle px-4 pb-3">
@@ -314,17 +304,14 @@ function LiveMapContent() {
                       </div>
                       <div className="flex items-center justify-between">
                         <StatusBadge status={t.status} />
-                        <span className="font-mono text-xs text-muted-foreground">{t.date}</span>
+                        <span className="font-mono text-xs text-muted-foreground">
+                          {t.date}
+                          {t.time ? ` · ${t.time}` : ""}
+                        </span>
                       </div>
                     </button>
                   ))
                 )}
-              </div>
-
-              <div className="shrink-0 border-t border-border px-4 py-3">
-                <span className="text-xs text-muted-foreground">
-                  Showing {filteredTickets.length} of {tickets.length} reports
-                </span>
               </div>
             </div>
           ))}

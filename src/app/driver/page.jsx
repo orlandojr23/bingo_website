@@ -220,6 +220,20 @@ export default function DriverPage() {
   const [isMapSheetExpanded, setIsMapSheetExpanded] = useState(false);
   const [mapCenter, setMapCenter] = useState([10.3025, 123.9095]);
   const [mapZoom, setMapZoom] = useState(16);
+  const [truckFocused, setTruckFocused] = useState(false);
+  const [mapBounds, setMapBounds] = useState(null);
+  const [flySignal, setFlySignal] = useState(0);
+
+  const handleMapBoundsChange = useCallback((b) => setMapBounds(b), []);
+  const isPointInView = useCallback(
+    (lat, lng) =>
+      !!mapBounds &&
+      lat <= mapBounds.north &&
+      lat >= mapBounds.south &&
+      lng <= mapBounds.east &&
+      lng >= mapBounds.west,
+    [mapBounds]
+  );
 
   // Profile & Logout Modals
   const [showProfile, setShowProfile] = useState(false);
@@ -404,7 +418,11 @@ export default function DriverPage() {
         id: "greeting",
         Icon: Waze3DWavingHandIcon,
         title: greetingTitle,
-        subtitle: `Unit ${currentTruck.id} • ${zoneName ?? "Standby"}`,
+        subtitle: `${new Date().toLocaleDateString("en-US", {
+          weekday: "long",
+          month: "long",
+          day: "numeric",
+        })} • Unit ${currentTruck.id} • ${zoneName ?? "Standby"}`,
       },
     ];
     const isPaused =
@@ -719,7 +737,12 @@ export default function DriverPage() {
               if (isMapSheetExpanded) {
                 setIsMapSheetExpanded(false);
               }
+              if (truckFocused) {
+                setTruckFocused(false);
+              }
             }}
+            onBoundsChange={handleMapBoundsChange}
+            flySignal={flySignal}
           />
         </div>
 
@@ -735,7 +758,7 @@ export default function DriverPage() {
                 setIsMapSheetExpanded(false);
                 haptic();
               }}
-              className="absolute inset-0 z-15 bg-black/25 backdrop-blur-[1px] cursor-pointer"
+              className="absolute inset-0 z-15 bg-black/25 cursor-pointer"
             />
           )}
         </AnimatePresence>
@@ -773,7 +796,7 @@ export default function DriverPage() {
                     {currentBanner.title}
                   </h3>
                   {currentBanner.subtitle && (
-                    <p className="text-xs font-medium text-emerald-700/80 truncate leading-tight mt-0.5">
+                    <p className="text-xs font-semibold text-emerald-800 truncate leading-tight mt-0.5">
                       {currentBanner.subtitle}
                     </p>
                   )}
@@ -792,7 +815,8 @@ export default function DriverPage() {
               haptic();
             }}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-xs font-black text-white shadow-xs hover:bg-emerald-700 active:scale-95 transition-all cursor-pointer border border-emerald-500/30"
-            title="Driver Terminal Settings"
+            title="Driver Terminal & Settings"
+            aria-label="Driver Terminal & Settings"
           >
             {driverSession?.name?.charAt(0)?.toUpperCase() || "D"}
           </button>
@@ -804,67 +828,84 @@ export default function DriverPage() {
           type="button"
           onClick={() => {
             setIsMapSheetExpanded(false);
-            const tracking = truckState?.tracking;
-            if (tracking?.lat != null && tracking?.lng != null) {
-              setMapCenter([tracking.lat, tracking.lng]);
-            } else if (coords?.lat != null && coords?.lng != null) {
-              setMapCenter([coords.lat, coords.lng]);
+            if (truckFocused) {
+              setTruckFocused(false);
             } else {
-              setMapCenter([10.3025, 123.9095]);
-            }
-            setMapZoom(17);
-            haptic();
-          }}
-          className="pointer-events-auto absolute bottom-[104px] left-4 z-20 flex h-12 w-12 items-center justify-center rounded-full bg-card/95 border border-border text-foreground shadow-lg backdrop-blur-md transition-all hover:scale-105 active:scale-95 cursor-pointer"
-          title="Focus Compactor Unit"
-        >
-          <Waze3DFocusTruckIcon className="h-9 w-9 shrink-0" />
-        </button>
-
-        {/* 2. Bottom-Right: Center GPS Location */}
-        <button
-          type="button"
-          onClick={() => {
-            setIsMapSheetExpanded(false);
-            const fallback = () => {
-              if (coords?.lat != null && coords?.lng != null) {
+              setTruckFocused(true);
+              const tracking = truckState?.tracking;
+              if (tracking?.lat != null && tracking?.lng != null) {
+                setMapCenter([tracking.lat, tracking.lng]);
+              } else if (coords?.lat != null && coords?.lng != null) {
                 setMapCenter([coords.lat, coords.lng]);
               } else {
                 setMapCenter([10.3025, 123.9095]);
               }
               setMapZoom(17);
-            };
-            if ("geolocation" in navigator) {
-              navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                  const { latitude, longitude } = pos.coords;
-                  setMapCenter([latitude, longitude]);
-                  setMapZoom(17);
-                },
-                () => fallback(),
-                { enableHighAccuracy: true, timeout: 10000 }
-              );
-            } else {
-              fallback();
+              setFlySignal((s) => s + 1);
             }
             haptic();
           }}
-          className="pointer-events-auto absolute bottom-[104px] right-4 z-20 flex h-12 w-12 items-center justify-center rounded-full bg-card/95 border border-border text-foreground shadow-lg backdrop-blur-md transition-all hover:scale-105 active:scale-95 cursor-pointer"
-          title="Center Driver Location"
+          className={cn(
+            "pointer-events-auto absolute bottom-[104px] left-4 z-20 flex h-[54px] w-[54px] flex-col items-center justify-center gap-0.5 rounded-full border shadow-lg backdrop-blur-md transition-all hover:scale-105 active:scale-95 cursor-pointer",
+            truckFocused
+              ? "border-emerald-500 bg-emerald-50/95 ring-2 ring-emerald-500/25"
+              : "border-border bg-card/95"
+          )}
+          title="Focus Compactor Unit"
+          aria-label="Focus Compactor Unit"
+          aria-pressed={truckFocused}
         >
-          <Waze3DTargetIcon className="h-9 w-9 shrink-0" />
+          <Waze3DFocusTruckIcon className="h-7 w-7 shrink-0" />
+          <span
+            className={cn(
+              "text-[8px] font-bold leading-none",
+              truckFocused ? "text-emerald-700" : "text-muted-foreground"
+            )}
+          >
+            Truck
+          </span>
         </button>
+
+        {/* 2. Bottom-Right: Center GPS Location (slides in when driver is out of view, out when centered) */}
+        <div className="pointer-events-none absolute bottom-[104px] right-4 z-20">
+          <AnimatePresence>
+            {coords?.lat != null && !isPointInView(coords.lat, coords.lng) && (
+              <motion.button
+                key="center-driver-location"
+                type="button"
+                initial={{ x: 72, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: 72, opacity: 0 }}
+                transition={{ duration: 0.3, ease: "easeInOut" }}
+                onClick={() => {
+                  setIsMapSheetExpanded(false);
+                  setTruckFocused(false);
+                  if (coords?.lat != null && coords?.lng != null) {
+                    setMapCenter([coords.lat, coords.lng]);
+                  } else {
+                    setMapCenter([10.3025, 123.9095]);
+                  }
+                  setMapZoom(17);
+                  setFlySignal((s) => s + 1);
+                  haptic();
+                }}
+                className="pointer-events-auto flex h-[54px] w-[54px] flex-col items-center justify-center gap-0.5 rounded-full border border-border bg-card/95 shadow-lg backdrop-blur-md cursor-pointer"
+                title="Center Driver Location"
+                aria-label="Center Driver Location"
+              >
+                <Waze3DTargetIcon className="h-7 w-7 shrink-0" />
+                <span className="text-[8px] font-bold leading-none text-muted-foreground">
+                  GPS
+                </span>
+              </motion.button>
+            )}
+          </AnimatePresence>
+        </div>
 
         {/* Waze-Style Single-Screen Bottom Sheet Drawer */}
         <div className="pointer-events-none absolute bottom-0 inset-x-0 z-30 flex justify-center">
           <motion.div
-            layout
-            transition={{
-              type: "spring",
-              damping: 30,
-              stiffness: 350,
-            }}
-            className="pointer-events-auto flex w-full max-w-md flex-col rounded-t-3xl border-t border-border bg-card/98 shadow-2xl backdrop-blur-xl"
+            className="pointer-events-auto flex w-full max-w-md flex-col rounded-t-3xl border-t border-border bg-card shadow-2xl"
           >
             {/* Top Drag Handle & Peeking Search Control */}
             <div className="flex flex-col items-center px-4 pt-2.5 pb-2">
@@ -1218,7 +1259,7 @@ export default function DriverPage() {
                   clearDriverSession();
                   setShowSignOutModal(false);
                 }}
-                className="inline-flex select-none items-center justify-center gap-1.5 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-medium text-rose-600 shadow-xs transition-all duration-150 hover:border-rose-300 hover:bg-rose-50/50 hover:text-rose-700 active:scale-[0.98] cursor-pointer"
+                className="inline-flex select-none items-center justify-center gap-1.5 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-medium text-rose-600 shadow-xs transition-all duration-150 hover:border-rose-600 hover:bg-rose-600 hover:text-white active:scale-[0.98] cursor-pointer"
               >
                 Sign Out
               </Link>

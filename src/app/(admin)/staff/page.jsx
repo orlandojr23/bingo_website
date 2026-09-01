@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Users, Plus, X, ArrowLeftRight } from "lucide-react";
+import { Search, Users, Plus, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { StatusBadge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
@@ -12,32 +12,15 @@ import { inputClass, labelClass } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import PasswordStrengthHint from "@/components/ui/password-strength-hint";
 import { useFleet } from "@/lib/fleet";
-import { useLiveRoute, assignDriver, swapDrivers } from "@/lib/live-route";
+import { useLiveRoute, assignDriver } from "@/lib/live-route";
 import {
   getDriverAccount,
   saveDriverAccount,
   removeDriverAccount,
   renameDriverAccount,
 } from "@/lib/driver-accounts";
+import { loadStaffRoster, saveStaffRoster } from "@/lib/staff";
 import ConfirmModal from "@/components/ui/confirm-modal";
-
-const initialStaff = [
-  { id: "DRV-001", name: "Juan Dela Cruz", role: "Driver", username: "juan.driver", status: "Active" },
-  { id: "DRV-002", name: "Pedro Reyes", role: "Driver", username: "pedro.driver", status: "Active" },
-];
-
-const STAFF_KEY = "bingo-staff-v1";
-
-function loadStaff() {
-  try {
-    const raw = window.localStorage.getItem(STAFF_KEY);
-    const parsed = raw ? JSON.parse(raw) : null;
-    if (Array.isArray(parsed) && parsed.every((p) => p && p.id)) {
-      return parsed;
-    }
-  } catch {}
-  return initialStaff;
-}
 
 function Field({ label, children, hint }) {
   return (
@@ -52,18 +35,14 @@ function Field({ label, children, hint }) {
 export default function StaffPage() {
   const live = useLiveRoute();
   const fleet = useFleet();
-  const [staff, setStaff] = useState(loadStaff);
+  const [staff, setStaff] = useState(loadStaffRoster);
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    try {
-      window.localStorage.setItem(STAFF_KEY, JSON.stringify(staff));
-    } catch {}
+    saveStaffRoster(staff);
   }, [staff]);
   const [selectedDriver, setSelectedDriver] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
-  const [swapSource, setSwapSource] = useState(null);
-  const [pendingSwap, setPendingSwap] = useState(null);
   const [driverToDelete, setDriverToDelete] = useState(null);
 
   const [name, setName] = useState("");
@@ -178,49 +157,8 @@ export default function StaffPage() {
     if (selectedDriver?.id === id) {
       setSelectedDriver(null);
     }
-    if (swapSource?.id === id) {
-      setSwapSource(null);
-    }
     setDriverToDelete(null);
   };
-
-  const handleSwapClick = (person, personTruck) => {
-    if (!swapSource) {
-      setSwapSource(person);
-      return;
-    }
-    if (swapSource.id === person.id) {
-      setSwapSource(null);
-      return;
-    }
-    setPendingSwap({ source: swapSource, target: person });
-  };
-
-  const handleSwapConfirm = () => {
-    if (!pendingSwap) return;
-    const { source, target } = pendingSwap;
-    const sourceTruck = truckOf(source.name);
-    const targetTruck = truckOf(target.name);
-    if (sourceTruck && targetTruck) {
-      swapDrivers(sourceTruck.id, targetTruck.id);
-    } else if (sourceTruck && !targetTruck) {
-      assignDriver(sourceTruck.id, target.name);
-    }
-    setPendingSwap(null);
-    setSwapSource(null);
-  };
-
-  const swapDescription = (() => {
-    if (!pendingSwap) return "";
-    const s = pendingSwap.source;
-    const t = pendingSwap.target;
-    const st = truckOf(s.name);
-    const tt = truckOf(t.name);
-    if (st && tt) {
-      return `${s.name} (${truckLabel(st)}) will swap trucks with ${t.name} (${truckLabel(tt)}).`;
-    }
-    return `${s.name}'s truck (${truckLabel(st)}) will be reassigned to ${t.name}.`;
-  })();
 
   const filteredStaff = staff.filter(
     (person) =>
@@ -269,33 +207,6 @@ export default function StaffPage() {
           </div>
         </div>
 
-        <AnimatePresence>
-          {swapSource && (
-            <motion.div
-              key="swap-banner"
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.25, ease: "easeInOut" }}
-              className="shrink-0 overflow-hidden"
-            >
-              <div className="flex items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5">
-                <p className="text-xs font-semibold text-amber-800">
-                  Select a driver to swap trucks with {swapSource.name} (
-                  {truckOf(swapSource.name) ? truckLabel(truckOf(swapSource.name)) : "Unassigned"}).
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setSwapSource(null)}
-                  className="shrink-0 rounded-md border border-amber-300 bg-card px-2.5 py-1 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 cursor-pointer"
-                >
-                  Cancel
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
         {filteredStaff.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-border bg-card p-10 text-center">
             <Users className="mb-2.5 h-8 w-8 text-zinc-300" />
@@ -315,22 +226,15 @@ export default function StaffPage() {
             {filteredStaff.map((person) => {
               const isSelected = selectedDriver?.id === person.id;
               const personTruck = truckOf(person.name);
-              const isSwapSource = swapSource?.id === person.id;
 
               return (
                 <div
                   key={person.id}
-                  onClick={() =>
-                    swapSource
-                      ? handleSwapClick(person, personTruck)
-                      : setSelectedDriver(person)
-                  }
+                  onClick={() => setSelectedDriver(person)}
                   className={`group flex w-full cursor-pointer select-none flex-col justify-between rounded-xl border bg-card p-4 text-left transition-all ${
-                    isSwapSource
-                      ? "border-amber-400 shadow-xs ring-1 ring-amber-400/20"
-                      : isSelected
-                        ? "border-emerald-400 shadow-xs ring-1 ring-emerald-400/20"
-                        : "border-border hover:border-zinc-300 hover:bg-muted/40"
+                    isSelected
+                      ? "border-emerald-400 shadow-xs ring-1 ring-emerald-400/20"
+                      : "border-border hover:border-zinc-300 hover:bg-muted/40"
                   }`}
                 >
                   <div>
@@ -363,25 +267,12 @@ export default function StaffPage() {
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleSwapClick(person, personTruck);
-                      }}
-                      disabled={!personTruck && !swapSource}
-                      className="flex items-center gap-1 rounded-md border border-amber-200 bg-card px-2.5 py-1 text-xs font-medium text-amber-600 transition-colors hover:border-amber-300 hover:bg-amber-50 hover:text-amber-700 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
-                      title="Swap Truck Assignment"
-                    >
-                      <ArrowLeftRight className="h-3 w-3" />
-                      Swap
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
                         setDriverToDelete(person);
                       }}
                       className="rounded-md border border-rose-200 bg-card px-2.5 py-1 text-xs font-medium text-rose-600 transition-colors hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 cursor-pointer"
                       title="Delete Driver"
                     >
-                      Delete
+                      Delete Driver
                     </button>
                   </div>
                 </div>
@@ -498,9 +389,11 @@ export default function StaffPage() {
                                 key={option}
                                 type="button"
                                 onClick={() => setStatus(option)}
-                                className={`rounded-md py-1.5 text-xs font-medium transition-colors ${
+                                className={`rounded-md py-1.5 text-xs font-medium transition-colors cursor-pointer ${
                                   status === option
-                                    ? "bg-card text-foreground shadow-xs"
+                                    ? option === "Active"
+                                      ? "bg-emerald-600 text-white shadow-xs"
+                                      : "bg-rose-600 text-white shadow-xs"
                                     : "text-muted-foreground hover:text-foreground"
                                 }`}
                               >
@@ -530,7 +423,7 @@ export default function StaffPage() {
                       Cancel
                     </Button>
                     <Button variant="primary" size="sm" type="submit">
-                      {isAdding ? "Create" : "Save"}
+                      {isAdding ? "Create Driver" : "Save Changes"}
                     </Button>
                   </div>
                 </div>
@@ -546,15 +439,6 @@ export default function StaffPage() {
         description={`This will permanently remove ${driverToDelete?.name} and unassign their truck. This action cannot be undone.`}
         onConfirm={() => handleDeleteDriver(driverToDelete?.id)}
         onCancel={() => setDriverToDelete(null)}
-      />
-
-      <ConfirmModal
-        open={!!pendingSwap}
-        title="Swap Truck Assignment"
-        description={swapDescription}
-        confirmLabel="Swap"
-        onConfirm={handleSwapConfirm}
-        onCancel={() => setPendingSwap(null)}
       />
     </div>
   );

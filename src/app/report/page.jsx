@@ -711,6 +711,20 @@ export default function ResidentMobilePWA() {
   const [isLocating, setIsLocating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedTicket, setSubmittedTicket] = useState(null);
+  const [truckFocused, setTruckFocused] = useState(false);
+  const [mapBounds, setMapBounds] = useState(null);
+  const [flySignal, setFlySignal] = useState(0);
+
+  const handleMapBoundsChange = useCallback((b) => setMapBounds(b), []);
+  const isPointInView = useCallback(
+    (lat, lng) =>
+      !!mapBounds &&
+      lat <= mapBounds.north &&
+      lat >= mapBounds.south &&
+      lng <= mapBounds.east &&
+      lng >= mapBounds.west,
+    [mapBounds]
+  );
 
   const fileInputRef = useRef(null);
   const { toast, ToastViewport } = useToast();
@@ -809,7 +823,7 @@ export default function ResidentMobilePWA() {
         reporter: reporterName || "Resident",
         urgency: urgency,
         status: "Pending",
-        date: new Date().toISOString().split("T")[0],
+        date: new Date().toLocaleDateString("en-CA"),
         time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         lat: gpsCoords?.lat || 10.3016,
         lng: gpsCoords?.lng || 123.9086,
@@ -881,7 +895,12 @@ export default function ResidentMobilePWA() {
               if (isMapSheetExpanded) {
                 setIsMapSheetExpanded(false);
               }
+              if (truckFocused) {
+                setTruckFocused(false);
+              }
             }}
+            onBoundsChange={handleMapBoundsChange}
+            flySignal={flySignal}
           />
         </div>
 
@@ -897,7 +916,7 @@ export default function ResidentMobilePWA() {
                 setIsMapSheetExpanded(false);
                 haptic();
               }}
-              className="absolute inset-0 z-15 bg-black/25 backdrop-blur-[1px] cursor-pointer"
+              className="absolute inset-0 z-15 bg-black/25 cursor-pointer"
             />
           )}
         </AnimatePresence>
@@ -935,7 +954,7 @@ export default function ResidentMobilePWA() {
                     {currentBanner.title}
                   </h3>
                   {currentBanner.subtitle && (
-                    <p className="text-xs font-medium text-emerald-700/80 truncate leading-tight mt-0.5">
+                    <p className="text-xs font-semibold text-emerald-800 truncate leading-tight mt-0.5">
                       {currentBanner.subtitle}
                     </p>
                   )}
@@ -957,6 +976,7 @@ export default function ResidentMobilePWA() {
             }}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-xs font-black text-white shadow-xs hover:bg-emerald-700 active:scale-95 transition-all cursor-pointer border border-emerald-500/30"
             title="Profile & Settings"
+            aria-label="Profile & Settings"
           >
             {residentSession?.name?.charAt(0)?.toUpperCase() || "R"}
           </button>
@@ -971,53 +991,90 @@ export default function ResidentMobilePWA() {
           onClick={() => {
             closeAllSheets();
             setIsMapSheetExpanded(false);
-            const activeTruck = activeTrucks && activeTrucks[0];
-            setMapCenter(
-              activeTruck ? [activeTruck.lat, activeTruck.lng] : [10.3025, 123.9095]
-            );
-            setMapZoom(17);
-            haptic();
-          }}
-          className="pointer-events-auto absolute bottom-[164px] left-4 z-20 flex h-12 w-12 items-center justify-center rounded-full bg-card/95 border border-border text-foreground shadow-lg backdrop-blur-md transition-all hover:scale-105 active:scale-95"
-          title="Focus Active Truck"
-        >
-          <Waze3DFocusTruckIcon className="h-9 w-9 shrink-0" />
-        </button>
-
-        {/* 2. Bottom-Right: Center My Location (3D GPS Target Icon) */}
-        <button
-          type="button"
-          onClick={() => {
-            closeAllSheets();
-            setIsMapSheetExpanded(false);
-            const centerOn = (coords) => {
-              setMapCenter([coords.lat, coords.lng]);
-              setMapZoom(17);
-            };
-            if (gpsCoords) {
-              centerOn(gpsCoords);
+            if (truckFocused) {
+              setTruckFocused(false);
             } else {
-              handleGetLocation((coords) => centerOn(coords));
+              setTruckFocused(true);
+              const activeTruck = activeTrucks && activeTrucks[0];
+              setMapCenter(
+                activeTruck ? [activeTruck.lat, activeTruck.lng] : [10.3025, 123.9095]
+              );
+              setMapZoom(17);
+              setFlySignal((s) => s + 1);
             }
             haptic();
           }}
-          className="pointer-events-auto absolute bottom-[164px] right-4 z-20 flex h-12 w-12 items-center justify-center rounded-full bg-card/95 border border-border text-foreground shadow-lg backdrop-blur-md transition-all hover:scale-105 active:scale-95"
-          title="Center My Location"
+          className={cn(
+            "pointer-events-auto absolute bottom-[164px] left-4 z-20 flex h-[54px] w-[54px] flex-col items-center justify-center gap-0.5 rounded-full border shadow-lg backdrop-blur-md transition-all hover:scale-105 active:scale-95 cursor-pointer",
+            truckFocused
+              ? "border-emerald-500 bg-emerald-50/95 ring-2 ring-emerald-500/25"
+              : "border-border bg-card/95"
+          )}
+          title="Focus Active Truck"
+          aria-label="Focus Active Truck"
+          aria-pressed={truckFocused}
         >
-          <Waze3DTargetIcon className="h-9 w-9 shrink-0" />
+          <Waze3DFocusTruckIcon className="h-7 w-7 shrink-0" />
+          <span
+            className={cn(
+              "text-[8px] font-bold leading-none",
+              truckFocused ? "text-emerald-700" : "text-muted-foreground"
+            )}
+          >
+            Truck
+          </span>
         </button>
+
+        {/* 2. Bottom-Right: Center My Location (slides in when GPS is out of view, out when centered) */}
+        <div className="pointer-events-none absolute bottom-[164px] right-4 z-20">
+          <AnimatePresence>
+            {(!gpsCoords || !isPointInView(gpsCoords.lat, gpsCoords.lng)) && (
+              <motion.button
+                key="center-my-location"
+                type="button"
+                initial={{ x: 72, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: 72, opacity: 0 }}
+                transition={{ duration: 0.3, ease: "easeInOut" }}
+                onClick={() => {
+                  closeAllSheets();
+                  setIsMapSheetExpanded(false);
+                  setTruckFocused(false);
+                  const centerOn = (coords) => {
+                    setMapCenter([coords.lat, coords.lng]);
+                    setMapZoom(17);
+                    setFlySignal((s) => s + 1);
+                  };
+                  if (gpsCoords) {
+                    centerOn(gpsCoords);
+                  } else {
+                    handleGetLocation((coords) => centerOn(coords));
+                  }
+                  haptic();
+                }}
+                className="pointer-events-auto flex h-[54px] w-[54px] flex-col items-center justify-center gap-0.5 rounded-full border border-border bg-card/95 shadow-lg backdrop-blur-md cursor-pointer"
+                title="Center My Location"
+                aria-label="Center My Location"
+              >
+                <Waze3DTargetIcon className="h-7 w-7 shrink-0" />
+                <span className="text-[8px] font-bold leading-none text-muted-foreground">
+                  GPS
+                </span>
+              </motion.button>
+            )}
+          </AnimatePresence>
+        </div>
 
         {/* Waze-Style Single-Screen Bottom Sheet Drawer (Peeks Search Bar & Action Pills) */}
         <div className="pointer-events-none absolute bottom-0 inset-x-0 z-30 flex justify-center">
           <motion.div
-            layout
             transition={{
               type: "spring",
               damping: 30,
               stiffness: 320,
               mass: 0.8,
             }}
-            className="pointer-events-auto w-full max-w-lg rounded-t-3xl border-t border-x border-border bg-card/98 p-4 shadow-2xl space-y-3 select-none backdrop-blur-xl"
+            className="pointer-events-auto w-full max-w-lg rounded-t-3xl border-t border-x border-border bg-card p-4 shadow-2xl space-y-3 select-none"
           >
             {/* Drag Handle & Collapse Toggle Bar */}
             <div
@@ -1532,7 +1589,7 @@ export default function ResidentMobilePWA() {
                             {isSubmitting ? (
                               <RefreshCw className="h-4 w-4 animate-spin" strokeWidth={2} />
                             ) : (
-                              "Confirm"
+                              "Submit Report"
                             )}
                           </button>
                         </motion.div>
@@ -1870,7 +1927,7 @@ export default function ResidentMobilePWA() {
                   clearResidentSession();
                   setShowSignOutModal(false);
                 }}
-                className="inline-flex select-none items-center justify-center gap-1.5 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-medium text-rose-600 shadow-xs transition-all duration-150 hover:border-rose-300 hover:bg-rose-50/50 hover:text-rose-700 active:scale-[0.98] cursor-pointer"
+                className="inline-flex select-none items-center justify-center gap-1.5 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-medium text-rose-600 shadow-xs transition-all duration-150 hover:border-rose-600 hover:bg-rose-600 hover:text-white active:scale-[0.98] cursor-pointer"
               >
                 Sign Out
               </Link>
