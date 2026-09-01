@@ -546,29 +546,65 @@ export default function ResidentMobilePWA() {
     };
   }, [activeTs, activeSchedule]);
 
+  // Single truthful status message derived from real schedules: pickup today,
+  // or no pickup today with the next collection day.
+  const pickupStatus = useMemo(() => {
+    if (liveBanner) return null;
+    const now = new Date();
+    const dayName = now.toLocaleDateString("en-US", { weekday: "long" });
+    const open = getSchedules().filter(
+      (s) => (live.scheduleStatus?.[s.id] ?? s.status) !== "Completed"
+    );
+    const today = open.find((s) => s.days?.includes(dayName));
+    if (today) {
+      const start = String(today.time || "").split("-")[0].trim();
+      return {
+        id: "pickup-status",
+        Icon: Waze3DCalendarIcon,
+        title: "Pickup today",
+        subtitle: `${today.type}${start ? ` • ${start}` : ""}`,
+      };
+    }
+    for (let off = 1; off <= 7; off++) {
+      const d = new Date(now);
+      d.setDate(now.getDate() + off);
+      const name = d.toLocaleDateString("en-US", { weekday: "long" });
+      const hit = open.find((s) => s.days?.includes(name));
+      if (hit) {
+        const label = off === 1 ? "Tomorrow" : name;
+        const start = String(hit.time || "").split("-")[0].trim();
+        return {
+          id: "pickup-status",
+          Icon: Waze3DCalendarIcon,
+          title: "No pickup today",
+          subtitle: `Next: ${label}${start ? ` at ${start}` : ""}`,
+        };
+      }
+    }
+    return {
+      id: "pickup-status",
+      Icon: Waze3DCalendarIcon,
+      title: "No pickup today",
+      subtitle: "No schedules posted yet",
+    };
+  }, [liveBanner, live]);
+
   const dynamicBannerMessages = useMemo(
     () => [
       {
         id: "greeting",
         Icon: Waze3DWavingHandIcon,
         title: greetingTitle,
-        subtitle: "",
+        subtitle: new Date().toLocaleDateString("en-US", {
+          weekday: "long",
+          month: "long",
+          day: "numeric",
+        }),
       },
       ...(liveBanner ? [liveBanner] : []),
-      {
-        id: "announcement",
-        Icon: Waze3DBellIcon,
-        title: "Sitio Vilgon collection active",
-        subtitle: "Prepare your malata waste",
-      },
-      {
-        id: "off-schedule",
-        Icon: Waze3DCalendarIcon,
-        title: "No pickup today",
-        subtitle: "Next: Tomorrow at 8:00 AM",
-      },
+      ...(pickupStatus ? [pickupStatus] : []),
     ],
-    [greetingTitle, liveBanner]
+    [greetingTitle, liveBanner, pickupStatus]
   );
 
   const [hasNewAnnouncement, setHasNewAnnouncement] = useState(true);
@@ -782,7 +818,7 @@ export default function ResidentMobilePWA() {
           <MapCanvas
             tickets={selectedTicket ? [selectedTicket] : []}
             trucks={activeTrucks}
-            routes={routePath.positions.length ? [{ id: displaySchedule.id, ...routePath }] : []}
+            routes={activeTs && !routeCompleted && routePath.positions.length ? [{ id: displaySchedule.id, ...routePath }] : []}
             mapMode="pins"
             center={selectedTicket ? [selectedTicket.lat, selectedTicket.lng] : mapCenter}
             zoom={mapZoom}
@@ -851,11 +887,11 @@ export default function ResidentMobilePWA() {
                 )}
 
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-base font-black tracking-tight text-foreground truncate leading-tight">
+                  <h3 className="text-base font-semibold tracking-tight text-foreground truncate leading-tight">
                     {currentBanner.title}
                   </h3>
                   {currentBanner.subtitle && (
-                    <p className="text-xs font-semibold text-emerald-700 truncate leading-tight mt-0.5">
+                    <p className="text-xs font-medium text-emerald-700/80 truncate leading-tight mt-0.5">
                       {currentBanner.subtitle}
                     </p>
                   )}

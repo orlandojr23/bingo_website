@@ -296,7 +296,7 @@ function LiveMapContent() {
                       key={t.id}
                       id={`report-card-${t.id}`}
                       onClick={() => handleSelectReport(t)}
-                      className={`w-full rounded-xl border bg-card p-3 text-left transition-all ${
+                      className={`w-full cursor-pointer rounded-xl border bg-card p-3 text-left transition-all ${
                         activeTicketId === t.id
                           ? "border-emerald-400 bg-emerald-50/50 shadow-xs ring-1 ring-emerald-400/20"
                           : "border-border hover:border-zinc-300 hover:bg-muted/40"
@@ -375,7 +375,7 @@ function LiveMapContent() {
                 <button
                   key={trk.id}
                   onClick={() => handleSelectTruck(trk)}
-                  className={`w-full rounded-xl border bg-card p-3 text-left transition-all ${
+                  className={`w-full cursor-pointer rounded-xl border bg-card p-3 text-left transition-all ${
                     activeTruckId === trk.id
                       ? "border-emerald-400 bg-emerald-50/50 shadow-xs ring-1 ring-emerald-400/20"
                       : "border-border hover:border-zinc-300 hover:bg-muted/40"

@@ -323,7 +323,7 @@ export const mockPilotData = {
       days: ["Monday", "Wednesday", "Friday"],
       time: "08:00 AM - 11:00 AM",
       activeTruckId: "TRK-01",
-      status: "In Progress", // Could be Scheduled, In Progress, Completed
+      status: "Scheduled", // Could be Scheduled, In Progress, Completed
       routePoints: [
         { name: "Sitio Silangan", time: "8:00 AM", lat: 10.3024, lng: 123.9084 },
         { name: "Sitio Vilgon", time: "8:45 AM", lat: 10.3029, lng: 123.9095 },

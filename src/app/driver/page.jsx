@@ -32,6 +32,7 @@ import { useFleet } from "@/lib/fleet";
 import { getDriverSession, clearDriverSession } from "@/lib/driver-session";
 import { changeDriverPassword } from "@/lib/driver-accounts";
 import { MapSkeleton } from "@/components/ui/skeletons";
+import PasswordStrengthHint from "@/components/ui/password-strength-hint";
 import { useToast } from "@/components/pwa/Toast";
 import BottomSheet from "@/components/pwa/BottomSheet";
 
@@ -341,9 +342,11 @@ export default function DriverPage() {
     const mine = getSchedules().filter(
       (s) => s.activeTruckId === selectedTruckId
     );
+    const inProgress = mine.filter((s) => status[s.id] === "In Progress");
+    const scheduled = mine.filter((s) => status[s.id] === "Scheduled");
     return (
-      mine.find((s) => status[s.id] === "In Progress") ||
-      mine.find((s) => status[s.id] === "Scheduled") ||
+      inProgress[inProgress.length - 1] ||
+      scheduled[scheduled.length - 1] ||
       null
     );
   }, [selectedTruckId, live]);
@@ -388,7 +391,13 @@ export default function DriverPage() {
   }, [driverName]);
 
   const bannerMessages = useMemo(() => {
-    const zoneName = assignedZone ? assignedZone.name : null;
+    // Keep taglines compact: first zone segment only, start time only
+    const zoneName = assignedZone
+      ? assignedZone.name.split("&")[0].trim()
+      : null;
+    const startTime = String(assignedSchedule?.time || "")
+      .split("-")[0]
+      .trim();
     const msgs = [
       {
         id: "greeting",
@@ -407,7 +416,7 @@ export default function DriverPage() {
         id: "status",
         Icon: Waze3DCleanIcon,
         title: "Route completed",
-        subtitle: zoneName ? `Next up: ${zoneName}` : "No further assignments today",
+        subtitle: zoneName ? `Next up: ${zoneName}` : "No more routes today",
       });
     } else if (isOnDuty && truckState.phase === "onsite") {
       msgs.push({
@@ -435,7 +444,7 @@ export default function DriverPage() {
         id: "status",
         Icon: Waze3DRouteIcon,
         title: "1 new assignment",
-        subtitle: `${zoneName ?? "New route"} • ${assignedSchedule.time}`,
+        subtitle: `${zoneName ?? "New route"}${startTime ? ` • ${startTime}` : ""}`,
       });
     } else {
       msgs.push({
@@ -685,7 +694,7 @@ export default function DriverPage() {
           <MapCanvas
             tickets={[]}
             trucks={trucksForMap}
-            routes={driverRoute.positions.length ? [{ id: routeScheduleId ?? "driver-route", ...driverRoute }] : []}
+            routes={isOnDuty && truckState?.phase !== "completed" && driverRoute.positions.length ? [{ id: routeScheduleId ?? "driver-route", ...driverRoute }] : []}
             mapMode="pins"
             center={mapCenter}
             zoom={mapZoom}
@@ -744,11 +753,11 @@ export default function DriverPage() {
                 )}
 
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-base font-black tracking-tight text-foreground truncate leading-tight">
+                  <h3 className="text-base font-semibold tracking-tight text-foreground truncate leading-tight">
                     {currentBanner.title}
                   </h3>
                   {currentBanner.subtitle && (
-                    <p className="text-xs font-semibold text-emerald-700 truncate leading-tight mt-0.5">
+                    <p className="text-xs font-medium text-emerald-700/80 truncate leading-tight mt-0.5">
                       {currentBanner.subtitle}
                     </p>
                   )}
@@ -1102,6 +1111,7 @@ export default function DriverPage() {
                     {f.show ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
                   </button>
                 </div>
+                {f.field === "newPassword" && <PasswordStrengthHint password={f.value} />}
                 <AnimatePresence initial={false}>
                   {pwErrors[f.field] && (
                     <motion.p

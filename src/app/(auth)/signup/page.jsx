@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { setResidentSession } from "@/lib/resident-session";
 import { getAccount, createAccount } from "@/lib/resident-accounts";
 import { Button } from "@/components/ui/button";
+import PasswordStrengthHint from "@/components/ui/password-strength-hint";
 
 const PUBLIC_DOMAINS = ["gmail.com", "yahoo.com", "outlook.com", "hotmail.com", "icloud.com"];
 
@@ -225,6 +226,7 @@ export default function SignupPage() {
                 {showPassword ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
               </button>
             </div>
+            <PasswordStrengthHint password={password} />
             <ErrorLine message={errors.password} />
           </div>
 

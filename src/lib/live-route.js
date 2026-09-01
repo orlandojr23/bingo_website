@@ -2,7 +2,7 @@ import { useSyncExternalStore } from "react";
 import { mockPilotData } from "@/lib/mock-data";
 
 const STORAGE_KEY = "bingo-live-route-v1";
-const STORE_VERSION = 3;
+const STORE_VERSION = 4;
 
 function buildSeed() {
   const scheduleStatus = {};
@@ -29,23 +29,6 @@ function buildSeed() {
       },
     };
   }
-
-  // Demo narrative: TRK-01 is already running SCH-001, approaching stop 2 (Sitio Vilgon)
-  const t1 = mockPilotData.activeTracking["TRK-01"];
-  trucks["TRK-01"] = {
-    truckId: "TRK-01",
-    scheduleId: "SCH-001",
-    phase: "enroute",
-    stopIndex: 1,
-    onsite: false,
-    tracking: {
-      lat: t1.lat,
-      lng: t1.lng,
-      heading: t1.heading,
-      eta: "5 mins",
-      isActive: true,
-    },
-  };
 
   const driverByTruck = {};
   for (const t of mockPilotData.trucks) driverByTruck[t.id] = t.driver ?? null;
@@ -241,9 +224,11 @@ export function startRoute(truckId) {
       return ts.scheduleId;
     }
 
+    const inProgress = mine.filter((s) => status[s.id] === "In Progress");
+    const scheduled = mine.filter((s) => status[s.id] === "Scheduled");
+    // Prefer the newest assignment so a freshly dispatch is what starts
     const pick =
-      mine.find((s) => status[s.id] === "In Progress") ||
-      mine.find((s) => status[s.id] === "Scheduled");
+      inProgress[inProgress.length - 1] || scheduled[scheduled.length - 1];
     if (!pick) return null;
 
     const first = pick.routePoints?.[0];

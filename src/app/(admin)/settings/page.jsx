@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { inputClass, labelClass } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import PasswordStrengthHint from "@/components/ui/password-strength-hint";
 
 function Toggle({ checked, onChange }) {
   return (
@@ -432,6 +433,7 @@ export default function SettingsPage() {
                       {showNew ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
                     </button>
                   </div>
+                  <PasswordStrengthHint password={passwords.newPassword} />
                 </div>
 
                 <div className="flex flex-col gap-1.5">

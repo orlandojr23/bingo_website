@@ -10,6 +10,7 @@ import { InfoRow } from "@/components/ui/info-row";
 import { Button } from "@/components/ui/button";
 import { inputClass, labelClass } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import PasswordStrengthHint from "@/components/ui/password-strength-hint";
 import { useFleet } from "@/lib/fleet";
 import { useLiveRoute, assignDriver, swapDrivers } from "@/lib/live-route";
 import {
@@ -486,6 +487,7 @@ export default function StaffPage() {
                             placeholder="e.g. default123"
                             className={cn(inputClass, "font-mono")}
                           />
+                          <PasswordStrengthHint password={password} />
                         </Field>
                       ) : (
                         <div className="flex shrink-0 flex-col gap-2">

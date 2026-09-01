@@ -108,6 +108,20 @@ const createTruckIcon = (heading = 90) => {
   });
 };
 
+// Cache icons by heading so react-leaflet keeps the same marker DOM between
+// GPS updates; a fresh divIcon each render replays the truckPopIn animation
+// and makes the truck look like it flickers in and out.
+const truckIconCache = new Map();
+const getTruckIcon = (heading = 90) => {
+  const key = ((Math.round(heading / 5) * 5) % 360 + 360) % 360;
+  let icon = truckIconCache.get(key);
+  if (!icon) {
+    icon = createTruckIcon(key);
+    truckIconCache.set(key, icon);
+  }
+  return icon;
+};
+
 function TruckMarker({ trk, fading }) {
   const markerRef = useRef(null);
 
@@ -123,7 +137,7 @@ function TruckMarker({ trk, fading }) {
     <Marker
       ref={markerRef}
       position={[trk.lat, trk.lng]}
-      icon={createTruckIcon(trk.heading ?? 90)}
+      icon={getTruckIcon(trk.heading ?? 90)}
     >
       <Popup>
         <div className="p-3 flex flex-col gap-1.5 min-w-[200px] text-zinc-900 font-sans">
