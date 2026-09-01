@@ -256,6 +256,16 @@ export default function ResidentLoginPage() {
           </Link>
         </p>
 
+        <p className="mt-3 text-center text-xs font-medium text-muted-foreground">
+          Are you a barangay driver?{" "}
+          <Link
+            href="/driver-login"
+            className="font-semibold text-emerald-600 transition-colors hover:text-emerald-700"
+          >
+            Driver Sign In
+          </Link>
+        </p>
+
         <p className="mt-4 text-center text-xs text-muted-foreground/80">
           Demo mode: any email with a 6+ character password works. Accounts
           created via Sign Up must use their own password.

@@ -3,7 +3,7 @@ export default function manifest() {
     name: "Bin'Go Smart Waste Collection",
     short_name: "Bin'Go",
     description: "Track garbage compactors live, report issues, and keep your community clean.",
-    start_url: "/",
+    start_url: "/login",
     scope: "/",
     display: "standalone",
     orientation: "portrait",
@@ -25,6 +25,13 @@ export default function manifest() {
       },
     ],
     shortcuts: [
+      {
+        name: "Driver Login",
+        short_name: "Driver",
+        description: "Sign in to the Driver Terminal",
+        url: "/driver-login",
+        icons: [{ src: "/icon.png", sizes: "192x192" }],
+      },
       {
         name: "Live Compactor Map",
         short_name: "Live Map",

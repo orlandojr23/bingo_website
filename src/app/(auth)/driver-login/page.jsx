@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getDriverSession, setDriverSession } from "@/lib/driver-session";
@@ -241,6 +242,16 @@ export default function DriverLoginPage() {
         <p className="mt-8 text-center text-xs text-muted-foreground/80">
           Driver accounts are created by the barangay admin. You can change
           your password anytime in the Driver Terminal settings.
+        </p>
+
+        <p className="mt-3 text-center text-xs font-medium text-muted-foreground">
+          Are you a resident?{" "}
+          <Link
+            href="/login"
+            className="font-semibold text-emerald-600 transition-colors hover:text-emerald-700"
+          >
+            Resident Sign In
+          </Link>
         </p>
       </div>
 
