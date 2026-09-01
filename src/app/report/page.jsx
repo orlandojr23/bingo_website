@@ -35,6 +35,8 @@ import { useLiveRoute, getSchedule, getSchedules } from "@/lib/live-route";
 import { useRoutePath } from "@/lib/use-route-path";
 import { useFleet } from "@/lib/fleet";
 import { getResidentSession, clearResidentSession } from "@/lib/resident-session";
+import { reverseGeocode } from "@/lib/geocode";
+import { useSwipeToggle } from "@/lib/use-swipe-toggle";
 import { cn, haptic } from "@/lib/utils";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -448,6 +450,23 @@ export default function ResidentMobilePWA() {
   const [notifyZone, setNotifyZone] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTicket, setSelectedTicket] = useState(null);
+  const [mapFocusTicket, setMapFocusTicket] = useState(null);
+  const [ticketAddress, setTicketAddress] = useState("");
+
+  useEffect(() => {
+    if (!selectedTicket) {
+      setTicketAddress("");
+      return;
+    }
+    let cancelled = false;
+    setTicketAddress("Locating address...");
+    reverseGeocode(selectedTicket.lat, selectedTicket.lng).then((addr) => {
+      if (!cancelled) setTicketAddress(addr || "Location pinned on map");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedTicket]);
   const [isMapSheetExpanded, setIsMapSheetExpanded] = useState(false);
   const [bannerIndex, setBannerIndex] = useState(0);
   const [mapReady, setMapReady] = useState(false);
@@ -635,7 +654,23 @@ export default function ResidentMobilePWA() {
     setSelectedTicket(null);
     setShowNotifications(false);
     setShowProfile(false);
+    setIsMapSheetExpanded(false);
   };
+
+  const sheetSwipe = useSwipeToggle(
+    () => {
+      if (!isMapSheetExpanded) {
+        setIsMapSheetExpanded(true);
+        haptic();
+      }
+    },
+    () => {
+      if (isMapSheetExpanded) {
+        setIsMapSheetExpanded(false);
+        haptic();
+      }
+    }
+  );
   const [mapCenter, setMapCenter] = useState([10.3025, 123.9095]);
   const [mapZoom, setMapZoom] = useState(16);
   const [unreadNotifications, setUnreadNotifications] = useState(2);
@@ -728,16 +763,21 @@ export default function ResidentMobilePWA() {
     if (!("geolocation" in navigator)) return;
     setIsLocating(true);
     navigator.geolocation.getCurrentPosition(
-      (position) => {
+      async (position) => {
         const { latitude, longitude } = position.coords;
         setGpsCoords({ lat: latitude, lng: longitude });
-        if (!locationName) {
-          setLocationName(`Near Sitio Vilgon, ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+        haptic();
+        if (typeof onSuccess === "function") onSuccess({ lat: latitude, lng: longitude });
+
+        const address = await reverseGeocode(latitude, longitude);
+        if (address) {
+          if (!locationName) setLocationName(address);
+          toast(`Location found: ${address}`);
+        } else {
+          if (!locationName) setLocationName("Near your current location");
+          toast("GPS location attached.");
         }
         setIsLocating(false);
-        haptic();
-        toast("GPS coordinates attached.");
-        onSuccess?.({ lat: latitude, lng: longitude });
       },
       (error) => {
         console.warn("GPS location error:", error);
@@ -816,23 +856,27 @@ export default function ResidentMobilePWA() {
         {/* Permanent Background Map Canvas */}
         <div className="absolute inset-0 h-full w-full z-0">
           <MapCanvas
-            tickets={selectedTicket ? [selectedTicket] : []}
+            tickets={mapFocusTicket ? [mapFocusTicket] : []}
             trucks={activeTrucks}
             routes={activeTs && !routeCompleted && routePath.positions.length ? [{ id: displaySchedule.id, ...routePath }] : []}
             mapMode="pins"
-            center={selectedTicket ? [selectedTicket.lat, selectedTicket.lng] : mapCenter}
+            center={mapFocusTicket ? [mapFocusTicket.lat, mapFocusTicket.lng] : selectedTicket ? [selectedTicket.lat, selectedTicket.lng] : mapCenter}
             zoom={mapZoom}
-            highlightedTicketId={selectedTicket?.id}
+            highlightedTicketId={mapFocusTicket?.id}
             onMapReady={handleMapReady}
             onSelectTicket={(t) => {
               closeAllSheets();
               setSelectedTicket(t);
+              setMapFocusTicket(t);
               setMapZoom(17);
               haptic();
             }}
             onMapDrag={() => {
               if (selectedTicket) {
                 setSelectedTicket(null);
+              }
+              if (mapFocusTicket) {
+                setMapFocusTicket(null);
               }
               if (isMapSheetExpanded) {
                 setIsMapSheetExpanded(false);
@@ -981,7 +1025,8 @@ export default function ResidentMobilePWA() {
                 setIsMapSheetExpanded(!isMapSheetExpanded);
                 haptic();
               }}
-              className="group flex flex-col items-center justify-center gap-1 cursor-pointer py-0.5"
+              {...sheetSwipe}
+              className="group flex touch-none flex-col items-center justify-center gap-1 cursor-pointer py-0.5"
             >
               <div className="h-1.5 w-10 rounded-full bg-muted-foreground/30 group-hover:bg-muted-foreground/60 transition-colors" />
             </div>
@@ -1015,7 +1060,10 @@ export default function ResidentMobilePWA() {
             </div>
 
             {/* Action Buttons Bar Inside Bottom Sheet (Admin Dashboard Style: rounded-xl) */}
-            <div className="flex items-center justify-between gap-2 pt-0.5 pb-1 border-b border-border/60">
+            <div
+              {...sheetSwipe}
+              className="flex touch-none items-center justify-between gap-2 pt-0.5 pb-1 border-b border-border/60"
+            >
               <button
                 type="button"
                 onClick={() => {
@@ -1310,8 +1358,8 @@ export default function ResidentMobilePWA() {
 
                   {submittedTicket ? (
                     <div className="rounded-2xl border border-border bg-card p-5 text-center space-y-3">
-                      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-                        <CheckCircle2 className="h-7 w-7" strokeWidth={1.75} />
+                      <div className="mx-auto flex h-12 w-12 items-center justify-center text-emerald-600">
+                        <CheckCircle2 className="h-9 w-9" strokeWidth={1.75} />
                       </div>
                       <div>
                         <h2 className="text-base font-bold tracking-tight text-foreground">
@@ -1539,6 +1587,7 @@ export default function ResidentMobilePWA() {
                             type="button"
                             onClick={() => {
                               closeAllSheets();
+                              setMapFocusTicket(null);
                               setSelectedTicket(t);
                               switchTab("map");
                               haptic();
@@ -1580,7 +1629,10 @@ export default function ResidentMobilePWA() {
       {/* Ticket Detail Bottom Sheet */}
       <BottomSheet
         open={!!selectedTicket}
-        onClose={() => setSelectedTicket(null)}
+        onClose={() => {
+          setSelectedTicket(null);
+          setMapFocusTicket(null);
+        }}
         title="Report Details"
       >
         {selectedTicket && (
@@ -1629,19 +1681,17 @@ export default function ResidentMobilePWA() {
                 value={<span className="font-mono">{selectedTicket.time}</span>}
               />
               <InfoRow
-                label="GPS"
-                value={
-                  <span className="font-mono text-xs">
-                    {selectedTicket.lat?.toFixed(4)}, {selectedTicket.lng?.toFixed(4)}
-                  </span>
-                }
+                label="Address"
+                value={<span className="text-xs">{ticketAddress || "—"}</span>}
               />
             </div>
 
             <button
               type="button"
               onClick={() => {
+                setMapFocusTicket(selectedTicket);
                 setSelectedTicket(null);
+                setMapZoom(17);
                 switchTab("map");
               }}
               className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 text-sm font-semibold text-white transition-all hover:bg-emerald-700 active:scale-[0.98] cursor-pointer"

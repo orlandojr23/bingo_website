@@ -31,6 +31,7 @@ import { useRoutePath } from "@/lib/use-route-path";
 import { useFleet } from "@/lib/fleet";
 import { getDriverSession, clearDriverSession } from "@/lib/driver-session";
 import { changeDriverPassword } from "@/lib/driver-accounts";
+import { useSwipeToggle } from "@/lib/use-swipe-toggle";
 import { MapSkeleton } from "@/components/ui/skeletons";
 import PasswordStrengthHint from "@/components/ui/password-strength-hint";
 import { useToast } from "@/components/pwa/Toast";
@@ -485,6 +486,21 @@ export default function DriverPage() {
     window.history.replaceState(null, "", `?tab=${id}`);
   };
 
+  const sheetSwipe = useSwipeToggle(
+    () => {
+      if (!isMapSheetExpanded) {
+        setIsMapSheetExpanded(true);
+        haptic();
+      }
+    },
+    () => {
+      if (isMapSheetExpanded) {
+        setIsMapSheetExpanded(false);
+        haptic();
+      }
+    }
+  );
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       setWakeLockSupported("wakeLock" in navigator);
@@ -858,14 +874,18 @@ export default function DriverPage() {
                   setIsMapSheetExpanded(!isMapSheetExpanded);
                   haptic();
                 }}
+                {...sheetSwipe}
                 aria-label="Toggle drawer expansion"
-                className="w-full flex flex-col items-center py-1 cursor-pointer group"
+                className="w-full flex touch-none flex-col items-center py-1 cursor-pointer group"
               >
                 <div className="h-1.5 w-10 rounded-full bg-muted-foreground/30 group-hover:bg-muted-foreground/60 transition-colors" />
               </button>
 
               {/* 3D Action Pill Tab Navigation */}
-              <div className="mt-2.5 flex w-full items-center justify-between gap-2">
+              <div
+                {...sheetSwipe}
+                className="mt-2.5 flex w-full touch-none items-center justify-between gap-2"
+              >
                 {/* 1. Route Tab */}
                 <button
                   type="button"
