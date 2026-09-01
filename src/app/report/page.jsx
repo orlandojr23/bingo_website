@@ -985,45 +985,56 @@ export default function ResidentMobilePWA() {
 
 
         {/* Floating Circular 3D Map Action Buttons (Option B: Symmetrical Left & Right Split) */}
-        {/* 1. Bottom-Left: Focus Active Truck (Dedicated 3D Focus Truck Icon) */}
-        <button
-          type="button"
-          onClick={() => {
-            closeAllSheets();
-            setIsMapSheetExpanded(false);
-            if (truckFocused) {
-              setTruckFocused(false);
-            } else {
-              setTruckFocused(true);
-              const activeTruck = activeTrucks && activeTrucks[0];
-              setMapCenter(
-                activeTruck ? [activeTruck.lat, activeTruck.lng] : [10.3025, 123.9095]
-              );
-              setMapZoom(17);
-              setFlySignal((s) => s + 1);
-            }
-            haptic();
-          }}
-          className={cn(
-            "pointer-events-auto absolute bottom-[164px] left-4 z-20 flex h-[54px] w-[54px] flex-col items-center justify-center gap-0.5 rounded-full border shadow-lg backdrop-blur-md transition-all hover:scale-105 active:scale-95 cursor-pointer",
-            truckFocused
-              ? "border-emerald-500 bg-emerald-50/95 ring-2 ring-emerald-500/25"
-              : "border-border bg-card/95"
-          )}
-          title="Focus Active Truck"
-          aria-label="Focus Active Truck"
-          aria-pressed={truckFocused}
-        >
-          <Waze3DFocusTruckIcon className="h-7 w-7 shrink-0" />
-          <span
-            className={cn(
-              "text-[8px] font-bold leading-none",
-              truckFocused ? "text-emerald-700" : "text-muted-foreground"
+        {/* 1. Bottom-Left: Focus Active Truck (slides in when the truck is out of view, out when centered) */}
+        <div className="pointer-events-none absolute bottom-[164px] left-4 z-20">
+          <AnimatePresence>
+            {activeTrucks?.[0] && !isPointInView(activeTrucks[0].lat, activeTrucks[0].lng) && (
+              <motion.button
+                key="focus-active-truck"
+                type="button"
+                initial={{ x: -72, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: -72, opacity: 0 }}
+                transition={{ duration: 0.3, ease: "easeInOut" }}
+                onClick={() => {
+                  closeAllSheets();
+                  setIsMapSheetExpanded(false);
+                  if (truckFocused) {
+                    setTruckFocused(false);
+                  } else {
+                    setTruckFocused(true);
+                    const activeTruck = activeTrucks && activeTrucks[0];
+                    setMapCenter(
+                      activeTruck ? [activeTruck.lat, activeTruck.lng] : [10.3025, 123.9095]
+                    );
+                    setMapZoom(17);
+                    setFlySignal((s) => s + 1);
+                  }
+                  haptic();
+                }}
+                className={cn(
+                  "pointer-events-auto flex h-[54px] w-[54px] flex-col items-center justify-center gap-0.5 rounded-full border shadow-lg backdrop-blur-md transition-all hover:scale-105 active:scale-95 cursor-pointer",
+                  truckFocused
+                    ? "border-emerald-500 bg-emerald-50/95 ring-2 ring-emerald-500/25"
+                    : "border-border bg-card/95"
+                )}
+                title="Focus Active Truck"
+                aria-label="Focus Active Truck"
+                aria-pressed={truckFocused}
+              >
+                <Waze3DFocusTruckIcon className="h-7 w-7 shrink-0" />
+                <span
+                  className={cn(
+                    "text-[8px] font-bold leading-none",
+                    truckFocused ? "text-emerald-700" : "text-muted-foreground"
+                  )}
+                >
+                  Truck
+                </span>
+              </motion.button>
             )}
-          >
-            Truck
-          </span>
-        </button>
+          </AnimatePresence>
+        </div>
 
         {/* 2. Bottom-Right: Center My Location (slides in when GPS is out of view, out when centered) */}
         <div className="pointer-events-none absolute bottom-[164px] right-4 z-20">
