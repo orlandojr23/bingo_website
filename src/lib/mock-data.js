@@ -1,3 +1,19 @@
+// Real-world anchor coordinates for the 10 sitios of Barangay Tejero, Cebu City.
+// Derived from OSM street anchors (Villagonzalo St, U. Alviola St, Zapatera St,
+// Tejero Barangay Hall) and local news coverage naming the sitios.
+export const TEJERO_SITOS = {
+  "Sitio Vilgon": { lat: 10.30125, lng: 123.9081, aliases: ["Vilgun", "Villagonzalo"] },
+  "Sitio ICM": { lat: 10.3039, lng: 123.90795 },
+  "Sitio Daclan": { lat: 10.30545, lng: 123.90885, aliases: ["IKP-Daclan"] },
+  "Sitio Sampaguita": { lat: 10.3049, lng: 123.90665 },
+  "Sitio Looban": { lat: 10.30465, lng: 123.90835 },
+  "Sitio Bacaros": { lat: 10.30565, lng: 123.90555, aliases: ["Macarosa", "Back Blessed"] },
+  "Sitio Mac Arthur": { lat: 10.3019, lng: 123.90755 },
+  "Sitio Silangan": { lat: 10.30285, lng: 123.90975 },
+  "Sitio Riverside": { lat: 10.303, lng: 123.90295 },
+  "Sitio Zapanta": { lat: 10.30375, lng: 123.90195 },
+};
+
 export const mockTickets = [
   {
     id: "TKT-001",
@@ -9,8 +25,8 @@ export const mockTickets = [
     status: "Pending",
     date: "2023-10-24",
     time: "08:42 AM",
-    lat: 10.3025,
-    lng: 123.9080,
+    lat: 10.30128,
+    lng: 123.90815,
     category: "Overflowing Bin",
     description: "Overflowing commercial garbage bin near the Sitio Vilgon community center, causing sidewalk spillover.",
   },
@@ -24,8 +40,8 @@ export const mockTickets = [
     status: "Resolved",
     date: "2023-10-23",
     time: "02:15 PM",
-    lat: 10.3032,
-    lng: 123.9095,
+    lat: 10.30388,
+    lng: 123.90788,
     category: "Litter",
     description: "Small food packaging litter scattered around the Sitio ICM multi-purpose park benches.",
   },
@@ -39,8 +55,8 @@ export const mockTickets = [
     status: "In Progress",
     date: "2023-10-24",
     time: "11:20 AM",
-    lat: 10.2995,
-    lng: 123.9065,
+    lat: 10.3054,
+    lng: 123.90878,
     category: "Illegal Dumping",
     description: "Large illegal dumping site in Sitio Daclan blocking pedestrian sidewalk and drainage gutter.",
   },
@@ -54,8 +70,8 @@ export const mockTickets = [
     status: "Pending",
     date: "2023-10-25",
     time: "09:30 AM",
-    lat: 10.3008,
-    lng: 123.9078,
+    lat: 10.30487,
+    lng: 123.90672,
     category: "Uncollected Waste",
     description: "Uncollected household trash bags sitting in Sitio Sampaguita for 3 days attracting stray animals.",
   },
@@ -69,8 +85,8 @@ export const mockTickets = [
     status: "Resolved",
     date: "2023-10-22",
     time: "04:10 PM",
-    lat: 10.3015,
-    lng: 123.9090,
+    lat: 10.30462,
+    lng: 123.90842,
     category: "Coastal Waste",
     description: "Plastic bottles and single-use plastics along the coastal walkway near Sitio Looban.",
   },
@@ -84,8 +100,8 @@ export const mockTickets = [
     status: "In Progress",
     date: "2023-10-25",
     time: "01:45 PM",
-    lat: 10.3020,
-    lng: 123.9102,
+    lat: 10.3057,
+    lng: 123.90548,
     category: "Drainage Clog",
     description: "Clogged drainage channel due to heavy solid waste accumulation in Sitio Bacaros.",
   },
@@ -99,8 +115,8 @@ export const mockTickets = [
     status: "Pending",
     date: "2023-10-26",
     time: "07:15 AM",
-    lat: 10.3045,
-    lng: 123.9085,
+    lat: 10.3029,
+    lng: 123.90968,
     category: "Green Waste",
     description: "Fallen tree branches and pruning waste after maintenance in Sitio Silangan.",
   },
@@ -114,8 +130,8 @@ export const mockTickets = [
     status: "Pending",
     date: "2023-10-26",
     time: "10:05 AM",
-    lat: 10.3010,
-    lng: 123.9060,
+    lat: 10.30195,
+    lng: 123.90762,
     category: "Hazardous Waste",
     description: "Improperly disposed commercial chemical containers near Sitio Mac Arthur service lane.",
   },
@@ -129,8 +145,8 @@ export const mockTickets = [
     status: "Resolved",
     date: "2023-10-21",
     time: "05:50 PM",
-    lat: 10.3028,
-    lng: 123.9082,
+    lat: 10.30118,
+    lng: 123.90802,
     category: "Organic Waste",
     description: "Rotten organic produce waste accumulating outside Sitio Vilgon market perimeter.",
   },
@@ -144,8 +160,8 @@ export const mockTickets = [
     status: "In Progress",
     date: "2023-10-25",
     time: "03:25 PM",
-    lat: 10.3035,
-    lng: 123.9092,
+    lat: 10.30396,
+    lng: 123.90802,
     category: "Debris",
     description: "Construction debris and gravel spillage along Sitio ICM emergency shoulder.",
   },
@@ -159,8 +175,8 @@ export const mockTickets = [
     status: "Pending",
     date: "2023-10-26",
     time: "06:40 AM",
-    lat: 10.2992,
-    lng: 123.9068,
+    lat: 10.30552,
+    lng: 123.90895,
     category: "Illegal Dumping",
     description: "Massive mixed waste pile blocking vendor delivery pathway in Sitio Daclan.",
   },
@@ -174,8 +190,8 @@ export const mockTickets = [
     status: "Resolved",
     date: "2023-10-20",
     time: "01:10 PM",
-    lat: 10.3005,
-    lng: 123.9075,
+    lat: 10.30478,
+    lng: 123.90655,
     category: "Litter",
     description: "Spilled liquid and cardboard cartons near Sitio Sampaguita transit zone.",
   },
@@ -256,36 +272,36 @@ export const mockAnalyticsData = {
 export const mockPilotData = {
   barangay: "Tejero",
   city: "Cebu City",
-  center: [10.3016, 123.9086], // Approx Tejero center
+  center: [10.3035, 123.906], // Tejero centroid (PhilAtlas barangay anchor 10.3012, 123.9090)
   zones: [
     {
       id: "zone-a",
-      name: "Sitio Vilgon & Sitio Silangan",
+      name: "Sitio Vilgon & Sitio Mac Arthur",
       coordinates: [
-        [10.302, 123.908],
-        [10.305, 123.908],
-        [10.305, 123.911],
-        [10.302, 123.911]
+        [10.3008, 123.9068],
+        [10.3024, 123.9068],
+        [10.3024, 123.9103],
+        [10.3008, 123.9103]
       ]
     },
     {
       id: "zone-b",
-      name: "Sitio Daclan & Sitio Mac Arthur",
+      name: "Sitio Silangan & Sitio Daclan",
       coordinates: [
-        [10.299, 123.906],
-        [10.302, 123.906],
-        [10.302, 123.909],
-        [10.299, 123.909]
+        [10.3024, 123.9084],
+        [10.3062, 123.9084],
+        [10.3062, 123.9103],
+        [10.3024, 123.9103]
       ]
     },
     {
       id: "zone-c",
-      name: "Sitio ICM & Tejero Market",
+      name: "Sitio ICM & Sitio Looban",
       coordinates: [
-        [10.300, 123.909],
-        [10.303, 123.909],
-        [10.303, 123.912],
-        [10.300, 123.912]
+        [10.3024, 123.9008],
+        [10.3062, 123.9008],
+        [10.3062, 123.9084],
+        [10.3024, 123.9084]
       ]
     }
   ],
@@ -325,10 +341,10 @@ export const mockPilotData = {
       activeTruckId: "TRK-01",
       status: "Scheduled", // Could be Scheduled, In Progress, Completed
       routePoints: [
-        { name: "Sitio Silangan", time: "8:00 AM", lat: 10.3024, lng: 123.9084 },
-        { name: "Sitio Vilgon", time: "8:45 AM", lat: 10.3029, lng: 123.9095 },
-        { name: "Tejero Chapel", time: "9:30 AM", lat: 10.3039, lng: 123.9102 },
-        { name: "MRF Facility", time: "10:30 AM", lat: 10.3048, lng: 123.9108 },
+        { name: "Sitio Mac Arthur", time: "8:00 AM", lat: 10.3019, lng: 123.90755 },
+        { name: "Sitio Vilgon", time: "8:45 AM", lat: 10.30125, lng: 123.9081 },
+        { name: "Tejero Chapel", time: "9:30 AM", lat: 10.3016, lng: 123.9086 },
+        { name: "MRF Facility", time: "10:30 AM", lat: 10.3068, lng: 123.906 },
       ],
     },
     {
@@ -340,10 +356,10 @@ export const mockPilotData = {
       activeTruckId: "TRK-02",
       status: "Scheduled",
       routePoints: [
-        { name: "Sitio Mac Arthur", time: "1:00 PM", lat: 10.2995, lng: 123.9065 },
-        { name: "Sitio Daclan", time: "1:45 PM", lat: 10.3002, lng: 123.9072 },
-        { name: "Sitio Sampaguita", time: "2:30 PM", lat: 10.3011, lng: 123.9081 },
-        { name: "MRF Facility", time: "3:45 PM", lat: 10.3048, lng: 123.9108 },
+        { name: "Sitio Silangan", time: "1:00 PM", lat: 10.30285, lng: 123.90975 },
+        { name: "Sitio Daclan", time: "1:45 PM", lat: 10.30545, lng: 123.90885 },
+        { name: "Sitio Sampaguita", time: "2:30 PM", lat: 10.3049, lng: 123.90665 },
+        { name: "MRF Facility", time: "3:45 PM", lat: 10.3068, lng: 123.906 },
       ],
     },
     {
@@ -355,17 +371,17 @@ export const mockPilotData = {
       activeTruckId: "TRK-01",
       status: "Scheduled",
       routePoints: [
-        { name: "Tejero Market", time: "9:00 AM", lat: 10.3005, lng: 123.9095 },
-        { name: "M.J. Cuenco Ave", time: "9:40 AM", lat: 10.3013, lng: 123.9102 },
-        { name: "Sitio ICM", time: "10:20 AM", lat: 10.3022, lng: 123.9111 },
-        { name: "MRF Facility", time: "11:30 AM", lat: 10.3048, lng: 123.9108 },
+        { name: "Sitio Zapanta", time: "9:00 AM", lat: 10.30375, lng: 123.90195 },
+        { name: "Sitio Riverside", time: "9:40 AM", lat: 10.303, lng: 123.90295 },
+        { name: "Sitio ICM", time: "10:20 AM", lat: 10.3039, lng: 123.90795 },
+        { name: "MRF Facility", time: "11:30 AM", lat: 10.3068, lng: 123.906 },
       ],
     }
   ],
   activeTracking: {
     "TRK-01": {
-      lat: 10.3025,
-      lng: 123.9095,
+      lat: 10.3017,
+      lng: 123.9079,
       heading: 90,
       lastUpdated: "Just now",
       eta: "5 mins",

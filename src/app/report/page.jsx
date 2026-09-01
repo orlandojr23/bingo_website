@@ -21,7 +21,6 @@ import {
   ChevronRight,
   User,
   LogOut,
-  Check,
   ShieldCheck,
   Navigation,
   Compass,
@@ -216,35 +215,6 @@ function Waze3DTruckIcon({ className = "h-5 w-5" }) {
         <circle cx="8" cy="23" r="1.2" fill="#a1a1aa" />
         <circle cx="23" cy="23" r="3" fill="#18181b" />
         <circle cx="23" cy="23" r="1.2" fill="#a1a1aa" />
-      </g>
-    </svg>
-  );
-}
-
-function Waze3DPinIcon({ className = "h-4 w-4" }) {
-  return (
-    <svg
-      viewBox="0 0 32 32"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-    >
-      <defs>
-        <linearGradient id="pinGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#f43f5e" />
-          <stop offset="50%" stopColor="#e11d48" />
-          <stop offset="100%" stopColor="#9f1239" />
-        </linearGradient>
-        <filter id="pinShadow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="1" stdDeviation="0.8" floodColor="#000000" floodOpacity="0.3" />
-        </filter>
-      </defs>
-      <g filter="url(#pinShadow)">
-        <path
-          d="M 16 3 C 10.5 3 6 7.5 6 13 C 6 20 16 29 16 29 C 16 29 26 20 26 13 C 26 7.5 21.5 3 16 3 Z"
-          fill="url(#pinGrad)"
-        />
-        <circle cx="16" cy="12" r="3.5" fill="#ffffff" />
       </g>
     </svg>
   );
@@ -506,7 +476,6 @@ export default function ResidentMobilePWA() {
   const displaySchedule = activeSchedule || getSchedules()[0] || { id: null, routePoints: [] };
   const routePoints = displaySchedule.routePoints ?? [];
   const stopIndex = activeTs ? activeTs.stopIndex : 0;
-  const onsiteNow = activeTs?.onsite ?? false;
   const routeCompleted = activeTs?.phase === "completed";
 
   const routePath = useRoutePath({
@@ -518,32 +487,6 @@ export default function ResidentMobilePWA() {
         : null,
     points: routeCompleted ? [] : routePoints.slice(stopIndex),
   });
-
-  const stepperStops = useMemo(
-    () =>
-      routePoints.map((p, i) => {
-        let status;
-        if (routeCompleted) {
-          status = i === routePoints.length - 1 ? "destination" : "completed";
-        } else if (i < stopIndex) {
-          status = "completed";
-        } else if (i === stopIndex) {
-          status = "current";
-        } else if (i === routePoints.length - 1) {
-          status = "destination";
-        } else {
-          status = "upcoming";
-        }
-        return { id: i + 1, name: p.name, time: p.time, status };
-      }),
-    [routePoints, stopIndex, routeCompleted]
-  );
-
-  const progressFraction = routeCompleted
-    ? 1
-    : routePoints.length > 1
-      ? stopIndex / (routePoints.length - 1)
-      : 0;
 
   // Live truck banner entry derived from the shared route store
   const liveBanner = useMemo(() => {
@@ -685,7 +628,7 @@ export default function ResidentMobilePWA() {
     {
       id: 2,
       title: "Malata Pickup Active",
-      message: "Collection is currently ongoing in Sitio Vilgon & Sitio Silangan, Brgy. Tejero.",
+      message: "Collection is currently ongoing in Sitio Mac Arthur & Sitio Vilgon, Brgy. Tejero.",
       time: "30m ago",
       unread: true,
     },
@@ -974,7 +917,7 @@ export default function ResidentMobilePWA() {
               setShowProfile(true);
               haptic();
             }}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-xs font-black text-white shadow-xs hover:bg-emerald-700 active:scale-95 transition-all cursor-pointer border border-emerald-500/30"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-sm font-semibold leading-none text-white shadow-xs hover:bg-emerald-700 active:scale-95 transition-all cursor-pointer border border-emerald-500/30"
             title="Profile & Settings"
             aria-label="Profile & Settings"
           >
@@ -1237,82 +1180,6 @@ export default function ResidentMobilePWA() {
                         </span>
                       </div>
                     </div>
-
-                    {/* Minimalist Point-to-Point Live Route Progress Stepper */}
-                    <div className="pt-2.5 border-t border-border/60 space-y-2">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-semibold text-muted-foreground">
-                          Route Progress
-                        </span>
-                        <span className="font-semibold text-emerald-700 text-xs">
-                          {routeCompleted
-                            ? "Route Completed"
-                            : `Stop ${Math.min(stopIndex + 1, routePoints.length)} of ${routePoints.length} \u2022 ${onsiteNow ? "On Site" : "En Route"}`}
-                        </span>
-                      </div>
-
-                      {/* Clean Stepper Bar */}
-                      <div className="relative px-0 pt-1 pb-0.5">
-                        {/* Track Lines: Spans from center of first node, trailing to the rear bumper of the active truck */}
-                        <div className="absolute top-4 left-[32px] right-[32px] h-0.5 rounded-full bg-border z-0" />
-                        <div
-                          className="absolute top-4 left-[32px] h-0.5 rounded-full bg-emerald-600 z-0"
-                          style={{
-                            width: routeCompleted
-                              ? "calc(100% - 64px)"
-                              : `calc(${Math.round(progressFraction * 100)}% - 14px)`,
-                          }}
-                        />
-
-                        {/* Waypoint Nodes */}
-                        <div className="relative z-10 flex items-center justify-between">
-                          {stepperStops.map((stop, idx) => (
-                            <div key={stop.id} className="flex flex-col items-center w-16 text-center shrink-0">
-                              {/* Node Badge */}
-                              {stop.status === "completed" && (
-                                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-600 text-white shadow-2xs">
-                                  <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
-                                </div>
-                              )}
-                              {stop.status === "current" && (
-                                <div className="flex h-7 w-7 items-center justify-center -translate-y-1.5">
-                                  <Waze3DTruckIcon className="h-8 w-8 shrink-0 filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.25)]" />
-                                </div>
-                              )}
-                              {stop.status === "upcoming" && (
-                                <div className="flex h-6 w-6 items-center justify-center rounded-full border border-border bg-card text-muted-foreground">
-                                  <span className="text-[9px] font-semibold">{idx + 1}</span>
-                                </div>
-                              )}
-                              {stop.status === "destination" && (
-                                <div className="flex h-7 w-7 items-center justify-center rounded-full border border-rose-200 bg-card shadow-2xs">
-                                  <Waze3DPinIcon className="h-4 w-4 shrink-0" />
-                                </div>
-                              )}
-
-                              {/* Stop Title & Time */}
-                              <div className="mt-1 text-center min-w-0">
-                                <span
-                                  className={cn(
-                                    "block text-[11px] leading-tight truncate max-w-[68px]",
-                                    stop.status === "current"
-                                      ? "font-bold text-foreground"
-                                      : stop.status === "completed"
-                                      ? "font-medium text-foreground/80"
-                                      : "font-normal text-muted-foreground"
-                                  )}
-                                >
-                                  {stop.name}
-                                </span>
-                                <span className="block text-[9px] font-mono text-muted-foreground/70">
-                                  {stop.time}
-                                </span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
                   </div>
 
                   {/* Zone Filter Chips (Admin Dashboard Style: rounded-xl) */}
@@ -1445,7 +1312,7 @@ export default function ResidentMobilePWA() {
                           setPhotoPreview(null);
                           setLocationName("");
                         }}
-                        className="flex h-9 w-full items-center justify-center rounded-xl border border-border bg-card text-xs font-semibold text-foreground transition-colors hover:bg-muted"
+                        className="flex h-11 w-full items-center justify-center rounded-xl border border-border bg-card px-6 text-sm font-bold text-foreground transition-all hover:bg-muted active:scale-[0.98] cursor-pointer"
                       >
                         Submit Another Report
                       </button>
@@ -1504,7 +1371,7 @@ export default function ResidentMobilePWA() {
                                 Take a photo of the waste or bin on the spot
                               </span>
                             </div>
-                            <span className="mt-2 inline-flex items-center justify-center rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-bold text-white shadow-xs">
+                            <span className="mt-2 inline-flex items-center justify-center rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-emerald-600/20">
                               Open Camera
                             </span>
                           </button>
@@ -1595,7 +1462,7 @@ export default function ResidentMobilePWA() {
                             type="button"
                             onClick={handleSubmitReport}
                             disabled={isSubmitting}
-                            className="flex h-11 w-full items-center justify-center rounded-xl bg-emerald-600 text-xs font-bold text-white hover:bg-emerald-700 active:scale-[0.98] transition-all cursor-pointer shadow-xs disabled:opacity-60"
+                            className="flex h-11 w-full items-center justify-center rounded-xl bg-emerald-600 px-6 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-60"
                           >
                             {isSubmitting ? (
                               <RefreshCw className="h-4 w-4 animate-spin" strokeWidth={2} />
@@ -1762,7 +1629,7 @@ export default function ResidentMobilePWA() {
                 setMapZoom(17);
                 switchTab("map");
               }}
-              className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 text-sm font-semibold text-white transition-all hover:bg-emerald-700 active:scale-[0.98] cursor-pointer"
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition-all hover:bg-emerald-700 active:scale-[0.98] cursor-pointer"
             >
               View on Map
             </button>
@@ -1825,7 +1692,7 @@ export default function ResidentMobilePWA() {
         <div className="h-[423px] overflow-y-auto space-y-4 pr-0.5 pt-2 scrollbar-hide">
           {/* User Profile Summary Header */}
           <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4">
-            <div className="flex h-13 w-13 items-center justify-center rounded-full bg-emerald-600 font-black text-white text-xl shadow-sm shrink-0">
+            <div className="flex h-13 w-13 items-center justify-center rounded-full bg-emerald-600 text-2xl font-semibold leading-none text-white shadow-sm shrink-0">
               {residentSession?.name?.charAt(0)?.toUpperCase() || "R"}
             </div>
             <div className="min-w-0 flex-1">
@@ -1884,7 +1751,7 @@ export default function ResidentMobilePWA() {
                 setShowProfile(false);
                 toast("Profile preferences saved.");
               }}
-              className="flex h-11 w-full items-center justify-center rounded-xl bg-emerald-600 text-xs font-bold text-white transition-all hover:bg-emerald-700 active:scale-[0.98] cursor-pointer shadow-xs"
+              className="flex h-11 w-full items-center justify-center rounded-xl bg-emerald-600 px-6 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition-all hover:bg-emerald-700 active:scale-[0.98] cursor-pointer"
             >
               Save Preferences
             </button>
@@ -1895,9 +1762,9 @@ export default function ResidentMobilePWA() {
                 setShowSignOutModal(true);
                 haptic();
               }}
-              className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-border bg-card text-xs font-medium text-zinc-700 transition-colors hover:border-rose-300 hover:text-rose-600 active:scale-[0.98]"
+              className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-border bg-card px-6 text-sm font-bold text-zinc-700 transition-all hover:border-rose-300 hover:text-rose-600 active:scale-[0.98]"
             >
-              <LogOut className="h-3.5 w-3.5 text-muted-foreground" strokeWidth={1.75} />
+              <LogOut className="h-4 w-4 text-muted-foreground" strokeWidth={1.75} />
               <span>Sign Out</span>
             </button>
           </div>
@@ -1929,6 +1796,7 @@ export default function ResidentMobilePWA() {
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowSignOutModal(false)}
+                className="rounded-xl font-bold"
               >
                 Cancel
               </Button>
@@ -1938,7 +1806,7 @@ export default function ResidentMobilePWA() {
                   clearResidentSession();
                   setShowSignOutModal(false);
                 }}
-                className="inline-flex select-none items-center justify-center gap-1.5 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-medium text-rose-600 shadow-xs transition-all duration-150 hover:border-rose-600 hover:bg-rose-600 hover:text-white active:scale-[0.98] cursor-pointer"
+                className="inline-flex select-none items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-bold text-rose-600 shadow-xs transition-all duration-150 hover:border-rose-600 hover:bg-rose-600 hover:text-white active:scale-[0.98] cursor-pointer"
               >
                 Sign Out
               </Link>

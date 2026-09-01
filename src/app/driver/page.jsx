@@ -422,7 +422,7 @@ export default function DriverPage() {
           weekday: "long",
           month: "long",
           day: "numeric",
-        })} • Unit ${currentTruck.id} • ${zoneName ?? "Standby"}`,
+        })} • ${zoneName ?? "Standby"}`,
       },
     ];
     const isPaused =
@@ -474,7 +474,7 @@ export default function DriverPage() {
       });
     }
     return msgs;
-  }, [greetingTitle, currentTruck.id, assignedZone, assignedSchedule, truckState, isOnDuty, currentPoint, routePoints.length]);
+  }, [greetingTitle, assignedZone, assignedSchedule, truckState, isOnDuty, currentPoint, routePoints.length]);
 
   const [bannerIndex, setBannerIndex] = useState(0);
   const [mapReady, setMapReady] = useState(false);
@@ -814,7 +814,7 @@ export default function DriverPage() {
               setShowProfile(true);
               haptic();
             }}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-xs font-black text-white shadow-xs hover:bg-emerald-700 active:scale-95 transition-all cursor-pointer border border-emerald-500/30"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-sm font-semibold leading-none text-white shadow-xs hover:bg-emerald-700 active:scale-95 transition-all cursor-pointer border border-emerald-500/30"
             title="Driver Terminal & Settings"
             aria-label="Driver Terminal & Settings"
           >
@@ -1113,7 +1113,7 @@ export default function DriverPage() {
         <div className="h-[362px] overflow-y-auto space-y-4 pr-0.5 pt-2 scrollbar-hide">
           {/* Driver Profile Summary Card */}
           <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4">
-            <div className="flex h-13 w-13 items-center justify-center rounded-full bg-emerald-600 font-black text-white text-xl shadow-sm shrink-0">
+            <div className="flex h-13 w-13 items-center justify-center rounded-full bg-emerald-600 text-2xl font-semibold leading-none text-white shadow-sm shrink-0">
               {driverSession?.name?.charAt(0)?.toUpperCase() || "D"}
             </div>
             <div className="min-w-0 flex-1">
@@ -1209,7 +1209,7 @@ export default function DriverPage() {
               size="md"
               disabled={pwSaving}
               onClick={handleChangePassword}
-              className="w-full"
+              className="h-11 w-full rounded-xl text-sm font-bold shadow-lg shadow-emerald-600/20"
             >
               {pwSaving ? (
                 <>
@@ -1231,9 +1231,9 @@ export default function DriverPage() {
                 setShowSignOutModal(true);
                 haptic();
               }}
-              className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-border bg-card text-xs font-medium text-zinc-700 transition-colors hover:border-rose-300 hover:text-rose-600 active:scale-[0.98]"
+              className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-border bg-card px-6 text-sm font-bold text-zinc-700 transition-all hover:border-rose-300 hover:text-rose-600 active:scale-[0.98]"
             >
-              <LogOut className="h-3.5 w-3.5 text-muted-foreground" strokeWidth={1.75} />
+              <LogOut className="h-4 w-4 text-muted-foreground" strokeWidth={1.75} />
               <span>Sign Out</span>
             </button>
           </div>
@@ -1265,6 +1265,7 @@ export default function DriverPage() {
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowSignOutModal(false)}
+                className="rounded-xl font-bold"
               >
                 Cancel
               </Button>
@@ -1274,7 +1275,7 @@ export default function DriverPage() {
                   clearDriverSession();
                   setShowSignOutModal(false);
                 }}
-                className="inline-flex select-none items-center justify-center gap-1.5 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-medium text-rose-600 shadow-xs transition-all duration-150 hover:border-rose-600 hover:bg-rose-600 hover:text-white active:scale-[0.98] cursor-pointer"
+                className="inline-flex select-none items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-bold text-rose-600 shadow-xs transition-all duration-150 hover:border-rose-600 hover:bg-rose-600 hover:text-white active:scale-[0.98] cursor-pointer"
               >
                 Sign Out
               </Link>

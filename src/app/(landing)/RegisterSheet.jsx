@@ -353,6 +353,8 @@ export default function RegisterSheet({ isOpen, onClose }) {
                               <option value="Sitio Bacaros">Sitio Bacaros</option>
                               <option value="Sitio Silangan">Sitio Silangan</option>
                               <option value="Sitio Mac Arthur">Sitio Mac Arthur</option>
+                              <option value="Sitio Riverside">Sitio Riverside</option>
+                              <option value="Sitio Zapanta">Sitio Zapanta</option>
                             </select>
                           </div>
                         ) : (
