@@ -320,13 +320,25 @@ function Waze3DTicketIcon({ className = "h-4 w-4" }) {
   );
 }
 
-function Waze3DWavingHandIcon({ className = "h-8 w-8" }) {
-  return (
-    <span className="text-[26px] select-none leading-none inline-block filter drop-shadow-[0_2px_4px_rgba(217,119,6,0.35)] shrink-0">
-      👋
-    </span>
-  );
+// A report is only actionable if the resident names a specific area/landmark.
+// GPS gives coordinates but not a usable "where", so the typed location must
+// pass this check before submit.
+const VAGUE_LOCATION_RE =
+  /^(here|there|home|house|my (house|home|location|current location)|current location|gps|my gps|near me|near my|unknown|n\/?a|none|test|asdf+|location|location pinned on map|near (your|my) current location|near collection point)$/i;
+const COORDS_RE = /^-?\d+(\.\d+)?\s*,\s*-?\d+(\.\d+)?$/;
+
+function isSpecificLocation(raw) {
+  const v = (raw || "").trim().replace(/\s+/g, " ");
+  if (v.length < 8) return false;
+  if (!/[a-zA-Z]/.test(v)) return false;
+  if (COORDS_RE.test(v)) return false;
+  if (VAGUE_LOCATION_RE.test(v)) return false;
+  const words = v.split(" ").filter(Boolean);
+  if (words.length < 2 && v.length < 12) return false;
+  return true;
 }
+
+const LOCATION_FORMAT_HINT = "Be specific: e.g. “Behind Tejero Chapel, Purok 3”";
 
 function Waze3DTargetIcon({ className = "h-9 w-9" }) {
   return (
@@ -587,7 +599,6 @@ export default function ResidentMobilePWA() {
     () => [
       {
         id: "greeting",
-        Icon: Waze3DWavingHandIcon,
         title: greetingTitle,
         subtitle: new Date().toLocaleDateString("en-US", {
           weekday: "long",
@@ -683,6 +694,7 @@ export default function ResidentMobilePWA() {
   const [reporterName, setReporterName] = useState("");
   const [reporterPhone, setReporterPhone] = useState("");
   const [gpsCoords, setGpsCoords] = useState(null);
+  const [gpsAddress, setGpsAddress] = useState("");
   const [isLocating, setIsLocating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedTicket, setSubmittedTicket] = useState(null);
@@ -759,13 +771,12 @@ export default function ResidentMobilePWA() {
         if (typeof onSuccess === "function") onSuccess({ lat: latitude, lng: longitude });
 
         const address = await reverseGeocode(latitude, longitude);
-        if (address) {
-          if (!locationName) setLocationName(address);
-          toast(`Location found: ${address}`);
-        } else {
-          if (!locationName) setLocationName("Near your current location");
-          toast("GPS location attached.");
-        }
+        setGpsAddress(address || "");
+        toast(
+          address
+            ? `GPS pinned near ${address}. Add a specific landmark so crews can find it.`
+            : "GPS pinned. Add a specific area or landmark so crews can find it."
+        );
         setIsLocating(false);
       },
       (error) => {
@@ -781,8 +792,13 @@ export default function ResidentMobilePWA() {
 
   const handleSubmitReport = (e) => {
     e.preventDefault();
-    if (!locationName && !gpsCoords) {
-      toast("Add a street location or tap 'Use My GPS'.", { variant: "error" });
+    if (!isSpecificLocation(locationName)) {
+      toast(
+        gpsCoords
+          ? `GPS is pinned, but add a specific area or landmark. ${LOCATION_FORMAT_HINT}`
+          : `Add a specific area or landmark. ${LOCATION_FORMAT_HINT}`,
+        { variant: "error" }
+      );
       return;
     }
 
@@ -792,7 +808,7 @@ export default function ResidentMobilePWA() {
       const newId = nextTicketId();
       const created = {
         id: newId,
-        location: locationName || "Near Collection Point",
+        location: locationName.trim(),
         barangay: barangay,
         city: "Cebu City",
         reporter: reporterName || "Resident",
@@ -903,9 +919,9 @@ export default function ResidentMobilePWA() {
         </AnimatePresence>
 
         {/* Waze-Style Flush Top Navigation Banner (Light Glass Theme - Dynamic Slide-from-Top Readout) */}
-        <div className="pointer-events-auto absolute top-0 inset-x-0 z-20 w-full border-b border-border bg-card/98 px-5 py-3 text-foreground backdrop-blur-md flex items-center justify-between gap-3.5 select-none overflow-hidden h-16 shadow-sm">
+        <div className="pointer-events-auto absolute top-0 inset-x-0 z-20 w-full border-b border-border bg-card/98 px-5 py-4 text-foreground backdrop-blur-md flex items-center justify-between gap-3.5 select-none overflow-hidden h-20 shadow-sm">
           {/* Left: Dynamic 3D Vector SVG Icon & Dynamic Slide-from-Top Readout */}
-          <div className="min-w-0 flex-1 overflow-hidden relative h-11 flex items-center">
+          <div className="min-w-0 flex-1 overflow-hidden relative h-14 flex items-center">
             {!mapReady ? (
               <div className="flex items-center gap-3.5 w-full">
                 <div className="h-10 w-10 shrink-0 rounded-xl bg-foreground/10 animate-pulse" />
@@ -931,11 +947,11 @@ export default function ResidentMobilePWA() {
                 )}
 
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-base font-semibold tracking-tight text-foreground truncate leading-tight">
+                  <h3 className="text-lg font-semibold tracking-tight text-foreground truncate leading-tight">
                     {currentBanner.title}
                   </h3>
                   {currentBanner.subtitle && (
-                    <p className="text-xs font-semibold text-emerald-800 truncate leading-tight mt-0.5">
+                    <p className="text-sm font-semibold text-emerald-800 truncate leading-tight mt-1">
                       {currentBanner.subtitle}
                     </p>
                   )}
@@ -1004,14 +1020,6 @@ export default function ResidentMobilePWA() {
                 aria-pressed={truckFocused}
               >
                 <Waze3DFocusTruckIcon className="h-7 w-7 shrink-0" />
-                <span
-                  className={cn(
-                    "text-[8px] font-bold leading-none",
-                    truckFocused ? "text-emerald-700" : "text-muted-foreground"
-                  )}
-                >
-                  Truck
-                </span>
               </motion.button>
             )}
           </AnimatePresence>
@@ -1049,9 +1057,6 @@ export default function ResidentMobilePWA() {
                 aria-label="Center My Location"
               >
                 <Waze3DTargetIcon className="h-7 w-7 shrink-0" />
-                <span className="text-[8px] font-bold leading-none text-muted-foreground">
-                  GPS
-                </span>
               </motion.button>
             )}
           </AnimatePresence>
@@ -1191,8 +1196,8 @@ export default function ResidentMobilePWA() {
                           className="space-y-4 pt-1"
                         >
 
-                  <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
-                    <div className="flex items-start justify-between gap-3">
+                  <div className="relative overflow-hidden rounded-2xl border border-border bg-[url('/hero-bg.svg')] bg-no-repeat [background-size:100%_100%] p-4 space-y-3 shadow-sm">
+                    <div className="relative flex items-start justify-between gap-3">
                       <div>
                         <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                           Sitio Vilgon &bull; Today's Pickup
@@ -1487,12 +1492,19 @@ export default function ResidentMobilePWA() {
 
                             <input
                               type="text"
-                              placeholder="e.g. Sitio Vilgon, near Chapel"
+                              placeholder="e.g. Behind Tejero Chapel, Purok 3"
                               value={locationName}
                               onChange={(e) => setLocationName(e.target.value)}
                               className="w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-xs font-semibold text-foreground focus:border-zinc-400 focus:outline-none transition-colors"
                               required
                             />
+                            <p className="mt-1 text-[10px] font-semibold text-muted-foreground">
+                              {gpsCoords
+                                ? gpsAddress
+                                  ? `GPS ≈ ${gpsAddress} — still add a landmark.`
+                                  : "GPS attached — still add a specific landmark."
+                                : LOCATION_FORMAT_HINT}
+                            </p>
                           </div>
 
                           {/* Minimalist Confirm Button */}

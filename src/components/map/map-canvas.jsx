@@ -759,16 +759,6 @@ export default function MapCanvas({ tickets = [], trucks = [], routes = [], road
                         {t.date}
                       </span>
                     </div>
-
-                    {onSelectTicket && (
-                      <button
-                        type="button"
-                        onClick={() => onSelectTicket(t)}
-                        className="w-full text-center mt-1 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-lg transition-colors shadow-xs"
-                      >
-                        View Details & Photo
-                      </button>
-                    )}
                   </div>
                 </Popup>
                 )}
