@@ -11,6 +11,7 @@ import {
   Eye,
   EyeOff,
   Loader2,
+  AlertTriangle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { mockPilotData, mockTickets } from "@/lib/mock-data";
@@ -22,6 +23,7 @@ import {
   completeRoute,
   endRoute,
   updateTracking,
+  reportRoadBlock,
   getSchedule,
   getSchedules,
 } from "@/lib/live-route";
@@ -384,8 +386,8 @@ export default function DriverPage() {
 
   const routeScheduleId = activeSchedule?.id ?? assignedSchedule?.id ?? null;
   const routeStops = activeSchedule
-    ? routePoints.slice(truckState?.stopIndex ?? 0)
-    : (assignedSchedule?.routePoints ?? []);
+    ? routePoints.slice(truckState?.stopIndex ?? 0, (truckState?.stopIndex ?? 0) + 1)
+    : (assignedSchedule?.routePoints?.slice(0, 1) ?? []);
   const driverRoute = useRoutePath({
     scheduleId: routeScheduleId,
     stopIndex: truckState?.stopIndex ?? 0,
@@ -394,6 +396,46 @@ export default function DriverPage() {
         ? { lat: truckState.tracking.lat, lng: truckState.tracking.lng }
         : null,
     points: truckState?.phase === "completed" ? [] : routeStops,
+    blocks: live.roadBlocks ?? [],
+  });
+
+  // Single "current stop" pin: target stop while on duty, first assigned stop
+  // before the shift starts, hidden once the route is completed.
+  const driverStopPoint =
+    truckState?.phase === "completed"
+      ? null
+      : activeSchedule
+        ? currentPoint
+        : assignedSchedule?.routePoints?.[0];
+  const driverCurrentStop = driverStopPoint
+    ? { ...driverStopPoint, index: activeSchedule ? truckState?.stopIndex ?? 0 : 0 }
+    : null;
+
+  // Compact numbered pins for every stop after the current one, so the driver sees
+  // the whole remaining run (and the full pre-start plan before Start).
+  const dStopIdx = truckState?.stopIndex ?? 0;
+  const driverStopList = activeSchedule ? routePoints : (assignedSchedule?.routePoints ?? []);
+  const driverBaseIdx = activeSchedule ? dStopIdx : 0;
+  const driverUpcomingStops =
+    truckState?.phase === "completed"
+      ? []
+      : driverStopList.slice(driverBaseIdx + 1).map((p, i) => ({ ...p, index: driverBaseIdx + 1 + i }));
+
+  // Road-accurate path for the legs AFTER the current stop. The origin is the fixed
+  // current-stop vertex (not the moving truck), so this is fetched once per stop
+  // advance instead of every sim tick; stopIndex+1 keeps its cache key distinct from
+  // the sim's current-leg key.
+  const driverOnDuty = isOnDuty && truckState?.phase !== "completed" && !!activeSchedule;
+  const driverFuturePath = useRoutePath({
+    scheduleId: routeScheduleId,
+    stopIndex: dStopIdx + 1,
+    origin:
+      driverOnDuty && routePoints[dStopIdx]
+        ? { lat: routePoints[dStopIdx].lat, lng: routePoints[dStopIdx].lng }
+        : null,
+    points: driverOnDuty ? routePoints.slice(dStopIdx + 1) : [],
+    blocks: live.roadBlocks ?? [],
+    enabled: driverOnDuty,
   });
 
   const driverName = (liveDriver || "Driver").split(" ")[0];
@@ -605,7 +647,8 @@ export default function DriverPage() {
           updateTracking(selectedTruckId, {
             lat: latitude,
             lng: longitude,
-            heading: heading || 90,
+            heading: heading != null ? (Math.round(heading) + 90) % 360 : 90,
+            lastGpsAt: now,
           });
         }
       },
@@ -685,6 +728,24 @@ export default function DriverPage() {
     toast("Route ended.");
   };
 
+  const handleReportBlocked = () => {
+    haptic(15);
+    const { lat, lng } = truckState?.tracking ?? {};
+    if (lat == null || lng == null) return;
+    const block = reportRoadBlock(
+      `${selectedTruckId} • ${liveDriver || "Driver"}`,
+      lat,
+      lng,
+      "Blocked street — reported by driver"
+    );
+    const alreadyBlocked = (live.roadBlocks ?? []).some((b) => b.edge === block?.edge);
+    toast(
+      alreadyBlocked
+        ? "That street is already blocked."
+        : "Road block reported — route is re-routing automatically."
+    );
+  };
+
   const handleResolveTicket = (ticketId) => {
     setDriverTickets((prev) =>
       prev.map((t) => (t.id === ticketId ? { ...t, status: "Resolved" } : t))
@@ -710,6 +771,29 @@ export default function DriverPage() {
     ];
   }, [currentTruck, truckState, isOnDuty]);
 
+  // Waze-style course-up camera while driving: heading up, auto-follow truck.
+  // Use the live travel heading so the camera matches actual motion.
+  const navBearing = isOnDuty
+    ? Math.round(truckState?.tracking.heading || driverRoute.heading || 0)
+    : null;
+
+  useEffect(() => {
+    if (isOnDuty) {
+      setTruckFocused(true);
+      setMapZoom(17);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOnDuty]);
+
+  const trackLat = truckState?.tracking.lat;
+  const trackLng = truckState?.tracking.lng;
+  useEffect(() => {
+    if (isOnDuty && truckFocused && trackLat != null && trackLng != null) {
+      setMapCenter([trackLat, trackLng]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trackLat, trackLng]);
+
   if (!sessionReady) {
     return (
       <div className="flex h-dvh w-full items-center justify-center bg-background">
@@ -728,8 +812,14 @@ export default function DriverPage() {
           <MapCanvas
             tickets={[]}
             trucks={trucksForMap}
-            routes={isOnDuty && truckState?.phase !== "completed" && driverRoute.positions.length ? [{ id: routeScheduleId ?? "driver-route", ...driverRoute }] : []}
+            routes={[
+              isOnDuty && truckState?.phase !== "completed" && driverRoute.positions.length >= 2 && { id: `${routeScheduleId ?? "driver-route"}-leg`, ...driverRoute },
+              driverFuturePath.positions.length >= 2 && { id: `${routeScheduleId ?? "driver-route"}-future-${dStopIdx}`, ...driverFuturePath },
+            ].filter(Boolean)}
+            roadBlocks={live.roadBlocks ?? []}
             mapMode="pins"
+            currentStop={driverCurrentStop}
+            upcomingStops={driverUpcomingStops}
             center={mapCenter}
             zoom={mapZoom}
             onMapReady={handleMapReady}
@@ -743,6 +833,8 @@ export default function DriverPage() {
             }}
             onBoundsChange={handleMapBoundsChange}
             flySignal={flySignal}
+            rotatable
+            bearing={navBearing}
           />
         </div>
 
@@ -1025,6 +1117,17 @@ export default function DriverPage() {
                               </>
                             )}
                           </button>
+
+                          {isOnDuty && (
+                            <button
+                              type="button"
+                              onClick={handleReportBlocked}
+                              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-amber-300 bg-amber-50 text-xs font-bold text-amber-700 transition-all hover:bg-amber-100 active:scale-[0.98] cursor-pointer shadow-xs"
+                            >
+                              <AlertTriangle className="h-4 w-4" />
+                              Report Blocked Road
+                            </button>
+                          )}
 
                           {isOnDuty && (
                             <button

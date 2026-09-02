@@ -478,6 +478,13 @@ export default function ResidentMobilePWA() {
   const stopIndex = activeTs ? activeTs.stopIndex : 0;
   const routeCompleted = activeTs?.phase === "completed";
 
+  // Single "current stop" pin: the live truck's target stop, or the first
+  // scheduled stop when no truck is on route yet. Hidden once completed.
+  const stopPoint = routeCompleted ? null : activeTs ? routePoints[stopIndex] : routePoints[0];
+  const currentStop = stopPoint
+    ? { ...stopPoint, index: activeTs ? stopIndex : 0 }
+    : null;
+
   const routePath = useRoutePath({
     scheduleId: displaySchedule.id,
     stopIndex,
@@ -485,7 +492,32 @@ export default function ResidentMobilePWA() {
       activeTs && !routeCompleted
         ? { lat: activeTs.tracking.lat, lng: activeTs.tracking.lng }
         : null,
-    points: routeCompleted ? [] : routePoints.slice(stopIndex),
+    points: routeCompleted ? [] : routePoints.slice(stopIndex, stopIndex + 1),
+    blocks: live.roadBlocks ?? [],
+  });
+
+  // Compact numbered pins for every stop after the current one, so residents see
+  // the whole remaining run as soon as a schedule exists (even before the driver starts).
+  const baseIdx = activeTs ? stopIndex : 0;
+  const upcomingStops = routeCompleted
+    ? []
+    : routePoints.slice(baseIdx + 1).map((p, i) => ({ ...p, index: baseIdx + 1 + i }));
+
+  // Road-accurate path for the legs AFTER the current stop. The origin is the fixed
+  // current-stop vertex (not the moving truck), so this is fetched once per stop
+  // advance instead of every sim tick; stopIndex+1 keeps its cache key distinct
+  // from the sim's current-leg key.
+  const onDuty = !!activeTs && !routeCompleted && !!activeTs.tracking?.isActive;
+  const futurePath = useRoutePath({
+    scheduleId: displaySchedule.id,
+    stopIndex: stopIndex + 1,
+    origin:
+      onDuty && routePoints[stopIndex]
+        ? { lat: routePoints[stopIndex].lat, lng: routePoints[stopIndex].lng }
+        : null,
+    points: onDuty ? routePoints.slice(stopIndex + 1) : [],
+    blocks: live.roadBlocks ?? [],
+    enabled: onDuty,
   });
 
   // Live truck banner entry derived from the shared route store
@@ -815,8 +847,14 @@ export default function ResidentMobilePWA() {
           <MapCanvas
             tickets={mapFocusTicket ? [mapFocusTicket] : []}
             trucks={activeTrucks}
-            routes={activeTs && !routeCompleted && routePath.positions.length ? [{ id: displaySchedule.id, ...routePath }] : []}
+            routes={[
+              activeTs && !routeCompleted && routePath.positions.length >= 2 && { id: `${displaySchedule.id}-leg`, ...routePath },
+              futurePath.positions.length >= 2 && { id: `${displaySchedule.id}-future-${stopIndex}`, ...futurePath },
+            ].filter(Boolean)}
+            roadBlocks={live.roadBlocks ?? []}
             mapMode="pins"
+            currentStop={currentStop}
+            upcomingStops={upcomingStops}
             center={mapFocusTicket ? [mapFocusTicket.lat, mapFocusTicket.lng] : selectedTicket ? [selectedTicket.lat, selectedTicket.lng] : mapCenter}
             zoom={mapZoom}
             highlightedTicketId={mapFocusTicket?.id}
@@ -1082,13 +1120,13 @@ export default function ResidentMobilePWA() {
                   if (!isMapSheetExpanded) setIsMapSheetExpanded(true);
                 }}
                 className={cn(
-                  "flex h-11 flex-1 min-w-0 items-center justify-center gap-2 rounded-xl border px-3 text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95",
+                  "flex h-11 flex-1 min-w-0 items-center justify-center gap-1.5 rounded-xl border px-2 text-[11px] font-bold transition-all cursor-pointer shadow-xs active:scale-95",
                   isMapSheetExpanded && (activeTab === "schedule" || activeTab === "map")
                     ? "border-emerald-500 bg-emerald-600 text-white font-bold"
                     : "border-border bg-card text-foreground hover:bg-muted"
                 )}
               >
-                <Waze3DCalendarIcon className="h-5.5 w-5.5 shrink-0" />
+                <Waze3DCalendarIcon className="h-4 w-4 shrink-0" />
                 <span className="truncate whitespace-nowrap">Schedules</span>
               </button>
 
@@ -1102,13 +1140,13 @@ export default function ResidentMobilePWA() {
                   }, 150);
                 }}
                 className={cn(
-                  "flex h-11 flex-1 min-w-0 items-center justify-center gap-2 rounded-xl border px-3 text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95",
+                  "flex h-11 flex-1 min-w-0 items-center justify-center gap-1.5 rounded-xl border px-2 text-[11px] font-bold transition-all cursor-pointer shadow-xs active:scale-95",
                   isMapSheetExpanded && activeTab === "report"
                     ? "border-emerald-500 bg-emerald-600 text-white font-bold"
                     : "border-border bg-card text-foreground hover:bg-muted"
                 )}
               >
-                <Waze3DCameraIcon className="h-5.5 w-5.5 shrink-0" />
+                <Waze3DCameraIcon className="h-4 w-4 shrink-0" />
                 <span className="truncate whitespace-nowrap">Report</span>
               </button>
 
@@ -1119,13 +1157,13 @@ export default function ResidentMobilePWA() {
                   if (!isMapSheetExpanded) setIsMapSheetExpanded(true);
                 }}
                 className={cn(
-                  "flex h-11 flex-1 min-w-0 items-center justify-center gap-2 rounded-xl border px-3 text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95",
+                  "flex h-11 flex-1 min-w-0 items-center justify-center gap-1.5 rounded-xl border px-2 text-[11px] font-bold transition-all cursor-pointer shadow-xs active:scale-95",
                   isMapSheetExpanded && activeTab === "tickets"
                     ? "border-emerald-500 bg-emerald-600 text-white font-bold"
                     : "border-border bg-card text-foreground hover:bg-muted"
                 )}
               >
-                <Waze3DTicketIcon className="h-5.5 w-5.5 shrink-0" />
+                <Waze3DTicketIcon className="h-4 w-4 shrink-0" />
                 <span className="truncate whitespace-nowrap">Tickets</span>
               </button>
             </div>

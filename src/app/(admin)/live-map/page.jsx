@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { useTickets, updateTicket } from "@/lib/tickets";
-import { useLiveRoute, getSchedule } from "@/lib/live-route";
+import { useLiveRoute, getSchedule, clearRoadBlock } from "@/lib/live-route";
 import { useTruckRoutes } from "@/lib/use-route-path";
 import { useFleet } from "@/lib/fleet";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
@@ -12,7 +12,7 @@ import TicketDetailsModal from "@/components/modals/ticket-details-modal";
 import { inputClass } from "@/components/ui/input";
 import { MapSkeleton } from "@/components/ui/skeletons";
 import { cn } from "@/lib/utils";
-import { Search, MapPin, Truck as TruckIcon } from "lucide-react";
+import { Search, MapPin, Truck as TruckIcon, AlertTriangle } from "lucide-react";
 
 const MapCanvas = dynamic(() => import("@/components/map/map-canvas"), {
   ssr: false,
@@ -153,6 +153,7 @@ function LiveMapContent() {
           tickets={mapView === "reports" ? filteredTickets : []}
           trucks={mapView === "trucks" ? trucksData : []}
           routes={mapView === "trucks" ? truckRoutes : []}
+          roadBlocks={live.roadBlocks ?? []}
           mapMode="pins"
           center={mapCenter}
           zoom={mapZoom}
@@ -324,6 +325,49 @@ function LiveMapContent() {
                 duty
               </p>
             </div>
+
+            {(live.roadBlocks ?? []).length > 0 && (
+              <div className="mx-4 mb-2 shrink-0 rounded-xl border border-rose-200 bg-rose-50/60 p-3">
+                <div className="mb-2 flex items-center gap-1.5">
+                  <AlertTriangle className="h-3.5 w-3.5 text-rose-600" />
+                  <span className="text-xs font-semibold text-rose-700">
+                    Blocked Roads ({live.roadBlocks.length})
+                  </span>
+                </div>
+                <div className="flex flex-col gap-2">
+                  {live.roadBlocks.map((b) => (
+                    <div
+                      key={b.id}
+                      className="flex items-center justify-between gap-2 rounded-lg border border-rose-200 bg-card px-2.5 py-2"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-semibold text-foreground">
+                          {b.reason || "Blocked road"}
+                        </p>
+                        <p className="truncate text-[10px] text-muted-foreground">
+                          {b.reportedBy || "Unknown"} ·{" "}
+                          {new Date(b.at).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => clearRoadBlock(b.id)}
+                        className="shrink-0 rounded-md border border-border bg-card px-2 py-1 text-[10px] font-semibold text-foreground transition-colors hover:bg-muted cursor-pointer"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-2 text-[10px] text-muted-foreground">
+                  Trucks automatically re-route around blocked streets. Clearing restores the
+                  original trajectory on all maps.
+                </p>
+              </div>
+            )}
 
             {trucksData.filter((t) => t.isActive).length === 1 &&
               (() => {

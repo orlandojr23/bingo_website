@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Calendar, Plus, X, Search, Truck } from "lucide-react";
+import { Calendar, Plus, X, Search, Truck, ChevronUp, ChevronDown, Shuffle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { mockPilotData } from "@/lib/mock-data";
-import { useLiveRoute, getSchedules, addSchedule, updateSchedule, removeSchedule, assignDriver } from "@/lib/live-route";
+import { useLiveRoute, getSchedules, addSchedule, updateSchedule, removeSchedule, assignDriver, buildZoneRoutePoints } from "@/lib/live-route";
 import { useFleet, addTruck, updateTruck, removeTruck } from "@/lib/fleet";
 import { loadStaffRoster } from "@/lib/staff";
 import ConfirmModal from "@/components/ui/confirm-modal";
@@ -32,6 +32,7 @@ export default function DispatchPage() {
   const [truckSheet, setTruckSheet] = useState(null);
   const [truckForm, setTruckForm] = useState({ id: "", plate: "", driver: "", capacity: "" });
   const [truckError, setTruckError] = useState("");
+  const [stopOrder, setStopOrder] = useState([]);
   const [scheduleToDelete, setScheduleToDelete] = useState(null);
   const [truckToRemove, setTruckToRemove] = useState(null);
   const [driverRoster, setDriverRoster] = useState([]);
@@ -77,6 +78,7 @@ export default function DispatchPage() {
       setDays(selectedSchedule.days.join(", "));
       setTime(selectedSchedule.time);
       setStatus(live.scheduleStatus[selectedSchedule.id] ?? selectedSchedule.status);
+      setStopOrder(selectedSchedule.routePoints ?? []);
     } else {
       setZoneId("");
       setTruckId("");
@@ -84,8 +86,37 @@ export default function DispatchPage() {
       setDays("");
       setTime("");
       setStatus("");
+      setStopOrder([]);
     }
   }, [selectedSchedule]);
+
+  // In create mode the stop list is generated from the zone, so keep it in
+  // sync with the zone/time selections until it is saved.
+  useEffect(() => {
+    if (isAdding && zoneId) setStopOrder(buildZoneRoutePoints(zoneId, time));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdding, zoneId, time]);
+
+  const moveStop = (index, dir) => {
+    setStopOrder((prev) => {
+      const j = index + dir;
+      if (j < 0 || j >= prev.length) return prev;
+      const next = [...prev];
+      [next[index], next[j]] = [next[j], next[index]];
+      return next;
+    });
+  };
+
+  const shuffleStops = () => {
+    setStopOrder((prev) => {
+      const next = [...prev];
+      for (let i = next.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [next[i], next[j]] = [next[j], next[i]];
+      }
+      return next;
+    });
+  };
 
   const buildScheduleFields = () => ({
     zoneId,
@@ -100,7 +131,10 @@ export default function DispatchPage() {
     e.preventDefault();
     if (!zoneId || !truckId || !type || !days || !time) return;
 
-    addSchedule(buildScheduleFields());
+    addSchedule({
+      ...buildScheduleFields(),
+      routePoints: stopOrder.length >= 2 ? stopOrder : undefined,
+    });
     setIsAdding(false);
   };
 
@@ -108,7 +142,13 @@ export default function DispatchPage() {
     e.preventDefault();
     if (!selectedSchedule || !zoneId || !truckId || !type || !days || !time) return;
 
-    updateSchedule(selectedSchedule.id, buildScheduleFields());
+    const zoneChanged = zoneId !== selectedSchedule.zoneId;
+    updateSchedule(selectedSchedule.id, {
+      ...buildScheduleFields(),
+      // Changing the coverage regenerates the stops for the new zone;
+      // otherwise the reordered sitio order is kept.
+      routePoints: zoneChanged ? undefined : stopOrder,
+    });
     setSelectedSchedule(null);
   };
 
@@ -201,6 +241,70 @@ export default function DispatchPage() {
             <option key={z.id} value={z.id}>{z.name}</option>
           ))}
         </select>
+      </Field>
+
+      <Field label="Route Stop Order (Truck starts at Stop 1)">
+        <div className="rounded-lg border border-border bg-background">
+          {stopOrder.length === 0 ? (
+            <p className="px-3 py-3 text-xs text-muted-foreground">
+              No stops for this coverage yet.
+            </p>
+          ) : (
+            <ul className="divide-y divide-border-subtle">
+              {stopOrder.map((stop, i) => (
+                <li key={`${stop.name}-${i}`} className="flex items-center gap-2 px-3 py-2">
+                  <span
+                    className={cn(
+                      "flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold",
+                      i === 0 ? "bg-emerald-600 text-white" : "bg-muted text-muted-foreground"
+                    )}
+                  >
+                    {i + 1}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-semibold text-foreground">{stop.name}</p>
+                    <p className="text-[10px] text-muted-foreground">{stop.time}</p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-0.5">
+                    <button
+                      type="button"
+                      onClick={() => moveStop(i, -1)}
+                      disabled={i === 0}
+                      className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                      aria-label={`Move ${stop.name} earlier`}
+                    >
+                      <ChevronUp className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => moveStop(i, 1)}
+                      disabled={i === stopOrder.length - 1}
+                      className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                      aria-label={`Move ${stop.name} later`}
+                    >
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+          {stopOrder.length >= 2 && (
+            <div className="flex items-center justify-between gap-2 border-t border-border-subtle px-3 py-2">
+              <p className="text-[10px] text-muted-foreground">
+                Reorder or shuffle to change which sitio the truck starts by.
+              </p>
+              <button
+                type="button"
+                onClick={shuffleStops}
+                className="flex shrink-0 items-center gap-1 rounded-md border border-border bg-card px-2 py-1 text-[10px] font-semibold text-foreground transition-colors hover:bg-muted cursor-pointer"
+              >
+                <Shuffle className="h-3 w-3" />
+                Shuffle Order
+              </button>
+            </div>
+          )}
+        </div>
       </Field>
 
       <Field label="Assigned Truck">
