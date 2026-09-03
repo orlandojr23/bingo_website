@@ -43,8 +43,8 @@ export default function AnalyticsPage() {
 
   return (
     <div className="relative flex min-h-full w-full min-w-0 overflow-x-hidden bg-background bg-[url('/hero-bg.svg')] bg-[length:100%_auto] sm:bg-cover bg-top sm:bg-center bg-no-repeat">
-      <div className="absolute inset-0 bg-background/70 sm:bg-background/40 pointer-events-none" />
-      <div className="relative z-10 flex flex-1 min-w-0 flex-col gap-5 p-4 [scrollbar-gutter:stable] sm:gap-6 sm:p-6 lg:p-8 pb-10 sm:pb-16 lg:pb-24">
+      <div className="absolute inset-0 bg-background/40 pointer-events-none" />
+      <div className="relative z-10 flex flex-1 min-w-0 flex-col gap-5 p-4 [scrollbar-gutter:stable] sm:gap-6 sm:p-6 lg:p-8 pb-6 sm:pb-8 lg:pb-10">
         <PageHeader
           title="Data & Insights"
           description="Performance and cleanup analytics for Barangay Tejero"
@@ -83,7 +83,6 @@ export default function AnalyticsPage() {
                   Comparison over the last 6 months
                 </p>
               </div>
-              <BarChart2 className="h-4 w-4 text-muted-foreground" />
             </div>
 
             <div className="flex h-48 items-end justify-between gap-1 sm:gap-3 border-b border-border-subtle pb-2 pt-4">
@@ -140,7 +139,6 @@ export default function AnalyticsPage() {
                   Share of each report type this quarter
                 </p>
               </div>
-              <PieChart className="h-4 w-4 text-muted-foreground" />
             </div>
 
             <div className="flex flex-col gap-3.5 py-1">
@@ -180,7 +178,6 @@ export default function AnalyticsPage() {
                 Key performance goals for the Tejero pilot and how we&apos;re doing
               </p>
             </div>
-            <ShieldAlert className="h-4 w-4 text-muted-foreground" />
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -209,6 +206,9 @@ export default function AnalyticsPage() {
             </div>
           </div>
         </div>
+
+        {/* Guaranteed bottom spacer element */}
+        <div className="h-6 sm:h-8 lg:h-10 w-full shrink-0 pointer-events-none" aria-hidden="true" />
       </div>
     </div>
   );

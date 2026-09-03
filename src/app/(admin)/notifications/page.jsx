@@ -105,8 +105,8 @@ export default function NotificationsPage() {
 
   return (
     <div className="relative flex min-h-full w-full min-w-0 overflow-x-hidden bg-background bg-[url('/hero-bg.svg')] bg-[length:100%_auto] sm:bg-cover bg-top sm:bg-center bg-no-repeat">
-      <div className="absolute inset-0 bg-background/70 sm:bg-background/40 pointer-events-none" />
-      <div className="relative z-10 flex flex-1 min-w-0 flex-col gap-5 p-4 [scrollbar-gutter:stable] sm:gap-6 sm:p-6 lg:p-8 pb-10 sm:pb-16 lg:pb-24">
+      <div className="absolute inset-0 bg-background/40 pointer-events-none" />
+      <div className="relative z-10 flex flex-1 min-w-0 flex-col gap-5 p-4 [scrollbar-gutter:stable] sm:gap-6 sm:p-6 lg:p-8 pb-6 sm:pb-8 lg:pb-10">
         <PageHeader
           title="Notifications"
           description="Emergency alerts, truck updates, and new resident reports"
@@ -237,11 +237,14 @@ export default function NotificationsPage() {
           )}
         </div>
 
-        <div className="mt-4 mb-2 sm:mb-6 lg:mb-8 flex shrink-0 items-center justify-between border-t border-border pt-3.5 pb-2">
+        <div className="mt-4 flex shrink-0 items-center justify-between border-t border-border pt-4 pb-6">
           <span className="text-xs font-medium text-muted-foreground">
             Showing {filteredNotifications.length} of {notifications.length} total alerts
           </span>
         </div>
+
+        {/* Guaranteed bottom spacer element */}
+        <div className="h-6 sm:h-8 lg:h-10 w-full shrink-0 pointer-events-none" aria-hidden="true" />
       </div>
 
       <AnimatePresence>

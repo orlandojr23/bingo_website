@@ -111,7 +111,7 @@ export default function CrudPage() {
 
   return (
     <div className="relative flex min-h-full w-full min-w-0 overflow-x-hidden bg-background bg-[url('/hero-bg.svg')] bg-[length:100%_auto] sm:bg-cover bg-top sm:bg-center bg-no-repeat">
-      <div className="absolute inset-0 bg-background/70 sm:bg-background/40 pointer-events-none" />
+      <div className="absolute inset-0 bg-background/40 pointer-events-none" />
       {toastMessage && (
         <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-6 z-50 flex animate-in-fade items-center gap-2.5 rounded-lg border border-zinc-800 bg-zinc-900 px-4 py-2.5 text-xs text-white shadow-lg">
           <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
@@ -119,7 +119,7 @@ export default function CrudPage() {
         </div>
       )}
 
-      <div className="relative z-10 flex flex-1 min-w-0 flex-col gap-5 p-4 [scrollbar-gutter:stable] sm:gap-6 sm:p-6 lg:p-8 pb-10 sm:pb-16 lg:pb-24">
+      <div className="relative z-10 flex flex-1 min-w-0 flex-col gap-5 p-4 [scrollbar-gutter:stable] sm:gap-6 sm:p-6 lg:p-8 pb-6 sm:pb-8 lg:pb-10">
         <PageHeader
           title="Data Management"
           description="Create, update, and remove waste reports"
@@ -283,6 +283,9 @@ export default function CrudPage() {
             </table>
           </div>
         </div>
+
+        {/* Guaranteed bottom spacer element */}
+        <div className="h-6 sm:h-8 lg:h-10 w-full shrink-0 pointer-events-none" aria-hidden="true" />
       </div>
 
       <AnimatePresence>
