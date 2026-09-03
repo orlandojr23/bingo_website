@@ -23,10 +23,18 @@ export function getAccount(email) {
   return readAccounts()[email.trim().toLowerCase()] || null;
 }
 
-export function createAccount({ name, email, password }) {
+export function createAccount({ name, email, password, sitio, address }) {
   const key = email.trim().toLowerCase();
   const accounts = readAccounts();
-  accounts[key] = { name, email: key, password, resetCode: null, createdAt: Date.now() };
+  accounts[key] = {
+    name,
+    email: key,
+    password,
+    sitio: sitio || null,
+    address: address || null,
+    resetCode: null,
+    createdAt: Date.now(),
+  };
   writeAccounts(accounts);
   return accounts[key];
 }

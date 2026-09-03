@@ -32,9 +32,10 @@ function bearingDeg(a, b) {
 
 // The truck icon faces north at rotation 0 and rotates clockwise by
 // (heading - 90), so heading = compass bearing + 90. Project the origin onto
-// the nearest route segment and use that segment's direction, so vertices the
-// truck already passed can never flip the heading ~180°.
-function headingAlong(positions) {
+// the nearest route segment, then sample the bearing lookaheadM meters AHEAD
+// of that projection along the path so the marker starts rotating into a
+// corner just before reaching it (Waze-style turn anticipation).
+function headingAlong(positions, lookaheadM = 15) {
   if (positions.length < 2) return null;
   const origin = { lat: positions[0][0], lng: positions[0][1] };
   const mLat = 111320;
@@ -42,6 +43,16 @@ function headingAlong(positions) {
   // Segment 0 is the pinned origin→first cached vertex; once the truck moves
   // it points backwards, so ignore it when real geometry follows.
   const startSeg = positions.length > 2 ? 1 : 0;
+
+  // Cumulative path distance (meters) at each vertex.
+  const cum = [0];
+  for (let i = 0; i < positions.length - 1; i++) {
+    const dx = (positions[i + 1][1] - positions[i][1]) * mLng;
+    const dy = (positions[i + 1][0] - positions[i][0]) * mLat;
+    cum.push(cum[i] + Math.hypot(dx, dy));
+  }
+
+  // Nearest segment to the origin + the along-path distance of the projection.
   let best = null;
   for (let i = startSeg; i < positions.length - 1; i++) {
     const a = { lat: positions[i][0], lng: positions[i][1] };
@@ -55,9 +66,18 @@ function headingAlong(positions) {
     const len2 = dx * dx + dy * dy;
     const t = len2 > 0 ? Math.max(0, Math.min(1, -(ax * dx + ay * dy) / len2)) : 0;
     const dist = Math.hypot(ax + dx * t, ay + dy * t);
-    if (!best || dist < best.dist) best = { dist, a, b };
+    if (!best || dist < best.dist) best = { i, t, dist };
   }
-  return Math.round((bearingDeg(best.a, best.b) + 90) % 360);
+
+  const total = cum[cum.length - 1];
+  const segLen = cum[best.i + 1] - cum[best.i];
+  const target = Math.min(cum[best.i] + segLen * best.t + lookaheadM, total);
+
+  let i = startSeg;
+  while (i < positions.length - 2 && cum[i + 1] < target) i++;
+  const a = { lat: positions[i][0], lng: positions[i][1] };
+  const b = { lat: positions[i + 1][0], lng: positions[i + 1][1] };
+  return Math.round((bearingDeg(a, b) + 90) % 360);
 }
 
 async function fetchOrs(waypoints) {

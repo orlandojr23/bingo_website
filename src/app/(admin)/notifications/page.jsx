@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import {
   Bell,
@@ -18,59 +18,24 @@ import { PanelStat } from "@/components/ui/panel-stat";
 import { InfoRow } from "@/components/ui/info-row";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import {
+  useNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
+  removeNotification,
+} from "@/lib/notifications";
 
-const initialNotifications = [
-  {
-    id: "NOTIF-001",
-    type: "Emergency",
-    title: "Critical Illegal Dumping Alert",
-    message: "Large-scale illegal dumping was reported near the Sitio Vilgon river access. This poses a serious environmental risk.",
-    location: "Sitio Vilgon, Brgy. Tejero",
-    barangay: "Tejero",
-    timestamp: "10m ago",
-    ticketId: "TKT-008",
-    actionUrl: "/live-map?ticketId=TKT-008",
-    actionLabel: "View on Map",
-    isRead: false,
-  },
-  {
-    id: "NOTIF-002",
-    type: "Dispatch",
-    title: "Truck 04 Arrived at Site",
-    message: "Truck 04 (Plate GW-8821) has arrived at the Sitio ICM collection area.",
-    location: "Sitio ICM, Brgy. Tejero",
-    barangay: "Tejero",
-    timestamp: "25m ago",
-    actionUrl: "/live-map?truckId=TRK-04",
-    actionLabel: "View Live Map",
-    isRead: false,
-  },
-  {
-    id: "NOTIF-003",
-    type: "System",
-    title: "Truck 02 GPS Alert",
-    message: "Truck 02 has been stopped for more than 20 minutes near Sitio Daclan.",
-    location: "Sitio Daclan, Brgy. Tejero",
-    barangay: "Tejero",
-    timestamp: "1h ago",
-    actionUrl: "/live-map?truckId=TRK-02",
-    actionLabel: "Track Truck",
-    isRead: true,
-  },
-  {
-    id: "NOTIF-004",
-    type: "Ticket",
-    title: "New Waste Report Filed",
-    message: "Resident reported overflowing communal bin near Sitio Sampaguita chapel.",
-    location: "Sitio Sampaguita, Brgy. Tejero",
-    barangay: "Tejero",
-    timestamp: "2h ago",
-    ticketId: "TKT-001",
-    actionUrl: "/tickets",
-    actionLabel: "Review Report",
-    isRead: true,
-  },
-];
+function timeAgoLabel(iso) {
+  const t = new Date(iso).getTime();
+  if (!Number.isFinite(t)) return "";
+  const mins = Math.max(0, Math.round((Date.now() - t) / 60000));
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return days === 1 ? "Yesterday" : `${days}d ago`;
+}
 
 const typeStyles = {
   Emergency: {
@@ -98,33 +63,33 @@ const typeStyles = {
 const getTypeStyle = (type) => typeStyles[type] || typeStyles.System;
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState([]);
+  const storeNotifications = useNotifications("admin");
   const [activeTab, setActiveTab] = useState("All");
-  const [selectedNotif, setSelectedNotif] = useState(null);
+  const [selectedNotifId, setSelectedNotifId] = useState(null);
 
-  useEffect(() => {
-    setNotifications(initialNotifications);
-  }, []);
+  // Adapt store entries to the card/sheet view shape.
+  const notifications = storeNotifications.map((n) => ({
+    ...n,
+    barangay: n.barangay ?? "Tejero",
+    timestamp: timeAgoLabel(n.at),
+  }));
+
+  const selectedNotif = notifications.find((n) => n.id === selectedNotifId) ?? null;
 
   const deleteNotification = (id, e) => {
     if (e) e.stopPropagation();
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-    if (selectedNotif?.id === id) {
-      setSelectedNotif(null);
+    removeNotification(id);
+    if (selectedNotifId === id) {
+      setSelectedNotifId(null);
     }
   };
 
   const markRead = (id) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id && !n.isRead ? { ...n, isRead: true } : n))
-    );
+    markNotificationRead(id);
   };
 
   const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-    if (selectedNotif) {
-      setSelectedNotif((prev) => ({ ...prev, isRead: true }));
-    }
+    markAllNotificationsRead("admin");
   };
 
   const filteredNotifications = notifications.filter((n) => {
@@ -207,7 +172,7 @@ export default function NotificationsPage() {
                   <div
                     key={n.id}
                     onClick={() => {
-                      setSelectedNotif(n);
+                      setSelectedNotifId(n.id);
                       markRead(n.id);
                     }}
                     className={`flex cursor-pointer select-none flex-col justify-between rounded-xl border bg-card p-4 transition-all ${
@@ -286,7 +251,7 @@ export default function NotificationsPage() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="absolute inset-0 bg-transparent pointer-events-auto"
-              onClick={() => setSelectedNotif(null)}
+              onClick={() => setSelectedNotifId(null)}
             />
             <motion.div
               initial={{ x: "100%" }}
@@ -315,7 +280,7 @@ export default function NotificationsPage() {
 
                     <button
                       type="button"
-                      onClick={() => setSelectedNotif(null)}
+                      onClick={() => setSelectedNotifId(null)}
                       className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
                       aria-label="Back to list"
                     >
@@ -350,20 +315,22 @@ export default function NotificationsPage() {
                     <p className="text-xs leading-relaxed text-zinc-700">{selectedNotif.message}</p>
                   </div>
 
-                  <Link href={selectedNotif.actionUrl}>
-                    <Button variant="secondary" className="w-full">
-                      {/Map|Track/.test(selectedNotif.actionLabel) ? (
-                        <MapPin className="h-3.5 w-3.5" />
-                      ) : (
-                        <TicketIcon className="h-3.5 w-3.5" />
-                      )}
-                      {selectedNotif.actionLabel}
-                    </Button>
-                  </Link>
+                  {selectedNotif.actionUrl && (
+                    <Link href={selectedNotif.actionUrl}>
+                      <Button variant="secondary" className="w-full">
+                        {/Map|Track/.test(selectedNotif.actionLabel || "") ? (
+                          <MapPin className="h-3.5 w-3.5" />
+                        ) : (
+                          <TicketIcon className="h-3.5 w-3.5" />
+                        )}
+                        {selectedNotif.actionLabel || "View"}
+                      </Button>
+                    </Link>
+                  )}
                 </div>
 
                 <div className="mt-6 flex shrink-0 items-center justify-end border-t border-border-subtle pt-4">
-                  <Button variant="secondary" onClick={() => setSelectedNotif(null)}>
+                  <Button variant="secondary" onClick={() => setSelectedNotifId(null)}>
                     Close
                   </Button>
                 </div>

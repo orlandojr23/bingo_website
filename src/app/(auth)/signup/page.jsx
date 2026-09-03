@@ -3,12 +3,17 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { User, Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
+import { User, Mail, Lock, Eye, EyeOff, Loader2, MapPin, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { setResidentSession } from "@/lib/resident-session";
 import { getAccount, createAccount } from "@/lib/resident-accounts";
+import { TEJERO_SITOS, PILOT_AREA } from "@/lib/mock-data";
 import { Button } from "@/components/ui/button";
 import PasswordStrengthHint from "@/components/ui/password-strength-hint";
+
+// Pilot launch covers Barangay Tejero only, so new accounts pick their home
+// area from this fixed sitio list instead of typing a free-form address.
+const SITIO_OPTIONS = Object.keys(TEJERO_SITOS);
 
 const PUBLIC_DOMAINS = ["gmail.com", "yahoo.com", "outlook.com", "hotmail.com", "icloud.com"];
 
@@ -60,6 +65,7 @@ export default function SignupPage() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [sitio, setSitio] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -103,6 +109,9 @@ export default function SignupPage() {
     } else if (getAccount(email)) {
       newErrors.email = "An account with this email already exists. Try signing in.";
     }
+    if (!sitio) {
+      newErrors.sitio = "Please select your sitio — the pilot launch covers Barangay Tejero only.";
+    }
     if (!password) {
       newErrors.password = "Please create a password.";
     } else if (password.length < 6) {
@@ -123,8 +132,8 @@ export default function SignupPage() {
 
     setTimeout(() => {
       const trimmedEmail = email.trim().toLowerCase();
-      createAccount({ name: name.trim(), email: trimmedEmail, password });
-      setResidentSession({ email: trimmedEmail, name: name.trim() });
+      createAccount({ name: name.trim(), email: trimmedEmail, password, sitio, address: { ...PILOT_AREA } });
+      setResidentSession({ email: trimmedEmail, name: name.trim(), sitio, address: { ...PILOT_AREA } });
       router.replace("/report");
     }, 900);
   };
@@ -201,6 +210,64 @@ export default function SignupPage() {
               />
             </div>
             <ErrorLine message={errors.email} />
+          </div>
+
+          {/* Service address: the pilot covers Barangay Tejero only, so the
+              upper levels each offer one fixed option; the resident's real
+              choice is the sitio. */}
+          <div className="flex flex-col gap-2.5">
+            <div className="grid grid-cols-2 gap-2.5">
+              {[
+                { label: "Region", value: PILOT_AREA.region },
+                { label: "Province", value: PILOT_AREA.province },
+                { label: "City / Municipality", value: PILOT_AREA.city },
+                { label: "Barangay", value: PILOT_AREA.barangay },
+              ].map((field) => (
+                <div key={field.label} className="flex flex-col gap-1">
+                  <span className="pl-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
+                    {field.label}
+                  </span>
+                  <select
+                    aria-label={field.label}
+                    className="w-full cursor-pointer rounded-xl border border-border bg-card px-3 py-2.5 text-xs font-semibold text-foreground outline-none transition-colors hover:border-zinc-300 focus:border-zinc-400"
+                  >
+                    <option value={field.value}>{field.value}</option>
+                  </select>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <span className="pl-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
+                Sitio
+              </span>
+              <div className="relative">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-muted-foreground/70">
+                  <MapPin className="h-4 w-4" />
+                </div>
+                <select
+                  value={sitio}
+                  onChange={(e) => handleFieldChange("sitio", e.target.value, setSitio)}
+                  aria-label="Home sitio in Barangay Tejero"
+                  className={`${fieldClass(!!errors.sitio)} cursor-pointer appearance-none ${
+                    sitio ? "" : "text-muted-foreground/50"
+                  }`}
+                >
+                  <option value="" disabled>
+                    Select your sitio
+                  </option>
+                  {SITIO_OPTIONS.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5 text-muted-foreground/70">
+                  <ChevronDown className="h-4 w-4" />
+                </div>
+              </div>
+            </div>
+            <ErrorLine message={errors.sitio} />
           </div>
 
           <div className="flex flex-col gap-1.5">

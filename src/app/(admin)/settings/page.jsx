@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { inputClass, labelClass } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import PasswordStrengthHint from "@/components/ui/password-strength-hint";
+import { useSoundEnabled, setSoundEnabled } from "@/lib/sounds";
 
 function Toggle({ checked, onChange }) {
   return (
@@ -62,8 +63,8 @@ export default function SettingsPage() {
     gpsWarnings: true,
     dailySummary: true,
     citizenDisputes: false,
-    soundChime: true,
   });
+  const soundEnabled = useSoundEnabled();
 
   const toggleNotification = (key) => {
     setNotifications((prev) => {
@@ -256,6 +257,22 @@ export default function SettingsPage() {
             </div>
 
             <div className="divide-y divide-border-subtle">
+              <div className="flex items-center justify-between gap-4 py-3">
+                <div>
+                  <h3 className="text-sm font-medium text-foreground">Notification Sounds</h3>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Play a chime when trucks start their route or arrive at a stop
+                  </p>
+                </div>
+                <Toggle
+                  checked={soundEnabled}
+                  onChange={() => {
+                    setSoundEnabled(!soundEnabled);
+                    showToast("Notification preferences updated.");
+                  }}
+                />
+              </div>
+
               <div className="flex items-center justify-between gap-4 py-3">
                 <div>
                   <h3 className="text-sm font-medium text-foreground">Critical Dumping Alerts</h3>

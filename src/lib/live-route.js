@@ -1,10 +1,11 @@
 import { useSyncExternalStore } from "react";
-import { mockPilotData } from "@/lib/mock-data";
+import { mockPilotData, TEJERO_SITOS } from "@/lib/mock-data";
 import { nearestEdge } from "@/lib/router";
 import { routeCache, cacheKeyFor, blocksSignature } from "@/lib/route-cache";
+import { pushNotification } from "@/lib/notifications";
 
 const STORAGE_KEY = "bingo-live-route-v1";
-const STORE_VERSION = 4;
+const STORE_VERSION = 5;
 
 function buildSeed() {
   const scheduleStatus = {};
@@ -156,6 +157,48 @@ export function buildZoneRoutePoints(zoneId, timeStr) {
   }));
 }
 
+// Sitio-picked assignments: the admin searches and orders sitios of Barangay
+// Tejero; each pick becomes a stop at the sitio's anchor coordinate with an
+// estimated time (+45 min per stop from the schedule start).
+export function buildSitioRoutePoints(sitioNames, timeStr) {
+  const start = parseStartMinutes(timeStr);
+  return (sitioNames || [])
+    .map((name, i) => {
+      const sitio = TEJERO_SITOS[name];
+      if (!sitio) return null;
+      return {
+        name,
+        time: start != null ? minutesToLabel(start + i * 45) : "TBD",
+        lat: sitio.lat,
+        lng: sitio.lng,
+      };
+    })
+    .filter(Boolean);
+}
+
+// Estimated time label for the stop at `index` given a schedule time range.
+export function estimateStopTime(timeStr, index) {
+  const start = parseStartMinutes(timeStr);
+  return start != null ? minutesToLabel(start + index * 45) : "TBD";
+}
+
+// Re-times existing stops in place after the admin edits the collection time.
+export function retimeRoutePoints(points, timeStr) {
+  return (points || []).map((p, i) => ({ ...p, time: estimateStopTime(timeStr, i) }));
+}
+
+// Display name for a schedule anywhere in the app: the legacy zone name when
+// present, otherwise the ordered sitio stops ("A → B" or "A +N more").
+export function scheduleLabel(schedule) {
+  if (!schedule) return "Barangay Tejero";
+  const zone = mockPilotData.zones.find((z) => z.id === schedule.zoneId);
+  if (zone) return zone.name;
+  const names = (schedule.routePoints || []).map((p) => p.name).filter(Boolean);
+  if (!names.length) return "Barangay Tejero";
+  if (names.length <= 2) return names.join(" → ");
+  return `${names[0]} → ${names[1]} +${names.length - 2} more`;
+}
+
 export function addSchedule(fields) {
   return write((next) => {
     const id = nextScheduleId();
@@ -164,7 +207,9 @@ export function addSchedule(fields) {
       id,
       routePoints: fields.routePoints?.length
         ? fields.routePoints
-        : buildZoneRoutePoints(fields.zoneId, fields.time),
+        : fields.zoneId
+          ? buildZoneRoutePoints(fields.zoneId, fields.time)
+          : [],
     };
     next.schedules = { ...next.schedules, [id]: schedule };
     next.scheduleStatus = { ...next.scheduleStatus, [id]: schedule.status || "Scheduled" };
@@ -199,7 +244,7 @@ export function removeSchedule(id) {
 }
 
 export function startRoute(truckId) {
-  return write((next) => {
+  const startedId = write((next) => {
     const ts = next.trucks[truckId];
     if (!ts) return null;
 
@@ -255,27 +300,68 @@ export function startRoute(truckId) {
     next.scheduleStatus = { ...status, [pick.id]: "In Progress" };
     return pick.id;
   });
+
+  // Tell admins the driver pressed Start Route (their feed + ding). Residents
+  // get the same moment through the live header banner and their own ding, so
+  // nothing is pushed for them. Dedupe keeps pause→resume from re-firing.
+  if (startedId) {
+    const first = getSchedule(startedId)?.routePoints?.[0];
+    pushNotification({
+      audience: "admin",
+      type: "Dispatch",
+      title: `Truck ${truckId} started its route`,
+      message: `Truck ${truckId} is now en route, heading to the ${first?.name ?? "first"} pickup pin point.`,
+      location: first ? `${first.name}, Brgy. Tejero` : undefined,
+      truckId,
+      actionUrl: `/live-map?truckId=${truckId}`,
+      actionLabel: "View Live Map",
+      at: new Date().toISOString(),
+      dedupeKey: `${startedId}:start`,
+    });
+  }
+  return startedId;
 }
 
 export function stopByAtPoint(truckId) {
+  const ts = getSnapshot().trucks[truckId];
+  if (!ts || !ts.scheduleId) return;
+  const point = getSchedule(ts.scheduleId)?.routePoints?.[ts.stopIndex];
   write((next) => {
-    const ts = next.trucks[truckId];
-    if (!ts || !ts.scheduleId) return;
-    const point = getSchedule(ts.scheduleId)?.routePoints?.[ts.stopIndex];
+    const cur = next.trucks[truckId];
+    if (!cur || !cur.scheduleId) return;
     next.trucks = {
       ...next.trucks,
       [truckId]: {
-        ...ts,
+        ...cur,
         phase: "onsite",
         onsite: true,
         tracking: {
-          ...ts.tracking,
-          lat: point?.lat ?? ts.tracking.lat,
-          lng: point?.lng ?? ts.tracking.lng,
+          ...cur.tracking,
+          lat: point?.lat ?? cur.tracking.lat,
+          lng: point?.lng ?? cur.tracking.lng,
           eta: "On Site",
         },
       },
     };
+  });
+
+  // Broadcast the arrival to admins: the truck reached the pin point they
+  // scheduled. Residents already see the arrival via their live header banner
+  // (driven by this same store), so no resident feed entry is pushed. The
+  // dedupe key keeps repeated presses on the same stop from double-firing.
+  const stopName = point?.name ?? "a stop";
+  const dedupeKey = `${ts.scheduleId}:${ts.stopIndex}:stopby`;
+  pushNotification({
+    audience: "admin",
+    type: "Dispatch",
+    title: `Truck ${truckId} arrived at ${stopName}`,
+    message: `Truck ${truckId} is now on site at the ${stopName} pickup pin point you scheduled.`,
+    location: `${stopName}, Brgy. Tejero`,
+    truckId,
+    actionUrl: `/live-map?truckId=${truckId}`,
+    actionLabel: "View Live Map",
+    at: new Date().toISOString(),
+    dedupeKey,
   });
 }
 
@@ -411,11 +497,14 @@ export function useLiveRoute() {
 }
 
 // ---- Live movement sim: advance on-duty trucks toward their next stop every
-// 5 seconds so the marker glides in realtime on every map (admin, resident,
-// driver). Any tab may tick; lastSimAt dedupes concurrent tabs. Trucks fed by
-// real GPS (recent lastGpsAt) or seeded by tests (simPaused) are left alone.
-const SIM_INTERVAL_MS = 5000;
-const SIM_STEP_M = 45;
+// 4 seconds so the marker glides in realtime on every map (admin, resident,
+// driver). The 4s tick lands before the marker's 4.6s glide finishes, so each
+// update retargets mid-glide and motion never pauses; the 36m step keeps the
+// same 9 m/s speed as the old 45m/5s cadence. Any tab may tick; lastSimAt
+// dedupes concurrent tabs. Trucks fed by real GPS (recent lastGpsAt) or
+// seeded by tests (simPaused) are left alone.
+const SIM_INTERVAL_MS = 4000;
+const SIM_STEP_M = 36;
 const SIM_STOP_GAP_M = 25;
 
 function simMeters(aLat, aLng, bLat, bLng) {

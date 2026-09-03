@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Calendar, Plus, X, Search, Truck, ChevronUp, ChevronDown, Shuffle } from "lucide-react";
+import dynamic from "next/dynamic";
+import { Calendar, Plus, X, Search, Truck, Shuffle, MapPin } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { mockPilotData } from "@/lib/mock-data";
-import { useLiveRoute, getSchedules, addSchedule, updateSchedule, removeSchedule, assignDriver, buildZoneRoutePoints } from "@/lib/live-route";
+import { TEJERO_SITOS } from "@/lib/mock-data";
+import { useLiveRoute, getSchedules, addSchedule, updateSchedule, removeSchedule, assignDriver, estimateStopTime, retimeRoutePoints, scheduleLabel } from "@/lib/live-route";
+import { useRoutePath } from "@/lib/use-route-path";
 import { useFleet, addTruck, updateTruck, removeTruck } from "@/lib/fleet";
 import { loadStaffRoster } from "@/lib/staff";
 import ConfirmModal from "@/components/ui/confirm-modal";
@@ -14,7 +16,13 @@ import { PanelStat } from "@/components/ui/panel-stat";
 import { InfoRow } from "@/components/ui/info-row";
 import { Button } from "@/components/ui/button";
 import { inputClass, labelClass } from "@/components/ui/input";
+import { MapSkeleton } from "@/components/ui/skeletons";
 import { cn } from "@/lib/utils";
+
+const MapCanvas = dynamic(() => import("@/components/map/map-canvas"), {
+  ssr: false,
+  loading: () => <MapSkeleton />,
+});
 
 function Field({ label, children }) {
   return (
@@ -50,7 +58,8 @@ export default function DispatchPage() {
     fleet.find((t) => t.id === truckId)?.driver ??
     null;
 
-  const [zoneId, setZoneId] = useState("");
+  const [sitioQuery, setSitioQuery] = useState("");
+  const [sitioDropdownOpen, setSitioDropdownOpen] = useState(false);
   const [truckId, setTruckId] = useState("");
   const [type, setType] = useState("");
   const [days, setDays] = useState("");
@@ -60,27 +69,29 @@ export default function DispatchPage() {
   useEffect(() => {
     if (isAdding) {
       setSelectedSchedule(null);
-      setZoneId(mockPilotData.zones[0]?.id || "");
       setTruckId(fleet[0]?.id || "");
       setType("Malata (Nabubulok)");
       setDays("Monday, Wednesday, Friday");
       setTime("08:00 AM - 11:00 AM");
       setStatus("Scheduled");
+      setStopOrder([]);
+      setSitioQuery("");
+      setSitioDropdownOpen(false);
     }
   }, [isAdding]);
 
   useEffect(() => {
     if (selectedSchedule) {
       setIsAdding(false);
-      setZoneId(selectedSchedule.zoneId);
       setTruckId(selectedSchedule.activeTruckId);
       setType(selectedSchedule.type);
       setDays(selectedSchedule.days.join(", "));
       setTime(selectedSchedule.time);
       setStatus(live.scheduleStatus[selectedSchedule.id] ?? selectedSchedule.status);
       setStopOrder(selectedSchedule.routePoints ?? []);
+      setSitioQuery("");
+      setSitioDropdownOpen(false);
     } else {
-      setZoneId("");
       setTruckId("");
       setType("");
       setDays("");
@@ -89,23 +100,6 @@ export default function DispatchPage() {
       setStopOrder([]);
     }
   }, [selectedSchedule]);
-
-  // In create mode the stop list is generated from the zone, so keep it in
-  // sync with the zone/time selections until it is saved.
-  useEffect(() => {
-    if (isAdding && zoneId) setStopOrder(buildZoneRoutePoints(zoneId, time));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdding, zoneId, time]);
-
-  const moveStop = (index, dir) => {
-    setStopOrder((prev) => {
-      const j = index + dir;
-      if (j < 0 || j >= prev.length) return prev;
-      const next = [...prev];
-      [next[index], next[j]] = [next[j], next[index]];
-      return next;
-    });
-  };
 
   const shuffleStops = () => {
     setStopOrder((prev) => {
@@ -118,8 +112,46 @@ export default function DispatchPage() {
     });
   };
 
+  // Search-picked sitios become the ordered pickup stops; the store's router
+  // traces the street-following green trajectory through them in this order.
+  const addSitioStop = (name) => {
+    const sitio = TEJERO_SITOS[name];
+    if (!sitio) return;
+    setSitioQuery("");
+    setStopOrder((prev) => {
+      if (prev.some((s) => s.name === name)) return prev;
+      return [
+        ...prev,
+        { name, time: estimateStopTime(time, prev.length), lat: sitio.lat, lng: sitio.lng },
+      ];
+    });
+  };
+
+  const removeStop = (index) => {
+    setStopOrder((prev) => retimeRoutePoints(prev.filter((_, i) => i !== index), time));
+  };
+
+  const handleTimeChange = (value) => {
+    setTime(value);
+    setStopOrder((prev) => (prev.length ? retimeRoutePoints(prev, value) : prev));
+  };
+
+  const sitioList = Object.entries(TEJERO_SITOS).map(([name, v]) => ({
+    name,
+    aliases: v.aliases ?? [],
+  }));
+  const filteredSitios = sitioList.filter((s) => {
+    if (stopOrder.some((p) => p.name === s.name)) return false;
+    const q = sitioQuery.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      s.name.toLowerCase().includes(q) ||
+      s.aliases.some((a) => a.toLowerCase().includes(q))
+    );
+  });
+
   const buildScheduleFields = () => ({
-    zoneId,
+    zoneId: selectedSchedule?.zoneId ?? null,
     activeTruckId: truckId,
     type,
     days: days.split(",").map((d) => d.trim()).filter(Boolean),
@@ -129,25 +161,22 @@ export default function DispatchPage() {
 
   const handleAddSchedule = (e) => {
     e.preventDefault();
-    if (!zoneId || !truckId || !type || !days || !time) return;
+    if (!truckId || !type || !days || !time || stopOrder.length === 0) return;
 
     addSchedule({
       ...buildScheduleFields(),
-      routePoints: stopOrder.length >= 2 ? stopOrder : undefined,
+      routePoints: stopOrder,
     });
     setIsAdding(false);
   };
 
   const handleUpdateSchedule = (e) => {
     e.preventDefault();
-    if (!selectedSchedule || !zoneId || !truckId || !type || !days || !time) return;
+    if (!selectedSchedule || !truckId || !type || !days || !time || stopOrder.length === 0) return;
 
-    const zoneChanged = zoneId !== selectedSchedule.zoneId;
     updateSchedule(selectedSchedule.id, {
       ...buildScheduleFields(),
-      // Changing the coverage regenerates the stops for the new zone;
-      // otherwise the reordered sitio order is kept.
-      routePoints: zoneChanged ? undefined : stopOrder,
+      routePoints: stopOrder,
     });
     setSelectedSchedule(null);
   };
@@ -213,13 +242,13 @@ export default function DispatchPage() {
   };
 
   const filteredSchedules = schedules.filter((sch) => {
-    const zone = mockPilotData.zones.find((z) => z.id === sch.zoneId);
     const truck = fleet.find((t) => t.id === sch.activeTruckId);
     const query = searchQuery.toLowerCase();
 
     return (
       sch.id.toLowerCase().includes(query) ||
-      (zone?.name || "").toLowerCase().includes(query) ||
+      scheduleLabel(sch).toLowerCase().includes(query) ||
+      (sch.routePoints || []).some((p) => (p.name || "").toLowerCase().includes(query)) ||
       (driverOf(sch.activeTruckId) || "").toLowerCase().includes(query) ||
       (truck?.id || "").toLowerCase().includes(query) ||
       sch.type.toLowerCase().includes(query)
@@ -229,25 +258,89 @@ export default function DispatchPage() {
   const totalSchedules = schedules.length;
   const activeDispatches = schedules.filter((s) => effStatus(s) === "In Progress").length;
 
+  // Live preview of the trajectory through the picked stops, reusing the same
+  // MapCanvas + router the driver/resident maps use. Stop names are folded
+  // into the scheduleId so the route-cache key changes with the sequence — the
+  // key alone only tracks stop COUNT and would serve stale geometry.
+  const previewPath = useRoutePath({
+    scheduleId: `preview|${stopOrder.map((s) => s.name).join(">")}`,
+    stopIndex: 0,
+    origin: null,
+    points: stopOrder,
+    enabled: (isAdding || selectedSchedule !== null) && stopOrder.length >= 2,
+  });
+
   const formFields = (
     <>
-      <Field label="Sitio Coverage">
-        <select
-          value={zoneId}
-          onChange={(e) => setZoneId(e.target.value)}
-          className={cn(inputClass, "cursor-pointer")}
-        >
-          {mockPilotData.zones.map((z) => (
-            <option key={z.id} value={z.id}>{z.name}</option>
-          ))}
-        </select>
+      <Field label="Pickup Stops — Search sitios in Brgy. Tejero">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            value={sitioQuery}
+            onChange={(e) => {
+              setSitioQuery(e.target.value);
+              setSitioDropdownOpen(true);
+            }}
+            onFocus={() => setSitioDropdownOpen(true)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                if (filteredSitios[0]) addSitioStop(filteredSitios[0].name);
+              } else if (e.key === "Escape") {
+                setSitioDropdownOpen(false);
+              }
+            }}
+            placeholder="Search a sitio or area (e.g. Vilgon, Riverside)..."
+            className={cn(inputClass, "pl-9")}
+          />
+          {sitioDropdownOpen && (
+            <>
+              <div
+                className="fixed inset-0 z-10 cursor-default"
+                onClick={() => setSitioDropdownOpen(false)}
+              />
+              <ul className="absolute inset-x-0 top-full z-20 mt-1 max-h-44 overflow-y-auto rounded-lg border border-border bg-card py-1 shadow-lg">
+                {filteredSitios.length === 0 ? (
+                  <li className="px-3 py-2 text-xs text-muted-foreground">
+                    {sitioQuery.trim()
+                      ? "No matching sitio in Barangay Tejero."
+                      : "All sitios are already on this route."}
+                  </li>
+                ) : (
+                  filteredSitios.map((s) => (
+                    <li key={s.name}>
+                      <button
+                        type="button"
+                        onClick={() => addSitioStop(s.name)}
+                        className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-muted"
+                      >
+                        <MapPin className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
+                        <span className="text-xs font-semibold text-foreground">{s.name}</span>
+                        {s.aliases.length > 0 && (
+                          <span className="truncate text-[10px] text-muted-foreground">
+                            ({s.aliases.join(", ")})
+                          </span>
+                        )}
+                        <Plus className="ml-auto h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      </button>
+                    </li>
+                  ))
+                )}
+              </ul>
+            </>
+          )}
+        </div>
+        <p className="text-[10px] text-muted-foreground">
+          Pick one or more sitios — the route trajectory is traced through them in the order below.
+        </p>
       </Field>
 
       <Field label="Route Stop Order (Truck starts at Stop 1)">
         <div className="rounded-lg border border-border bg-background">
           {stopOrder.length === 0 ? (
             <p className="px-3 py-3 text-xs text-muted-foreground">
-              No stops for this coverage yet.
+              No stops yet search above to add sitios as pickup stops.
             </p>
           ) : (
             <ul className="divide-y divide-border-subtle">
@@ -268,21 +361,11 @@ export default function DispatchPage() {
                   <div className="flex shrink-0 items-center gap-0.5">
                     <button
                       type="button"
-                      onClick={() => moveStop(i, -1)}
-                      disabled={i === 0}
-                      className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
-                      aria-label={`Move ${stop.name} earlier`}
+                      onClick={() => removeStop(i)}
+                      className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-rose-50 hover:text-rose-600 cursor-pointer"
+                      aria-label={`Remove ${stop.name} from route`}
                     >
-                      <ChevronUp className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => moveStop(i, 1)}
-                      disabled={i === stopOrder.length - 1}
-                      className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
-                      aria-label={`Move ${stop.name} later`}
-                    >
-                      <ChevronDown className="h-3.5 w-3.5" />
+                      <X className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 </li>
@@ -292,7 +375,7 @@ export default function DispatchPage() {
           {stopOrder.length >= 2 && (
             <div className="flex items-center justify-between gap-2 border-t border-border-subtle px-3 py-2">
               <p className="text-[10px] text-muted-foreground">
-                Reorder or shuffle to change which sitio the truck starts by.
+                Shuffle to change which sitio the truck starts by.
               </p>
               <button
                 type="button"
@@ -306,6 +389,28 @@ export default function DispatchPage() {
           )}
         </div>
       </Field>
+
+      {stopOrder.length > 0 && (
+        <Field label="Route Preview">
+          <div className="h-52 overflow-hidden rounded-lg border border-border">
+            <MapCanvas
+              tickets={[]}
+              trucks={[]}
+              routes={
+                previewPath.positions.length >= 2
+                  ? [{ id: "assignment-preview", positions: previewPath.positions }]
+                  : []
+              }
+              mapMode="pins"
+              currentStop={{ ...stopOrder[0], index: 0 }}
+              upcomingStops={stopOrder.slice(1).map((s, i) => ({ ...s, index: i + 1 }))}
+              center={[stopOrder[0].lat, stopOrder[0].lng]}
+              zoom={14}
+              showTicketPopup={false}
+            />
+          </div>
+        </Field>
+      )}
 
       <Field label="Assigned Truck">
         <select
@@ -346,7 +451,7 @@ export default function DispatchPage() {
         <input
           type="text"
           value={time}
-          onChange={(e) => setTime(e.target.value)}
+          onChange={(e) => handleTimeChange(e.target.value)}
           placeholder="e.g. 08:00 AM - 11:00 AM"
           className={inputClass}
           required
@@ -468,7 +573,6 @@ export default function DispatchPage() {
             <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
               {filteredSchedules.map((sch) => {
                 const isSelected = selectedSchedule?.id === sch.id;
-                const zone = mockPilotData.zones.find((z) => z.id === sch.zoneId);
                 const truck = fleet.find((t) => t.id === sch.activeTruckId);
 
                 return (
@@ -488,7 +592,7 @@ export default function DispatchPage() {
                       </div>
 
                       <div className="text-sm font-semibold leading-tight text-foreground">
-                        {zone?.name || sch.zoneId}
+                        {scheduleLabel(sch)}
                       </div>
 
                       <div className="mt-4 border-t border-border-subtle pt-2">
@@ -577,7 +681,12 @@ export default function DispatchPage() {
                   >
                     Cancel
                   </Button>
-                  <Button variant="primary" type="submit">
+                  <Button
+                    variant="primary"
+                    type="submit"
+                    disabled={stopOrder.length === 0}
+                    title={stopOrder.length === 0 ? "Add at least one sitio stop first" : undefined}
+                  >
                     {isAdding ? "Create Schedule" : "Save Changes"}
                   </Button>
                 </div>

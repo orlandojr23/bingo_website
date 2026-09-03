@@ -28,9 +28,10 @@ import {
   Menu,
   Search,
 } from "lucide-react";
-import { mockPilotData } from "@/lib/mock-data";
+import { mockPilotData, TEJERO_SITOS } from "@/lib/mock-data";
 import { useTickets, addTicket, nextTicketId } from "@/lib/tickets";
-import { useLiveRoute, getSchedule, getSchedules } from "@/lib/live-route";
+import { useLiveRoute, getSchedule, getSchedules, scheduleLabel } from "@/lib/live-route";
+import { playDing, playTrumpet, useSoundEnabled, setSoundEnabled } from "@/lib/sounds";
 import { useRoutePath } from "@/lib/use-route-path";
 import { useFleet } from "@/lib/fleet";
 import { getResidentSession, clearResidentSession } from "@/lib/resident-session";
@@ -93,91 +94,6 @@ function Waze3DTurnArrow({ className = "h-7 w-7" }) {
           strokeLinecap="round"
           strokeLinejoin="round"
         />
-      </g>
-    </svg>
-  );
-}
-
-function Waze3DBellIcon({ className = "h-6 w-6", active = false }) {
-  return (
-    <svg
-      viewBox="0 0 36 36"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-    >
-      <defs>
-        {/* Main Body 3D Gradient */}
-        <linearGradient id={active ? "bellBodyActive" : "bellBodyInactive"} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor={active ? "#fde047" : "#6ee7b7"} />
-          <stop offset="45%" stopColor={active ? "#f59e0b" : "#10b981"} />
-          <stop offset="100%" stopColor={active ? "#b45309" : "#047857"} />
-        </linearGradient>
-
-        {/* Rim Highlight 3D Gradient */}
-        <linearGradient id={active ? "bellRimActive" : "bellRimInactive"} x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor={active ? "#fbbf24" : "#34d399"} />
-          <stop offset="50%" stopColor={active ? "#fef08a" : "#a7f3d0"} />
-          <stop offset="100%" stopColor={active ? "#d97706" : "#059669"} />
-        </linearGradient>
-
-        {/* Soft Drop Shadow */}
-        <filter id="3dBellShadow" x="-30%" y="-20%" width="160%" height="160%">
-          <feDropShadow dx="0" dy="1.5" stdDeviation="1.2" floodColor="#000000" floodOpacity="0.2" />
-        </filter>
-      </defs>
-
-      <g filter="url(#3dBellShadow)">
-        {/* Top Attachment Loop Ring */}
-        <circle
-          cx="18"
-          cy="5"
-          r="2.2"
-          stroke={active ? "#f59e0b" : "#10b981"}
-          strokeWidth="1.8"
-          fill="none"
-        />
-
-        {/* Bell Flared Body */}
-        <path
-          d="M 18 7.5 C 12 7.5 9 11.5 9 18 C 9 22 7 23.5 6 24.5 H 30 C 29 23.5 27 22 27 18 C 27 11.5 24 7.5 18 7.5 Z"
-          fill={`url(#${active ? "bellBodyActive" : "bellBodyInactive"})`}
-        />
-
-        {/* 3D Flared Rim Lip */}
-        <ellipse
-          cx="18"
-          cy="24.5"
-          rx="12"
-          ry="2"
-          fill={`url(#${active ? "bellRimActive" : "bellRimInactive"})`}
-        />
-
-        {/* Bell Clapper Ball */}
-        <circle
-          cx="18"
-          cy="27"
-          r="2.8"
-          fill={`url(#${active ? "bellBodyActive" : "bellBodyInactive"})`}
-        />
-
-        {/* Active Sound Vibration Arcs */}
-        {active && (
-          <>
-            <path
-              d="M 3 14 C 1.5 16.5 1.5 19.5 3 22"
-              stroke="#f59e0b"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-            <path
-              d="M 33 14 C 34.5 16.5 34.5 19.5 33 22"
-              stroke="#f59e0b"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-          </>
-        )}
       </g>
     </svg>
   );
@@ -490,12 +406,10 @@ export default function ResidentMobilePWA() {
   const stopIndex = activeTs ? activeTs.stopIndex : 0;
   const routeCompleted = activeTs?.phase === "completed";
 
-  // Single "current stop" pin: the live truck's target stop, or the first
-  // scheduled stop when no truck is on route yet. Hidden once completed.
-  const stopPoint = routeCompleted ? null : activeTs ? routePoints[stopIndex] : routePoints[0];
-  const currentStop = stopPoint
-    ? { ...stopPoint, index: activeTs ? stopIndex : 0 }
-    : null;
+  // Single "current stop" pin: the live truck's target stop. Pins only appear
+  // once the driver presses Start Route (activeTs); hidden once completed.
+  const stopPoint = !activeTs || routeCompleted ? null : routePoints[stopIndex];
+  const currentStop = stopPoint ? { ...stopPoint, index: stopIndex } : null;
 
   const routePath = useRoutePath({
     scheduleId: displaySchedule.id,
@@ -508,12 +422,12 @@ export default function ResidentMobilePWA() {
     blocks: live.roadBlocks ?? [],
   });
 
-  // Compact numbered pins for every stop after the current one, so residents see
-  // the whole remaining run as soon as a schedule exists (even before the driver starts).
-  const baseIdx = activeTs ? stopIndex : 0;
-  const upcomingStops = routeCompleted
-    ? []
-    : routePoints.slice(baseIdx + 1).map((p, i) => ({ ...p, index: baseIdx + 1 + i }));
+  // Compact numbered pins for every stop after the current one — likewise only
+  // shown once the driver has started the route.
+  const upcomingStops =
+    !activeTs || routeCompleted
+      ? []
+      : routePoints.slice(stopIndex + 1).map((p, i) => ({ ...p, index: stopIndex + 1 + i }));
 
   // Road-accurate path for the legs AFTER the current stop. The origin is the fixed
   // current-stop vertex (not the moving truck), so this is fetched once per stop
@@ -534,7 +448,15 @@ export default function ResidentMobilePWA() {
 
   // Live truck banner entry derived from the shared route store
   const liveBanner = useMemo(() => {
-    if (!activeTs || !activeSchedule || activeTs.phase === "completed") return null;
+    if (!activeTs || !activeSchedule) return null;
+    if (activeTs.phase === "completed") {
+      return {
+        id: "truck-live",
+        Icon: Waze3DTruckIcon,
+        title: "Collection complete",
+        subtitle: "All pickups are done — see you next schedule!",
+      };
+    }
     const point = activeSchedule.routePoints?.[activeTs.stopIndex];
     if (activeTs.onsite) {
       return {
@@ -551,6 +473,31 @@ export default function ResidentMobilePWA() {
       subtitle: `Approaching ${point?.name ?? "your stop"}`,
     };
   }, [activeTs, activeSchedule]);
+
+  // Pickup notification sounds: a cute ding when the driver starts the route
+  // (including a fresh route after a completed one), and a trumpet fanfare
+  // each time the driver presses Stop By and the truck arrives at a stop. The
+  // snapshot present on mount is only recorded, so opening the page while a
+  // route is already running never replays sounds for past events.
+  const truckSoundRef = useRef("init");
+  const soundEnabled = useSoundEnabled();
+  useEffect(() => {
+    const state = !activeTs
+      ? "none"
+      : activeTs.onsite
+        ? "onsite"
+        : activeTs.phase === "completed"
+          ? "completed"
+          : "enroute";
+    const prev = truckSoundRef.current;
+    truckSoundRef.current = state;
+    if (prev === "init" || prev === state) return;
+    if (state === "enroute" && (prev === "none" || prev === "completed")) {
+      playDing();
+    } else if (state === "onsite") {
+      playTrumpet();
+    }
+  }, [activeTs]);
 
   // Single truthful status message derived from real schedules: pickup today,
   // or no pickup today with the next collection day.
@@ -631,14 +578,12 @@ export default function ResidentMobilePWA() {
 
   const currentBanner = dynamicBannerMessages[bannerIndex] || dynamicBannerMessages[0];
 
-  // Modals for Header Profile & Notifications
-  const [showNotifications, setShowNotifications] = useState(false);
+  // Modals for Header Profile
   const [showProfile, setShowProfile] = useState(false);
   const [showSignOutModal, setShowSignOutModal] = useState(false);
 
   const closeAllSheets = () => {
     setSelectedTicket(null);
-    setShowNotifications(false);
     setShowProfile(false);
     setIsMapSheetExpanded(false);
   };
@@ -657,32 +602,15 @@ export default function ResidentMobilePWA() {
       }
     }
   );
-  const [mapCenter, setMapCenter] = useState([10.3025, 123.9095]);
+  // The resident's home sitio (chosen at signup) is the map's initial focus;
+  // coverage still spans their whole service area (Barangay Tejero for the
+  // pilot) so they see trucks collecting in neighboring sitios too.
+  const [mapCenter, setMapCenter] = useState(() => {
+    const sitioName = getResidentSession()?.sitio;
+    const sitio = sitioName ? TEJERO_SITOS[sitioName] : null;
+    return sitio ? [sitio.lat, sitio.lng] : [10.3025, 123.9095];
+  });
   const [mapZoom, setMapZoom] = useState(16);
-  const [unreadNotifications, setUnreadNotifications] = useState(2);
-  const [notificationsList, setNotificationsList] = useState([
-    {
-      id: 1,
-      title: "Truck TRK-01 Approaching",
-      message: "Garbage compactor TRK-01 is 5 minutes away from Sitio Vilgon.",
-      time: "5m ago",
-      unread: true,
-    },
-    {
-      id: 2,
-      title: "Malata Pickup Active",
-      message: "Collection is currently ongoing in Sitio Mac Arthur & Sitio Vilgon, Brgy. Tejero.",
-      time: "30m ago",
-      unread: true,
-    },
-    {
-      id: 3,
-      title: "Report Resolved",
-      message: "Your overflow report TKT-002 was collected by the dispatch crew.",
-      time: "Yesterday",
-      unread: false,
-    },
-  ]);
 
   // Form State for Report
   const [photoPreview, setPhotoPreview] = useState(null);
@@ -832,14 +760,13 @@ export default function ResidentMobilePWA() {
 
   const filteredSchedules = getSchedules().filter((s) => {
     const matchesZone = selectedZone === "all" || s.zoneId === selectedZone;
+    const q = searchQuery.toLowerCase();
     const matchesQuery =
       !searchQuery ||
-      s.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.days.some((d) => d.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      mockPilotData.zones
-        .find((z) => z.id === s.zoneId)
-        ?.name.toLowerCase()
-        .includes(searchQuery.toLowerCase());
+      s.type.toLowerCase().includes(q) ||
+      s.days.some((d) => d.toLowerCase().includes(q)) ||
+      scheduleLabel(s).toLowerCase().includes(q) ||
+      (s.routePoints || []).some((p) => (p.name || "").toLowerCase().includes(q));
     return matchesZone && matchesQuery;
   });
 
@@ -961,22 +888,23 @@ export default function ResidentMobilePWA() {
             )}
           </div>
 
-          {/* Right: Top-Right Circular Profile Button with Initial Letter "O" */}
-          <button
-            type="button"
-            onClick={() => {
-              setIsMapSheetExpanded(false);
-              setSelectedTicket(null);
-              setShowNotifications(false);
-              setShowProfile(true);
-              haptic();
-            }}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-sm font-semibold leading-none text-white shadow-xs hover:bg-emerald-700 active:scale-95 transition-all cursor-pointer border border-emerald-500/30"
-            title="Profile & Settings"
-            aria-label="Profile & Settings"
-          >
-            {residentSession?.name?.charAt(0)?.toUpperCase() || "R"}
-          </button>
+          {/* Right: Top-Right Circular Profile Button */}
+          <div className="flex shrink-0 items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => {
+                setIsMapSheetExpanded(false);
+                setSelectedTicket(null);
+                setShowProfile(true);
+                haptic();
+              }}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-sm font-semibold leading-none text-white shadow-xs hover:bg-emerald-700 active:scale-95 transition-all cursor-pointer border border-emerald-500/30"
+              title="Profile & Settings"
+              aria-label="Profile & Settings"
+            >
+              {residentSession?.name?.charAt(0)?.toUpperCase() || "R"}
+            </button>
+          </div>
         </div>
 
 
@@ -1263,12 +1191,11 @@ export default function ResidentMobilePWA() {
                   {/* Schedule List */}
                   <div className="space-y-3">
                     {filteredSchedules.map((sch) => {
-                      const zone = mockPilotData.zones.find((z) => z.id === sch.zoneId);
                       const isRecyclable = sch.type.includes("Recyclable");
                       const isDiliMalata = sch.type.includes("Dili Malata");
                       const isBiodegradable = !isRecyclable && !isDiliMalata;
 
-                      const areaTitle = zone?.name ?? "Barangay Tejero";
+                      const areaTitle = scheduleLabel(sch);
 
                       const DAY_ABBR = {
                         Monday: "Mon",
@@ -1687,52 +1614,6 @@ export default function ResidentMobilePWA() {
         )}
       </BottomSheet>
 
-      {/* Notifications Bottom Sheet */}
-      <BottomSheet
-        open={showNotifications}
-        onClose={() => setShowNotifications(false)}
-        title="Notifications"
-      >
-        <div className="space-y-3">
-          <div className="flex items-center justify-between pb-1">
-            <span className="text-xs text-muted-foreground font-medium">Recent Updates & Alerts</span>
-            {unreadNotifications > 0 && (
-              <button
-                type="button"
-                onClick={() => {
-                  setUnreadNotifications(0);
-                  setNotificationsList((prev) => prev.map((n) => ({ ...n, unread: false })));
-                  toast("All notifications marked as read.");
-                }}
-                className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 cursor-pointer"
-              >
-                Mark all as read
-              </button>
-            )}
-          </div>
-
-          <div className="space-y-2.5">
-            {notificationsList.map((n) => (
-              <div
-                key={n.id}
-                className={cn(
-                  "rounded-xl border p-3.5 transition-all",
-                  n.unread
-                    ? "border-emerald-200 bg-emerald-50/50"
-                    : "border-border bg-card"
-                )}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <h4 className="text-xs font-semibold text-foreground">{n.title}</h4>
-                  <span className="text-[10px] font-mono text-muted-foreground shrink-0">{n.time}</span>
-                </div>
-                <p className="mt-1 text-xs text-muted-foreground leading-relaxed">{n.message}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </BottomSheet>
-
       {/* Profile & Settings Slide-Up Bottom Sheet */}
       <BottomSheet
         open={showProfile}
@@ -1770,9 +1651,15 @@ export default function ResidentMobilePWA() {
               <div className="flex items-center justify-between p-3">
                 <div className="flex items-center gap-2.5">
                   <Bell className="h-4 w-4 text-emerald-600" />
-                  <span className="text-xs font-bold text-foreground">Pickup Notifications</span>
+                  <span className="text-xs font-bold text-foreground">Notification Sounds</span>
                 </div>
-                <input type="checkbox" defaultChecked className="h-4 w-4 accent-emerald-600 rounded cursor-pointer" />
+                <input
+                  type="checkbox"
+                  checked={soundEnabled}
+                  onChange={(e) => setSoundEnabled(e.target.checked)}
+                  aria-label="Toggle notification sounds"
+                  className="h-4 w-4 accent-emerald-600 rounded cursor-pointer"
+                />
               </div>
 
               <div className="flex items-center justify-between p-3">
@@ -1780,7 +1667,11 @@ export default function ResidentMobilePWA() {
                   <MapPin className="h-4 w-4 text-emerald-600" />
                   <span className="text-xs font-bold text-foreground">Home Address</span>
                 </div>
-                <span className="text-xs font-semibold text-muted-foreground">Sitio Vilgon</span>
+                <span className="text-xs font-semibold text-muted-foreground">
+                  {residentSession?.sitio
+                    ? `${residentSession.sitio}, ${residentSession?.address?.barangay || "Tejero"}`
+                    : "Barangay Tejero"}
+                </span>
               </div>
 
               <div className="flex items-center justify-between p-3">

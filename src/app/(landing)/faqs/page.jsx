@@ -30,7 +30,7 @@ const faqCategories = [
     faqs: [
       {
         question: "How accurate is the live truck tracking?",
-        answer: "Every collection truck has a tracker that shares its location every 5 to 10 seconds, so the live map stays accurate and up to date."
+        answer: "Every collection truck has a tracker that shares its location every few seconds, so the live map stays accurate and up to date."
       },
       {
         question: "What happens when I report an uncollected garbage bin?",

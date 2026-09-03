@@ -8,6 +8,7 @@ import "leaflet-rotate";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
 import { MapSkeleton } from "@/components/ui/skeletons";
 import { Navigation } from "lucide-react";
+import { SERVICE_AREAS } from "@/lib/mock-data";
 
 // Fix default leaflet icons in Next.js
 delete L.Icon.Default.prototype._getIconUrl;
@@ -19,15 +20,22 @@ L.Icon.Default.mergeOptions({
 
 const OSM_TILE_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 
-// The system only operates in the Philippines (Metro Cebu focus), so every map
-// is clamped to the archipelago: users can zoom out to see the whole country but
-// no further, and cannot pan past its edges into neighboring countries.
-const PH_MAX_BOUNDS = [
-  [4.5, 116.7], // southwest: southern Mindanao / Palawan
-  [21.2, 126.8], // northeast: Batanes / Philippine Sea
+// The pilot launch operates only within Barangay Tejero, so every map is
+// clamped to the barangay: the bounds are derived from the active service
+// area's sitio anchors with ~500 m of padding (street context at the edges +
+// GPS drift slack), panning past the edges bounces back, and zooming out
+// beyond the neighborhood view is blocked. When another barangay joins
+// SERVICE_AREAS, maps for that area derive their own bounds the same way.
+const ACTIVE_AREA = SERVICE_AREAS.tejero;
+const TEJERO_BOUNDS_PAD = 0.0045; // ≈500 m at this latitude
+const tejeroLats = Object.values(ACTIVE_AREA.sitios).map((s) => s.lat);
+const tejeroLngs = Object.values(ACTIVE_AREA.sitios).map((s) => s.lng);
+const TEJERO_MAX_BOUNDS = [
+  [Math.min(...tejeroLats) - TEJERO_BOUNDS_PAD, Math.min(...tejeroLngs) - TEJERO_BOUNDS_PAD],
+  [Math.max(...tejeroLats) + TEJERO_BOUNDS_PAD, Math.max(...tejeroLngs) + TEJERO_BOUNDS_PAD],
 ];
-const PH_MIN_ZOOM = 6;
-const PH_BOUNDS_VISCOSITY = 1.0;
+const TEJERO_MIN_ZOOM = 15;
+const TEJERO_BOUNDS_VISCOSITY = 1.0;
 
 const getUrgencyColor = (urgency) => {
   switch (urgency) {
@@ -43,12 +51,22 @@ const getUrgencyColor = (urgency) => {
   }
 };
 
-const createCustomIcon = (urgency) => {
+const createTicketIcon = (urgency) => {
   const color = getUrgencyColor(urgency);
   return L.divIcon({
     className: "custom-pin bg-transparent border-0",
     html: `
-      <div style="display: flex; align-items: center; justify-content: center;">
+      <div style="display: flex; align-items: center; justify-content: center; transform-origin: 50% 50%; animation: ticketPinPopIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);">
+        <style>
+          @keyframes ticketPinPopIn {
+            0% { opacity: 0; transform: scale(0.2); }
+            100% { opacity: 1; transform: scale(1); }
+          }
+          @keyframes ticketPinFadeOut {
+            from { opacity: 1; transform: scale(1); }
+            to { opacity: 0; transform: scale(0.5); }
+          }
+        </style>
         <svg width="18" height="18" viewBox="0 0 18 18" style="filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.3));">
           <circle cx="9" cy="9" r="7" fill="${color}" stroke="#ffffff" stroke-width="2.5" />
         </svg>
@@ -58,6 +76,20 @@ const createCustomIcon = (urgency) => {
     iconAnchor: [9, 9],
     popupAnchor: [0, -9],
   });
+};
+
+// Cache per urgency so re-renders keep the same icon and never replay the
+// pop-in animation — a fresh divIcon each render would swap the DOM node and
+// restart the CSS animation on every live-store tick.
+const ticketIconCache = new Map();
+const getTicketIcon = (urgency) => {
+  const key = urgency ?? "default";
+  let icon = ticketIconCache.get(key);
+  if (!icon) {
+    icon = createTicketIcon(urgency);
+    ticketIconCache.set(key, icon);
+  }
+  return icon;
 };
 
 const createRoadBlockIcon = () =>
@@ -202,6 +234,9 @@ const getStopPinIcon = (stop, compact = false) => {
   return icon;
 };
 
+// Stable identity for an upcoming-stop pin: absolute route index + position.
+const upcomingPinKey = (s) => `${s.index}-${s.lat}-${s.lng}`;
+
 function StopPinMarker({ stop, fading, compact = false }) {
   const markerRef = useRef(null);
 
@@ -220,6 +255,69 @@ function StopPinMarker({ stop, fading, compact = false }) {
       icon={getStopPinIcon(stop, compact)}
       zIndexOffset={compact ? 1800 : 2000}
     />
+  );
+}
+
+// Report/ticket pin: pops in on mount via the icon's own animation; on removal
+// the parent keeps it mounted ~500ms with `fading` so it shrinks away instead
+// of vanishing. Same key whether live or fading, so the marker never remounts
+// mid-transition.
+function TicketMarker({ ticket: t, fading, highlighted, showTicketPopup, onSelectTicket }) {
+  const markerRef = useRef(null);
+
+  useEffect(() => {
+    const inner = markerRef.current?.getElement()?.firstElementChild;
+    if (!inner) return;
+    if (fading) {
+      inner.style.animation = "ticketPinFadeOut 0.45s ease-in forwards";
+    }
+  }, [fading]);
+
+  return (
+    <Marker
+      ref={markerRef}
+      position={[t.lat, t.lng]}
+      icon={getTicketIcon(t.urgency)}
+      zIndexOffset={highlighted ? 1000 : 0}
+      eventHandlers={
+        !showTicketPopup && onSelectTicket
+          ? { click: () => onSelectTicket(t) }
+          : undefined
+      }
+    >
+      {showTicketPopup && (
+      <Popup>
+        <div className="p-3.5 flex flex-col gap-2 min-w-[220px] max-w-[260px] text-zinc-900 font-sans">
+          <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-zinc-100">
+            <span className="font-mono font-semibold text-xs text-zinc-900">
+              {t.id}
+            </span>
+            <UrgencyBadge urgency={t.urgency} />
+          </div>
+
+          <div className="flex flex-col">
+            <span className="font-semibold text-xs text-zinc-900">
+              {t.location}
+            </span>
+            <span className="text-xs text-zinc-500">
+              {t.barangay}, {t.city || "Cebu City"}
+            </span>
+          </div>
+
+          <p className="text-xs text-zinc-600 line-clamp-2 leading-relaxed">
+            {t.description}
+          </p>
+
+          <div className="flex items-center justify-between pt-2 border-t border-zinc-100 mt-0.5">
+            <StatusBadge status={t.status} />
+            <span className="text-xs text-zinc-400 font-mono">
+              {t.date}
+            </span>
+          </div>
+        </div>
+      </Popup>
+      )}
+    </Marker>
   );
 }
 
@@ -585,6 +683,53 @@ export default function MapCanvas({ tickets = [], trucks = [], routes = [], road
   const fadingOnly = fadingTrucks.filter((t) => !activeIds.has(t.id));
   const fadingIds = new Set(fadingOnly.map((t) => t.id));
 
+  // Report pin hand-off: tickets leaving the list (filtered out, resolved,
+  // view toggled) stay mounted for 500ms playing their fade-out.
+  const [fadingTickets, setFadingTickets] = useState([]);
+  const prevTicketsRef = useRef(tickets || []);
+
+  useEffect(() => {
+    const prev = prevTicketsRef.current;
+    prevTicketsRef.current = tickets || [];
+    const currentIds = new Set((tickets || []).map((t) => t.id));
+    const removed = prev.filter((t) => !currentIds.has(t.id));
+    if (!removed.length) return;
+    setFadingTickets((f) => [...f, ...removed]);
+    const removedIds = new Set(removed.map((t) => t.id));
+    setTimeout(() => {
+      setFadingTickets((f) => f.filter((x) => !removedIds.has(x.id)));
+    }, 500);
+  }, [tickets]);
+
+  const ticketIds = new Set((tickets || []).map((t) => t.id));
+  const fadingTicketsOnly = fadingTickets.filter((t) => !ticketIds.has(t.id));
+  const fadingTicketIds = new Set(fadingTicketsOnly.map((t) => t.id));
+
+  // Upcoming-stop pin hand-off: when the route advances (or ends), the consumed
+  // compact pins fade out instead of vanishing mid-run.
+  const [fadingUpcoming, setFadingUpcoming] = useState([]);
+  const prevUpcomingRef = useRef(upcomingStops || []);
+
+  useEffect(() => {
+    const prev = prevUpcomingRef.current;
+    prevUpcomingRef.current = upcomingStops || [];
+    const currentKeys = new Set((upcomingStops || []).map(upcomingPinKey));
+    const removed = prev.filter((s) => !currentKeys.has(upcomingPinKey(s)));
+    if (!removed.length) return;
+    setFadingUpcoming((f) => [
+      ...f.filter((x) => !removed.some((r) => upcomingPinKey(r) === upcomingPinKey(x))),
+      ...removed,
+    ]);
+    const removedKeys = new Set(removed.map(upcomingPinKey));
+    setTimeout(() => {
+      setFadingUpcoming((f) => f.filter((x) => !removedKeys.has(upcomingPinKey(x))));
+    }, 500);
+  }, [upcomingStops]);
+
+  const upcomingKeys = new Set((upcomingStops || []).map(upcomingPinKey));
+  const fadingUpcomingOnly = fadingUpcoming.filter((s) => !upcomingKeys.has(upcomingPinKey(s)));
+  const fadingUpcomingKeys = new Set(fadingUpcomingOnly.map(upcomingPinKey));
+
   useEffect(() => {
     const t = setTimeout(() => setMounted(true), 0);
     return () => clearTimeout(t);
@@ -618,9 +763,9 @@ export default function MapCanvas({ tickets = [], trucks = [], routes = [], road
         rotate
         rotateControl={false}
         touchRotate={true}
-        minZoom={PH_MIN_ZOOM}
-        maxBounds={PH_MAX_BOUNDS}
-        maxBoundsViscosity={PH_BOUNDS_VISCOSITY}
+        minZoom={TEJERO_MIN_ZOOM}
+        maxBounds={TEJERO_MAX_BOUNDS}
+        maxBoundsViscosity={TEJERO_BOUNDS_VISCOSITY}
         className="w-full h-full z-10"
       >
         <MapCameraController center={mapCenter} zoom={mapZoom} onMapDrag={onMapDrag} onBoundsChange={onBoundsChange} flySignal={flySignal} bearing={autoFollow ? (rotatable ? cameraBearing : 0) : null} onUserRotate={handleUserRotate} />
@@ -714,57 +859,18 @@ export default function MapCanvas({ tickets = [], trucks = [], routes = [], road
           </Marker>
         ))}
 
-        {/* Point Markers */}
+        {/* Point Markers (removed pins finish their fade-out before unmount) */}
         {(mapMode === "pins" || mapMode === "combined") &&
-          tickets.map((t) => {
-            const isHighlighted = highlightedTicketId === t.id;
-            return (
-              <Marker
-                key={`pin-${t.id}`}
-                position={[t.lat, t.lng]}
-                icon={createCustomIcon(t.urgency)}
-                zIndexOffset={isHighlighted ? 1000 : 0}
-                eventHandlers={
-                  !showTicketPopup && onSelectTicket
-                    ? { click: () => onSelectTicket(t) }
-                    : undefined
-                }
-              >
-                {showTicketPopup && (
-                <Popup>
-                  <div className="p-3.5 flex flex-col gap-2 min-w-[220px] max-w-[260px] text-zinc-900 font-sans">
-                    <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-zinc-100">
-                      <span className="font-mono font-semibold text-xs text-zinc-900">
-                        {t.id}
-                      </span>
-                      <UrgencyBadge urgency={t.urgency} />
-                    </div>
-
-                    <div className="flex flex-col">
-                      <span className="font-semibold text-xs text-zinc-900">
-                        {t.location}
-                      </span>
-                      <span className="text-xs text-zinc-500">
-                        {t.barangay}, {t.city || "Cebu City"}
-                      </span>
-                    </div>
-
-                    <p className="text-xs text-zinc-600 line-clamp-2 leading-relaxed">
-                      {t.description}
-                    </p>
-
-                    <div className="flex items-center justify-between pt-2 border-t border-zinc-100 mt-0.5">
-                      <StatusBadge status={t.status} />
-                      <span className="text-xs text-zinc-400 font-mono">
-                        {t.date}
-                      </span>
-                    </div>
-                  </div>
-                </Popup>
-                )}
-              </Marker>
-            );
-          })}
+          [...tickets, ...fadingTicketsOnly].map((t) => (
+            <TicketMarker
+              key={`pin-${t.id}`}
+              ticket={t}
+              fading={fadingTicketIds.has(t.id)}
+              highlighted={highlightedTicketId === t.id}
+              showTicketPopup={showTicketPopup}
+              onSelectTicket={onSelectTicket}
+            />
+          ))}
 
         {/* Truck Markers (Only render active trucks on route; fading ones finish their fade-out) */}
         {[...activeTrucks, ...fadingOnly].map((trk) => (
@@ -791,12 +897,12 @@ export default function MapCanvas({ tickets = [], trucks = [], routes = [], road
             fading={false}
           />
         )}
-        {(upcomingStops || []).map((s) => (
+        {[...(upcomingStops || []), ...fadingUpcomingOnly].map((s) => (
           <StopPinMarker
-            key={`upcoming-pin-${s.index}-${s.lat}-${s.lng}`}
+            key={`upcoming-pin-${upcomingPinKey(s)}`}
             stop={s}
             compact
-            fading={false}
+            fading={fadingUpcomingKeys.has(upcomingPinKey(s))}
           />
         ))}
       </MapContainer>

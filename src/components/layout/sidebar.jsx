@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useUnreadCount } from "@/lib/notifications";
 
 const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutGrid },
@@ -26,13 +27,14 @@ const navItems = [
   { name: "Live Map", href: "/live-map", icon: Map },
   { name: "Reports", href: "/tickets", icon: Ticket },
   { name: "Data & Insights", href: "/analytics", icon: BarChart3 },
-  { name: "Notifications", href: "/notifications", icon: Bell, badge: 2 },
+  { name: "Notifications", href: "/notifications", icon: Bell },
 ];
 
 export default function Sidebar({ isOpen, onClose }) {
   const pathname = usePathname();
   const router = useRouter();
   const [showSignOutModal, setShowSignOutModal] = useState(false);
+  const unreadNotifications = useUnreadCount("admin");
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -66,6 +68,8 @@ export default function Sidebar({ isOpen, onClose }) {
         {navItems.map((item) => {
           const isActive =
             pathname === item.href || pathname?.startsWith(`${item.href}/`);
+          const badge =
+            item.href === "/notifications" ? unreadNotifications : 0;
           return (
             <Link
               key={item.name}
@@ -90,9 +94,9 @@ export default function Sidebar({ isOpen, onClose }) {
                 />
                 <span>{item.name}</span>
               </div>
-              {item.badge && (
+              {badge > 0 && (
                 <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-emerald-600 px-1.5 text-[10px] font-bold leading-none text-white">
-                  {item.badge}
+                  {badge > 99 ? "99+" : badge}
                 </span>
               )}
             </Link>

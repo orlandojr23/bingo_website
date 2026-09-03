@@ -1,3 +1,13 @@
+// The pilot launch covers a single barangay, so every resident account shares
+// these fixed upper address levels; only the sitio is chosen at signup. When
+// the service expands, these become real dropdown options.
+export const PILOT_AREA = {
+  region: "Region VII — Central Visayas",
+  province: "Cebu",
+  city: "Cebu City",
+  barangay: "Tejero",
+};
+
 // Real-world anchor coordinates for the 10 sitios of Barangay Tejero, Cebu City.
 // Derived from OSM street anchors (Villagonzalo St, U. Alviola St, Zapatera St,
 // Tejero Barangay Hall) and local news coverage naming the sitios.
@@ -12,6 +22,18 @@ export const TEJERO_SITOS = {
   "Sitio Silangan": { lat: 10.30285, lng: 123.90975 },
   "Sitio Riverside": { lat: 10.303, lng: 123.90295 },
   "Sitio Zapanta": { lat: 10.30375, lng: 123.90195 },
+};
+
+// Registry of service areas keyed by barangay id. A resident's signup location
+// determines which area scopes their map coverage and data, and which admin
+// console their reports flow to. The pilot launch has exactly one entry;
+// expanding to another barangay means adding its entry (and sitios) here.
+export const SERVICE_AREAS = {
+  tejero: {
+    id: "tejero",
+    ...PILOT_AREA,
+    sitios: TEJERO_SITOS,
+  },
 };
 
 export const mockTickets = [

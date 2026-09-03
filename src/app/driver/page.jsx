@@ -26,6 +26,7 @@ import {
   reportRoadBlock,
   getSchedule,
   getSchedules,
+  scheduleLabel,
 } from "@/lib/live-route";
 import { cn, haptic } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -371,12 +372,16 @@ export default function DriverPage() {
   const assignedZone = assignedSchedule
     ? mockPilotData.zones.find((z) => z.id === assignedSchedule.zoneId)
     : null;
+  // Compact area label: legacy zone segment, or the first stop of a
+  // sitio-built custom route.
+  const assignedAreaName = assignedSchedule
+    ? assignedZone
+      ? assignedZone.name.split("&")[0].trim()
+      : assignedSchedule.routePoints?.[0]?.name ?? scheduleLabel(assignedSchedule)
+    : null;
 
   const activeSchedule = truckState?.scheduleId
     ? getSchedule(truckState.scheduleId)
-    : null;
-  const activeZone = activeSchedule
-    ? mockPilotData.zones.find((z) => z.id === activeSchedule.zoneId)
     : null;
   const routePoints = activeSchedule?.routePoints ?? [];
   const currentPoint = routePoints[truckState?.stopIndex ?? 0];
@@ -399,27 +404,21 @@ export default function DriverPage() {
     blocks: live.roadBlocks ?? [],
   });
 
-  // Single "current stop" pin: target stop while on duty, first assigned stop
-  // before the shift starts, hidden once the route is completed.
+  // Single "current stop" pin: shown only once the driver has started the
+  // route (an active schedule exists); hidden once the route is completed.
   const driverStopPoint =
-    truckState?.phase === "completed"
-      ? null
-      : activeSchedule
-        ? currentPoint
-        : assignedSchedule?.routePoints?.[0];
+    !activeSchedule || truckState?.phase === "completed" ? null : currentPoint;
   const driverCurrentStop = driverStopPoint
-    ? { ...driverStopPoint, index: activeSchedule ? truckState?.stopIndex ?? 0 : 0 }
+    ? { ...driverStopPoint, index: truckState?.stopIndex ?? 0 }
     : null;
 
-  // Compact numbered pins for every stop after the current one, so the driver sees
-  // the whole remaining run (and the full pre-start plan before Start).
+  // Compact numbered pins for every stop after the current one — likewise gated
+  // on the route having started, so the map stays pin-free until Start Route.
   const dStopIdx = truckState?.stopIndex ?? 0;
-  const driverStopList = activeSchedule ? routePoints : (assignedSchedule?.routePoints ?? []);
-  const driverBaseIdx = activeSchedule ? dStopIdx : 0;
   const driverUpcomingStops =
-    truckState?.phase === "completed"
+    !activeSchedule || truckState?.phase === "completed"
       ? []
-      : driverStopList.slice(driverBaseIdx + 1).map((p, i) => ({ ...p, index: driverBaseIdx + 1 + i }));
+      : routePoints.slice(dStopIdx + 1).map((p, i) => ({ ...p, index: dStopIdx + 1 + i }));
 
   // Road-accurate path for the legs AFTER the current stop. The origin is the fixed
   // current-stop vertex (not the moving truck), so this is fetched once per stop
@@ -448,10 +447,8 @@ export default function DriverPage() {
   }, [driverName]);
 
   const bannerMessages = useMemo(() => {
-    // Keep taglines compact: first zone segment only, start time only
-    const zoneName = assignedZone
-      ? assignedZone.name.split("&")[0].trim()
-      : null;
+    // Keep taglines compact: first area segment only, start time only
+    const zoneName = assignedAreaName;
     const startTime = String(assignedSchedule?.time || "")
       .split("-")[0]
       .trim();
@@ -516,7 +513,7 @@ export default function DriverPage() {
       });
     }
     return msgs;
-  }, [greetingTitle, assignedZone, assignedSchedule, truckState, isOnDuty, currentPoint, routePoints.length]);
+  }, [greetingTitle, assignedAreaName, assignedSchedule, truckState, isOnDuty, currentPoint, routePoints.length]);
 
   const [bannerIndex, setBannerIndex] = useState(0);
   const [mapReady, setMapReady] = useState(false);
@@ -695,7 +692,7 @@ export default function DriverPage() {
 
     if (truckState.phase === "enroute") {
       stopByAtPoint(selectedTruckId);
-      toast(`Arrived at ${currentPoint?.name ?? "stop"}.`);
+      toast(`Arrived at ${currentPoint?.name ?? "stop"} — admin notified.`);
       return;
     }
 
@@ -713,10 +710,9 @@ export default function DriverPage() {
         s.activeTruckId === selectedTruckId &&
         (live.scheduleStatus[s.id] ?? s.status) === "Scheduled"
     );
-    const nextZone = mockPilotData.zones.find((z) => z.id === next?.zoneId);
     toast(
-      nextZone
-        ? `Route completed. New assignment: ${nextZone.name}.`
+      next
+        ? `Route completed. New assignment: ${scheduleLabel(next)}.`
         : "Route completed. No further assignments."
     );
   };
@@ -769,7 +765,7 @@ export default function DriverPage() {
         isActive: truckState.tracking.isActive,
       },
     ];
-  }, [currentTruck, truckState, isOnDuty]);
+  }, [currentTruck, truckState, isOnDuty, driverRoute.heading, liveDriver]);
 
   // Waze-style course-up camera while driving: heading up, auto-follow truck.
   // Use the live travel heading so the camera matches actual motion.
@@ -1142,7 +1138,7 @@ export default function DriverPage() {
                           <div className="rounded-xl border border-border bg-muted/40 p-3 space-y-2">
                             <InfoRow
                               label="Active Route"
-                              value={activeZone ? activeZone.name : "No Active Route"}
+                              value={activeSchedule ? scheduleLabel(activeSchedule) : "No Active Route"}
                             />
                             <InfoRow
                               label="Next Stop"
@@ -1181,8 +1177,8 @@ export default function DriverPage() {
                         <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
                           <div className="border-b border-border/60 pb-2.5">
                             <h3 className="text-sm font-extrabold text-foreground tracking-tight">
-                              {assignedZone
-                                ? `${assignedZone.name} Route`
+                              {assignedSchedule
+                                ? `${scheduleLabel(assignedSchedule)} Route`
                                 : "No Route Assigned"}
                             </h3>
                           </div>

@@ -113,6 +113,8 @@ export default function ResidentLoginPage() {
       setResidentSession({
         email: trimmedEmail,
         name: account?.name || nameFromEmail(trimmedEmail),
+        sitio: account?.sitio ?? null,
+        address: account?.address ?? null,
       });
       router.replace("/report");
     }, 900);

@@ -11,11 +11,11 @@ export function getResidentSession() {
   }
 }
 
-export function setResidentSession({ email, name }) {
+export function setResidentSession({ email, name, sitio, address }) {
   try {
     window.localStorage.setItem(
       SESSION_KEY,
-      JSON.stringify({ email, name, signedInAt: Date.now() })
+      JSON.stringify({ email, name, sitio: sitio || null, address: address || null, signedInAt: Date.now() })
     );
   } catch {
     // storage unavailable — session won't persist
