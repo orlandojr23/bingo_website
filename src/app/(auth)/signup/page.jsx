@@ -345,7 +345,7 @@ export default function SignupPage() {
       </div>
 
       <p className="pb-6 text-center text-xs font-medium text-muted-foreground/60">
-        Bin&apos;Go &middot; Barangay Tejero Waste Collection
+        Bin&apos;Go &middot; Smart Waste Collection, Simplified
       </p>
     </div>
   );

@@ -264,7 +264,7 @@ export default function LandingLayout({ children }) {
               Bin&apos;Go
             </h2>
             <div className="w-full flex justify-center text-center text-xs font-semibold text-emerald-400/60 pt-8 border-t border-emerald-800/10">
-              <span>© {new Date().getFullYear()} Bin&apos;Go Waste Management Platform. All rights reserved.</span>
+              <span>© {new Date().getFullYear()} Bin&apos;Go. All rights reserved.</span>
             </div>
           </div>
 
