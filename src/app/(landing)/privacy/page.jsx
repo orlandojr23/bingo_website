@@ -57,7 +57,7 @@ export default function PrivacyPolicyPage() {
               <ul className="list-disc pl-5 space-y-2">
                 <li><strong className="text-zinc-800">To Provide the Service:</strong> Showing live truck locations near your area.</li>
                 <li><strong className="text-zinc-800">For Waste Reports:</strong> Sending your reports straight to the barangay team that handles collection.</li>
-                <li><strong className="text-zinc-800">To Keep You Updated:</strong> Sending helpful alerts (like when a truck is arriving) and emails about important changes to our policies.</li>
+                <li><strong className="text-zinc-800">To Keep You Updated:</strong> Sending helpful in-app alerts (like when a truck is arriving) and important notices about changes to our policies.</li>
               </ul>
             </div>
           </section>
@@ -72,7 +72,7 @@ export default function PrivacyPolicyPage() {
                 Bin'Go uses standard security practices to keep your personal information safe. All information sent between your device and Bin'Go is encrypted, and sensitive data is stored securely. We will never sell, rent, or share your data with third parties.
               </p>
               <p className="text-sm bg-zinc-50 p-4 rounded-xl border border-zinc-100">
-                Last Updated: August 25, 2026
+                Last Updated: September 3, 2026
               </p>
             </div>
           </section>
