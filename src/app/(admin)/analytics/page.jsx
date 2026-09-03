@@ -43,7 +43,7 @@ export default function AnalyticsPage() {
 
   return (
     <div className="relative flex min-h-full w-full min-w-0 overflow-x-hidden bg-background bg-[url('/hero-bg.svg')] bg-[length:100%_auto] sm:bg-cover bg-top sm:bg-center bg-no-repeat">
-      <div className="absolute inset-0 bg-background/40 pointer-events-none" />
+      <div className="absolute inset-0 bg-background/42 pointer-events-none" />
       <div className="relative z-10 flex flex-1 min-w-0 flex-col gap-5 p-4 [scrollbar-gutter:stable] sm:gap-6 sm:p-6 lg:p-8 pb-6 sm:pb-8 lg:pb-10">
         <PageHeader
           title="Data & Insights"
@@ -111,7 +111,7 @@ export default function AnalyticsPage() {
                         </div>
                       </div>
                     </div>
-                    <span className="font-mono text-xs font-medium text-muted-foreground">
+                    <span className="text-xs font-medium text-muted-foreground tracking-tight tabular-nums">
                       {item.month}
                     </span>
                   </div>
@@ -148,7 +148,7 @@ export default function AnalyticsPage() {
                     <span className="font-semibold text-foreground">{cat.name}</span>
                     <div className="flex items-center gap-2">
                       <span className="text-muted-foreground">{cat.count} reports</span>
-                      <span className="w-9 text-right font-mono font-semibold text-foreground">
+                      <span className="w-9 text-right font-semibold text-foreground tracking-tight tabular-nums">
                         {cat.percentage}
                       </span>
                     </div>
@@ -184,7 +184,7 @@ export default function AnalyticsPage() {
             <div className="flex flex-col justify-between rounded-lg border border-border bg-muted/40 p-3 text-xs">
               <span className="font-medium text-muted-foreground">Cleanup Time Goal</span>
               <div className="mt-2 flex items-baseline justify-between">
-                <span className="font-mono text-lg font-semibold text-foreground">&lt; 6.0 hrs</span>
+                <span className="text-lg font-semibold text-foreground tracking-tight tabular-nums">&lt; 6.0 hrs</span>
                 <span className="font-semibold text-emerald-600">Met (4.2 hrs)</span>
               </div>
             </div>
@@ -192,7 +192,7 @@ export default function AnalyticsPage() {
             <div className="flex flex-col justify-between rounded-lg border border-border bg-muted/40 p-3 text-xs">
               <span className="font-medium text-muted-foreground">Cleanup Success Rate</span>
               <div className="mt-2 flex items-baseline justify-between">
-                <span className="font-mono text-lg font-semibold text-foreground">&gt; 85.0%</span>
+                <span className="text-lg font-semibold text-foreground tracking-tight tabular-nums">&gt; 85.0%</span>
                 <span className="font-semibold text-emerald-600">Met (88.7%)</span>
               </div>
             </div>
@@ -200,7 +200,7 @@ export default function AnalyticsPage() {
             <div className="flex flex-col justify-between rounded-lg border border-border bg-muted/40 p-3 text-xs">
               <span className="font-medium text-muted-foreground">Confirmed by Residents</span>
               <div className="mt-2 flex items-baseline justify-between">
-                <span className="font-mono text-lg font-semibold text-foreground">&gt; 90.0%</span>
+                <span className="text-lg font-semibold text-foreground tracking-tight tabular-nums">&gt; 90.0%</span>
                 <span className="font-semibold text-emerald-600">Met (92.4%)</span>
               </div>
             </div>

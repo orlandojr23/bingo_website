@@ -105,7 +105,7 @@ export default function NotificationsPage() {
 
   return (
     <div className="relative flex min-h-full w-full min-w-0 overflow-x-hidden bg-background bg-[url('/hero-bg.svg')] bg-[length:100%_auto] sm:bg-cover bg-top sm:bg-center bg-no-repeat">
-      <div className="absolute inset-0 bg-background/40 pointer-events-none" />
+      <div className="absolute inset-0 bg-background/42 pointer-events-none" />
       <div className="relative z-10 flex flex-1 min-w-0 flex-col gap-5 p-4 [scrollbar-gutter:stable] sm:gap-6 sm:p-6 lg:p-8 pb-6 sm:pb-8 lg:pb-10">
         <PageHeader
           title="Notifications"
@@ -184,7 +184,7 @@ export default function NotificationsPage() {
                   >
                     <div className="flex shrink-0 flex-nowrap items-center justify-between gap-2">
                       <div className="flex min-w-0 flex-nowrap items-center gap-1.5">
-                        <span className="whitespace-nowrap font-mono text-xs font-semibold text-foreground">
+                        <span className="whitespace-nowrap text-xs font-semibold tracking-tight text-foreground tabular-nums">
                           {n.id}
                         </span>
                         {!n.isRead && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />}
@@ -216,7 +216,7 @@ export default function NotificationsPage() {
                       <InfoRow label="Location" value={n.location || "System"} />
                       <InfoRow
                         label="Received"
-                        value={<span className="font-mono text-xs">{n.timestamp}</span>}
+                        value={<span className="text-xs font-medium tracking-tight text-muted-foreground tabular-nums">{n.timestamp}</span>}
                       />
                     </div>
 
@@ -268,7 +268,7 @@ export default function NotificationsPage() {
                 <div className="flex flex-1 flex-col gap-4 overflow-y-auto">
                   <div className="flex shrink-0 items-start justify-between border-b border-border pb-3">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-mono text-xs font-semibold text-foreground">
+                      <span className="text-xs font-semibold tracking-tight text-foreground tabular-nums">
                         {selectedNotif.id}
                       </span>
                       <span

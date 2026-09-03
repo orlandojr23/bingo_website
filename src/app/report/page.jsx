@@ -1515,7 +1515,7 @@ export default function ResidentMobilePWA() {
                             className="w-full rounded-xl border border-border bg-card p-3.5 text-left transition-colors hover:border-zinc-300 active:scale-[0.99] cursor-pointer space-y-2"
                           >
                             <div className="flex items-center justify-between gap-2">
-                              <span className="font-mono text-xs font-bold text-foreground">{t.id}</span>
+                              <span className="text-xs font-semibold text-foreground tracking-tight tabular-nums">{t.id}</span>
                               <StatusBadge status={t.status} />
                             </div>
 
@@ -1529,7 +1529,7 @@ export default function ResidentMobilePWA() {
                             </div>
 
                             <div className="flex items-center justify-between text-xs pt-2 border-t border-border/60">
-                              <span className="font-mono text-muted-foreground">{t.date} &bull; {t.time}</span>
+                              <span className="font-medium text-muted-foreground tracking-tight tabular-nums">{t.date} &bull; {t.time}</span>
                               <UrgencyBadge urgency={t.urgency} />
                             </div>
                           </button>
@@ -1570,7 +1570,7 @@ export default function ResidentMobilePWA() {
             )}
 
             <div className="flex items-center justify-between gap-2">
-              <span className="font-mono text-sm font-semibold text-emerald-700">
+              <span className="text-sm font-semibold text-emerald-700 tracking-tight tabular-nums">
                 {selectedTicket.id}
               </span>
               <div className="flex items-center gap-1.5">
@@ -1594,11 +1594,11 @@ export default function ResidentMobilePWA() {
               />
               <InfoRow
                 label="Date"
-                value={<span className="font-mono">{selectedTicket.date}</span>}
+                value={<span className="font-medium text-foreground tracking-tight tabular-nums">{selectedTicket.date}</span>}
               />
               <InfoRow
                 label="Time"
-                value={<span className="font-mono">{selectedTicket.time}</span>}
+                value={<span className="font-medium text-foreground tracking-tight tabular-nums">{selectedTicket.time}</span>}
               />
               <InfoRow
                 label="Address"

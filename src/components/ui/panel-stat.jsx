@@ -12,7 +12,7 @@ export function PanelStat({ label, value, hint, tone = "zinc", className }) {
   return (
     <div className={cn("rounded-xl border border-border bg-card p-3.5", className)}>
       <div className="text-xs font-medium text-muted-foreground">{label}</div>
-      <div className="mt-1 font-mono text-lg font-semibold tracking-tight text-foreground">
+      <div className="mt-1 text-lg font-semibold tracking-tight text-foreground tabular-nums">
         {value}
       </div>
       {hint && (

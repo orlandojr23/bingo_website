@@ -177,7 +177,7 @@ export default function StaffPage() {
 
   return (
     <div className="relative flex min-h-full w-full min-w-0 overflow-x-hidden bg-background bg-[url('/hero-bg.svg')] bg-[length:100%_auto] sm:bg-cover bg-top sm:bg-center bg-no-repeat">
-      <div className="absolute inset-0 bg-background/40 pointer-events-none" />
+      <div className="absolute inset-0 bg-background/42 pointer-events-none" />
       <div className="relative z-10 flex flex-1 min-w-0 flex-col gap-5 p-4 [scrollbar-gutter:stable] sm:gap-6 sm:p-6 lg:p-8 pb-6 sm:pb-8 lg:pb-10">
         <PageHeader
           title="Drivers"
@@ -240,7 +240,7 @@ export default function StaffPage() {
                 >
                   <div>
                     <div className="mb-2 flex items-center justify-between">
-                      <span className="font-mono text-xs font-semibold text-foreground">{person.id}</span>
+                      <span className="text-xs font-semibold text-foreground tracking-tight tabular-nums">{person.id}</span>
                       <StatusBadge status={person.status} />
                     </div>
 
@@ -258,7 +258,7 @@ export default function StaffPage() {
                       />
                       <InfoRow
                         label="Login Email"
-                        value={<span className="font-mono text-xs">{person.username}</span>}
+                        value={<span className="text-xs font-medium text-foreground">{person.username}</span>}
                       />
                     </div>
                   </div>
@@ -312,7 +312,7 @@ export default function StaffPage() {
                     <h2 className="text-sm font-semibold text-foreground">Add New Driver</h2>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs font-semibold text-foreground">
+                      <span className="text-xs font-semibold text-foreground tracking-tight tabular-nums">
                         {selectedDriver?.id}
                       </span>
                       <StatusBadge status={selectedDriver?.status || "Active"} />

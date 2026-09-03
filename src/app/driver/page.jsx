@@ -207,7 +207,7 @@ function InfoRow({ label, value }) {
   return (
     <div className="flex items-center justify-between text-xs py-1">
       <span className="text-muted-foreground font-medium">{label}</span>
-      <span className="font-bold text-foreground">{value}</span>
+      <span className="font-semibold text-foreground tracking-tight tabular-nums">{value}</span>
     </div>
   );
 }

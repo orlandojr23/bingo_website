@@ -111,7 +111,7 @@ export default function CrudPage() {
 
   return (
     <div className="relative flex min-h-full w-full min-w-0 overflow-x-hidden bg-background bg-[url('/hero-bg.svg')] bg-[length:100%_auto] sm:bg-cover bg-top sm:bg-center bg-no-repeat">
-      <div className="absolute inset-0 bg-background/40 pointer-events-none" />
+      <div className="absolute inset-0 bg-background/42 pointer-events-none" />
       {toastMessage && (
         <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-6 z-50 flex animate-in-fade items-center gap-2.5 rounded-lg border border-zinc-800 bg-zinc-900 px-4 py-2.5 text-xs text-white shadow-lg">
           <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
@@ -144,7 +144,7 @@ export default function CrudPage() {
                 Click any row or card to open and update its details.
               </p>
             </div>
-            <span className="font-mono text-xs text-muted-foreground">
+            <span className="text-xs text-muted-foreground font-medium tracking-tight tabular-nums">
               {records.length} {records.length === 1 ? "Record" : "Records"}
             </span>
           </div>
@@ -172,7 +172,7 @@ export default function CrudPage() {
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-mono text-xs font-semibold text-foreground">{r.id}</span>
+                      <span className="text-xs font-semibold text-foreground tracking-tight tabular-nums">{r.id}</span>
                       <div className="flex items-center gap-1.5">
                         <UrgencyBadge urgency={r.urgency} />
                         <StatusBadge status={r.status} />
@@ -246,7 +246,7 @@ export default function CrudPage() {
                           isSelected ? "bg-muted/80 font-medium" : "hover:bg-muted/40"
                         }`}
                       >
-                        <td className="p-3.5 pl-5 font-mono font-semibold text-foreground">{r.id}</td>
+                        <td className="p-3.5 pl-5 font-semibold text-foreground tracking-tight tabular-nums">{r.id}</td>
                         <td className="p-3.5 font-medium text-foreground">{r.location}</td>
                         <td className="p-3.5 text-muted-foreground">{r.barangay}</td>
                         <td className="p-3.5 text-muted-foreground">{r.reporter}</td>
@@ -312,7 +312,7 @@ export default function CrudPage() {
                       {editingId ? `Update Report` : "Create New Report"}
                     </h2>
                     {editingId && (
-                      <span className="font-mono text-xs font-medium text-muted-foreground">
+                      <span className="text-xs font-semibold text-muted-foreground tracking-tight tabular-nums">
                         {editingId}
                       </span>
                     )}

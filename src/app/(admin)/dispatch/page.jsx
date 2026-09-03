@@ -501,7 +501,7 @@ export default function DispatchPage() {
 
   return (
     <div className="relative flex min-h-full w-full min-w-0 overflow-x-hidden bg-background bg-[url('/hero-bg.svg')] bg-[length:100%_auto] sm:bg-cover bg-top sm:bg-center bg-no-repeat">
-      <div className="absolute inset-0 bg-background/40 pointer-events-none" />
+      <div className="absolute inset-0 bg-background/42 pointer-events-none" />
       <div className="relative z-10 flex flex-1 min-w-0 flex-col gap-5 p-4 [scrollbar-gutter:stable] sm:gap-6 sm:p-6 lg:p-8 pb-6 sm:pb-8 lg:pb-10">
         <PageHeader
           title="Fleet Dispatch"
@@ -554,7 +554,7 @@ export default function DispatchPage() {
                         <div className="flex items-center gap-2.5 min-w-0">
                           <Truck className={`h-4.5 w-4.5 shrink-0 mt-0.5 ${isActive ? "text-emerald-600" : "text-zinc-400"}`} />
                           <div className="flex min-w-0 flex-col">
-                            <span className="font-mono text-xs font-bold text-foreground whitespace-nowrap">{t.id}</span>
+                            <span className="text-xs font-semibold text-foreground whitespace-nowrap tracking-tight tabular-nums">{t.id}</span>
                             <span className="text-[11px] font-medium text-muted-foreground whitespace-nowrap truncate">{t.plate}</span>
                           </div>
                         </div>
@@ -627,7 +627,7 @@ export default function DispatchPage() {
                   >
                     <div>
                       <div className="mb-2 flex items-center justify-between">
-                        <span className="font-mono text-xs font-semibold text-foreground">{sch.id}</span>
+                        <span className="text-xs font-semibold text-foreground tracking-tight tabular-nums">{sch.id}</span>
                         <StatusBadge status={effStatus(sch)} />
                       </div>
 
@@ -696,7 +696,7 @@ export default function DispatchPage() {
                     <h2 className="text-sm font-semibold text-foreground">Create Assignment</h2>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs font-semibold text-foreground">
+                      <span className="text-xs font-semibold text-foreground tracking-tight tabular-nums">
                         {selectedSchedule?.id}
                       </span>
                       <StatusBadge status={selectedSchedule ? effStatus(selectedSchedule) : "Scheduled"} />

@@ -95,7 +95,7 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
         <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
           <div className="flex shrink-0 items-start justify-between border-b border-border pb-3">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-mono text-xs font-semibold text-foreground">{ticket.id}</span>
+              <span className="text-xs font-semibold text-foreground tracking-tight tabular-nums">{ticket.id}</span>
               <UrgencyBadge urgency={ticket.urgency} />
               <StatusBadge status={ticket.status} />
             </div>
@@ -196,7 +196,7 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
               <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-5 sm:p-6">
                 <div className="flex shrink-0 items-start justify-between border-b border-border pb-4">
                   <div className="flex flex-wrap items-center gap-2.5">
-                    <span className="font-mono text-base font-semibold text-foreground">{ticket.id}</span>
+                    <span className="text-base font-semibold text-foreground tracking-tight tabular-nums">{ticket.id}</span>
                     <UrgencyBadge urgency={ticket.urgency} />
                     <StatusBadge status={ticket.status} />
                   </div>
@@ -224,8 +224,8 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
                   </DetailBlock>
 
                   <DetailBlock label="Date & Time">
-                    <span className="text-sm font-semibold text-foreground">{ticket.date || "2023-10-24"}</span>
-                    <span className="mt-0.5 font-mono text-xs text-muted-foreground">
+                    <span className="text-sm font-semibold text-foreground tracking-tight tabular-nums">{ticket.date || "2023-10-24"}</span>
+                    <span className="mt-0.5 text-xs font-medium text-muted-foreground tracking-tight tabular-nums">
                       {ticket.time || "08:42 AM"}
                     </span>
                   </DetailBlock>

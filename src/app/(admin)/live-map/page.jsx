@@ -325,7 +325,7 @@ function LiveMapContent() {
                       }`}
                     >
                       <div className="mb-1 flex flex-nowrap items-center justify-between gap-2">
-                        <span className="shrink-0 whitespace-nowrap font-mono text-xs font-semibold text-foreground">
+                        <span className="shrink-0 whitespace-nowrap text-xs font-semibold tracking-tight text-foreground tabular-nums">
                           {t.id}
                         </span>
                         <UrgencyBadge urgency={t.urgency} />
@@ -336,7 +336,7 @@ function LiveMapContent() {
                       </div>
                       <div className="flex items-center justify-between">
                         <StatusBadge status={t.status} />
-                        <span className="font-mono text-xs text-muted-foreground">
+                        <span className="text-xs font-medium text-muted-foreground tracking-tight tabular-nums">
                           {t.date}
                           {t.time ? ` · ${t.time}` : ""}
                         </span>

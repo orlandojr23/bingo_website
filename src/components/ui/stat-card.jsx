@@ -25,7 +25,7 @@ export function StatCard({
       </div>
 
       <div className="flex flex-col gap-1">
-        <div className="text-2xl sm:text-4xl font-bold tracking-tight text-zinc-900 font-mono">
+        <div className="text-2xl sm:text-4xl font-bold tracking-tight text-zinc-900 tabular-nums">
           {value}
         </div>
 
