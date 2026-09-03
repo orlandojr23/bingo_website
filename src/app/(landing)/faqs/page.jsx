@@ -12,15 +12,19 @@ const faqCategories = [
     faqs: [
       {
         question: "What is Bin'Go and how does it work?",
-        answer: "Bin'Go is a smart waste collection platform that connects residents with their barangay. Residents use the mobile app to track garbage trucks live and report uncollected waste or dumping. Barangay staff use the web dashboard to manage trucks, plan routes, and respond to reports."
+        answer: "Bin'Go is a smart waste collection platform that connects residents with their barangay. Residents track garbage trucks live and report uncollected waste or dumping, right from their browser or phone. Barangay staff use the web dashboard to manage trucks, plan routes, and respond to reports."
+      },
+      {
+        question: "Where is Bin'Go available?",
+        answer: "Bin'Go is currently in its first pilot launch in Barangay Tejero, Cebu City. If you live in Tejero, you can create an account by selecting your sitio during signup. We plan to expand to more barangays across Metro Cebu after the pilot."
       },
       {
         question: "Do I need to pay to use the Bin'Go app?",
-        answer: "No, the Bin'Go mobile app is 100% free for all residents. Our goal is to make garbage collection clear and easy for every household."
+        answer: "No, Bin'Go is 100% free for all residents. Our goal is to make garbage collection clear and easy for every household."
       },
       {
-        question: "Can I use my web account to log into the mobile app?",
-        answer: "Yes! Your Bin'Go account works everywhere. Sign up on the website and use the same email and password to log into the iOS or Android mobile app."
+        question: "Do I need to download a mobile app?",
+        answer: "No download needed. Bin'Go is a web app that works in any modern browser, and you can install it straight to your phone's home screen for a full app experience. Your one account works everywhere you sign in. Native iOS and Android apps are coming soon."
       }
     ]
   },
@@ -34,11 +38,11 @@ const faqCategories = [
       },
       {
         question: "What happens when I report an uncollected garbage bin?",
-        answer: "When you submit a report in the mobile app, it appears right away on your barangay's live map. The team then assigns the nearest available truck to handle it, and you'll get a notification once it's resolved."
+        answer: "When you submit a report, it appears right away on your barangay's live map. The collection team reviews it and dispatches a truck to handle it, and you can follow your report's status from your own report list."
       },
       {
         question: "Can I track trucks outside of my designated Barangay?",
-        answer: "By default, your map highlights the routes and trucks active in your own barangay so it stays easy to read. You can still zoom out to see collection activity across the whole city or municipality."
+        answer: "During the pilot, your map is focused on your own barangay's coverage area so it always stays clear and easy to read. As Bin'Go expands to more barangays, you'll be able to follow collection activity in every covered area."
       }
     ]
   },
@@ -48,11 +52,15 @@ const faqCategories = [
     faqs: [
       {
         question: "Are my reports anonymous?",
-        answer: "Yes, you have the option to turn on 'Anonymous Mode' when submitting a report. In this mode, the barangay dashboard will only see the report details and location, not your personal information."
+        answer: "Reports are linked to your account so the barangay team can follow up if they need more details. Your personal information is only visible to the authorized barangay staff handling your report, never to other residents."
       },
       {
         question: "How is my location data used?",
         answer: "We only request location access when you are actively viewing the live map (to show your position relative to the trucks) or when you are dropping a pin for a waste report. We never track your location in the background."
+      },
+      {
+        question: "Can I turn off the notification sounds?",
+        answer: "Yes. Open your profile and switch off 'Notification Sounds' to mute the pickup chimes. Your visual alerts in the app header will keep working either way."
       }
     ]
   }
