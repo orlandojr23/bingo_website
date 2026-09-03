@@ -37,10 +37,13 @@ export default function PrivacyPolicyPage() {
             <h2 className="text-2xl font-bold text-zinc-900">Information We Collect</h2>
             <div className="space-y-3 text-zinc-600 font-medium leading-relaxed">
               <p>
-                When you register for a Bin'Go account, we collect basic information such as your name, email address, and your city or barangay. This is only used to set up your account and show you information relevant to your area.
+                When you register for a Bin'Go account, we collect basic information such as your name, email address, and your home address details (region, province, city, barangay, and sitio). This is only used to set up your account and show you collection information relevant to your area.
               </p>
               <p>
-                If you use the mobile app to track trucks or report waste, we may ask for access to your device's location. This is only used while the app is open and in use.
+                If you track trucks or report waste, we may ask for access to your device's location. This is only used while you are actively using the platform — never in the background.
+              </p>
+              <p>
+                Collection trucks share their device GPS location while their drivers are on duty, so residents can follow live collection progress. Location sharing stops as soon as the driver ends the route.
               </p>
             </div>
           </section>

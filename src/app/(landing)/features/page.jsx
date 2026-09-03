@@ -44,16 +44,16 @@ export default function FeaturesPage() {
           </div>
 
           <div className="bg-white p-8 rounded-3xl shadow-sm border border-zinc-100 flex flex-col items-start transition-all hover:shadow-md hover:-translate-y-1">
-            <h3 className="text-xl font-bold text-zinc-900 mb-3">Automatic Team Assignment</h3>
+            <h3 className="text-xl font-bold text-zinc-900 mb-3">Dispatch & Route Planning</h3>
             <p className="text-zinc-600 font-medium leading-relaxed text-sm">
-              The nearest available cleanup team is automatically assigned to urgent reports, so nothing waits too long.
+              Build pickup routes stop by stop with a live map preview, then assign a truck and driver in just a few clicks.
             </p>
           </div>
 
           <div className="bg-white p-8 rounded-3xl shadow-sm border border-zinc-100 flex flex-col items-start transition-all hover:shadow-md hover:-translate-y-1">
             <h3 className="text-xl font-bold text-zinc-900 mb-3">Instant Alerts</h3>
             <p className="text-zinc-600 font-medium leading-relaxed text-sm">
-              Get notified right away when urgent reports come in or when a truck goes off its scheduled route.
+              Admins are notified the moment a truck starts its route or arrives at a stop, and residents get a sound alert as the truck reaches their pickup point.
             </p>
           </div>
 
