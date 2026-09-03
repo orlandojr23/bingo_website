@@ -298,12 +298,13 @@ export default function LandingLayout({ children }) {
                 <a href="/#features" onClick={() => setIsMobileMenuOpen(false)} className={`transition-all px-6 py-2 rounded-2xl ${activeSection === "features" ? "text-emerald-700" : "text-zinc-900 hover:text-emerald-600 hover:bg-zinc-50"}`}>Features</a>
                 <a href="/#faq" onClick={() => setIsMobileMenuOpen(false)} className={`transition-all px-6 py-2 rounded-2xl ${activeSection === "faq" ? "text-emerald-700" : "text-zinc-900 hover:text-emerald-600 hover:bg-zinc-50"}`}>FAQ</a>
 
-                <button 
-                  onClick={() => { setIsMobileMenuOpen(false); setIsContactOpen(true); }} 
-                  className="transition-all px-6 py-2 rounded-2xl text-emerald-600 hover:bg-emerald-50 text-left cursor-pointer"
+                <Link
+                  href="/support"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="transition-all px-6 py-2 rounded-2xl text-emerald-600 hover:bg-emerald-50 text-center cursor-pointer"
                 >
                   Contact Us
-                </button>
+                </Link>
               </nav>
             </div>
 
