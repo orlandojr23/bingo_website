@@ -176,8 +176,8 @@ export default function StaffPage() {
   const formOpen = isAdding || selectedDriver !== null;
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-background">
-      <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-6 [scrollbar-gutter:stable] lg:p-8">
+    <div className="flex min-h-full w-full min-w-0 overflow-x-hidden bg-background">
+      <div className="flex flex-1 min-w-0 flex-col gap-5 p-4 [scrollbar-gutter:stable] sm:gap-6 sm:p-6 lg:p-8 pb-10 sm:pb-16 lg:pb-24">
         <PageHeader
           title="Drivers"
           description="Manage driver accounts and assign them to trucks"
@@ -284,12 +284,12 @@ export default function StaffPage() {
 
       <AnimatePresence>
         {formOpen && (
-          <div className="fixed inset-0 z-50 flex justify-end pointer-events-none overflow-hidden">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-stretch justify-end pointer-events-none overflow-hidden">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-transparent pointer-events-auto"
+              className="absolute inset-0 bg-black/40 sm:bg-transparent pointer-events-auto"
               onClick={() => (isAdding ? setIsAdding(false) : setSelectedDriver(null))}
             />
             <motion.div
@@ -297,41 +297,42 @@ export default function StaffPage() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="relative z-10 flex h-full w-full max-w-md flex-col overflow-y-auto border-l border-border bg-card p-6 shadow-2xl pointer-events-auto"
+              className="relative z-10 flex h-auto max-h-[85dvh] sm:h-full sm:max-h-full w-full max-w-md flex-col overflow-hidden rounded-t-2xl sm:rounded-none border-t sm:border-t-0 sm:border-l border-border bg-card p-4 sm:p-6 shadow-2xl pointer-events-auto self-end sm:self-auto"
             >
               <form
                 onSubmit={isAdding ? handleAddDriver : handleUpdateDriver}
-                className="flex h-full flex-col overflow-hidden"
+                className="flex h-full flex-col justify-between overflow-hidden"
               >
-                <div className="flex flex-1 flex-col gap-5 overflow-y-auto">
-                  <div className="flex shrink-0 items-start justify-between border-b border-border pb-3">
-                    {isAdding ? (
-                      <h2 className="text-sm font-semibold text-foreground">Add New Driver</h2>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs font-semibold text-foreground">
-                          {selectedDriver?.id}
-                        </span>
-                        <StatusBadge status={selectedDriver?.status || "Active"} />
-                      </div>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => (isAdding ? setIsAdding(false) : setSelectedDriver(null))}
-                      className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
-                      aria-label="Close panel"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
+                <div className="flex shrink-0 items-start justify-between border-b border-border pb-3">
+                  {isAdding ? (
+                    <h2 className="text-sm font-semibold text-foreground">Add New Driver</h2>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs font-semibold text-foreground">
+                        {selectedDriver?.id}
+                      </span>
+                      <StatusBadge status={selectedDriver?.status || "Active"} />
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => (isAdding ? setIsAdding(false) : setSelectedDriver(null))}
+                    className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
+                    aria-label="Close panel"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
 
+                <div className="flex-1 overflow-y-auto py-3 gap-5 flex flex-col min-h-0">
                   <div className="flex flex-col gap-4">
                     <Field label="Full Name">
                       <input
                         required
                         type="text"
                         value={name}
-                        onChange={(e) => setName(e.target.value)}
+                        onChange={(e) => setName(formatNameInput(e.target.value))}
+                        onBlur={() => setName(formatNameInput(name))}
                         placeholder={isAdding ? "e.g. Maria Santos" : undefined}
                         className={inputClass}
                       />
@@ -368,14 +369,14 @@ export default function StaffPage() {
                       {isAdding ? (
                         <Field
                           label="Temporary Password"
-                          hint="The driver can change this after their initial login."
+                          hint="Share this temporary password with the driver to log in"
                         >
                           <input
                             required
-                            type="text"
+                            type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            placeholder="e.g. default123"
+                            placeholder="Set temp password..."
                             className={cn(inputClass, "font-mono")}
                           />
                           <PasswordStrengthHint password={password} />
@@ -407,7 +408,7 @@ export default function StaffPage() {
                   </div>
                 </div>
 
-                <div className="mt-6 flex shrink-0 flex-col gap-3 border-t border-border-subtle pt-4">
+                <div className="mt-auto shrink-0 flex flex-col gap-3 border-t border-border-subtle pt-4">
                   {formError && (
                     <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-600">
                       {formError}

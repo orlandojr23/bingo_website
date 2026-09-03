@@ -103,7 +103,7 @@ export default function DemoPage() {
 
   return (
     <div className="min-h-screen bg-zinc-50 pt-24 sm:pt-32 pb-16 sm:pb-24">
-      <div className="max-w-xl mx-auto px-6">
+      <div className="max-w-xl mx-auto px-4 sm:px-6">
         <div className="text-center mb-10 sm:mb-14">
           <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-zinc-900 mb-4 leading-[1.15]">
             Request a <span className="text-emerald-600">Demo.</span>

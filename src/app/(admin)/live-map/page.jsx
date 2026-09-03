@@ -109,10 +109,13 @@ function LiveMapContent() {
     return matchSearch && matchStatus && matchUrgency;
   });
 
+  const [mobileTab, setMobileTab] = useState("map");
+
   const handleSelectReport = (ticket) => {
     setActiveTicketId(ticket.id);
     setMapCenter([ticket.lat, ticket.lng]);
     setSelectedTicket(ticket);
+    setMobileTab("map");
   };
 
   const handlePinClick = (ticket) => {
@@ -123,11 +126,13 @@ function LiveMapContent() {
   const handleSelectTruck = (truck) => {
     setActiveTruckId(truck.id);
     setMapCenter([truck.lat, truck.lng]);
+    setMobileTab("map");
   };
 
   const handleLocateOnMap = (ticket) => {
     setMapCenter([ticket.lat, ticket.lng]);
     setActiveTicketId(ticket.id);
+    setMobileTab("map");
   };
 
   const handleUpdateStatus = (ticketId, newStatus) => {
@@ -147,8 +152,40 @@ function LiveMapContent() {
   };
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-background">
-      <div className="relative h-full flex-1 overflow-hidden">
+    <div className="flex flex-1 h-full min-h-0 w-full flex-col lg:flex-row overflow-hidden bg-background">
+      {/* Mobile Tab Switcher */}
+      <div className="flex shrink-0 items-center border-b border-border bg-card p-2 lg:hidden">
+        <div className="flex flex-1 gap-1 rounded-lg bg-muted p-0.5">
+          <button
+            type="button"
+            onClick={() => setMobileTab("map")}
+            className={`flex flex-1 items-center justify-center rounded-md py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+              mobileTab === "map"
+                ? "bg-card text-foreground shadow-xs"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <span>Live Map</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setMobileTab("panel")}
+            className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+              mobileTab === "panel"
+                ? "bg-card text-foreground shadow-xs"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {mapView === "reports" ? (
+              <span>Reports ({filteredTickets.length})</span>
+            ) : (
+              <span>Trucks ({trucksData.length})</span>
+            )}
+          </button>
+        </div>
+      </div>
+
+      <div className={cn("relative h-full flex-1 overflow-hidden", mobileTab !== "map" && "hidden lg:block")}>
         <MapCanvas
           tickets={mapView === "reports" ? filteredTickets : []}
           trucks={mapView === "trucks" ? trucksData : []}
@@ -164,7 +201,7 @@ function LiveMapContent() {
         />
       </div>
 
-      <div className="flex h-full w-[300px] shrink-0 flex-col overflow-hidden border-l border-border bg-card lg:w-[340px]">
+      <div className={cn("flex h-full w-full shrink-0 flex-col overflow-hidden border-l border-border bg-card lg:w-[340px]", mobileTab !== "panel" && "hidden lg:flex")}>
         <div className="shrink-0 border-b border-border px-5 pb-4 pt-5">
           <h2 className="text-sm font-semibold text-foreground">Map Control</h2>
         </div>
@@ -180,7 +217,7 @@ function LiveMapContent() {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              Reports
+              Reports ({filteredTickets.length})
             </button>
             <button
               type="button"
@@ -191,7 +228,7 @@ function LiveMapContent() {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              Trucks
+              Trucks ({trucksData.length})
             </button>
           </div>
         </div>
@@ -243,12 +280,6 @@ function LiveMapContent() {
                   <option value="High">High</option>
                   <option value="Critical">Emergency</option>
                 </select>
-              </div>
-
-              <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border-subtle px-4 pb-3">
-                <span className="text-xs text-muted-foreground">
-                  Showing {filteredTickets.length} of {tickets.length} reports
-                </span>
               </div>
 
               <div className="mb-2 flex shrink-0 flex-col gap-2 border-b border-border-subtle px-4 pb-3">
@@ -448,12 +479,6 @@ function LiveMapContent() {
                 </button>
               ))
               )}
-            </div>
-
-            <div className="shrink-0 border-t border-border px-4 py-3">
-              <span className="text-xs text-muted-foreground">
-                Showing {trucksData.filter((t) => t.isActive).length} of {trucksData.length} active trucks
-              </span>
             </div>
           </div>
         )}

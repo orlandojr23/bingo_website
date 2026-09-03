@@ -110,15 +110,15 @@ export default function CrudPage() {
   const pendingCount = records.filter((r) => r.status === "Pending").length;
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-background">
+    <div className="flex min-h-full w-full min-w-0 overflow-x-hidden bg-background">
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 flex animate-in-fade items-center gap-2.5 rounded-lg border border-zinc-800 bg-zinc-900 px-4 py-2.5 text-xs text-white shadow-lg">
+        <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-6 z-50 flex animate-in-fade items-center gap-2.5 rounded-lg border border-zinc-800 bg-zinc-900 px-4 py-2.5 text-xs text-white shadow-lg">
           <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
           <span>{toastMessage}</span>
         </div>
       )}
 
-      <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-6 [scrollbar-gutter:stable] lg:p-8">
+      <div className="flex flex-1 min-w-0 flex-col gap-5 p-4 [scrollbar-gutter:stable] sm:gap-6 sm:p-6 lg:p-8 pb-10 sm:pb-16 lg:pb-24">
         <PageHeader
           title="Data Management"
           description="Create, update, and remove waste reports"
@@ -130,7 +130,7 @@ export default function CrudPage() {
           }
         />
 
-        <div className="grid shrink-0 grid-cols-2 gap-3.5 max-w-sm sm:max-w-md">
+        <div className="grid shrink-0 grid-cols-2 gap-3 sm:gap-3.5 max-w-sm sm:max-w-md">
           <PanelStat label="Total Reports" value={records.length} hint="All reports on record" />
           <PanelStat label="Waiting" value={pendingCount} hint="Needs attention" tone="rose" />
         </div>
@@ -140,7 +140,7 @@ export default function CrudPage() {
             <div>
               <h2 className="text-sm font-semibold text-foreground">All Waste Reports</h2>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                Click any row or Edit to open and update its details.
+                Click any row or card to open and update its details.
               </p>
             </div>
             <span className="font-mono text-xs text-muted-foreground">
@@ -148,7 +148,66 @@ export default function CrudPage() {
             </span>
           </div>
 
-          <div className="overflow-x-auto">
+          {/* Mobile Cards View (< sm) */}
+          <div className="flex flex-col divide-y divide-border-subtle sm:hidden">
+            {records.length === 0 ? (
+              <div className="flex flex-col items-center p-8 text-center">
+                <FilePlus2 className="mb-2.5 h-8 w-8 text-zinc-300" />
+                <h3 className="text-sm font-semibold text-foreground">No Reports Yet</h3>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Click &quot;Create New Report&quot; to add your first record.
+                </p>
+              </div>
+            ) : (
+              records.map((r) => {
+                const isSelected = editingId === r.id;
+
+                return (
+                  <div
+                    key={r.id}
+                    onClick={() => handleEdit(r)}
+                    className={`flex cursor-pointer flex-col gap-2 p-4 transition-colors ${
+                      isSelected ? "bg-muted/80 font-medium" : "hover:bg-muted/40"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-mono text-xs font-semibold text-foreground">{r.id}</span>
+                      <div className="flex items-center gap-1.5">
+                        <UrgencyBadge urgency={r.urgency} />
+                        <StatusBadge status={r.status} />
+                      </div>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-semibold text-foreground">{r.location}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {r.barangay} · {r.reporter}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-end gap-3 pt-1" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        onClick={() => handleEdit(r)}
+                        className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 cursor-pointer"
+                      >
+                        Edit Record
+                      </button>
+                      <span className="text-border">|</span>
+                      <button
+                        type="button"
+                        onClick={() => setRecordToDelete(r)}
+                        className="text-xs font-semibold text-rose-600 hover:text-rose-700 cursor-pointer"
+                      >
+                        Delete Record
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Desktop & Tablet Table View (>= sm) */}
+          <div className="hidden overflow-x-auto sm:block">
             <table className="w-full text-left text-xs">
               <thead className="border-b border-border bg-muted/50 font-medium text-muted-foreground">
                 <tr>
@@ -227,12 +286,12 @@ export default function CrudPage() {
 
       <AnimatePresence>
         {isSheetOpen && (
-          <div className="fixed inset-0 z-50 flex justify-end pointer-events-none overflow-hidden">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-stretch justify-end pointer-events-none overflow-hidden">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-transparent pointer-events-auto"
+              className="absolute inset-0 bg-black/40 sm:bg-transparent pointer-events-auto"
               onClick={resetForm}
             />
             <motion.div
@@ -240,81 +299,99 @@ export default function CrudPage() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="relative z-10 flex h-full w-full max-w-md flex-col overflow-y-auto border-l border-border bg-card p-6 shadow-2xl pointer-events-auto"
+              className="relative z-10 flex h-auto max-h-[85dvh] sm:h-full sm:max-h-full w-full max-w-md flex-col overflow-hidden rounded-t-2xl sm:rounded-none border-t sm:border-t-0 sm:border-l border-border bg-card p-4 sm:p-6 shadow-2xl pointer-events-auto self-end sm:self-auto"
             >
-              <form onSubmit={handleSave} className="flex h-full flex-col overflow-hidden">
-                <div className="flex flex-1 flex-col gap-5 overflow-y-auto">
-                  <div className="flex shrink-0 items-start justify-between border-b border-border pb-3">
-                    <div>
-                      <h2 className="text-sm font-semibold text-foreground">
-                        {editingId ? `Update Report` : "Create New Report"}
-                      </h2>
-                      {editingId && (
-                        <span className="font-mono text-xs font-medium text-muted-foreground">
-                          {editingId}
-                        </span>
-                      )}
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={resetForm}
-                      className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
-                      aria-label="Close sheet"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
+              <form onSubmit={handleSave} className="flex h-full flex-col justify-between overflow-hidden">
+                <div className="flex shrink-0 items-start justify-between border-b border-border pb-3">
+                  <div>
+                    <h2 className="text-sm font-semibold text-foreground">
+                      {editingId ? `Update Report` : "Create New Report"}
+                    </h2>
+                    {editingId && (
+                      <span className="font-mono text-xs font-medium text-muted-foreground">
+                        {editingId}
+                      </span>
+                    )}
                   </div>
 
+                  <button
+                    type="button"
+                    onClick={resetForm}
+                    className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
+                    aria-label="Close sheet"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto py-3 gap-5 flex flex-col min-h-0">
                   <div className="flex flex-col gap-4">
                     <div className="flex flex-col gap-1.5">
                       <label className={labelClass}>Location</label>
                       <input
-                        type="text"
                         required
-                        placeholder="e.g. Osmeña Blvd & Colon St"
+                        type="text"
+                        placeholder="e.g. Sitio Vilgon"
                         value={form.location}
-                        onChange={(e) => setForm({ ...form, location: e.target.value })}
+                        onChange={(e) => setForm({ ...form, location: formatNameInput(e.target.value) })}
+                        onBlur={() => setForm({ ...form, location: formatNameInput(form.location) })}
                         className={inputClass}
                       />
                     </div>
 
-                    <div className="flex flex-col gap-1.5">
-                      <label className={labelClass}>Barangay</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. Capitol Site"
-                        value={form.barangay}
-                        onChange={(e) => setForm({ ...form, barangay: e.target.value })}
-                        className={inputClass}
-                      />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="flex flex-col gap-1.5">
+                        <label className={labelClass}>Barangay</label>
+                        <input
+                          required
+                          type="text"
+                          value={form.barangay}
+                          onChange={(e) => setForm({ ...form, barangay: formatNameInput(e.target.value) })}
+                          onBlur={() => setForm({ ...form, barangay: formatNameInput(form.barangay) })}
+                          className={inputClass}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className={labelClass}>Reporter Name</label>
+                        <input
+                          required
+                          type="text"
+                          placeholder="Resident name"
+                          value={form.reporter}
+                          onChange={(e) => setForm({ ...form, reporter: formatNameInput(e.target.value) })}
+                          onBlur={() => setForm({ ...form, reporter: formatNameInput(form.reporter) })}
+                          className={inputClass}
+                        />
+                      </div>
                     </div>
 
-                    <div className="flex flex-col gap-1.5">
-                      <label className={labelClass}>Reporter Name</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. Juan Dela Cruz"
-                        value={form.reporter}
-                        onChange={(e) => setForm({ ...form, reporter: e.target.value })}
-                        className={inputClass}
-                      />
-                    </div>
-
-                    <div className="flex flex-col gap-1.5">
-                      <label className={labelClass}>Priority</label>
-                      <select
-                        value={form.urgency}
-                        onChange={(e) => setForm({ ...form, urgency: e.target.value })}
-                        className={cn(inputClass, "cursor-pointer")}
-                      >
-                        <option value="Low">Low</option>
-                        <option value="Medium">Medium</option>
-                        <option value="High">High</option>
-                        <option value="Critical">Emergency</option>
-                      </select>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="flex flex-col gap-1.5">
+                        <label className={labelClass}>Waste Category</label>
+                        <select
+                          value={form.category}
+                          onChange={(e) => setForm({ ...form, category: e.target.value })}
+                          className={cn(inputClass, "cursor-pointer")}
+                        >
+                          <option value="Malata (Nabubulok)">Malata (Nabubulok)</option>
+                          <option value="Di-Malata (Di-Nabubulok)">Di-Malata (Di-Nabubulok)</option>
+                          <option value="Special Waste / Hazardous">Special / Hazardous</option>
+                          <option value="Recyclable">Recyclable</option>
+                        </select>
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className={labelClass}>Urgency Level</label>
+                        <select
+                          value={form.urgency}
+                          onChange={(e) => setForm({ ...form, urgency: e.target.value })}
+                          className={cn(inputClass, "cursor-pointer")}
+                        >
+                          <option value="Low">Low</option>
+                          <option value="Normal">Normal</option>
+                          <option value="High">High</option>
+                          <option value="Urgent">Urgent</option>
+                        </select>
+                      </div>
                     </div>
 
                     <div className="flex flex-col gap-1.5">
@@ -324,14 +401,14 @@ export default function CrudPage() {
                         onChange={(e) => setForm({ ...form, status: e.target.value })}
                         className={cn(inputClass, "cursor-pointer")}
                       >
-                        <option value="Pending">Waiting</option>
-                        <option value="In Progress">On the Way</option>
-                        <option value="Resolved">Cleaned Up</option>
+                        <option value="Pending">Pending</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Resolved">Resolved</option>
                       </select>
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                      <label className={labelClass}>Additional Details</label>
+                      <label className={labelClass}>Description / Notes</label>
                       <textarea
                         rows={3}
                         placeholder="Add any extra details about this report..."
@@ -343,7 +420,7 @@ export default function CrudPage() {
                   </div>
                 </div>
 
-                <div className="mt-6 flex shrink-0 items-center justify-end gap-2 border-t border-border-subtle pt-4">
+                <div className="mt-auto shrink-0 flex items-center justify-end gap-2 border-t border-border-subtle pt-4">
                   <Button variant="secondary" size="sm" type="button" onClick={resetForm}>
                     Cancel
                   </Button>

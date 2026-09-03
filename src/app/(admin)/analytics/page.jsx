@@ -42,8 +42,8 @@ export default function AnalyticsPage() {
   ];
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-background">
-      <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-6 [scrollbar-gutter:stable] lg:p-8">
+    <div className="flex min-h-full w-full min-w-0 overflow-x-hidden bg-background">
+      <div className="flex flex-1 min-w-0 flex-col gap-5 p-4 [scrollbar-gutter:stable] sm:gap-6 sm:p-6 lg:p-8 pb-10 sm:pb-16 lg:pb-24">
         <PageHeader
           title="Data & Insights"
           description="Performance and cleanup analytics for Barangay Tejero"
@@ -59,7 +59,7 @@ export default function AnalyticsPage() {
           }
         />
 
-        <div className="grid shrink-0 grid-cols-2 gap-3.5 sm:grid-cols-3 max-w-sm sm:max-w-xl">
+        <div className="grid shrink-0 grid-cols-2 gap-3 sm:grid-cols-3 max-w-sm sm:max-w-xl">
           {kpis.map((kpi) => (
             <PanelStat
               key={kpi.label}
@@ -85,7 +85,7 @@ export default function AnalyticsPage() {
               <BarChart2 className="h-4 w-4 text-muted-foreground" />
             </div>
 
-            <div className="flex h-48 items-end justify-between gap-3 border-b border-border-subtle pb-2 pt-4">
+            <div className="flex h-48 items-end justify-between gap-1 sm:gap-3 border-b border-border-subtle pb-2 pt-4">
               {mockAnalyticsData.monthlyReports.map((item) => {
                 const maxVal = 160;
                 const totalHeight = (item.count / maxVal) * 100;

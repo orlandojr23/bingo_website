@@ -104,8 +104,8 @@ export default function NotificationsPage() {
   const isSheetOpen = selectedNotif !== null;
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-background">
-      <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-6 [scrollbar-gutter:stable] lg:p-8">
+    <div className="flex min-h-full w-full min-w-0 overflow-x-hidden bg-background">
+      <div className="flex flex-1 min-w-0 flex-col gap-5 p-4 [scrollbar-gutter:stable] sm:gap-6 sm:p-6 lg:p-8 pb-10 sm:pb-16 lg:pb-24">
         <PageHeader
           title="Notifications"
           description="Emergency alerts, truck updates, and new resident reports"
@@ -119,13 +119,13 @@ export default function NotificationsPage() {
           }
         />
 
-        <div className="grid shrink-0 grid-cols-2 gap-3.5 max-w-sm sm:max-w-md">
+        <div className="grid shrink-0 grid-cols-2 gap-3 sm:gap-3.5 max-w-sm sm:max-w-md">
           <PanelStat label="Alerts" value={totalCount} hint="Total received" />
           <PanelStat label="Unread" value={unreadCount} hint="Awaiting your review" tone="emerald" />
         </div>
 
         <div className="flex shrink-0 items-center">
-          <div className="flex items-center gap-1 rounded-lg border border-border bg-muted p-0.5">
+          <div className="inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-lg border border-border bg-muted/70 p-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
             {["All", "Emergency", "System", "Ticket"].map((tab) => {
               const isActive = activeTab === tab;
               let displayLabel = "All Alerts";
@@ -236,8 +236,8 @@ export default function NotificationsPage() {
           )}
         </div>
 
-        <div className="mt-2 flex shrink-0 items-center justify-between border-t border-border pt-3">
-          <span className="text-xs text-muted-foreground">
+        <div className="mt-4 mb-2 sm:mb-6 lg:mb-8 flex shrink-0 items-center justify-between border-t border-border pt-3.5 pb-2">
+          <span className="text-xs font-medium text-muted-foreground">
             Showing {filteredNotifications.length} of {notifications.length} total alerts
           </span>
         </div>
@@ -245,22 +245,22 @@ export default function NotificationsPage() {
 
       <AnimatePresence>
         {isSheetOpen && (
-          <div className="fixed inset-0 z-50 flex justify-end pointer-events-none overflow-hidden">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-stretch justify-end pointer-events-none overflow-hidden">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-transparent pointer-events-auto"
+              className="absolute inset-0 bg-black/40 sm:bg-transparent pointer-events-auto"
               onClick={() => setSelectedNotifId(null)}
             />
             <motion.div
-              initial={{ x: "100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "100%" }}
+              initial={{ y: "100%", x: 0 }}
+              animate={{ y: 0, x: 0 }}
+              exit={{ y: "100%", x: 0 }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="relative z-10 flex h-full w-full max-w-md flex-col overflow-y-auto border-l border-border bg-card p-6 shadow-2xl pointer-events-auto"
+              className="relative z-10 flex h-auto max-h-[85dvh] sm:h-full w-full max-w-md flex-col overflow-y-auto rounded-t-2xl sm:rounded-none border-t sm:border-t-0 sm:border-l border-border bg-card p-4 sm:p-6 shadow-2xl pointer-events-auto self-end sm:self-auto"
             >
-              <div className="flex h-full flex-1 flex-col overflow-hidden">
+              <div className="flex flex-col h-full justify-between overflow-y-auto">
                 <div className="flex flex-1 flex-col gap-4 overflow-y-auto">
                   <div className="flex shrink-0 items-start justify-between border-b border-border pb-3">
                     <div className="flex flex-wrap items-center gap-2">
@@ -316,7 +316,7 @@ export default function NotificationsPage() {
                   </div>
 
                   {selectedNotif.actionUrl && (
-                    <Link href={selectedNotif.actionUrl}>
+                    <Link href={selectedNotif.actionUrl} onClick={() => setSelectedNotifId(null)}>
                       <Button variant="secondary" className="w-full">
                         {/Map|Track/.test(selectedNotif.actionLabel || "") ? (
                           <MapPin className="h-3.5 w-3.5" />

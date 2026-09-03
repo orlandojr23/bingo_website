@@ -1421,7 +1421,15 @@ export default function ResidentMobilePWA() {
                               type="text"
                               placeholder="e.g. Behind Tejero Chapel, Purok 3"
                               value={locationName}
-                              onChange={(e) => setLocationName(e.target.value)}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                const formatted = val.split(/(\s+)/).map(p => p.trim().length > 0 ? p.charAt(0).toUpperCase() + p.slice(1) : p).join("");
+                                setLocationName(formatted);
+                              }}
+                              onBlur={() => {
+                                const formatted = locationName.split(/(\s+)/).map(p => p.trim().length > 0 ? p.charAt(0).toUpperCase() + p.slice(1) : p).join("");
+                                setLocationName(formatted);
+                              }}
                               className="w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-xs font-semibold text-foreground focus:border-zinc-400 focus:outline-none transition-colors"
                               required
                             />

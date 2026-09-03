@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { Calendar, Plus, X, Search, Truck, Shuffle, MapPin } from "lucide-react";
+import { Calendar, Plus, Minus, X, Search, Truck, Shuffle, MapPin } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TEJERO_SITOS } from "@/lib/mock-data";
 import { useLiveRoute, getSchedules, addSchedule, updateSchedule, removeSchedule, assignDriver, estimateStopTime, retimeRoutePoints, scheduleLabel } from "@/lib/live-route";
@@ -59,6 +59,7 @@ export default function DispatchPage() {
     null;
 
   const [sitioQuery, setSitioQuery] = useState("");
+  const [previewZoom, setPreviewZoom] = useState(14);
   const [sitioDropdownOpen, setSitioDropdownOpen] = useState(false);
   const [truckId, setTruckId] = useState("");
   const [type, setType] = useState("");
@@ -392,7 +393,7 @@ export default function DispatchPage() {
 
       {stopOrder.length > 0 && (
         <Field label="Route Preview">
-          <div className="h-52 overflow-hidden rounded-lg border border-border">
+          <div className="relative h-52 overflow-hidden rounded-lg border border-border">
             <MapCanvas
               tickets={[]}
               trucks={[]}
@@ -405,9 +406,31 @@ export default function DispatchPage() {
               currentStop={{ ...stopOrder[0], index: 0 }}
               upcomingStops={stopOrder.slice(1).map((s, i) => ({ ...s, index: i + 1 }))}
               center={[stopOrder[0].lat, stopOrder[0].lng]}
-              zoom={14}
+              zoom={previewZoom}
               showTicketPopup={false}
             />
+
+            {/* Floating Zoom In & Zoom Out Controls */}
+            <div className="absolute bottom-2.5 right-2.5 z-20 flex flex-col rounded-lg border border-border bg-card/95 shadow-md backdrop-blur-xs">
+              <button
+                type="button"
+                onClick={() => setPreviewZoom((z) => Math.min(z + 1, 18))}
+                className="flex h-7 w-7 items-center justify-center rounded-t-lg text-foreground transition-colors hover:bg-muted active:bg-muted/80 cursor-pointer border-b border-border"
+                aria-label="Zoom in map preview"
+                title="Zoom In"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setPreviewZoom((z) => Math.max(z - 1, 11))}
+                className="flex h-7 w-7 items-center justify-center rounded-b-lg text-foreground transition-colors hover:bg-muted active:bg-muted/80 cursor-pointer"
+                aria-label="Zoom out map preview"
+                title="Zoom Out"
+              >
+                <Minus className="h-3.5 w-3.5" />
+              </button>
+            </div>
           </div>
         </Field>
       )}
@@ -440,7 +463,8 @@ export default function DispatchPage() {
         <input
           type="text"
           value={days}
-          onChange={(e) => setDays(e.target.value)}
+          onChange={(e) => setDays(formatDaysInput(e.target.value))}
+          onBlur={() => setDays(formatDaysFinal(days))}
           placeholder="e.g. Monday, Wednesday, Friday"
           className={inputClass}
           required
@@ -451,7 +475,8 @@ export default function DispatchPage() {
         <input
           type="text"
           value={time}
-          onChange={(e) => handleTimeChange(e.target.value)}
+          onChange={(e) => handleTimeChange(e.target.value.toUpperCase())}
+          onBlur={() => setTime(time.toUpperCase())}
           placeholder="e.g. 08:00 AM - 11:00 AM"
           className={inputClass}
           required
@@ -475,8 +500,8 @@ export default function DispatchPage() {
   const isSheetOpen = isAdding || selectedSchedule !== null;
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-background">
-      <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-6 [scrollbar-gutter:stable] lg:p-8">
+    <div className="flex min-h-full w-full min-w-0 overflow-x-hidden bg-background">
+      <div className="flex flex-1 min-w-0 flex-col gap-5 p-4 [scrollbar-gutter:stable] sm:gap-6 sm:p-6 lg:p-8 pb-10 sm:pb-16 lg:pb-24">
         <PageHeader
           title="Fleet Dispatch"
           description="Manage truck assignments and weekly collection schedules"
@@ -504,7 +529,7 @@ export default function DispatchPage() {
               <span>Add Truck</span>
             </Button>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="w-full">
             {fleet.length === 0 ? (
               <div className="flex w-full flex-col items-center rounded-lg border border-dashed border-border px-4 py-6 text-center">
                 <Truck className="h-6 w-6 text-zinc-300" />
@@ -514,29 +539,43 @@ export default function DispatchPage() {
                 </p>
               </div>
             ) : (
-            fleet.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => openTruckSheet("edit", t)}
-                className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-xs transition-colors hover:border-zinc-300 hover:bg-muted/40 cursor-pointer"
-                title={`Edit ${t.id}`}
-              >
-                <Truck
-                  className={`h-3.5 w-3.5 ${
-                    live.trucks[t.id]?.tracking?.isActive ? "text-emerald-600" : "text-zinc-400"
-                  }`}
-                />
-                <span
-                  className={`h-1.5 w-1.5 rounded-full ${
-                    live.trucks[t.id]?.tracking?.isActive ? "bg-emerald-500" : "bg-zinc-300"
-                  }`}
-                />
-                <span className="font-mono font-semibold text-foreground">{t.id}</span>
-                <span className="text-muted-foreground">{t.plate}</span>
-                {t.driver && <span className="hidden text-muted-foreground sm:inline">· {t.driver}</span>}
-              </button>
-            ))
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {fleet.map((t) => {
+                  const isActive = live.trucks[t.id]?.tracking?.isActive;
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => openTruckSheet("edit", t)}
+                      className="group relative flex cursor-pointer flex-col justify-between rounded-xl border border-border bg-card p-3.5 text-left transition-all hover:border-zinc-300 hover:shadow-xs"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <Truck className={`h-4.5 w-4.5 shrink-0 mt-0.5 ${isActive ? "text-emerald-600" : "text-zinc-400"}`} />
+                          <div className="flex min-w-0 flex-col">
+                            <span className="font-mono text-xs font-bold text-foreground whitespace-nowrap">{t.id}</span>
+                            <span className="text-[11px] font-medium text-muted-foreground whitespace-nowrap truncate">{t.plate}</span>
+                          </div>
+                        </div>
+                        <span
+                          className={`shrink-0 text-xs font-medium ${
+                            isActive ? "text-emerald-600" : "text-zinc-400"
+                          }`}
+                        >
+                          {isActive ? "On Duty" : "Off Duty"}
+                        </span>
+                      </div>
+
+                      <div className="mt-3 flex items-center justify-between border-t border-border-subtle pt-2.5 text-xs">
+                        <span className="text-muted-foreground font-medium">Driver:</span>
+                        <span className="font-semibold text-foreground truncate max-w-[130px]" title={t.driver || "Unassigned"}>
+                          {t.driver || "Unassigned"}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             )}
           </div>
         </div>
@@ -570,7 +609,7 @@ export default function DispatchPage() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-3.5 pb-6 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
               {filteredSchedules.map((sch) => {
                 const isSelected = selectedSchedule?.id === sch.id;
                 const truck = fleet.find((t) => t.id === sch.activeTruckId);
@@ -629,12 +668,12 @@ export default function DispatchPage() {
 
       <AnimatePresence>
         {isSheetOpen && (
-          <div className="fixed inset-0 z-50 flex justify-end pointer-events-none overflow-hidden">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-stretch justify-end pointer-events-none overflow-hidden">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-transparent pointer-events-auto"
+              className="absolute inset-0 bg-black/40 sm:bg-transparent pointer-events-auto"
               onClick={() => (isAdding ? setIsAdding(false) : setSelectedSchedule(null))}
             />
             <motion.div
@@ -642,38 +681,38 @@ export default function DispatchPage() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="relative z-10 flex h-full w-full max-w-md flex-col overflow-y-auto border-l border-border bg-card p-6 shadow-2xl pointer-events-auto"
+              className="relative z-10 flex h-auto max-h-[85dvh] sm:h-full sm:max-h-full w-full max-w-md flex-col overflow-hidden rounded-t-2xl sm:rounded-none border-t sm:border-t-0 sm:border-l border-border bg-card p-4 sm:p-6 shadow-2xl pointer-events-auto self-end sm:self-auto"
             >
               <form
                 onSubmit={isAdding ? handleAddSchedule : handleUpdateSchedule}
-                className="flex h-full flex-col overflow-hidden"
+                className="flex h-full flex-col justify-between overflow-hidden"
               >
-                <div className="flex flex-1 flex-col gap-5 overflow-y-auto">
-                  <div className="flex shrink-0 items-start justify-between border-b border-border pb-3">
-                    {isAdding ? (
-                      <h2 className="text-sm font-semibold text-foreground">Create Assignment</h2>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs font-semibold text-foreground">
-                          {selectedSchedule?.id}
-                        </span>
-                        <StatusBadge status={selectedSchedule ? effStatus(selectedSchedule) : "Scheduled"} />
-                      </div>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => (isAdding ? setIsAdding(false) : setSelectedSchedule(null))}
-                      className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
-                      aria-label="Close panel"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
+                <div className="flex shrink-0 items-start justify-between border-b border-border pb-3">
+                  {isAdding ? (
+                    <h2 className="text-sm font-semibold text-foreground">Create Assignment</h2>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs font-semibold text-foreground">
+                        {selectedSchedule?.id}
+                      </span>
+                      <StatusBadge status={selectedSchedule ? effStatus(selectedSchedule) : "Scheduled"} />
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => (isAdding ? setIsAdding(false) : setSelectedSchedule(null))}
+                    className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
+                    aria-label="Close panel"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
 
+                <div className="flex-1 overflow-y-auto py-3 gap-5 flex flex-col min-h-0">
                   <div className="mt-1 flex flex-col gap-4">{formFields}</div>
                 </div>
 
-                <div className="mt-6 flex shrink-0 items-center justify-end gap-2 border-t border-border-subtle pt-4">
+                <div className="mt-auto shrink-0 flex items-center justify-end gap-2 border-t border-border-subtle pt-4">
                   <Button
                     variant="secondary"
                     type="button"
@@ -698,12 +737,12 @@ export default function DispatchPage() {
 
       <AnimatePresence>
         {truckSheet && (
-          <div className="fixed inset-0 z-50 flex justify-end pointer-events-none overflow-hidden">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-stretch justify-end pointer-events-none overflow-hidden">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-transparent pointer-events-auto"
+              className="absolute inset-0 bg-black/40 sm:bg-transparent pointer-events-auto"
               onClick={() => setTruckSheet(null)}
             />
             <motion.div
@@ -711,24 +750,24 @@ export default function DispatchPage() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="relative z-10 flex h-full w-full max-w-md flex-col overflow-y-auto border-l border-border bg-card p-6 shadow-2xl pointer-events-auto"
+              className="relative z-10 flex h-auto max-h-[85dvh] sm:h-full sm:max-h-full w-full max-w-md flex-col overflow-hidden rounded-t-2xl sm:rounded-none border-t sm:border-t-0 sm:border-l border-border bg-card p-4 sm:p-6 shadow-2xl pointer-events-auto self-end sm:self-auto"
             >
-              <form onSubmit={handleTruckSubmit} className="flex h-full flex-col overflow-hidden">
-                <div className="flex flex-1 flex-col gap-5 overflow-y-auto">
-                  <div className="flex shrink-0 items-start justify-between border-b border-border pb-3">
-                    <h2 className="text-sm font-semibold text-foreground">
-                      {truckSheet.mode === "add" ? "Add Truck" : `Edit ${truckSheet.truck?.id}`}
-                    </h2>
-                    <button
-                      type="button"
-                      onClick={() => setTruckSheet(null)}
-                      className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
-                      aria-label="Close panel"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
+              <form onSubmit={handleTruckSubmit} className="flex h-full flex-col justify-between overflow-hidden">
+                <div className="flex shrink-0 items-start justify-between border-b border-border pb-3">
+                  <h2 className="text-sm font-semibold text-foreground">
+                    {truckSheet.mode === "add" ? "Add Truck" : `Edit ${truckSheet.truck?.id}`}
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={() => setTruckSheet(null)}
+                    className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
+                    aria-label="Close panel"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
 
+                <div className="flex-1 overflow-y-auto py-3 gap-5 flex flex-col min-h-0">
                   <div className="mt-1 flex flex-col gap-4">
                     <Field label="Truck Code">
                       <input
@@ -787,7 +826,7 @@ export default function DispatchPage() {
                   </div>
                 </div>
 
-                <div className="mt-6 flex shrink-0 items-center justify-between gap-2 border-t border-border-subtle pt-4">
+                <div className="mt-auto shrink-0 flex items-center justify-between gap-2 border-t border-border-subtle pt-4">
                   <div>
                     {truckSheet.mode === "edit" && (
                       <Button variant="secondary" type="button" onClick={handleTruckDeleteRequest} className="text-rose-600">

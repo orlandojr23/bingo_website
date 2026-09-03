@@ -67,11 +67,11 @@ export default function LandingPage() {
     <div className="flex flex-col w-full overflow-hidden">
       
       {/* Hero Section */}
-      <section className="relative pt-24 pb-10 sm:pb-16 lg:py-0 lg:h-screen lg:min-h-[640px] flex items-center overflow-hidden bg-[url('/hero-bg.svg')] bg-cover bg-center bg-no-repeat">
+      <section className="relative min-w-0 w-full pt-20 sm:pt-24 pb-10 sm:pb-16 lg:py-0 lg:h-screen lg:min-h-[640px] flex items-center overflow-hidden bg-[url('/hero-bg.svg')] bg-cover bg-center bg-no-repeat">
         {/* Overlay to prevent background from overwhelming hero content */}
         <div className="absolute inset-0 bg-white/40 -z-10" />
 
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 relative w-full z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative w-full z-10">
           
           {/* Single Grid switching between left and right layout orders */}
           <div className={`w-full flex flex-col lg:flex-row items-center justify-center gap-8 sm:gap-12 lg:gap-16 xl:gap-20 ${sectionSettled ? "" : "invisible"} ${

@@ -125,32 +125,42 @@ export default function SettingsPage() {
   const sectionCard = "flex flex-col gap-4 rounded-xl border border-border bg-card p-4 sm:p-5";
   const sectionHeader = "flex items-center gap-2.5 border-b border-border-subtle pb-3";
 
+  const formatNameInput = (val) => {
+    if (!val) return "";
+    return val
+      .split(/(\s+)/)
+      .map((part) => {
+        if (part.trim().length > 0) {
+          return part.charAt(0).toUpperCase() + part.slice(1);
+        }
+        return part;
+      })
+      .join("");
+  };
+
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-background">
+    <div className="flex min-h-full w-full min-w-0 overflow-x-hidden bg-background">
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 flex animate-in-fade items-center gap-2.5 rounded-lg border border-zinc-800 bg-zinc-900 px-4 py-2.5 text-xs text-white shadow-lg">
+        <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-6 z-50 flex animate-in-fade items-center gap-2.5 rounded-lg border border-zinc-800 bg-zinc-900 px-4 py-2.5 text-xs text-white shadow-lg">
           <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
           <span>{toastMessage}</span>
         </div>
       )}
 
-      <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-6 [scrollbar-gutter:stable] lg:p-8">
+      <div className="flex flex-1 min-w-0 flex-col gap-5 p-4 [scrollbar-gutter:stable] sm:gap-6 sm:p-6 lg:p-8 pb-10 sm:pb-16 lg:pb-24">
         <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
           <PageHeader
             title="Settings"
             description="Manage your profile, preferences, and password"
           />
 
+          {/* Profile Section */}
           <section className={sectionCard}>
             <div className={sectionHeader}>
-              <div>
-                <h2 className="text-sm font-semibold text-foreground">
-                  Admin Profile & Office Details
-                </h2>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  Your office&apos;s contact information and coverage area
-                </p>
-              </div>
+              <User className="h-4 w-4 text-emerald-600" />
+              <h2 className="text-sm font-semibold text-foreground">
+                Account & Office Profile
+              </h2>
             </div>
 
             <form onSubmit={handleProfileSave} className="space-y-4">
@@ -161,7 +171,10 @@ export default function SettingsPage() {
                     type="text"
                     value={profile.entityName}
                     onChange={(e) =>
-                      setProfile({ ...profile, entityName: e.target.value })
+                      setProfile({ ...profile, entityName: formatNameInput(e.target.value) })
+                    }
+                    onBlur={() =>
+                      setProfile({ ...profile, entityName: formatNameInput(profile.entityName) })
                     }
                     className={inputClass}
                     required
@@ -174,7 +187,10 @@ export default function SettingsPage() {
                     type="text"
                     value={profile.adminName}
                     onChange={(e) =>
-                      setProfile({ ...profile, adminName: e.target.value })
+                      setProfile({ ...profile, adminName: formatNameInput(e.target.value) })
+                    }
+                    onBlur={() =>
+                      setProfile({ ...profile, adminName: formatNameInput(profile.adminName) })
                     }
                     className={inputClass}
                     required
@@ -187,7 +203,7 @@ export default function SettingsPage() {
                     type="email"
                     value={profile.email}
                     onChange={(e) =>
-                      setProfile({ ...profile, email: e.target.value })
+                      setProfile({ ...profile, email: e.target.value.toLowerCase() })
                     }
                     pattern="[^\s@]+@[^\s@]+\.[^\s@]+"
                     className={inputClass}

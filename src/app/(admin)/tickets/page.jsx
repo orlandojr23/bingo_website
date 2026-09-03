@@ -58,8 +58,8 @@ export default function TicketsPage() {
   const isSheetOpen = selectedTicket !== null;
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-background">
-      <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-6 [scrollbar-gutter:stable] lg:p-8">
+    <div className="flex min-h-full w-full min-w-0 overflow-x-hidden bg-background">
+      <div className="flex flex-1 min-w-0 flex-col gap-5 p-4 [scrollbar-gutter:stable] sm:gap-6 sm:p-6 lg:p-8 pb-10 sm:pb-16 lg:pb-24">
         <PageHeader
           title="Reports"
           description="All waste reports submitted by residents and their current status"
@@ -187,8 +187,8 @@ export default function TicketsPage() {
           )}
         </div>
 
-        <div className="mt-2 flex shrink-0 items-center justify-between border-t border-border pt-3">
-          <span className="text-xs text-muted-foreground">
+        <div className="mt-2 mb-2 sm:mb-6 lg:mb-8 flex shrink-0 items-center justify-between border-t border-border pt-3.5 pb-2">
+          <span className="text-xs font-medium text-muted-foreground">
             Showing {filteredTickets.length} of {tickets.length} total reports
           </span>
         </div>

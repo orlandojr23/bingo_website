@@ -175,12 +175,12 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
   const modalContent = (
     <AnimatePresence>
       {isOpen && ticket && (
-        <div className="fixed inset-0 z-[100] flex justify-end">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-stretch justify-end overflow-hidden">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-transparent"
+            className="absolute inset-0 bg-black/40 sm:bg-transparent"
             onClick={onClose}
           />
 
@@ -189,110 +189,112 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="relative z-10 flex h-full w-full max-w-md flex-col border-l border-border bg-card shadow-2xl"
+            className="relative z-10 flex h-auto max-h-[85dvh] sm:h-full sm:max-h-full w-full max-w-md flex-col overflow-hidden rounded-t-2xl sm:rounded-none border-t sm:border-t-0 sm:border-l border-border bg-card shadow-2xl self-end sm:self-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-5 sm:p-6">
-              <div className="flex shrink-0 items-start justify-between border-b border-border pb-4">
-                <div className="flex flex-wrap items-center gap-2.5">
-                  <span className="font-mono text-base font-semibold text-foreground">{ticket.id}</span>
-                  <UrgencyBadge urgency={ticket.urgency} />
-                  <StatusBadge status={ticket.status} />
-                </div>
+            <div className="flex h-full flex-col justify-between overflow-hidden">
+              <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-5 sm:p-6">
+                <div className="flex shrink-0 items-start justify-between border-b border-border pb-4">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <span className="font-mono text-base font-semibold text-foreground">{ticket.id}</span>
+                    <UrgencyBadge urgency={ticket.urgency} />
+                    <StatusBadge status={ticket.status} />
+                  </div>
 
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer"
-                  aria-label="Close sheet"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-
-              <div className="flex shrink-0 flex-col gap-3 py-1">
-                <DetailBlock label="Location">
-                  <span className="text-sm font-semibold text-foreground">{ticket.location}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {ticket.barangay}, {ticket.city || "Cebu City"}
-                  </span>
-                </DetailBlock>
-
-                <DetailBlock label="Reporter">
-                  <span className="text-sm font-semibold text-foreground">{ticket.reporter}</span>
-                </DetailBlock>
-
-                <DetailBlock label="Date & Time">
-                  <span className="text-sm font-semibold text-foreground">{ticket.date || "2023-10-24"}</span>
-                  <span className="mt-1 flex w-fit rounded-md border border-border bg-card px-1.5 py-0.5 font-mono text-xs font-medium text-zinc-700">
-                    {ticket.time || "08:42 AM"}
-                  </span>
-                </DetailBlock>
-
-                <DetailBlock label="Assigned Team">
-                  <span className="text-sm font-semibold text-foreground">{assignedUnit}</span>
-                  <span className="text-xs text-muted-foreground">Brgy. Tejero</span>
-                </DetailBlock>
-              </div>
-
-              <DetailBlock label="Additional Details" className="shrink-0">
-                <p className="text-sm leading-relaxed text-zinc-700">
-                  {ticket.description || "No additional details provided."}
-                </p>
-              </DetailBlock>
-
-              <DetailBlock label="Photo from Resident" className="shrink-0">
-                <div className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-lg border border-border bg-muted">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={getTicketPhoto(ticket.category)}
-                    alt={`Photo for report ${ticket.id}`}
-                    className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
-                    onError={(e) => {
-                      e.target.src = "https://images.unsplash.com/photo-1611284446314-60a58ac0deb9?w=600&auto=format&fit=crop&q=80";
-                    }}
-                  />
-                </div>
-              </DetailBlock>
-
-              <div className="mt-2 flex shrink-0 flex-col gap-3 border-t border-border-subtle pb-4 pt-4">
-                <span className="text-xs font-medium text-muted-foreground">Update Status</span>
-                <StatusSelector selectedStatus={selectedStatus} onSelect={setSelectedStatus} size="md" />
-              </div>
-            </div>
-
-            <div className="flex shrink-0 items-center justify-between gap-3 border-t border-border p-4 sm:p-5">
-              <div className="flex items-center">
-                {onLocateOnMap ? (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => {
-                      onLocateOnMap(ticket);
-                      onClose();
-                    }}
-                    className="text-emerald-700"
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer"
+                    aria-label="Close sheet"
                   >
-                    <MapPin className="h-3.5 w-3.5 text-emerald-600" />
-                    <span>Locate on Map</span>
-                  </Button>
-                ) : (
-                  <Link href={`/live-map?ticketId=${ticket.id}`} onClick={onClose}>
-                    <Button variant="secondary" size="sm" className="text-emerald-700">
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                <div className="flex shrink-0 flex-col gap-3 py-1">
+                  <DetailBlock label="Location">
+                    <span className="text-sm font-semibold text-foreground">{ticket.location}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {ticket.barangay}, {ticket.city || "Cebu City"}
+                    </span>
+                  </DetailBlock>
+
+                  <DetailBlock label="Reporter">
+                    <span className="text-sm font-semibold text-foreground">{ticket.reporter}</span>
+                  </DetailBlock>
+
+                  <DetailBlock label="Date & Time">
+                    <span className="text-sm font-semibold text-foreground">{ticket.date || "2023-10-24"}</span>
+                    <span className="mt-0.5 font-mono text-xs text-muted-foreground">
+                      {ticket.time || "08:42 AM"}
+                    </span>
+                  </DetailBlock>
+
+                  <DetailBlock label="Assigned Team">
+                    <span className="text-sm font-semibold text-foreground">{assignedUnit}</span>
+                    <span className="text-xs text-muted-foreground">Brgy. Tejero</span>
+                  </DetailBlock>
+                </div>
+
+                <DetailBlock label="Additional Details" className="shrink-0">
+                  <p className="text-sm leading-relaxed text-zinc-700">
+                    {ticket.description || "No additional details provided."}
+                  </p>
+                </DetailBlock>
+
+                <DetailBlock label="Photo from Resident" className="shrink-0">
+                  <div className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-lg border border-border bg-muted">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={getTicketPhoto(ticket.category)}
+                      alt={`Photo for report ${ticket.id}`}
+                      className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
+                      onError={(e) => {
+                        e.target.src = "https://images.unsplash.com/photo-1611284446314-60a58ac0deb9?w=600&auto=format&fit=crop&q=80";
+                      }}
+                    />
+                  </div>
+                </DetailBlock>
+
+                <div className="mt-2 flex shrink-0 flex-col gap-3 border-t border-border-subtle pb-4 pt-4">
+                  <span className="text-xs font-medium text-muted-foreground">Update Status</span>
+                  <StatusSelector selectedStatus={selectedStatus} onSelect={setSelectedStatus} size="md" />
+                </div>
+              </div>
+
+              <div className="mt-auto shrink-0 flex items-center justify-between gap-3 border-t border-border p-4 sm:p-5 bg-card">
+                <div className="flex items-center">
+                  {onLocateOnMap ? (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => {
+                        onLocateOnMap(ticket);
+                        onClose();
+                      }}
+                      className="text-emerald-700"
+                    >
                       <MapPin className="h-3.5 w-3.5 text-emerald-600" />
                       <span>Locate on Map</span>
                     </Button>
-                  </Link>
-                )}
-              </div>
+                  ) : (
+                    <Link href={`/live-map?ticketId=${ticket.id}`} onClick={onClose}>
+                      <Button variant="secondary" size="sm" className="text-emerald-700">
+                        <MapPin className="h-3.5 w-3.5 text-emerald-600" />
+                        <span>Locate on Map</span>
+                      </Button>
+                    </Link>
+                  )}
+                </div>
 
-              <div className="flex items-center gap-2">
-                <Button variant="secondary" size="sm" onClick={onClose}>
-                  Cancel
-                </Button>
-                <Button variant="primary" size="sm" onClick={handleSave}>
-                  Save Changes
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button variant="secondary" size="sm" onClick={onClose}>
+                    Cancel
+                  </Button>
+                  <Button variant="primary" size="sm" onClick={handleSave}>
+                    Save Changes
+                  </Button>
+                </div>
               </div>
             </div>
           </motion.div>

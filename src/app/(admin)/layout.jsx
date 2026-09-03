@@ -61,17 +61,21 @@ export default function AdminLayout({ children }) {
   }
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground">
+    <div className="flex min-h-[100dvh] w-full bg-background text-foreground lg:h-screen lg:overflow-hidden">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <button
-          onClick={() => setSidebarOpen(true)}
-          className="m-4 mb-0 self-start rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:hidden"
-          aria-label="Open navigation"
-        >
-          <Menu className="h-5 w-5" strokeWidth={1.75} />
-        </button>
-        <main className="flex min-h-0 min-w-0 flex-1 flex-col animate-in-fade">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <div className="sticky top-0 z-20 flex p-3 pb-0 lg:hidden">
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(true)}
+            className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer"
+            aria-label="Open navigation"
+          >
+            <Menu className="h-5 w-5" strokeWidth={1.75} />
+          </button>
+        </div>
+
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden animate-in-fade">
           {children}
         </main>
       </div>

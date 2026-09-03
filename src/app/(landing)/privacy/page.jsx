@@ -4,14 +4,14 @@ import { motion } from "framer-motion";
 
 export default function PrivacyPolicyPage() {
   return (
-    <div className="min-h-screen bg-zinc-50 pt-32 pb-24">
-      <div className="max-w-4xl mx-auto px-6 sm:px-12">
+    <div className="min-h-screen bg-zinc-50 pt-24 sm:pt-32 pb-16 sm:pb-24">
+      <div className="max-w-4xl mx-auto px-4 sm:px-12">
         {/* Header Section */}
-        <div className="text-center mb-16">
+        <div className="text-center mb-10 sm:mb-16">
           <motion.h1 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-4xl sm:text-5xl font-black tracking-tight text-zinc-900 mb-6"
+            className="text-3xl sm:text-5xl font-black tracking-tight text-zinc-900 mb-4 sm:mb-6"
           >
             Privacy Policy
           </motion.h1>
@@ -30,7 +30,7 @@ export default function PrivacyPolicyPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="bg-white rounded-3xl shadow-sm border border-zinc-200 p-8 sm:p-12 space-y-12"
+          className="bg-white rounded-3xl shadow-sm border border-zinc-200 p-6 sm:p-12 space-y-8 sm:space-y-12"
         >
           {/* Policy Item */}
           <section className="space-y-4">

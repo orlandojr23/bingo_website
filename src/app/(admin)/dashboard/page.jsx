@@ -76,8 +76,8 @@ export default function DashboardPage() {
   });
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-background">
-      <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-6 [scrollbar-gutter:stable] lg:p-8">
+    <div className="flex min-h-full w-full min-w-0 overflow-x-hidden bg-background">
+      <div className="flex flex-1 min-w-0 flex-col gap-5 p-4 [scrollbar-gutter:stable] sm:gap-6 sm:p-6 lg:p-8 pb-10 sm:pb-16 lg:pb-24">
         <PageHeader
           title="Good morning, Officer Santos"
           description={
@@ -96,16 +96,16 @@ export default function DashboardPage() {
           <DashboardSkeleton />
         ) : (
           <>
-        <div className="grid shrink-0 grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid shrink-0 grid-cols-2 gap-3 sm:gap-3.5 lg:grid-cols-4">
           {kpis.map((kpi) => (
             <div
               key={kpi.label}
-              className="flex flex-col justify-between rounded-xl border border-border bg-card p-4"
+              className="flex flex-col justify-between rounded-xl border border-border bg-card p-3.5 sm:p-4"
             >
               <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 {kpi.label}
               </span>
-              <span className="mt-1.5 font-mono text-2xl font-semibold leading-tight text-foreground">
+              <span className="mt-1.5 font-mono text-xl sm:text-2xl font-semibold leading-tight text-foreground">
                 {kpi.value}
               </span>
               <span className={`mt-2 text-xs font-medium ${hintTones[kpi.tone]}`}>
@@ -115,10 +115,10 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        <div className="flex shrink-0 items-center justify-between">
-          <h3 className="text-sm font-semibold text-foreground">Recent Reports</h3>
+        <div className="flex shrink-0 flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between min-w-0 w-full overflow-hidden">
+          <h3 className="text-sm font-semibold text-foreground shrink-0 whitespace-nowrap">Recent Reports</h3>
 
-          <div className="flex items-center gap-1 rounded-lg border border-border bg-muted p-0.5">
+          <div className="inline-flex max-w-full shrink-0 items-center gap-1 overflow-x-auto rounded-lg border border-border bg-muted/70 p-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
             {["All", "Pending", "In Progress", "Resolved"].map((status) => {
               const isActive = statusFilter === status;
               let displayLabel = "All";
@@ -222,16 +222,16 @@ export default function DashboardPage() {
           )}
         </div>
 
-        <div className="mt-2 flex shrink-0 items-center justify-between border-t border-border pt-3">
-          <span className="text-xs text-muted-foreground">
+        <div className="mt-4 flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center justify-between border-t border-border pt-4 pb-4">
+          <span className="text-xs font-medium text-muted-foreground">
             Showing {filteredTickets.length} of {tickets.length} total reports
           </span>
           <Link
             href="/tickets"
-            className="flex items-center gap-1 text-xs font-semibold text-foreground transition-colors hover:text-accent-emerald"
+            className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-border bg-card px-3.5 py-2 text-xs font-semibold text-foreground transition-all hover:bg-muted hover:border-zinc-300 shadow-2xs cursor-pointer"
           >
             <span>See all reports</span>
-            <ChevronRight className="h-3.5 w-3.5" />
+            <ChevronRight className="h-3.5 w-3.5 text-emerald-600" />
           </Link>
         </div>
           </>

@@ -130,10 +130,10 @@ export default function LandingLayout({ children }) {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col font-sans bg-white">
+    <div className="min-h-screen flex flex-col font-sans bg-white min-w-0 overflow-x-hidden">
       {/* Floating Sticky Logo */}
       <div className="fixed top-2 z-50 pointer-events-none w-full">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 h-[72px] flex items-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[72px] flex items-center">
           <a 
             href="/#home" 
             className="inline-flex items-center group pointer-events-auto transition-all duration-500 ease-out"
@@ -141,7 +141,7 @@ export default function LandingLayout({ children }) {
             <img 
               src="/logo-green-v2.png" 
               alt="Bin-Go Logo" 
-              className={`h-16 w-auto object-contain origin-left scale-[1.65] transition-all duration-500 ease-out ${
+              className={`h-12 sm:h-16 w-auto object-contain origin-left scale-[1.25] sm:scale-[1.65] transition-all duration-500 ease-out ${
                 hideLogo 
                   ? "opacity-0 scale-90 pointer-events-none" 
                   : scrolled 

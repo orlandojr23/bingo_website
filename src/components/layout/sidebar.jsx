@@ -19,6 +19,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useUnreadCount } from "@/lib/notifications";
+import { motion, AnimatePresence } from "framer-motion";
 
 const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutGrid },
@@ -42,9 +43,9 @@ export default function Sidebar({ isOpen, onClose }) {
   };
 
   const sidebarContent = (
-    <div className="flex h-full w-64 shrink-0 flex-col border-r border-border-subtle bg-card lg:w-72">
+    <div className="flex h-full w-[280px] sm:w-64 shrink-0 flex-col border-r border-border-subtle bg-card lg:w-72">
       <div className="flex h-16 shrink-0 items-center justify-between overflow-hidden border-b border-border-subtle px-5">
-        <Link href="/dashboard" className="flex items-center">
+        <Link href="/dashboard" className="flex items-center" onClick={() => onClose && onClose()}>
           <img
             src="/logo-green-v2.png"
             alt="Bin-Go Logo"
@@ -76,7 +77,7 @@ export default function Sidebar({ isOpen, onClose }) {
               href={item.href}
               onClick={() => onClose && onClose()}
               className={cn(
-                "group flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                "group flex items-center justify-between rounded-lg px-3.5 py-2.5 text-sm font-medium transition-colors sm:py-2",
                 isActive
                   ? "bg-muted text-foreground"
                   : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
@@ -197,17 +198,29 @@ export default function Sidebar({ isOpen, onClose }) {
         {sidebarContent}
       </aside>
 
-      {isOpen && (
-        <div className="fixed inset-0 z-50 flex lg:hidden">
-          <div
-            className="fixed inset-0 bg-zinc-950/40 backdrop-blur-sm"
-            onClick={onClose}
-          />
-          <aside className="relative z-50 flex h-full flex-col shadow-2xl">
-            {sidebarContent}
-          </aside>
-        </div>
-      )}
+      <AnimatePresence>
+        {isOpen && (
+          <div className="fixed inset-0 z-50 flex pointer-events-none lg:hidden">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25, ease: "easeInOut" }}
+              className="fixed inset-0 bg-zinc-950/50 backdrop-blur-xs pointer-events-auto"
+              onClick={onClose}
+            />
+            <motion.aside
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ type: "spring", stiffness: 320, damping: 32 }}
+              className="relative z-50 flex h-full flex-col shadow-2xl pointer-events-auto"
+            >
+              {sidebarContent}
+            </motion.aside>
+          </div>
+        )}
+      </AnimatePresence>
     </>
   );
 }
