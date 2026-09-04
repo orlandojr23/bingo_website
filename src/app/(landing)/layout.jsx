@@ -141,7 +141,7 @@ export default function LandingLayout({ children }) {
             <img 
               src="/logo-green-v2.png" 
               alt="Bin-Go Logo" 
-              className={`h-12 sm:h-16 w-auto object-contain origin-left scale-[1.25] sm:scale-[1.65] transition-all duration-500 ease-out ${
+              className={`h-16 w-auto object-contain origin-left scale-[1.65] transition-all duration-500 ease-out ${
                 hideLogo 
                   ? "opacity-0 scale-90 pointer-events-none" 
                   : scrolled 
