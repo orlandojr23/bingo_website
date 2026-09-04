@@ -447,39 +447,14 @@ export function assignDriver(truckId, driverName) {
 }
 
 export function getRoadBlocks() {
-  return getSnapshot().roadBlocks || [];
+  return [];
 }
 
-// Blocks the street segment nearest to the reported location. Every map
-// (driver, resident, admin) derives its trajectory from this list, so the
-// green route line re-routes around the block automatically in realtime.
-export function reportRoadBlock(reportedBy, lat, lng, reason = "Blocked road") {
-  return write((next) => {
-    const edge = nearestEdge(lat, lng);
-    if (!edge) return null;
-    const existing = (next.roadBlocks || []).find((b) => b.edge === edge.key);
-    if (existing) return existing;
-    const block = {
-      id: `RB-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e4)}`,
-      edge: edge.key,
-      a: edge.a,
-      b: edge.b,
-      lat: edge.lat,
-      lng: edge.lng,
-      reason,
-      reportedBy,
-      at: new Date().toISOString(),
-    };
-    next.roadBlocks = [...(next.roadBlocks || []), block];
-    return block;
-  });
+export function reportRoadBlock() {
+  return null;
 }
 
-export function clearRoadBlock(id) {
-  write((next) => {
-    next.roadBlocks = (next.roadBlocks || []).filter((b) => b.id !== id);
-  });
-}
+export function clearRoadBlock() {}
 
 export function swapDrivers(truckIdA, truckIdB) {
   write((next) => {

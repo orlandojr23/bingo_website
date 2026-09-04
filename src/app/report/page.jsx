@@ -8,24 +8,17 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Camera,
   MapPin,
-  Send,
   CheckCircle2,
-  Clock,
   Trash2,
-  Map,
   Calendar,
   Ticket,
   Truck,
   Bell,
   RefreshCw,
   ChevronRight,
-  User,
   LogOut,
   ShieldCheck,
-  Navigation,
-  Compass,
   X,
-  Menu,
   Search,
 } from "lucide-react";
 import { mockPilotData, TEJERO_SITOS } from "@/lib/mock-data";
@@ -42,8 +35,6 @@ import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MapSkeleton } from "@/components/ui/skeletons";
 import { InfoRow } from "@/components/ui/info-row";
-import AppHeader from "@/components/pwa/AppHeader";
-import BottomNav from "@/components/pwa/BottomNav";
 import BottomSheet from "@/components/pwa/BottomSheet";
 import { useToast } from "@/components/pwa/Toast";
 
@@ -53,13 +44,6 @@ const MapCanvas = dynamic(() => import("@/components/map/map-canvas"), {
 });
 
 const TAB_IDS = ["schedule", "map", "report", "tickets"];
-
-const NAV_TABS = [
-  { id: "schedule", label: "Schedules", icon: Calendar },
-  { id: "map", label: "Live Map", icon: Map },
-  { id: "report", label: "Report", icon: Camera, raised: true },
-  { id: "tickets", label: "My Tickets", icon: Ticket },
-];
 
 function Waze3DTurnArrow({ className = "h-7 w-7" }) {
   return (
@@ -340,6 +324,20 @@ function getTimeBasedGreeting(name = "Orlando") {
   return `Hello, ${name}!`;
 }
 
+// Approximate meters along a lat/lng polyline (equirectangular projection —
+// plenty accurate at barangay scale).
+function pathMeters(positions) {
+  let meters = 0;
+  for (let i = 0; i < positions.length - 1; i++) {
+    const [lat1, lng1] = positions[i];
+    const [lat2, lng2] = positions[i + 1];
+    const mLat = 111320;
+    const mLng = 111320 * Math.cos(((lat1 + lat2) / 2) * (Math.PI / 180));
+    meters += Math.hypot((lat2 - lat1) * mLat, (lng2 - lng1) * mLng);
+  }
+  return meters;
+}
+
 export default function ResidentMobilePWA() {
   const [activeTab, setActiveTab] = useState("schedule"); // "schedule" | "map" | "report" | "tickets"
   const tickets = useTickets();
@@ -392,11 +390,17 @@ export default function ResidentMobilePWA() {
   const live = useLiveRoute();
   const fleet = useFleet();
 
-  // The truck currently running a route (any truck past idle with an assignment)
+  // The truck currently running a route: assigned, past idle, and actually
+  // broadcasting (or finished). A paused/ended route (isActive false while
+  // enroute/onsite) is not live — residents fall back to the schedule banner
+  // instead of seeing a stale "Paused away" message.
   const activeTs = useMemo(
     () =>
-      Object.values(live.trucks).find(
-        (ts) => ts.phase !== "idle" && ts.scheduleId
+      Object.values(live.trucks || {}).find(
+        (ts) =>
+          ts.scheduleId &&
+          ts.phase !== "idle" &&
+          (ts.tracking?.isActive || ts.phase === "completed")
       ) || null,
     [live]
   );
@@ -419,7 +423,6 @@ export default function ResidentMobilePWA() {
         ? { lat: activeTs.tracking.lat, lng: activeTs.tracking.lng }
         : null,
     points: routeCompleted ? [] : routePoints.slice(stopIndex, stopIndex + 1),
-    blocks: live.roadBlocks ?? [],
   });
 
   // Compact numbered pins for every stop after the current one — likewise only
@@ -442,9 +445,27 @@ export default function ResidentMobilePWA() {
         ? { lat: routePoints[stopIndex].lat, lng: routePoints[stopIndex].lng }
         : null,
     points: onDuty ? routePoints.slice(stopIndex + 1) : [],
-    blocks: live.roadBlocks ?? [],
     enabled: onDuty,
   });
+
+  // Truthful countdown ETA for the banner: meters remaining along the drawn
+  // route leg (live truck position → current stop) at the fleet's ~9 m/s
+  // working pace — replaces the store's static "5 mins" placeholder, so the
+  // banner counts down for real as the truck approaches.
+  const liveEta = useMemo(() => {
+    if (!activeTs || routeCompleted || activeTs.onsite) return null;
+    let meters = pathMeters(routePath.positions ?? []);
+    if (meters <= 0 && stopPoint && activeTs.tracking?.lat != null) {
+      meters = pathMeters([
+        [activeTs.tracking.lat, activeTs.tracking.lng],
+        [stopPoint.lat, stopPoint.lng],
+      ]);
+    }
+    if (meters <= 0) return null;
+    if (meters < 120) return "Arriving now";
+    const mins = Math.max(1, Math.round(meters / 9 / 60));
+    return `${mins} min${mins === 1 ? "" : "s"}`;
+  }, [activeTs, routeCompleted, activeTs?.onsite, routePath, stopPoint]);
 
   // Live truck banner entry derived from the shared route store
   const liveBanner = useMemo(() => {
@@ -469,10 +490,13 @@ export default function ResidentMobilePWA() {
     return {
       id: "truck-live",
       Icon: Waze3DTurnArrow,
-      title: `Truck is ${activeTs.tracking.eta} away`,
+      title:
+        liveEta === "Arriving now"
+          ? "Truck arriving now"
+          : `Truck is ${liveEta ?? "a few mins"} away`,
       subtitle: `Approaching ${point?.name ?? "your stop"}`,
     };
-  }, [activeTs, activeSchedule]);
+  }, [activeTs, activeSchedule, liveEta]);
 
   // Pickup notification sounds: a cute ding when the driver starts the route
   // (including a fresh route after a completed one), and a trumpet fanfare
@@ -493,11 +517,11 @@ export default function ResidentMobilePWA() {
     truckSoundRef.current = state;
     if (prev === "init" || prev === state) return;
     if (state === "enroute" && (prev === "none" || prev === "completed")) {
-      playDing();
+      if (soundEnabled) playDing();
     } else if (state === "onsite") {
-      playTrumpet();
+      if (soundEnabled) playTrumpet();
     }
-  }, [activeTs]);
+  }, [activeTs, soundEnabled]);
 
   // Single truthful status message derived from real schedules: pickup today,
   // or no pickup today with the next collection day.
@@ -629,6 +653,13 @@ export default function ResidentMobilePWA() {
   const [truckFocused, setTruckFocused] = useState(false);
   const [mapBounds, setMapBounds] = useState(null);
   const [flySignal, setFlySignal] = useState(0);
+  const submitTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (submitTimeoutRef.current) clearTimeout(submitTimeoutRef.current);
+    };
+  }, []);
 
   const handleMapBoundsChange = useCallback((b) => setMapBounds(b), []);
   const isPointInView = useCallback(
@@ -657,9 +688,9 @@ export default function ResidentMobilePWA() {
 
   // Active trucks for live tracking map (Only show trucks whose drivers started their route!)
   const activeTrucks = useMemo(() => {
-    return fleet
+    return (fleet || [])
       .map((t) => {
-        const ts = live.trucks[t.id];
+        const ts = (live.trucks || {})[t.id];
         if (!ts || !ts.tracking.isActive) return null;
         return {
           id: t.id,
@@ -732,7 +763,7 @@ export default function ResidentMobilePWA() {
 
     setIsSubmitting(true);
 
-    setTimeout(() => {
+    submitTimeoutRef.current = setTimeout(() => {
       const newId = nextTicketId();
       const created = {
         id: newId,
@@ -794,7 +825,6 @@ export default function ResidentMobilePWA() {
               activeTs && !routeCompleted && routePath.positions.length >= 2 && { id: `${displaySchedule.id}-leg`, ...routePath },
               futurePath.positions.length >= 2 && { id: `${displaySchedule.id}-future-${stopIndex}`, ...futurePath },
             ].filter(Boolean)}
-            roadBlocks={live.roadBlocks ?? []}
             mapMode="pins"
             currentStop={currentStop}
             upcomingStops={upcomingStops}
@@ -924,28 +954,18 @@ export default function ResidentMobilePWA() {
                 onClick={() => {
                   closeAllSheets();
                   setIsMapSheetExpanded(false);
-                  if (truckFocused) {
-                    setTruckFocused(false);
-                  } else {
-                    setTruckFocused(true);
-                    const activeTruck = activeTrucks && activeTrucks[0];
-                    setMapCenter(
-                      activeTruck ? [activeTruck.lat, activeTruck.lng] : [10.3025, 123.9095]
-                    );
+                  setTruckFocused(true);
+                  const activeTruck = activeTrucks && activeTrucks[0];
+                  if (activeTruck) {
+                    setMapCenter([activeTruck.lat, activeTruck.lng]);
                     setMapZoom(17);
                     setFlySignal((s) => s + 1);
                   }
                   haptic();
                 }}
-                className={cn(
-                  "pointer-events-auto flex h-[54px] w-[54px] flex-col items-center justify-center gap-0.5 rounded-full border shadow-lg backdrop-blur-md transition-all hover:scale-105 active:scale-95 cursor-pointer",
-                  truckFocused
-                    ? "border-emerald-500 bg-emerald-50/95 ring-2 ring-emerald-500/25"
-                    : "border-border bg-card/95"
-                )}
+                className="pointer-events-auto flex h-[54px] w-[54px] flex-col items-center justify-center gap-0.5 rounded-full border border-border bg-card/95 shadow-lg backdrop-blur-md transition-all hover:scale-105 active:scale-95 cursor-pointer"
                 title="Focus Active Truck"
                 aria-label="Focus Active Truck"
-                aria-pressed={truckFocused}
               >
                 <Waze3DFocusTruckIcon className="h-7 w-7 shrink-0" />
               </motion.button>
@@ -1422,9 +1442,7 @@ export default function ResidentMobilePWA() {
                               placeholder="e.g. Behind Tejero Chapel, Purok 3"
                               value={locationName}
                               onChange={(e) => {
-                                const val = e.target.value;
-                                const formatted = val.split(/(\s+)/).map(p => p.trim().length > 0 ? p.charAt(0).toUpperCase() + p.slice(1) : p).join("");
-                                setLocationName(formatted);
+                                setLocationName(e.target.value);
                               }}
                               onBlur={() => {
                                 const formatted = locationName.split(/(\s+)/).map(p => p.trim().length > 0 ? p.charAt(0).toUpperCase() + p.slice(1) : p).join("");

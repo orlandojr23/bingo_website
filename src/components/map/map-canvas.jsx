@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline, useMap, ZoomControl } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
@@ -20,22 +20,13 @@ L.Icon.Default.mergeOptions({
 
 const OSM_TILE_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 
-// The pilot launch operates only within Barangay Tejero, so every map is
-// clamped to the barangay: the bounds are derived from the active service
-// area's sitio anchors with ~500 m of padding (street context at the edges +
-// GPS drift slack), panning past the edges bounces back, and zooming out
-// beyond the neighborhood view is blocked. When another barangay joins
-// SERVICE_AREAS, maps for that area derive their own bounds the same way.
-const ACTIVE_AREA = SERVICE_AREAS.tejero;
-const TEJERO_BOUNDS_PAD = 0.0045; // ≈500 m at this latitude
-const tejeroLats = Object.values(ACTIVE_AREA.sitios).map((s) => s.lat);
-const tejeroLngs = Object.values(ACTIVE_AREA.sitios).map((s) => s.lng);
-const TEJERO_MAX_BOUNDS = [
-  [Math.min(...tejeroLats) - TEJERO_BOUNDS_PAD, Math.min(...tejeroLngs) - TEJERO_BOUNDS_PAD],
-  [Math.max(...tejeroLats) + TEJERO_BOUNDS_PAD, Math.max(...tejeroLngs) + TEJERO_BOUNDS_PAD],
+// Metro Cebu Map Bounds & Zoom (Expanded map scope for Admin, Resident, and Driver)
+const METRO_CEBU_MAX_BOUNDS = [
+  [10.1500, 123.7000], // SW Metro Cebu (Talisay / Minglanilla)
+  [10.4800, 124.0800], // NE Metro Cebu (Mandaue / Lapu-Lapu / Liloan)
 ];
-const TEJERO_MIN_ZOOM = 15;
-const TEJERO_BOUNDS_VISCOSITY = 1.0;
+const METRO_CEBU_MIN_ZOOM = 11;
+const METRO_CEBU_BOUNDS_VISCOSITY = 0.3;
 
 const getUrgencyColor = (urgency) => {
   switch (urgency) {
@@ -92,36 +83,11 @@ const getTicketIcon = (urgency) => {
   return icon;
 };
 
-const createRoadBlockIcon = () =>
-  L.divIcon({
-    className: "custom-road-block bg-transparent border-0",
-    html: `
-      <div style="position: relative; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;">
-        <style>
-          @keyframes roadBlockPulse {
-            0% { transform: scale(0.7); opacity: 0.7; }
-            100% { transform: scale(1.8); opacity: 0; }
-          }
-        </style>
-        <div style="position: absolute; inset: 0; border-radius: 9999px; background: rgba(225, 29, 72, 0.35); animation: roadBlockPulse 1.6s ease-out infinite;"></div>
-        <svg width="22" height="22" viewBox="0 0 22 22" style="position: relative; filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.35));">
-          <circle cx="11" cy="11" r="10" fill="#E11D48" stroke="#ffffff" stroke-width="2" />
-          <rect x="5" y="9.25" width="12" height="3.5" rx="1.75" fill="#ffffff" />
-        </svg>
-      </div>
-    `,
-    iconSize: [26, 26],
-    iconAnchor: [13, 13],
-    popupAnchor: [0, -13],
-  });
-
-const roadBlockIcon = createRoadBlockIcon();
-
 const createTruckIcon = () => {
   return L.divIcon({
     className: "custom-truck bg-transparent border-0",
     html: `
-      <div style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.3)); animation: truckPopIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);">
+      <div style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; filter: drop-shadow(0px 3px 5px rgba(0,0,0,0.28)); animation: truckPopIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);">
         <style>
           @keyframes truckPopIn {
             0% { opacity: 0; transform: scale(0); }
@@ -132,7 +98,7 @@ const createTruckIcon = () => {
             to { opacity: 0; }
           }
         </style>
-        <svg width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg width="32" height="32" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
           {/* 4 Side Tires */}
           <rect x="7" y="9" width="3.5" height="7" rx="1.5" fill="#18181b" />
           <rect x="33.5" y="9" width="3.5" height="7" rx="1.5" fill="#18181b" />
@@ -169,9 +135,9 @@ const createTruckIcon = () => {
         </svg>
       </div>
     `,
-    iconSize: [44, 44],
-    iconAnchor: [22, 22],
-    popupAnchor: [0, -22],
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+    popupAnchor: [0, -16],
   });
 };
 
@@ -184,22 +150,30 @@ const createStopPinIcon = (stop, { compact = false } = {}) => {
   const time = String(stop.time ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
   const num = stop.index != null ? stop.index + 1 : "";
   const svg = compact
-    ? `<svg width="24" height="28" viewBox="0 0 24 28" style="filter: drop-shadow(0 1px 3px rgba(0,0,0,0.2));">
-        <path d="M12 26 C 12 26 2 17 2 11 C 2 5.5 6.5 1 12 1 C 17.5 1 22 5.5 22 11 C 22 17 12 26 12 26 Z" fill="#059669" stroke="#ffffff" stroke-width="1.5" />
-        ${num ? `<text x="12" y="11" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="700" fill="#ffffff" font-family="ui-sans-serif, system-ui, sans-serif">${num}</text>` : ""}
+    ? `<svg width="26" height="30" viewBox="0 0 24 28" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.22));">
+        <path d="M12 26 C 12 26 2 17 2 11 C 2 5.5 6.5 1 12 1 C 17.5 1 22 5.5 22 11 C 22 17 12 26 12 26 Z" fill="#059669" stroke="#ffffff" stroke-width="1.8" />
+        ${num ? `<text x="12" y="11" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="800" fill="#ffffff" font-family="ui-sans-serif, system-ui, sans-serif">${num}</text>` : ""}
       </svg>`
-    : `<svg width="36" height="42" viewBox="0 0 36 42" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.18));">
-        <path d="M18 40 C 18 40 3 26 3 17 C 3 8.7 9.7 2 18 2 C 26.3 2 33 8.7 33 17 C 33 26 18 40 18 40 Z" fill="#059669" stroke="#ffffff" stroke-width="1.5" />
-        ${num ? `<text x="18" y="17" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="700" fill="#ffffff" font-family="ui-sans-serif, system-ui, sans-serif">${num}</text>` : ""}
+    : `<svg width="36" height="42" viewBox="0 0 36 42" style="filter: drop-shadow(0 2px 5px rgba(0,0,0,0.25));">
+        <path d="M18 40 C 18 40 3 26 3 17 C 3 8.7 9.7 2 18 2 C 26.3 2 33 8.7 33 17 C 33 26 18 40 18 40 Z" fill="#059669" stroke="#ffffff" stroke-width="2" />
+        ${num ? `<text x="18" y="17" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="800" fill="#ffffff" font-family="ui-sans-serif, system-ui, sans-serif">${num}</text>` : ""}
       </svg>`;
-  const pill = `<div style="margin-top: ${compact ? 4 : 6}px; background: #ffffff; border: 1px solid rgba(24,24,27,0.08); border-radius: 999px; padding: ${compact ? "2px 8px" : "3px 10px"}; box-shadow: 0 2px 6px rgba(0,0,0,0.08); text-align: center; white-space: nowrap;">
-          <div style="font-size: ${compact ? 9 : 10}px; font-weight: 600; color: #27272a; line-height: 1.3;">${name}</div>
-          ${time ? `<div style="font-size: ${compact ? 7.5 : 8.5}px; font-weight: 600; color: #059669; line-height: 1.35;">${time}</div>` : ""}
-        </div>`;
+
+  const pill = compact
+    ? ""
+    : `<div style="margin-bottom: 4px; background: #ffffff; border: 1px solid rgba(24,24,27,0.12); border-radius: 999px; padding: 3px 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.14); text-align: center; white-space: nowrap;">
+        <div style="font-size: 10px; font-weight: 700; color: #18181b; line-height: 1.3;">${name}</div>
+        ${time ? `<div style="font-size: 8.5px; font-weight: 600; color: #059669; line-height: 1.35;">${time}</div>` : ""}
+      </div>`;
+
+  const totalHeight = compact ? 30 : 76;
+  const iconWidth = compact ? 26 : 36;
+  const anchorX = Math.round(iconWidth / 2);
+
   return L.divIcon({
     className: "custom-stop-pin bg-transparent border-0",
     html: `
-      <div data-compact="${compact ? "1" : "0"}" data-stop-index="${stop.index ?? ""}" style="display: flex; flex-direction: column; align-items: center; transform-origin: 50% 100%; animation: stopPinPopIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;">
+      <div data-compact="${compact ? "1" : "0"}" data-stop-index="${stop.index ?? ""}" style="display: flex; flex-direction: column-reverse; align-items: center; pointer-events: none; transform-origin: 50% 100%; animation: stopPinPopIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;">
         <style>
           @keyframes stopPinPopIn {
             0% { opacity: 0; transform: scale(0.2); }
@@ -214,9 +188,9 @@ const createStopPinIcon = (stop, { compact = false } = {}) => {
         ${pill}
       </div>
     `,
-    iconSize: compact ? [24, 28] : [36, 42],
-    iconAnchor: compact ? [12, 26] : [18, 40],
-    popupAnchor: compact ? [0, -26] : [0, -40],
+    iconSize: [iconWidth, totalHeight],
+    iconAnchor: [anchorX, totalHeight],
+    popupAnchor: [0, -totalHeight],
   });
 };
 
@@ -321,6 +295,7 @@ function TicketMarker({ ticket: t, fading, highlighted, showTicketPopup, onSelec
   );
 }
 
+
 function TruckMarker({ trk, fading, bearing = 0 }) {
   const markerRef = useRef(null);
   const [view, setView] = useState({ lat: trk.lat, lng: trk.lng, rot: trk.heading ?? 90 });
@@ -328,10 +303,24 @@ function TruckMarker({ trk, fading, bearing = 0 }) {
   viewRef.current = view;
   const animRef = useRef(null);
 
+  const activeIcon = truckIcon;
+
   // New telemetry retargets the tween; position glides over the 5s update
   // cadence and heading eases faster so turns read like a nav arrow.
+  // If the position jumps > 30m (e.g. route start or reset), snap immediately
+  // so the truck pops in cleanly on the trajectory instead of floating across the map.
   useEffect(() => {
     const v = viewRef.current;
+    const dLat = (trk.lat - v.lat) * 111000;
+    const dLng = (trk.lng - v.lng) * 111000 * Math.cos((v.lat * Math.PI) / 180);
+    const distMeters = Math.sqrt(dLat * dLat + dLng * dLng);
+
+    if (distMeters > 30) {
+      setView({ lat: trk.lat, lng: trk.lng, rot: trk.heading ?? 90 });
+      animRef.current = null;
+      return;
+    }
+
     animRef.current = {
       fromLat: v.lat,
       fromLng: v.lng,
@@ -379,7 +368,8 @@ function TruckMarker({ trk, fading, bearing = 0 }) {
     <Marker
       ref={markerRef}
       position={[view.lat, view.lng]}
-      icon={truckIcon}
+      icon={activeIcon}
+      zIndexOffset={5000}
     >
       <Popup>
         <div className="p-3 flex flex-col gap-1.5 min-w-[200px] text-zinc-900 font-sans">
@@ -601,7 +591,7 @@ function BearingWatcher({ onBearing }) {
   return null;
 }
 
-export default function MapCanvas({ tickets = [], trucks = [], routes = [], roadBlocks = [], mapMode = "pins", center, zoom, highlightedTicketId, currentStop, upcomingStops = [], onSelectTicket, onMapDrag, onBoundsChange, flySignal, onMapReady, showZoomControl = false, showTicketPopup = true, rotatable = false, bearing = null }) {
+export default function MapCanvas({ tickets = [], trucks = [], routes = [], mapMode = "pins", center, zoom, highlightedTicketId, currentStop, upcomingStops = [], onSelectTicket, onMapDrag, onBoundsChange, flySignal, onMapReady, showZoomControl = false, showTicketPopup = true, rotatable = false, bearing = null, perspective3D = false }) {
   const [mounted, setMounted] = useState(false);
   const tileRef = useRef(null);
   const tejeroCenter = [10.3016, 123.9086];
@@ -753,34 +743,58 @@ export default function MapCanvas({ tickets = [], trucks = [], routes = [], road
   const showCompass = rotatable || Math.abs(normBearing) > 2;
 
   return (
-    <div className="w-full h-full relative">
-      <MapContainer
-        center={mapCenter}
-        zoom={mapZoom}
-        scrollWheelZoom={true}
-        attributionControl={false}
-        zoomControl={false}
-        rotate
-        rotateControl={false}
-        touchRotate={true}
-        minZoom={TEJERO_MIN_ZOOM}
-        maxBounds={TEJERO_MAX_BOUNDS}
-        maxBoundsViscosity={TEJERO_BOUNDS_VISCOSITY}
-        className="w-full h-full z-10"
+    <div
+      className="w-full h-full relative overflow-hidden"
+      style={
+        perspective3D
+          ? {
+              perspective: "750px",
+              perspectiveOrigin: "50% 68%",
+            }
+          : undefined
+      }
+    >
+      <div
+        className="w-full h-full"
+        style={
+          perspective3D
+            ? {
+                transform: "rotateX(42deg) scale(1.24)",
+                transformOrigin: "50% 75%",
+                transition: "transform 0.5s cubic-bezier(0.25, 1, 0.5, 1)",
+              }
+            : {
+                transition: "transform 0.5s cubic-bezier(0.25, 1, 0.5, 1)",
+              }
+        }
       >
-        <MapCameraController center={mapCenter} zoom={mapZoom} onMapDrag={onMapDrag} onBoundsChange={onBoundsChange} flySignal={flySignal} bearing={autoFollow ? (rotatable ? cameraBearing : 0) : null} onUserRotate={handleUserRotate} />
-        <BearingWatcher onBearing={handleBearing} />
-        {showZoomControl && <ZoomControl position="topleft" />}
-        
-        {/* OpenStreetMap standard tiles (no API key required) */}
-        <TileLayer
-          ref={tileRef}
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url={OSM_TILE_URL}
-          maxZoom={19}
-          detectRetina={true}
-        />
-        {onMapReady && <MapReadyNotifier onReady={onMapReady} tileRef={tileRef} />}
+        <MapContainer
+          center={mapCenter}
+          zoom={mapZoom}
+          scrollWheelZoom={true}
+          attributionControl={false}
+          zoomControl={false}
+          rotate
+          rotateControl={false}
+          touchRotate={true}
+          minZoom={METRO_CEBU_MIN_ZOOM}
+          maxBounds={METRO_CEBU_MAX_BOUNDS}
+          maxBoundsViscosity={METRO_CEBU_BOUNDS_VISCOSITY}
+          className="w-full h-full z-10"
+        >
+          <MapCameraController center={mapCenter} zoom={mapZoom} onMapDrag={onMapDrag} onBoundsChange={onBoundsChange} flySignal={flySignal} bearing={autoFollow ? (rotatable ? cameraBearing : 0) : null} onUserRotate={handleUserRotate} />
+          <BearingWatcher onBearing={handleBearing} />
+          {showZoomControl && <ZoomControl position="topleft" />}
+          
+          {/* OpenStreetMap standard tiles (no API key required) */}
+          <TileLayer
+            ref={tileRef}
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url={OSM_TILE_URL}
+            maxZoom={19}
+            detectRetina={true}
+          />
+          {onMapReady && <MapReadyNotifier onReady={onMapReady} tileRef={tileRef} />}
 
 
 
@@ -834,31 +848,6 @@ export default function MapCanvas({ tickets = [], trucks = [], routes = [], road
           />
         ))}
 
-        {/* Road Blocks (blocked streets forcing automatic re-routes) */}
-        {(roadBlocks || []).map((b) => (
-          <Marker
-            key={`road-block-${b.id}`}
-            position={[b.lat, b.lng]}
-            icon={roadBlockIcon}
-            zIndexOffset={1500}
-          >
-            <Popup>
-              <div className="p-3 flex flex-col gap-1 min-w-[180px] text-zinc-900 font-sans">
-                <div className="flex items-center gap-1.5 pb-1 border-b border-zinc-100">
-                  <span className="font-semibold text-xs text-rose-600">Road Blocked</span>
-                </div>
-                <div className="text-xs text-zinc-600">{b.reason || "Blocked road"}</div>
-                {b.reportedBy && (
-                  <div className="text-xs text-zinc-500">Reported by {b.reportedBy}</div>
-                )}
-                <div className="text-xs text-emerald-600 font-bold mt-0.5">
-                  Trucks are re-routing around this street.
-                </div>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
-
         {/* Point Markers (removed pins finish their fade-out before unmount) */}
         {(mapMode === "pins" || mapMode === "combined") &&
           [...tickets, ...fadingTicketsOnly].map((t) => (
@@ -879,6 +868,8 @@ export default function MapCanvas({ tickets = [], trucks = [], routes = [], road
             trk={trk}
             fading={fadingIds.has(trk.id)}
             bearing={rotatable ? (compassBearing ?? 0) : 0}
+            isDriverPOV={perspective3D}
+            currentStreet={currentStop?.name ?? "Sitio Zapanta"}
           />
         ))}
 
@@ -906,6 +897,7 @@ export default function MapCanvas({ tickets = [], trucks = [], routes = [], road
           />
         ))}
       </MapContainer>
+      </div>
       {showCompass && (
         <button
           type="button"

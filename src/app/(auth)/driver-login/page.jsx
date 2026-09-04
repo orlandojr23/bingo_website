@@ -256,7 +256,7 @@ export default function DriverLoginPage() {
       </div>
 
       <p className="pb-6 text-center text-xs font-medium text-muted-foreground/60">
-        Bin&apos;Go &middot; Barangay Tejero Driver Terminal
+        Bin&apos;Go &middot; Smart Waste Collection, Simplified
       </p>
     </div>
   );

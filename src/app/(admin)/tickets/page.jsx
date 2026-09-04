@@ -44,10 +44,10 @@ export default function TicketsPage() {
 
   const filteredTickets = tickets.filter((t) => {
     const matchSearch =
-      t.location.toLowerCase().includes(search.toLowerCase()) ||
-      t.id.toLowerCase().includes(search.toLowerCase()) ||
-      t.reporter.toLowerCase().includes(search.toLowerCase()) ||
-      t.barangay.toLowerCase().includes(search.toLowerCase());
+      (t.location || "").toLowerCase().includes(search.toLowerCase()) ||
+      (t.id || "").toLowerCase().includes(search.toLowerCase()) ||
+      (t.reporter || "").toLowerCase().includes(search.toLowerCase()) ||
+      (t.barangay || "").toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "All" || t.status === statusFilter;
     const matchUrgency = urgencyFilter === "All" || t.urgency === urgencyFilter;
     return matchSearch && matchStatus && matchUrgency;

@@ -109,7 +109,7 @@ export default function DispatchPage() {
         const j = Math.floor(Math.random() * (i + 1));
         [next[i], next[j]] = [next[j], next[i]];
       }
-      return next;
+      return retimeRoutePoints(next, time);
     });
   };
 
@@ -175,6 +175,11 @@ export default function DispatchPage() {
     e.preventDefault();
     if (!selectedSchedule || !truckId || !type || !days || !time || stopOrder.length === 0) return;
 
+    if (live.scheduleStatus[selectedSchedule.id] === "In Progress" || selectedSchedule.status === "In Progress") {
+      alert("Cannot edit an in-progress schedule.");
+      return;
+    }
+
     updateSchedule(selectedSchedule.id, {
       ...buildScheduleFields(),
       routePoints: stopOrder,
@@ -183,6 +188,11 @@ export default function DispatchPage() {
   };
 
   const handleDeleteSchedule = (id) => {
+    if (live.scheduleStatus[id] === "In Progress") {
+      alert("Cannot delete a schedule while it is in progress.");
+      setScheduleToDelete(null);
+      return;
+    }
     removeSchedule(id);
     if (selectedSchedule?.id === id) {
       setSelectedSchedule(null);

@@ -11,7 +11,7 @@ import {
   Eye,
   EyeOff,
   Loader2,
-  AlertTriangle,
+  X,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { mockPilotData, mockTickets } from "@/lib/mock-data";
@@ -23,7 +23,6 @@ import {
   completeRoute,
   endRoute,
   updateTracking,
-  reportRoadBlock,
   getSchedule,
   getSchedules,
   scheduleLabel,
@@ -212,6 +211,20 @@ function InfoRow({ label, value }) {
   );
 }
 
+// Compact, truthful area tagline for the header banners: the first pickup
+// stop plus how many more stops follow, so a multi-stop assignment never
+// reads as a single sitio. Falls back to the zone name when a schedule
+// carries no stop list.
+function assignedAreaTagline(schedule, zone) {
+  if (!schedule) return null;
+  const names = (schedule.routePoints || []).map((p) => p.name).filter(Boolean);
+  if (!names.length) {
+    return zone ? zone.name.split("&")[0].trim() : scheduleLabel(schedule);
+  }
+  if (names.length === 1) return names[0];
+  return `${names[0]} + ${names.length - 1} more stop${names.length === 2 ? "" : "s"}`;
+}
+
 export default function DriverPage() {
   const [selectedTruckId, setSelectedTruckId] = useState("TRK-01");
   const [wakeLockActive, setWakeLockActive] = useState(false);
@@ -275,8 +288,8 @@ export default function DriverPage() {
     heading: 90,
     accuracy: 8,
   });
-  const [lastBroadcastTime, setLastBroadcastTime] = useState(null);
-  const [broadcastCount, setBroadcastCount] = useState(0);
+  const lastBroadcastTime = useRef(null);
+  const broadcastCount = useRef(0);
   const [broadcastStatus, setBroadcastStatus] = useState("Standby");
 
   const watchIdRef = useRef(null);
@@ -369,16 +382,21 @@ export default function DriverPage() {
     );
   }, [selectedTruckId, live]);
 
+  // How many routes are still queued for this truck — drives the banner's
+  // "N new assignments" headline so it stays truthful with multiple queued.
+  const pendingAssignments = useMemo(() => {
+    const status = live.scheduleStatus;
+    return getSchedules().filter(
+      (s) =>
+        s.activeTruckId === selectedTruckId &&
+        (status[s.id] === "In Progress" || status[s.id] === "Scheduled")
+    ).length;
+  }, [selectedTruckId, live]);
+
   const assignedZone = assignedSchedule
     ? mockPilotData.zones.find((z) => z.id === assignedSchedule.zoneId)
     : null;
-  // Compact area label: legacy zone segment, or the first stop of a
-  // sitio-built custom route.
-  const assignedAreaName = assignedSchedule
-    ? assignedZone
-      ? assignedZone.name.split("&")[0].trim()
-      : assignedSchedule.routePoints?.[0]?.name ?? scheduleLabel(assignedSchedule)
-    : null;
+  const assignedAreaName = assignedAreaTagline(assignedSchedule, assignedZone);
 
   const activeSchedule = truckState?.scheduleId
     ? getSchedule(truckState.scheduleId)
@@ -401,7 +419,6 @@ export default function DriverPage() {
         ? { lat: truckState.tracking.lat, lng: truckState.tracking.lng }
         : null,
     points: truckState?.phase === "completed" ? [] : routeStops,
-    blocks: live.roadBlocks ?? [],
   });
 
   // Single "current stop" pin: shown only once the driver has started the
@@ -433,7 +450,6 @@ export default function DriverPage() {
         ? { lat: routePoints[dStopIdx].lat, lng: routePoints[dStopIdx].lng }
         : null,
     points: driverOnDuty ? routePoints.slice(dStopIdx + 1) : [],
-    blocks: live.roadBlocks ?? [],
     enabled: driverOnDuty,
   });
 
@@ -447,7 +463,7 @@ export default function DriverPage() {
   }, [driverName]);
 
   const bannerMessages = useMemo(() => {
-    // Keep taglines compact: first area segment only, start time only
+    // Keep taglines compact: start time only
     const zoneName = assignedAreaName;
     const startTime = String(assignedSchedule?.time || "")
       .split("-")[0]
@@ -455,13 +471,13 @@ export default function DriverPage() {
     const msgs = [
       {
         id: "greeting",
-        Icon: Waze3DWavingHandIcon,
+        Icon: null,
         title: greetingTitle,
         subtitle: `${new Date().toLocaleDateString("en-US", {
           weekday: "long",
           month: "long",
           day: "numeric",
-        })} • ${zoneName ?? "Standby"}`,
+        })}`,
       },
     ];
     const isPaused =
@@ -501,7 +517,7 @@ export default function DriverPage() {
       msgs.push({
         id: "status",
         Icon: Waze3DRouteIcon,
-        title: "1 new assignment",
+        title: `${pendingAssignments} new assignment${pendingAssignments === 1 ? "" : "s"}`,
         subtitle: `${zoneName ?? "New route"}${startTime ? ` • ${startTime}` : ""}`,
       });
     } else {
@@ -513,7 +529,7 @@ export default function DriverPage() {
       });
     }
     return msgs;
-  }, [greetingTitle, assignedAreaName, assignedSchedule, truckState, isOnDuty, currentPoint, routePoints.length]);
+  }, [greetingTitle, assignedAreaName, assignedSchedule, truckState, isOnDuty, currentPoint, routePoints.length, pendingAssignments]);
 
   const [bannerIndex, setBannerIndex] = useState(0);
   const [mapReady, setMapReady] = useState(false);
@@ -615,6 +631,26 @@ export default function DriverPage() {
     }
   };
 
+  const selectedTruckIdRef = useRef(selectedTruckId);
+  useEffect(() => {
+    selectedTruckIdRef.current = selectedTruckId;
+  }, [selectedTruckId]);
+
+  const truckFocusedRef = useRef(truckFocused);
+  useEffect(() => {
+    truckFocusedRef.current = truckFocused;
+  }, [truckFocused]);
+
+  useEffect(() => {
+    return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+      releaseWakeLock();
+    };
+  }, []);
+
   const startGpsWatch = () => {
     if (watchIdRef.current !== null || !("geolocation" in navigator)) return;
     const id = navigator.geolocation.watchPosition(
@@ -627,21 +663,22 @@ export default function DriverPage() {
           heading: heading || 90,
           accuracy: Math.round(accuracy),
         });
-        setMapCenter([latitude, longitude]);
-        setLastBroadcastTime(
+        if (truckFocusedRef.current) {
+          setMapCenter([latitude, longitude]);
+        }
+        lastBroadcastTime.current =
           new Date().toLocaleTimeString([], {
             hour: "2-digit",
             minute: "2-digit",
             second: "2-digit",
-          })
-        );
-        setBroadcastCount((prev) => prev + 1);
+          });
+        broadcastCount.current += 1;
         setBroadcastStatus("Broadcasting live");
 
         const now = Date.now();
         if (now - lastPushRef.current >= 2000) {
           lastPushRef.current = now;
-          updateTracking(selectedTruckId, {
+          updateTracking(selectedTruckIdRef.current, {
             lat: latitude,
             lng: longitude,
             heading: heading != null ? (Math.round(heading) + 90) % 360 : 90,
@@ -686,6 +723,21 @@ export default function DriverPage() {
       setBroadcastStatus("Broadcasting live");
       await requestWakeLock();
       startGpsWatch();
+
+      // Waze Navigation Camera Mode: Focus truck, collapse bottom sheet, set zoom 18 & fly camera
+      setTruckFocused(true);
+      setIsMapSheetExpanded(false);
+      const tracking = live.trucks[selectedTruckId]?.tracking;
+      if (tracking?.lat != null && tracking?.lng != null) {
+        setMapCenter([tracking.lat, tracking.lng]);
+      } else if (coords?.lat != null && coords?.lng != null) {
+        setMapCenter([coords.lat, coords.lng]);
+      } else {
+        setMapCenter([10.3025, 123.9095]);
+      }
+      setMapZoom(18);
+      setFlySignal((s) => s + 1);
+
       toast(wasPaused ? "Route resumed." : "Route started.");
       return;
     }
@@ -699,6 +751,17 @@ export default function DriverPage() {
     if (!isLastPoint) {
       continueRoute(selectedTruckId);
       const next = routePoints[truckState.stopIndex + 1];
+
+      // Maintain Waze Navigation Camera Focus on next leg
+      setTruckFocused(true);
+      setIsMapSheetExpanded(false);
+      const tracking = truckState?.tracking;
+      if (tracking?.lat != null && tracking?.lng != null) {
+        setMapCenter([tracking.lat, tracking.lng]);
+      }
+      setMapZoom(18);
+      setFlySignal((s) => s + 1);
+
       toast(`En route to ${next?.name ?? "next stop"}.`);
       return;
     }
@@ -722,24 +785,6 @@ export default function DriverPage() {
     endRoute(selectedTruckId);
     await stopGpsWatch();
     toast("Route ended.");
-  };
-
-  const handleReportBlocked = () => {
-    haptic(15);
-    const { lat, lng } = truckState?.tracking ?? {};
-    if (lat == null || lng == null) return;
-    const block = reportRoadBlock(
-      `${selectedTruckId} • ${liveDriver || "Driver"}`,
-      lat,
-      lng,
-      "Blocked street — reported by driver"
-    );
-    const alreadyBlocked = (live.roadBlocks ?? []).some((b) => b.edge === block?.edge);
-    toast(
-      alreadyBlocked
-        ? "That street is already blocked."
-        : "Road block reported — route is re-routing automatically."
-    );
   };
 
   const handleResolveTicket = (ticketId) => {
@@ -770,13 +815,23 @@ export default function DriverPage() {
   // Waze-style course-up camera while driving: heading up, auto-follow truck.
   // Use the live travel heading so the camera matches actual motion.
   const navBearing = isOnDuty
-    ? Math.round(truckState?.tracking.heading || driverRoute.heading || 0)
+    ? Math.round(truckState?.tracking.heading ?? driverRoute.heading ?? 0)
     : null;
 
   useEffect(() => {
     if (isOnDuty) {
       setTruckFocused(true);
       setMapZoom(17);
+      if (watchIdRef.current === null && typeof window !== "undefined") {
+        setBroadcastStatus("Broadcasting live");
+        requestWakeLock();
+        startGpsWatch();
+      }
+      if (truckState?.tracking?.lat != null && truckState?.tracking?.lng != null) {
+        setMapCenter([truckState.tracking.lat, truckState.tracking.lng]);
+      }
+    } else {
+      stopGpsWatch();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOnDuty]);
@@ -812,7 +867,6 @@ export default function DriverPage() {
               isOnDuty && truckState?.phase !== "completed" && driverRoute.positions.length >= 2 && { id: `${routeScheduleId ?? "driver-route"}-leg`, ...driverRoute },
               driverFuturePath.positions.length >= 2 && { id: `${routeScheduleId ?? "driver-route"}-future-${dStopIdx}`, ...driverFuturePath },
             ].filter(Boolean)}
-            roadBlocks={live.roadBlocks ?? []}
             mapMode="pins"
             currentStop={driverCurrentStop}
             upcomingStops={driverUpcomingStops}
@@ -831,6 +885,7 @@ export default function DriverPage() {
             flySignal={flySignal}
             rotatable
             bearing={navBearing}
+            perspective3D={false}
           />
         </div>
 
@@ -852,9 +907,9 @@ export default function DriverPage() {
         </AnimatePresence>
 
         {/* Waze-Style Flush Top Navigation Banner */}
-        <div className="pointer-events-auto absolute top-0 inset-x-0 z-20 w-full border-b border-border bg-card/98 px-5 py-3 text-foreground backdrop-blur-md flex items-center justify-between gap-3.5 select-none overflow-hidden h-16 shadow-sm">
+        <div className="pointer-events-auto absolute top-0 inset-x-0 z-20 w-full border-b border-border bg-card/98 px-5 py-4 text-foreground backdrop-blur-md flex items-center justify-between gap-3.5 select-none overflow-hidden h-20 shadow-sm">
           {/* Left: Dynamic 3D Icon & Slide-from-Top Readout */}
-          <div className="min-w-0 flex-1 overflow-hidden relative h-11 flex items-center">
+          <div className="min-w-0 flex-1 overflow-hidden relative h-14 flex items-center">
             {!mapReady ? (
               <div className="flex items-center gap-3.5 w-full">
                 <div className="h-10 w-10 shrink-0 rounded-xl bg-foreground/10 animate-pulse" />
@@ -880,11 +935,11 @@ export default function DriverPage() {
                 )}
 
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-base font-semibold tracking-tight text-foreground truncate leading-tight">
+                  <h3 className="text-lg font-semibold tracking-tight text-foreground truncate leading-tight">
                     {currentBanner.title}
                   </h3>
                   {currentBanner.subtitle && (
-                    <p className="text-xs font-semibold text-emerald-800 truncate leading-tight mt-0.5">
+                    <p className="text-sm font-semibold text-emerald-800 truncate leading-tight mt-1">
                       {currentBanner.subtitle}
                     </p>
                   )}
@@ -894,7 +949,7 @@ export default function DriverPage() {
             )}
           </div>
 
-          {/* Right: Top-Right Circular Profile Button with Initial Letter "D" */}
+          {/* Right: Top-Right Circular Profile Button */}
           <button
             type="button"
             onClick={() => {
@@ -928,41 +983,23 @@ export default function DriverPage() {
                   transition={{ duration: 0.3, ease: "easeInOut" }}
                   onClick={() => {
                     setIsMapSheetExpanded(false);
-                    if (truckFocused) {
-                      setTruckFocused(false);
+                    setTruckFocused(true);
+                    if (tracking?.lat != null && tracking?.lng != null) {
+                      setMapCenter([tracking.lat, tracking.lng]);
+                    } else if (coords?.lat != null && coords?.lng != null) {
+                      setMapCenter([coords.lat, coords.lng]);
                     } else {
-                      setTruckFocused(true);
-                      if (tracking?.lat != null && tracking?.lng != null) {
-                        setMapCenter([tracking.lat, tracking.lng]);
-                      } else if (coords?.lat != null && coords?.lng != null) {
-                        setMapCenter([coords.lat, coords.lng]);
-                      } else {
-                        setMapCenter([10.3025, 123.9095]);
-                      }
-                      setMapZoom(17);
-                      setFlySignal((s) => s + 1);
+                      setMapCenter([10.3025, 123.9095]);
                     }
+                    setMapZoom(17);
+                    setFlySignal((s) => s + 1);
                     haptic();
                   }}
-                  className={cn(
-                    "pointer-events-auto flex h-[54px] w-[54px] flex-col items-center justify-center gap-0.5 rounded-full border shadow-lg backdrop-blur-md transition-all hover:scale-105 active:scale-95 cursor-pointer",
-                    truckFocused
-                      ? "border-emerald-500 bg-emerald-50/95 ring-2 ring-emerald-500/25"
-                      : "border-border bg-card/95"
-                  )}
+                  className="pointer-events-auto flex h-[54px] w-[54px] flex-col items-center justify-center gap-0.5 rounded-full border border-border bg-card/95 shadow-lg backdrop-blur-md transition-all hover:scale-105 active:scale-95 cursor-pointer"
                   title="Focus Compactor Unit"
                   aria-label="Focus Compactor Unit"
-                  aria-pressed={truckFocused}
                 >
                   <Waze3DFocusTruckIcon className="h-7 w-7 shrink-0" />
-                  <span
-                    className={cn(
-                      "text-[8px] font-bold leading-none",
-                      truckFocused ? "text-emerald-700" : "text-muted-foreground"
-                    )}
-                  >
-                    Truck
-                  </span>
                 </motion.button>
               );
             })()}
@@ -997,9 +1034,6 @@ export default function DriverPage() {
                 aria-label="Center Driver Location"
               >
                 <Waze3DTargetIcon className="h-7 w-7 shrink-0" />
-                <span className="text-[8px] font-bold leading-none text-muted-foreground">
-                  GPS
-                </span>
               </motion.button>
             )}
           </AnimatePresence>
@@ -1069,103 +1103,95 @@ export default function DriverPage() {
             </div>
 
             {/* Expanded Tab Drawer Content Wrapper */}
-            <AnimatePresence mode="wait">
+            <AnimatePresence>
               {isMapSheetExpanded && (
                 <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.25 }}
-                  className="px-4 pb-4 pt-1"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.25, ease: "easeInOut" }}
+                  className="overflow-hidden"
                 >
-                  <div className="h-[340px] overflow-y-auto space-y-4 pr-0.5 pt-2 scrollbar-hide">
+                  <div className="h-[340px] overflow-y-auto space-y-4 pr-0.5 pt-1 px-4 pb-4 scrollbar-hide">
 
                     {/* Tab 1: Route & Telemetry Controls */}
                     {activeTab === "route" && (
                       <div className="space-y-4">
                         {/* Main Route Workflow Control */}
-                        <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
-                          <button
-                            type="button"
-                            onClick={handlePrimaryAction}
-                            className={cn(
-                              "flex h-12 w-full items-center justify-center gap-2 rounded-xl text-xs font-bold transition-all active:scale-[0.98] cursor-pointer shadow-xs",
-                              isOnDuty && truckState?.phase === "enroute"
-                                ? "bg-amber-600 text-white hover:bg-amber-700"
-                                : "bg-emerald-600 text-white hover:bg-emerald-700"
-                            )}
-                          >
-                            {!isOnDuty ? (
-                              <>
-                                <Play className="h-4 w-4 fill-white" /> Start Route
-                              </>
-                            ) : truckState.phase === "enroute" ? (
-                              <>
-                                Stop By: {currentPoint?.name ?? "Stop"}
-                              </>
-                            ) : !isLastPoint ? (
-                              <>
-                                Continue Route
-                              </>
-                            ) : (
-                              <>
-                                <CheckCircle2 className="h-4 w-4" /> Complete Route
-                              </>
-                            )}
-                          </button>
-
-                          {isOnDuty && (
+                        <div className="relative rounded-2xl border border-emerald-500/25 bg-[url('/hero-bg.svg')] bg-cover bg-center bg-no-repeat p-4 space-y-3 shadow-md overflow-hidden">
+                          <div className="relative z-10 space-y-3">
                             <button
                               type="button"
-                              onClick={handleReportBlocked}
-                              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-amber-300 bg-amber-50 text-xs font-bold text-amber-700 transition-all hover:bg-amber-100 active:scale-[0.98] cursor-pointer shadow-xs"
+                              onClick={handlePrimaryAction}
+                              className={cn(
+                                "flex h-12 w-full items-center justify-center gap-2 rounded-xl text-xs font-bold transition-all active:scale-[0.98] cursor-pointer shadow-xs",
+                                isOnDuty && truckState?.phase === "enroute"
+                                  ? "bg-amber-600 text-white hover:bg-amber-700"
+                                  : "bg-emerald-600 text-white hover:bg-emerald-700"
+                              )}
                             >
-                              <AlertTriangle className="h-4 w-4" />
-                              Report Blocked Road
+                              {!isOnDuty ? (
+                                <>
+                                  <Play className="h-4 w-4 fill-white" /> Start Route
+                                </>
+                              ) : truckState.phase === "enroute" ? (
+                                <>
+                                  Stop By: {currentPoint?.name ?? "Stop"}
+                                </>
+                              ) : !isLastPoint ? (
+                                <>
+                                  Continue Route
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle2 className="h-4 w-4" /> Complete Route
+                                </>
+                              )}
                             </button>
-                          )}
 
-                          {isOnDuty && (
-                            <button
-                              type="button"
-                              onClick={handleEndRoute}
-                              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-rose-600 text-xs font-bold text-white transition-all hover:bg-rose-700 active:scale-[0.98] cursor-pointer shadow-xs"
-                            >
-                              End Route
-                            </button>
-                          )}
+                            {isOnDuty && (
+                              <button
+                                type="button"
+                                onClick={handleEndRoute}
+                                className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-rose-600 text-xs font-bold text-white transition-all hover:bg-rose-700 active:scale-[0.98] cursor-pointer shadow-xs"
+                              >
+                                <X className="h-4 w-4 stroke-[2.5]" />
+                                End Route
+                              </button>
+                            )}
 
-                          <div className="rounded-xl border border-border bg-muted/40 p-3 space-y-2">
-                            <InfoRow
-                              label="Active Route"
-                              value={activeSchedule ? scheduleLabel(activeSchedule) : "No Active Route"}
-                            />
-                            <InfoRow
-                              label="Next Stop"
-                              value={
-                                truckState?.phase === "completed"
-                                  ? "Route Completed"
-                                  : truckState?.onsite
-                                    ? `At ${currentPoint?.name ?? "stop"}`
-                                    : currentPoint
-                                      ? `${currentPoint.name} • ${currentPoint.time}`
-                                      : "Standby"
-                              }
-                            />
-                            <InfoRow
-                              label="Stops Served"
-                              value={
-                                routePoints.length
-                                  ? `${
-                                      truckState?.phase === "completed"
-                                        ? routePoints.length
-                                        : truckState?.onsite
-                                          ? truckState.stopIndex + 1
-                                          : truckState?.stopIndex ?? 0
-                                    } of ${routePoints.length}`
-                                  : "—"
-                              }
-                            />
+                            <div className="space-y-1.5 pt-1 px-1">
+                              <InfoRow
+                                label="Active Route"
+                                value={activeSchedule ? scheduleLabel(activeSchedule) : "No Active Route"}
+                              />
+                              <InfoRow
+                                label="Next Stop"
+                                value={
+                                  truckState?.phase === "completed"
+                                    ? "Route Completed"
+                                    : truckState?.onsite
+                                      ? `At ${currentPoint?.name ?? "stop"}`
+                                      : currentPoint
+                                        ? `${currentPoint.name} • ${currentPoint.time}`
+                                        : "Standby"
+                                }
+                              />
+                              <InfoRow
+                                label="Stops Served"
+                                value={
+                                  routePoints.length
+                                    ? `${
+                                        truckState?.phase === "completed"
+                                          ? routePoints.length
+                                          : truckState?.onsite
+                                            ? truckState.stopIndex + 1
+                                            : truckState?.stopIndex ?? 0
+                                      } of ${routePoints.length}`
+                                    : "—"
+                                }
+                              />
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1217,8 +1243,8 @@ export default function DriverPage() {
             </div>
             <div className="min-w-0 flex-1">
               <h3 className="text-base font-bold text-foreground truncate">{driverSession?.name || "Driver"}</h3>
-              <p className="text-xs font-semibold text-foreground mt-0.5">Compactor Operator (TRK-01)</p>
-              <p className="text-[11px] text-muted-foreground">Plate: CEB-9912 &bull; Sitio Vilgon, Brgy. Tejero</p>
+              <p className="text-xs font-semibold text-foreground mt-0.5">Compactor Operator ({selectedTruckId})</p>
+              <p className="text-[11px] text-muted-foreground">Plate: {currentTruck.plate} &bull; Brgy. Tejero, Cebu City</p>
             </div>
           </div>
 
