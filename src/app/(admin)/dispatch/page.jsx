@@ -18,6 +18,21 @@ import { Button } from "@/components/ui/button";
 import { inputClass, labelClass } from "@/components/ui/input";
 import { MapSkeleton } from "@/components/ui/skeletons";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/components/pwa/Toast";
+
+// Helpers for the Collection Days text input — title-cases day names on type,
+// and normalises the final value on blur so "monday, wednesday" → "Monday, Wednesday".
+function formatDaysInput(val) {
+  return val.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+function formatDaysFinal(val) {
+  return val
+    .split(",")
+    .map((d) => d.trim())
+    .filter(Boolean)
+    .map((d) => d.charAt(0).toUpperCase() + d.slice(1))
+    .join(", ");
+}
 
 const MapCanvas = dynamic(() => import("@/components/map/map-canvas"), {
   ssr: false,
@@ -34,6 +49,7 @@ function Field({ label, children }) {
 }
 
 export default function DispatchPage() {
+  const toast = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSchedule, setSelectedSchedule] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -177,7 +193,7 @@ export default function DispatchPage() {
     if (!selectedSchedule || !truckId || !type || !days || !time || stopOrder.length === 0) return;
 
     if (live.scheduleStatus[selectedSchedule.id] === "In Progress" || selectedSchedule.status === "In Progress") {
-      alert("Cannot edit an in-progress schedule.");
+      toast("Cannot edit an in-progress schedule.", { variant: "warning" });
       return;
     }
 
@@ -190,7 +206,7 @@ export default function DispatchPage() {
 
   const handleDeleteSchedule = (id) => {
     if (live.scheduleStatus[id] === "In Progress") {
-      alert("Cannot delete a schedule while it is in progress.");
+      toast("Cannot delete a schedule while it is in progress.", { variant: "warning" });
       setScheduleToDelete(null);
       return;
     }

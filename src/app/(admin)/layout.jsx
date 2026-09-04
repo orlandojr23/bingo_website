@@ -43,6 +43,9 @@ export default function AdminLayout({ children }) {
         router.replace("/admin-login");
       }
       setChecking(false);
+    }).catch(() => {
+      setChecking(false);
+      router.replace("/admin-login");
     });
 
     const {

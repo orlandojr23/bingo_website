@@ -2,6 +2,11 @@
 
 import { useState } from "react";
 import { CheckCircle2, Plus, X, FilePlus2 } from "lucide-react";
+
+// Title-case helper for name-like text inputs (Location, Barangay, Reporter)
+function formatNameInput(val) {
+  return val.replace(/\b\w/g, (c) => c.toUpperCase());
+}
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";

@@ -46,8 +46,7 @@ function LiveMapContent() {
         setSelectedTicket(ticket);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [urlTicketId, tickets]);
 
   const live = useLiveRoute();
   const fleet = useFleet();
@@ -79,8 +78,7 @@ function LiveMapContent() {
         setMapZoom(16);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [urlTruckId, trucksData]);
 
   useEffect(() => {
     if (mapView === "trucks") {

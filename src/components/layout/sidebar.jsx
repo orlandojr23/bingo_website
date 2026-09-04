@@ -38,7 +38,9 @@ export default function Sidebar({ isOpen, onClose }) {
   const unreadNotifications = useUnreadCount("admin");
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch {}
     router.replace("/admin-login");
   };
 

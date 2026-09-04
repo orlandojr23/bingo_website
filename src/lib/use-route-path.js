@@ -217,7 +217,7 @@ export function useTruckRoutes(live, fleet) {
         if (!active || !sched) continue;
 
         const origin = { lat: ts.tracking.lat, lng: ts.tracking.lng };
-        const waypoints = buildWaypoints(origin, sched.routePoints.slice(ts.stopIndex, ts.stopIndex + 1));
+        const waypoints = buildWaypoints(origin, (sched.routePoints || []).slice(ts.stopIndex, ts.stopIndex + 1));
         if (waypoints.length < 2) continue;
 
         const cacheKey = cacheKeyFor(sched.id, ts.stopIndex, origin, waypoints.length, blockSig);

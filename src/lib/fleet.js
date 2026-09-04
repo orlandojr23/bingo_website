@@ -21,7 +21,7 @@ function writeStore(list) {
   try {
     localStorage.setItem(KEY, JSON.stringify(list));
   } catch {}
-  window.dispatchEvent(new CustomEvent(CHANGE_EVENT));
+  if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent(CHANGE_EVENT));
 }
 
 export function normalizeCode(code) {
@@ -34,7 +34,7 @@ export function addTruck({ id, plate, driver, capacity }) {
   const plateClean = plate.trim().toUpperCase();
   if (!code || !plateClean) return { error: "Truck code and plate number are required." };
   if (list.some((t) => normalizeCode(t.id) === code)) return { error: `Truck code ${code} already exists.` };
-  if (list.some((t) => t.plate.trim().toUpperCase() === plateClean)) return { error: `Plate ${plateClean} is already registered.` };
+  if (list.some((t) => (t.plate || "").trim().toUpperCase() === plateClean)) return { error: `Plate ${plateClean} is already registered.` };
   const truck = { id: code, plate: plateClean, driver: driver?.trim() || "", capacity: capacity?.trim() || "" };
   writeStore([...list, truck]);
   return { truck };
@@ -46,10 +46,10 @@ export function updateTruck(id, patch) {
   if (!target) return { error: "Truck not found." };
   const next = { ...target, ...patch };
   const code = normalizeCode(next.id);
-  const plateClean = next.plate.trim().toUpperCase();
+  const plateClean = (next.plate || "").trim().toUpperCase();
   if (!code || !plateClean) return { error: "Truck code and plate number are required." };
   if (list.some((t) => t.id !== id && normalizeCode(t.id) === code)) return { error: `Truck code ${code} already exists.` };
-  if (list.some((t) => t.id !== id && t.plate.trim().toUpperCase() === plateClean)) return { error: `Plate ${plateClean} is already registered.` };
+  if (list.some((t) => t.id !== id && (t.plate || "").trim().toUpperCase() === plateClean)) return { error: `Plate ${plateClean} is already registered.` };
   next.id = code;
   next.plate = plateClean;
   writeStore(list.map((t) => (t.id === id ? next : t)));

@@ -347,12 +347,17 @@ function TruckMarker({ trk, fading, bearing = 0 }) {
         };
         const v = viewRef.current;
         if (next.lat !== v.lat || next.lng !== v.lng || next.rot !== v.rot) setView(next);
+        // Stop looping once both tweens are done
+        if (pk >= 1 && rk >= 1) { animRef.current = null; return; }
+      } else {
+        // No active animation — don't keep looping
+        return;
       }
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, []);
+  }, [trk.lat, trk.lng, trk.heading]);
 
   useEffect(() => {
     const inner = markerRef.current?.getElement()?.firstElementChild;

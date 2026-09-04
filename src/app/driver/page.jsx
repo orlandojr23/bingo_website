@@ -366,7 +366,7 @@ export default function DriverPage() {
     truckState.tracking.isActive;
 
   const currentTruck =
-    fleet.find((t) => t.id === selectedTruckId) || fleet[0];
+    fleet.find((t) => t.id === selectedTruckId) || fleet[0] || { id: "—", plate: "—", driver: "—", capacity: "—" };
 
   const liveDriver = live.driverByTruck[selectedTruckId] ?? currentTruck.driver;
 
@@ -627,7 +627,9 @@ export default function DriverPage() {
 
   const releaseWakeLock = async () => {
     if (wakeLockRef.current) {
-      await wakeLockRef.current.release();
+      try {
+        await wakeLockRef.current.release();
+      } catch {}
       wakeLockRef.current = null;
       setWakeLockActive(false);
     }

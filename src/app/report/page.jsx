@@ -358,6 +358,8 @@ export default function ResidentMobilePWA() {
     setTicketAddress("Locating address...");
     reverseGeocode(selectedTicket.lat, selectedTicket.lng).then((addr) => {
       if (!cancelled) setTicketAddress(addr || "Location pinned on map");
+    }).catch(() => {
+      if (!cancelled) setTicketAddress("Location pinned on map");
     });
     return () => {
       cancelled = true;
@@ -714,9 +716,23 @@ export default function ResidentMobilePWA() {
   const handlePhotoChange = (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = () => setPhotoPreview(reader.result);
-      reader.readAsDataURL(file);
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 800;
+        let w = img.width, h = img.height;
+        if (w > MAX || h > MAX) {
+          const scale = MAX / Math.max(w, h);
+          w = Math.round(w * scale);
+          h = Math.round(h * scale);
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        setPhotoPreview(canvas.toDataURL("image/jpeg", 0.7));
+        URL.revokeObjectURL(img.src);
+      };
+      img.src = URL.createObjectURL(file);
     }
   };
 
@@ -730,8 +746,11 @@ export default function ResidentMobilePWA() {
         haptic();
         if (typeof onSuccess === "function") onSuccess({ lat: latitude, lng: longitude });
 
-        const address = await reverseGeocode(latitude, longitude);
-        setGpsAddress(address || "");
+        let address = "";
+        try {
+          address = await reverseGeocode(latitude, longitude) || "";
+        } catch {}
+        setGpsAddress(address);
         toast(
           address
             ? `GPS pinned near ${address}. Add a specific landmark so crews can find it.`

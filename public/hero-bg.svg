@@ -18,18 +18,10 @@
       <stop offset="100%" stop-color="#ffffff" stop-opacity="0.95" />
     </linearGradient>
     
-    <!-- Bird shape -->
-    <path id="bird" d="M0,0 Q4,-4 8,0 Q12,-4 16,0 Q12,-1.5 8,-0.8 Q4,-1.5 0,0 Z" fill="#94a3b8" />
   </defs>
 
   <!-- Sky -->
   <rect width="1440" height="900" fill="url(#skyGradient)" />
-
-  <!-- Birds -->
-  <use href="#bird" x="650" y="150" transform="scale(0.8)" opacity="0.6" />
-  <use href="#bird" x="690" y="130" transform="scale(0.6)" opacity="0.5" />
-  <use href="#bird" x="720" y="160" transform="scale(0.5)" opacity="0.4" />
-  <use href="#bird" x="840" y="90" transform="scale(0.9)" opacity="0.5" />
 
   <!-- 1. Distant Mountain Range -->
   <path d="M-100,900 L-100,500 L180,310 L450,440 L780,240 L1080,410 L1380,200 L1600,340 L1600,900 Z" fill="#e2f5ec" />
