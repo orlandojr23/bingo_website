@@ -10,10 +10,13 @@ import { PanelStat } from "@/components/ui/panel-stat";
 import { inputClass, labelClass } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import CrudDeleteModal from "@/components/modals/crud-delete-modal";
-import { useTickets, addTicket, updateTicket, removeTicket, nextTicketId } from "@/lib/tickets";
+import { useTickets, useArchivedTickets, addTicket, updateTicket, removeTicket, restoreTicket, hardDeleteTicket, nextTicketId } from "@/lib/tickets";
 
 export default function CrudPage() {
-  const records = useTickets();
+  const activeRecords = useTickets();
+  const archivedRecords = useArchivedTickets();
+  const [viewMode, setViewMode] = useState("active");
+  const records = viewMode === "active" ? activeRecords : archivedRecords;
   const [editingId, setEditingId] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
   const [recordToDelete, setRecordToDelete] = useState(null);
@@ -87,9 +90,19 @@ export default function CrudPage() {
     if (!recordToDelete) return;
     const id = recordToDelete.id;
 
-    removeTicket(id);
-    showToast(`Record ${id} deleted.`);
+    if (viewMode === "trash") {
+      hardDeleteTicket(id);
+      showToast(`Record ${id} permanently deleted.`);
+    } else {
+      removeTicket(id);
+      showToast(`Record ${id} moved to trash.`);
+    }
     setRecordToDelete(null);
+  };
+
+  const handleRestore = (id) => {
+    restoreTicket(id);
+    showToast(`Record ${id} restored.`);
   };
 
   const resetForm = () => {
@@ -131,17 +144,32 @@ export default function CrudPage() {
           }
         />
 
+        <div className="flex bg-muted/50 p-1 rounded-lg w-fit">
+          <button 
+            className={cn("px-4 py-1.5 text-sm font-medium rounded-md transition-colors", viewMode === "active" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}
+            onClick={() => setViewMode("active")}
+          >
+            Active Reports
+          </button>
+          <button 
+            className={cn("px-4 py-1.5 text-sm font-medium rounded-md transition-colors", viewMode === "trash" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}
+            onClick={() => setViewMode("trash")}
+          >
+            Trash Bin
+          </button>
+        </div>
+
         <div className="grid shrink-0 grid-cols-2 gap-3 sm:gap-3.5 max-w-sm sm:max-w-md">
-          <PanelStat label="Total Reports" value={records.length} hint="All reports on record" />
+          <PanelStat label={viewMode === "trash" ? "Archived Reports" : "Total Reports"} value={records.length} hint={viewMode === "trash" ? "Reports in trash" : "All reports on record"} />
           <PanelStat label="Waiting" value={pendingCount} hint="Needs attention" tone="rose" />
         </div>
 
         <div className="flex flex-col overflow-hidden rounded-xl border border-border bg-card">
           <div className="flex items-center justify-between border-b border-border-subtle p-4 sm:p-5">
             <div>
-              <h2 className="text-sm font-semibold text-foreground">All Waste Reports</h2>
+              <h2 className="text-sm font-semibold text-foreground">{viewMode === "trash" ? "Archived Reports" : "All Waste Reports"}</h2>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                Click any row or card to open and update its details.
+                {viewMode === "trash" ? "These records have been moved to the trash." : "Click any row or card to open and update its details."}
               </p>
             </div>
             <span className="text-xs text-muted-foreground font-medium tracking-tight tabular-nums">
@@ -154,9 +182,9 @@ export default function CrudPage() {
             {records.length === 0 ? (
               <div className="flex flex-col items-center p-8 text-center">
                 <FilePlus2 className="mb-2.5 h-8 w-8 text-zinc-300" />
-                <h3 className="text-sm font-semibold text-foreground">No Reports Yet</h3>
+                <h3 className="text-sm font-semibold text-foreground">{viewMode === "trash" ? "Trash is Empty" : "No Reports Yet"}</h3>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Click &quot;Create New Report&quot; to add your first record.
+                  {viewMode === "trash" ? "Deleted reports will appear here." : "Click \"Create New Report\" to add your first record."}
                 </p>
               </div>
             ) : (
@@ -185,21 +213,43 @@ export default function CrudPage() {
                       </p>
                     </div>
                     <div className="flex items-center justify-end gap-3 pt-1" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        type="button"
-                        onClick={() => handleEdit(r)}
-                        className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 cursor-pointer"
-                      >
-                        Edit Record
-                      </button>
-                      <span className="text-border">|</span>
-                      <button
-                        type="button"
-                        onClick={() => setRecordToDelete(r)}
-                        className="text-xs font-semibold text-rose-600 hover:text-rose-700 cursor-pointer"
-                      >
-                        Delete Record
-                      </button>
+                      {viewMode === "trash" ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleRestore(r.id)}
+                            className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 cursor-pointer"
+                          >
+                            Restore
+                          </button>
+                          <span className="text-border">|</span>
+                          <button
+                            type="button"
+                            onClick={() => setRecordToDelete(r)}
+                            className="text-xs font-semibold text-rose-600 hover:text-rose-700 cursor-pointer"
+                          >
+                            Permanently Delete
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleEdit(r)}
+                            className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 cursor-pointer"
+                          >
+                            Edit Record
+                          </button>
+                          <span className="text-border">|</span>
+                          <button
+                            type="button"
+                            onClick={() => setRecordToDelete(r)}
+                            className="text-xs font-semibold text-rose-600 hover:text-rose-700 cursor-pointer"
+                          >
+                            Delete Record
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 );
@@ -227,9 +277,9 @@ export default function CrudPage() {
                     <td colSpan={7} className="p-10">
                       <div className="flex flex-col items-center text-center">
                         <FilePlus2 className="mb-2.5 h-8 w-8 text-zinc-300" />
-                        <h3 className="text-sm font-semibold text-foreground">No Reports Yet</h3>
+                        <h3 className="text-sm font-semibold text-foreground">{viewMode === "trash" ? "Trash is Empty" : "No Reports Yet"}</h3>
                         <p className="mt-1 text-xs text-muted-foreground">
-                          Click &quot;Create New Report&quot; to add your first record.
+                          {viewMode === "trash" ? "Deleted reports will appear here." : "Click \"Create New Report\" to add your first record."}
                         </p>
                       </div>
                     </td>
@@ -258,21 +308,43 @@ export default function CrudPage() {
                         </td>
                         <td className="p-3.5 pr-5 text-right">
                           <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                            <button
-                              type="button"
-                              onClick={() => handleEdit(r)}
-                              className="font-medium text-emerald-600 transition-colors hover:text-emerald-700 cursor-pointer"
-                            >
-                              Edit Record
-                            </button>
-                            <span className="text-border">|</span>
-                            <button
-                              type="button"
-                              onClick={() => setRecordToDelete(r)}
-                              className="font-medium text-rose-600 transition-colors hover:text-rose-700 cursor-pointer"
-                            >
-                              Delete Record
-                            </button>
+                            {viewMode === "trash" ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRestore(r.id)}
+                                  className="font-medium text-emerald-600 transition-colors hover:text-emerald-700 cursor-pointer"
+                                >
+                                  Restore
+                                </button>
+                                <span className="text-border">|</span>
+                                <button
+                                  type="button"
+                                  onClick={() => setRecordToDelete(r)}
+                                  className="font-medium text-rose-600 transition-colors hover:text-rose-700 cursor-pointer"
+                                >
+                                  Permanently Delete
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleEdit(r)}
+                                  className="font-medium text-emerald-600 transition-colors hover:text-emerald-700 cursor-pointer"
+                                >
+                                  Edit Record
+                                </button>
+                                <span className="text-border">|</span>
+                                <button
+                                  type="button"
+                                  onClick={() => setRecordToDelete(r)}
+                                  className="font-medium text-rose-600 transition-colors hover:text-rose-700 cursor-pointer"
+                                >
+                                  Delete Record
+                                </button>
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -443,6 +515,7 @@ export default function CrudPage() {
         onClose={() => setRecordToDelete(null)}
         onConfirm={handleDeleteConfirm}
         record={recordToDelete}
+        mode={viewMode === "trash" ? "hard" : "soft"}
       />
     </div>
   );

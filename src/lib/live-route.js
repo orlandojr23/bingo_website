@@ -235,11 +235,39 @@ export function updateSchedule(id, patch) {
 export function removeSchedule(id) {
   return write((next) => {
     const schedules = { ...next.schedules };
+    if (schedules[id]) {
+      schedules[id] = { ...schedules[id], isArchived: true };
+      next.schedules = schedules;
+    }
+  });
+}
+
+export function restoreSchedule(id) {
+  return write((next) => {
+    const schedules = { ...next.schedules };
+    if (schedules[id]) {
+      schedules[id] = { ...schedules[id], isArchived: false };
+      next.schedules = schedules;
+    }
+  });
+}
+
+export function hardDeleteSchedule(id) {
+  return write((next) => {
+    const schedules = { ...next.schedules };
     delete schedules[id];
     next.schedules = schedules;
     const status = { ...next.scheduleStatus };
     delete status[id];
     next.scheduleStatus = status;
+  });
+}
+
+export function acceptAssignment(scheduleId) {
+  return write((next) => {
+    if (next.schedules?.[scheduleId]) {
+      next.scheduleStatus = { ...next.scheduleStatus, [scheduleId]: "Accepted" };
+    }
   });
 }
 
@@ -273,7 +301,7 @@ export function startRoute(truckId) {
     }
 
     const inProgress = mine.filter((s) => status[s.id] === "In Progress");
-    const scheduled = mine.filter((s) => status[s.id] === "Scheduled");
+    const scheduled = mine.filter((s) => status[s.id] === "Scheduled" || status[s.id] === "Assigned" || status[s.id] === "Accepted");
     // Prefer the newest assignment so a freshly dispatch is what starts
     const pick =
       inProgress[inProgress.length - 1] || scheduled[scheduled.length - 1];

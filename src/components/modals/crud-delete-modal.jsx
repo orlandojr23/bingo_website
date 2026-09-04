@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export default function CrudDeleteModal({ isOpen, onClose, onConfirm, record }) {
+export default function CrudDeleteModal({ isOpen, onClose, onConfirm, record, mode = "soft" }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -34,7 +34,7 @@ export default function CrudDeleteModal({ isOpen, onClose, onConfirm, record }) 
 
         <div className="flex flex-col gap-1 mb-3">
           <h3 className="text-sm font-semibold text-foreground">
-            Delete Record
+            {mode === "hard" ? "Permanently Delete Record" : "Delete Record"}
           </h3>
           <span className="text-xs font-mono font-medium text-muted-foreground">
             {record.id}
@@ -42,8 +42,10 @@ export default function CrudDeleteModal({ isOpen, onClose, onConfirm, record }) 
         </div>
 
         <p className="text-sm text-muted-foreground mb-5 leading-relaxed">
-          Are you sure you want to permanently delete the report for{" "}
-          <strong className="text-foreground font-semibold">{record.location}</strong> ({record.barangay})? This action cannot be undone.
+          {mode === "hard" 
+            ? <>Are you sure you want to permanently delete the report for <strong className="text-foreground font-semibold">{record.location}</strong> ({record.barangay})? This action cannot be undone.</>
+            : <>Are you sure you want to move the report for <strong className="text-foreground font-semibold">{record.location}</strong> ({record.barangay}) to the trash bin?</>
+          }
         </p>
 
         <div className="flex items-center justify-end gap-2 pt-3.5 border-t border-border-subtle mt-2">

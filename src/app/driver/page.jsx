@@ -26,6 +26,8 @@ import {
   getSchedule,
   getSchedules,
   scheduleLabel,
+  acceptAssignment,
+  removeSchedule,
 } from "@/lib/live-route";
 import { cn, haptic } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -45,7 +47,7 @@ const MapCanvas = dynamic(() => import("@/components/map/map-canvas"), {
   loading: () => <MapSkeleton />,
 });
 
-const TAB_IDS = ["route", "assignment"];
+const TAB_IDS = ["route", "assignment", "history"];
 
 // 3D Vector SVG Icons for Action Buttons & Banners
 function Waze3DFocusTruckIcon({ className = "h-9 w-9" }) {
@@ -374,7 +376,7 @@ export default function DriverPage() {
       (s) => s.activeTruckId === selectedTruckId
     );
     const inProgress = mine.filter((s) => status[s.id] === "In Progress");
-    const scheduled = mine.filter((s) => status[s.id] === "Scheduled");
+    const scheduled = mine.filter((s) => status[s.id] === "Scheduled" || status[s.id] === "Assigned" || status[s.id] === "Accepted");
     return (
       inProgress[inProgress.length - 1] ||
       scheduled[scheduled.length - 1] ||
@@ -389,7 +391,7 @@ export default function DriverPage() {
     return getSchedules().filter(
       (s) =>
         s.activeTruckId === selectedTruckId &&
-        (status[s.id] === "In Progress" || status[s.id] === "Scheduled")
+        (status[s.id] === "In Progress" || status[s.id] === "Scheduled" || status[s.id] === "Assigned" || status[s.id] === "Accepted")
     ).length;
   }, [selectedTruckId, live]);
 
@@ -771,7 +773,7 @@ export default function DriverPage() {
     const next = getSchedules().find(
       (s) =>
         s.activeTruckId === selectedTruckId &&
-        (live.scheduleStatus[s.id] ?? s.status) === "Scheduled"
+        ((live.scheduleStatus[s.id] ?? s.status) === "Scheduled" || (live.scheduleStatus[s.id] ?? s.status) === "Assigned" || (live.scheduleStatus[s.id] ?? s.status) === "Accepted")
     );
     toast(
       next
@@ -1072,14 +1074,14 @@ export default function DriverPage() {
                     setIsMapSheetExpanded(true);
                   }}
                   className={cn(
-                    "flex h-11 flex-1 min-w-0 items-center justify-center gap-2 rounded-xl border px-3 text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95",
+                    "flex h-11 flex-1 min-w-0 items-center justify-center gap-1.5 rounded-xl border px-1 sm:px-3 text-[11px] sm:text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95",
                     isMapSheetExpanded && activeTab === "route"
                       ? "border-emerald-500 bg-emerald-600 text-white font-bold"
                       : "border-border bg-card text-foreground hover:bg-muted"
                   )}
                 >
-                  <Waze3DPlayIcon className="h-5.5 w-5.5 shrink-0" />
-                  <span className="truncate whitespace-nowrap">Route</span>
+                  <Waze3DPlayIcon className="h-5 sm:h-5.5 w-5 sm:w-5.5 shrink-0" />
+                  <span className="whitespace-nowrap">Route</span>
                 </button>
 
                 {/* 2. Assignment Tab */}
@@ -1090,14 +1092,32 @@ export default function DriverPage() {
                     setIsMapSheetExpanded(true);
                   }}
                   className={cn(
-                    "flex h-11 flex-1 min-w-0 items-center justify-center gap-2 rounded-xl border px-3 text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95",
+                    "flex h-11 flex-1 min-w-0 items-center justify-center gap-1.5 rounded-xl border px-1 sm:px-3 text-[11px] sm:text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95",
                     isMapSheetExpanded && activeTab === "assignment"
                       ? "border-emerald-500 bg-emerald-600 text-white font-bold"
                       : "border-border bg-card text-foreground hover:bg-muted"
                   )}
                 >
-                  <Waze3DRouteIcon className="h-5.5 w-5.5 shrink-0" />
-                  <span className="truncate whitespace-nowrap">Assignment</span>
+                  <Waze3DRouteIcon className="h-5 sm:h-5.5 w-5 sm:w-5.5 shrink-0" />
+                  <span className="whitespace-nowrap">Assignment</span>
+                </button>
+
+                {/* 3. History Tab */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    switchTab("history");
+                    setIsMapSheetExpanded(true);
+                  }}
+                  className={cn(
+                    "flex h-11 flex-1 min-w-0 items-center justify-center gap-1.5 rounded-xl border px-1 sm:px-3 text-[11px] sm:text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95",
+                    isMapSheetExpanded && activeTab === "history"
+                      ? "border-emerald-500 bg-emerald-600 text-white font-bold"
+                      : "border-border bg-card text-foreground hover:bg-muted"
+                  )}
+                >
+                  <CheckCircle2 className="h-4 sm:h-5 w-4 sm:w-5 shrink-0" />
+                  <span className="whitespace-nowrap">History</span>
                 </button>
               </div>
             </div>
@@ -1120,34 +1140,48 @@ export default function DriverPage() {
                         {/* Main Route Workflow Control */}
                         <div className="relative rounded-2xl border border-emerald-500/25 bg-[url('/hero-bg.svg')] bg-cover bg-center bg-no-repeat p-4 space-y-3 shadow-md overflow-hidden">
                           <div className="relative z-10 space-y-3">
-                            <button
-                              type="button"
-                              onClick={handlePrimaryAction}
-                              className={cn(
-                                "flex h-12 w-full items-center justify-center gap-2 rounded-xl text-xs font-bold transition-all active:scale-[0.98] cursor-pointer shadow-xs",
-                                isOnDuty && truckState?.phase === "enroute"
-                                  ? "bg-amber-600 text-white hover:bg-amber-700"
-                                  : "bg-emerald-600 text-white hover:bg-emerald-700"
-                              )}
-                            >
-                              {!isOnDuty ? (
-                                <>
-                                  <Play className="h-4 w-4 fill-white" /> Start Route
-                                </>
-                              ) : truckState.phase === "enroute" ? (
-                                <>
-                                  Stop By: {currentPoint?.name ?? "Stop"}
-                                </>
-                              ) : !isLastPoint ? (
-                                <>
-                                  Continue Route
-                                </>
-                              ) : (
-                                <>
-                                  <CheckCircle2 className="h-4 w-4" /> Complete Route
-                                </>
-                              )}
-                            </button>
+                            {(!isOnDuty && assignedSchedule && (live.scheduleStatus[assignedSchedule.id] === "Scheduled" || live.scheduleStatus[assignedSchedule.id] === "Assigned")) ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  haptic(15);
+                                  acceptAssignment(assignedSchedule.id);
+                                  toast("Assignment accepted.");
+                                }}
+                                className="flex h-12 w-full items-center justify-center gap-2 rounded-xl text-xs font-bold transition-all active:scale-[0.98] cursor-pointer shadow-xs bg-indigo-600 text-white hover:bg-indigo-700"
+                              >
+                                Accept Assignment
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={handlePrimaryAction}
+                                className={cn(
+                                  "flex h-12 w-full items-center justify-center gap-2 rounded-xl text-xs font-bold transition-all active:scale-[0.98] cursor-pointer shadow-xs",
+                                  isOnDuty && truckState?.phase === "enroute"
+                                    ? "bg-amber-600 text-white hover:bg-amber-700"
+                                    : "bg-emerald-600 text-white hover:bg-emerald-700"
+                                )}
+                              >
+                                {!isOnDuty ? (
+                                  <>
+                                    <Play className="h-4 w-4 fill-white" /> Start Route
+                                  </>
+                                ) : truckState.phase === "enroute" ? (
+                                  <>
+                                    Stop By: {currentPoint?.name ?? "Stop"}
+                                  </>
+                                ) : !isLastPoint ? (
+                                  <>
+                                    Continue Route
+                                  </>
+                                ) : (
+                                  <>
+                                    <CheckCircle2 className="h-4 w-4" /> Complete Route
+                                  </>
+                                )}
+                              </button>
+                            )}
 
                             {isOnDuty && (
                               <button
@@ -1218,6 +1252,48 @@ export default function DriverPage() {
                             <InfoRow label="Scheduled Hours" value={assignedSchedule?.time ?? "—"} />
                           </div>
                         </div>
+                      </div>
+                    )}
+
+                    {/* Tab 3: History */}
+                    {activeTab === "history" && (
+                      <div className="space-y-3">
+                        {(() => {
+                          const history = getSchedules().filter(
+                            (s) =>
+                              s.activeTruckId === selectedTruckId &&
+                              live.scheduleStatus[s.id] === "Completed" &&
+                              !s.isArchived
+                          );
+                          if (history.length === 0) {
+                            return (
+                              <div className="rounded-2xl border border-border bg-card p-6 flex flex-col items-center justify-center text-center">
+                                <CheckCircle2 className="h-8 w-8 text-muted-foreground/50 mb-2" />
+                                <h3 className="text-sm font-bold text-foreground">No completed routes</h3>
+                                <p className="text-xs text-muted-foreground mt-1">Routes you finish today will appear here.</p>
+                              </div>
+                            );
+                          }
+                          return history.map((s) => (
+                            <div key={s.id} className="rounded-2xl border border-border bg-card p-4 flex items-center justify-between">
+                              <div>
+                                <h3 className="text-sm font-extrabold text-foreground tracking-tight">{scheduleLabel(s)}</h3>
+                                <p className="text-xs text-muted-foreground">{s.time || "No time specified"}</p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  haptic();
+                                  removeSchedule(s.id);
+                                  toast("Route archived from history.");
+                                }}
+                                className="rounded-lg bg-rose-50 text-rose-600 px-3 py-1.5 text-xs font-bold transition-all hover:bg-rose-100 active:scale-95 border border-rose-200 cursor-pointer"
+                              >
+                                Archive
+                              </button>
+                            </div>
+                          ));
+                        })()}
                       </div>
                     )}
 

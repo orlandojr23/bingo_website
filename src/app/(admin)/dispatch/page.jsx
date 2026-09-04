@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { Calendar, Plus, Minus, X, Search, Truck, Shuffle, MapPin } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TEJERO_SITOS } from "@/lib/mock-data";
-import { useLiveRoute, getSchedules, addSchedule, updateSchedule, removeSchedule, assignDriver, estimateStopTime, retimeRoutePoints, scheduleLabel } from "@/lib/live-route";
+import { useLiveRoute, getSchedules, addSchedule, updateSchedule, removeSchedule, restoreSchedule, hardDeleteSchedule, assignDriver, estimateStopTime, retimeRoutePoints, scheduleLabel } from "@/lib/live-route";
 import { useRoutePath } from "@/lib/use-route-path";
 import { useFleet, addTruck, updateTruck, removeTruck } from "@/lib/fleet";
 import { loadStaffRoster } from "@/lib/staff";
@@ -44,6 +44,7 @@ export default function DispatchPage() {
   const [scheduleToDelete, setScheduleToDelete] = useState(null);
   const [truckToRemove, setTruckToRemove] = useState(null);
   const [driverRoster, setDriverRoster] = useState([]);
+  const [viewMode, setViewMode] = useState("active");
 
   useEffect(() => {
     setDriverRoster(loadStaffRoster());
@@ -193,11 +194,21 @@ export default function DispatchPage() {
       setScheduleToDelete(null);
       return;
     }
-    removeSchedule(id);
+
+    if (viewMode === "trash") {
+      hardDeleteSchedule(id);
+    } else {
+      removeSchedule(id);
+    }
+
     if (selectedSchedule?.id === id) {
       setSelectedSchedule(null);
     }
     setScheduleToDelete(null);
+  };
+
+  const handleRestoreSchedule = (id) => {
+    restoreSchedule(id);
   };
 
   const openTruckSheet = (mode, truck) => {
@@ -253,6 +264,10 @@ export default function DispatchPage() {
   };
 
   const filteredSchedules = schedules.filter((sch) => {
+    const isArchived = sch.isArchived === true;
+    if (viewMode === "active" && isArchived) return false;
+    if (viewMode === "trash" && !isArchived) return false;
+
     const truck = fleet.find((t) => t.id === sch.activeTruckId);
     const query = searchQuery.toLowerCase();
 
@@ -266,8 +281,8 @@ export default function DispatchPage() {
     );
   });
 
-  const totalSchedules = schedules.length;
-  const activeDispatches = schedules.filter((s) => effStatus(s) === "In Progress").length;
+  const totalSchedules = schedules.filter(s => !s.isArchived).length;
+  const activeDispatches = schedules.filter((s) => effStatus(s) === "In Progress" && !s.isArchived).length;
 
   // Live preview of the trajectory through the picked stops, reusing the same
   // MapCanvas + router the driver/resident maps use. Stop names are folded
@@ -524,6 +539,21 @@ export default function DispatchPage() {
           }
         />
 
+        <div className="flex bg-muted/50 p-1 rounded-lg w-fit">
+          <button 
+            className={cn("px-4 py-1.5 text-sm font-medium rounded-md transition-colors", viewMode === "active" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}
+            onClick={() => setViewMode("active")}
+          >
+            Active Assignments
+          </button>
+          <button 
+            className={cn("px-4 py-1.5 text-sm font-medium rounded-md transition-colors", viewMode === "trash" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}
+            onClick={() => setViewMode("trash")}
+          >
+            Trash Bin
+          </button>
+        </div>
+
         <div className="grid shrink-0 grid-cols-2 gap-3.5 max-w-sm sm:max-w-md">
           <PanelStat label="Schedules" value={totalSchedules} hint="Total collection schedules" />
           <PanelStat label="Trucks Out" value={activeDispatches} hint="Currently collecting" tone="emerald" />
@@ -609,11 +639,13 @@ export default function DispatchPage() {
             <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-border bg-card p-10 text-center">
               <Calendar className="mb-2.5 h-8 w-8 text-zinc-300" />
               <h3 className="text-sm font-semibold text-foreground">
-                {searchQuery ? "No Schedules Found" : "No Schedules Yet"}
+                {searchQuery ? "No Schedules Found" : viewMode === "trash" ? "Trash is Empty" : "No Schedules Yet"}
               </h3>
               <p className="mt-1 max-w-[240px] text-xs text-muted-foreground">
                 {searchQuery ? (
                   <>We couldn&apos;t find any schedules matching &quot;{searchQuery}&quot;.</>
+                ) : viewMode === "trash" ? (
+                  <>Deleted assignments will appear here.</>
                 ) : (
                   <>Click &quot;Create Assignment&quot; to set up your first collection route.</>
                 )}
@@ -656,18 +688,45 @@ export default function DispatchPage() {
                       </div>
                     </div>
 
-                    <div className="mt-2 flex shrink-0 items-center justify-end">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setScheduleToDelete(sch);
-                        }}
-                        className="rounded-md border border-rose-200 bg-card px-2.5 py-1 text-xs font-medium text-rose-600 transition-colors hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 cursor-pointer"
-                        title="Delete Assignment"
-                      >
-                        Delete Assignment
-                      </button>
+                    <div className="mt-2 flex shrink-0 items-center justify-end gap-2">
+                      {viewMode === "trash" ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRestoreSchedule(sch.id);
+                            }}
+                            className="rounded-md border border-emerald-200 bg-card px-2.5 py-1 text-xs font-medium text-emerald-600 transition-colors hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer"
+                            title="Restore Assignment"
+                          >
+                            Restore
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setScheduleToDelete(sch);
+                            }}
+                            className="rounded-md border border-rose-200 bg-card px-2.5 py-1 text-xs font-medium text-rose-600 transition-colors hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 cursor-pointer"
+                            title="Permanently Delete"
+                          >
+                            Permanently Delete
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setScheduleToDelete(sch);
+                          }}
+                          className="rounded-md border border-rose-200 bg-card px-2.5 py-1 text-xs font-medium text-rose-600 transition-colors hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 cursor-pointer"
+                          title="Delete Assignment"
+                        >
+                          Delete Assignment
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -865,8 +924,12 @@ export default function DispatchPage() {
 
       <ConfirmModal
         open={!!scheduleToDelete}
-        title="Delete Assignment"
-        description={`This will permanently remove schedule ${scheduleToDelete?.id}. This action cannot be undone.`}
+        title={viewMode === "trash" ? "Permanently Delete Assignment" : "Delete Assignment"}
+        description={
+          viewMode === "trash"
+            ? `This will permanently remove schedule ${scheduleToDelete?.id}. This action cannot be undone.`
+            : `This will move schedule ${scheduleToDelete?.id} to the trash bin.`
+        }
         onConfirm={() => handleDeleteSchedule(scheduleToDelete?.id)}
         onCancel={() => setScheduleToDelete(null)}
       />

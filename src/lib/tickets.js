@@ -101,10 +101,28 @@ export function updateTicket(id, patch) {
 
 export function removeTicket(id) {
   return write((next) => {
+    next.tickets = next.tickets.map((t) => (t.id === id ? { ...t, isArchived: true } : t));
+  });
+}
+
+export function restoreTicket(id) {
+  return write((next) => {
+    next.tickets = next.tickets.map((t) => (t.id === id ? { ...t, isArchived: false } : t));
+  });
+}
+
+export function hardDeleteTicket(id) {
+  return write((next) => {
     next.tickets = next.tickets.filter((t) => t.id !== id);
   });
 }
 
 export function useTickets() {
-  return useSyncExternalStore(subscribe, getSnapshot, () => SEED).tickets;
+  const tickets = useSyncExternalStore(subscribe, getSnapshot, () => SEED).tickets;
+  return tickets.filter(t => !t.isArchived);
+}
+
+export function useArchivedTickets() {
+  const tickets = useSyncExternalStore(subscribe, getSnapshot, () => SEED).tickets;
+  return tickets.filter(t => t.isArchived);
 }

@@ -22,7 +22,7 @@ import {
   Search,
 } from "lucide-react";
 import { mockPilotData, TEJERO_SITOS } from "@/lib/mock-data";
-import { useTickets, addTicket, nextTicketId } from "@/lib/tickets";
+import { useTickets, addTicket, nextTicketId, updateTicket, removeTicket } from "@/lib/tickets";
 import { useLiveRoute, getSchedule, getSchedules, scheduleLabel } from "@/lib/live-route";
 import { playDing, playTrumpet, useSoundEnabled, setSoundEnabled } from "@/lib/sounds";
 import { useRoutePath } from "@/lib/use-route-path";
@@ -637,6 +637,7 @@ export default function ResidentMobilePWA() {
   const [mapZoom, setMapZoom] = useState(16);
 
   // Form State for Report
+  const [editingTicketId, setEditingTicketId] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
   const [category, setCategory] = useState("Overflowing Bin");
   const [urgency, setUrgency] = useState("High");
@@ -749,6 +750,23 @@ export default function ResidentMobilePWA() {
     );
   };
 
+  const handleEditTicket = useCallback((ticket) => {
+    setEditingTicketId(ticket.id);
+    setCategory(ticket.category || "Overflowing Bin");
+    setUrgency(ticket.urgency || "High");
+    setLocationName(ticket.location || "");
+    setBarangay(ticket.barangay || "Tejero");
+    setDescription(ticket.description || "");
+    setPhotoPreview(ticket.photo || null);
+    if (ticket.lat && ticket.lng) {
+      setGpsCoords({ lat: ticket.lat, lng: ticket.lng });
+    } else {
+      setGpsCoords(null);
+    }
+    closeAllSheets();
+    switchTab("report");
+  }, []);
+
   const handleSubmitReport = (e) => {
     e.preventDefault();
     if (!isSpecificLocation(locationName)) {
@@ -764,28 +782,46 @@ export default function ResidentMobilePWA() {
     setIsSubmitting(true);
 
     submitTimeoutRef.current = setTimeout(() => {
-      const newId = nextTicketId();
-      const created = {
-        id: newId,
-        location: locationName.trim(),
-        barangay: barangay,
-        city: "Cebu City",
-        reporter: reporterName || "Resident",
-        urgency: urgency,
-        status: "Pending",
-        date: new Date().toLocaleDateString("en-CA"),
-        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        lat: gpsCoords?.lat || 10.3016,
-        lng: gpsCoords?.lng || 123.9086,
-        category: category,
-        description: description || `Reported ${category} at ${locationName}.`,
-        photo: photoPreview,
-      };
+      if (editingTicketId) {
+        const patch = {
+          location: locationName.trim(),
+          barangay: barangay,
+          urgency: urgency,
+          lat: gpsCoords?.lat || 10.3016,
+          lng: gpsCoords?.lng || 123.9086,
+          category: category,
+          description: description,
+          photo: photoPreview,
+        };
+        updateTicket(editingTicketId, patch);
+        setSubmittedTicket({ id: editingTicketId, ...patch });
+        setIsSubmitting(false);
+        setEditingTicketId(null);
+        haptic(20);
+      } else {
+        const newId = nextTicketId();
+        const created = {
+          id: newId,
+          location: locationName.trim(),
+          barangay: barangay,
+          city: "Cebu City",
+          reporter: reporterName || "Resident",
+          urgency: urgency,
+          status: "Pending",
+          date: new Date().toLocaleDateString("en-CA"),
+          time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          lat: gpsCoords?.lat || 10.3016,
+          lng: gpsCoords?.lng || 123.9086,
+          category: category,
+          description: description || `Reported ${category} at ${locationName}.`,
+          photo: photoPreview,
+        };
 
-      addTicket(created);
-      setSubmittedTicket(created);
-      setIsSubmitting(false);
-      haptic(20);
+        addTicket(created);
+        setSubmittedTicket(created);
+        setIsSubmitting(false);
+        haptic(20);
+      }
     }, 600);
   };
 
@@ -1461,18 +1497,41 @@ export default function ResidentMobilePWA() {
                           </div>
 
                           {/* Minimalist Confirm Button */}
-                          <button
-                            type="button"
-                            onClick={handleSubmitReport}
-                            disabled={isSubmitting}
-                            className="flex h-11 w-full items-center justify-center rounded-xl bg-emerald-600 px-6 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-60"
-                          >
-                            {isSubmitting ? (
-                              <RefreshCw className="h-4 w-4 animate-spin" strokeWidth={2} />
-                            ) : (
-                              "Submit Report"
+                          <div className="flex gap-3">
+                            {editingTicketId && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingTicketId(null);
+                                  setLocationName("");
+                                  setDescription("");
+                                  setPhotoPreview(null);
+                                  switchTab("tickets");
+                                }}
+                                disabled={isSubmitting}
+                                className="flex h-11 w-1/3 items-center justify-center rounded-xl bg-muted px-4 text-sm font-bold text-foreground hover:bg-muted/80 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-60"
+                              >
+                                Cancel
+                              </button>
                             )}
-                          </button>
+                            <button
+                              type="button"
+                              onClick={handleSubmitReport}
+                              disabled={isSubmitting}
+                              className={cn(
+                                "flex h-11 items-center justify-center rounded-xl bg-emerald-600 px-6 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-60",
+                                editingTicketId ? "w-2/3" : "w-full"
+                              )}
+                            >
+                              {isSubmitting ? (
+                                <RefreshCw className="h-4 w-4 animate-spin" strokeWidth={2} />
+                              ) : editingTicketId ? (
+                                "Update Report"
+                              ) : (
+                                "Submit Report"
+                              )}
+                            </button>
+                          </div>
                         </motion.div>
                       )}
                     </form>
@@ -1520,37 +1579,69 @@ export default function ResidentMobilePWA() {
                       {tickets
                         .filter((t) => (ticketFilter === "all" ? true : t.status === ticketFilter))
                         .map((t) => (
-                          <button
+                          <div
                             key={t.id}
-                            type="button"
-                            onClick={() => {
-                              closeAllSheets();
-                              setMapFocusTicket(null);
-                              setSelectedTicket(t);
-                              switchTab("map");
-                              haptic();
-                            }}
-                            className="w-full rounded-xl border border-border bg-card p-3.5 text-left transition-colors hover:border-zinc-300 active:scale-[0.99] cursor-pointer space-y-2"
+                            className="w-full rounded-xl border border-border bg-card p-3.5 text-left transition-colors hover:border-zinc-300 space-y-2 flex flex-col"
                           >
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="text-xs font-semibold text-foreground tracking-tight tabular-nums">{t.id}</span>
-                              <StatusBadge status={t.status} />
-                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                closeAllSheets();
+                                setMapFocusTicket(null);
+                                setSelectedTicket(t);
+                                switchTab("map");
+                                haptic();
+                              }}
+                              className="w-full text-left cursor-pointer active:scale-[0.99]"
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-xs font-semibold text-foreground tracking-tight tabular-nums">{t.id}</span>
+                                <StatusBadge status={t.status} />
+                              </div>
 
-                            <div>
-                              <h3 className="text-sm font-bold text-foreground leading-snug">
-                                {t.location}
-                              </h3>
-                              <p className="text-xs text-muted-foreground mt-0.5">
-                                {t.category}
-                              </p>
-                            </div>
+                              <div className="mt-2">
+                                <h3 className="text-sm font-bold text-foreground leading-snug">
+                                  {t.location}
+                                </h3>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                  {t.category}
+                                </p>
+                              </div>
 
-                            <div className="flex items-center justify-between text-xs pt-2 border-t border-border/60">
-                              <span className="font-medium text-muted-foreground tracking-tight tabular-nums">{t.date} &bull; {t.time}</span>
-                              <UrgencyBadge urgency={t.urgency} />
-                            </div>
-                          </button>
+                              <div className="flex items-center justify-between text-xs pt-2 mt-2 border-t border-border/60">
+                                <span className="font-medium text-muted-foreground tracking-tight tabular-nums">{t.date} &bull; {t.time}</span>
+                                <UrgencyBadge urgency={t.urgency} />
+                              </div>
+                            </button>
+
+                            {t.reporter === residentSession?.name && (
+                              <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/60">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 px-3 text-xs"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditTicket(t);
+                                  }}
+                                >
+                                  Edit
+                                </Button>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  className="h-8 px-3 text-xs"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    removeTicket(t.id);
+                                    toast("Report deleted", { variant: "default" });
+                                  }}
+                                >
+                                  Delete
+                                </Button>
+                              </div>
+                            )}
+                          </div>
                         ))}
                     </div>
                   </motion.div>
