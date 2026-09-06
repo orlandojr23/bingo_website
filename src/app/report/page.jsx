@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { mockPilotData, TEJERO_SITOS } from "@/lib/mock-data";
 import { useTickets, addTicket, nextTicketId, updateTicket, removeTicket } from "@/lib/tickets";
+import { useAuth } from "@/context/AuthContext";
 import { useLiveRoute, getSchedule, getSchedules, scheduleLabel } from "@/lib/live-route";
 import { playDing, playTrumpet, useSoundEnabled, setSoundEnabled } from "@/lib/sounds";
 import { useRoutePath } from "@/lib/use-route-path";
@@ -31,6 +32,7 @@ import { getResidentSession, clearResidentSession } from "@/lib/resident-session
 import { reverseGeocode } from "@/lib/geocode";
 import { useSwipeToggle } from "@/lib/use-swipe-toggle";
 import { cn, haptic } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MapSkeleton } from "@/components/ui/skeletons";
@@ -312,7 +314,8 @@ function Waze3DFocusTruckIcon({ className = "h-9 w-9" }) {
   );
 }
 
-function getTimeBasedGreeting(name = "Orlando") {
+function getTimeBasedGreeting(fullName = "Resident") {
+  const name = fullName.split(" ")[0];
   const hour = new Date().getHours();
   if (hour >= 5 && hour < 12) {
     return `Good morning, ${name}!`;
@@ -366,28 +369,53 @@ export default function ResidentMobilePWA() {
     };
   }, [selectedTicket]);
   const [isMapSheetExpanded, setIsMapSheetExpanded] = useState(false);
-  const [bannerIndex, setBannerIndex] = useState(0);
   const [mapReady, setMapReady] = useState(false);
   const handleMapReady = useCallback(() => setMapReady(true), []);
-
   const router = useRouter();
   const [sessionReady, setSessionReady] = useState(false);
+  const [residentSession, setResidentSession] = useState(null);
+
+  const { user, loading: authLoading } = useAuth();
+
   useEffect(() => {
-    if (!getResidentSession()) {
+    if (authLoading) return;
+    
+    if (!user) {
       router.replace("/login");
       return;
     }
-    setSessionReady(true);
-  }, [router]);
+    
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) return;
+      supabase.from('profiles').select('role, full_name, sitio, id').eq('id', session.user.id).single().then(({ data }) => {
+          setResidentSession({ 
+            email: session.user.email, 
+            name: data?.full_name || session.user.user_metadata?.full_name || "Resident", 
+            sitio: data?.sitio || session.user.user_metadata?.sitio,
+            id: session.user.id 
+          });
+          setSessionReady(true);
+        });
+      });
+    }, [router, user, authLoading]);
 
-  const residentSession = useMemo(() => getResidentSession(), []);
   const greetingTitle = useMemo(
-    () =>
-      getTimeBasedGreeting(
-        residentSession?.name?.trim().split(/\s+/)[0] || "Resident"
-      ),
+    () => getTimeBasedGreeting(residentSession?.name || "Resident"),
     [residentSession]
   );
+
+  // Focus map on the resident's home sitio if they provided one, otherwise
+  // default to Barangay Tejero hall. The bounding box restricts them anyway, but
+  // coverage still spans their whole service area (Barangay Tejero for the
+  // pilot) so they see trucks collecting in neighboring sitios too.
+  const [mapCenter, setMapCenter] = useState([10.3025, 123.9095]);
+
+  useEffect(() => {
+    if (residentSession?.sitio) {
+      const sitio = TEJERO_SITOS[residentSession.sitio];
+      if (sitio) setMapCenter([sitio.lat, sitio.lng]);
+    }
+  }, [residentSession]);
 
   const live = useLiveRoute();
   const fleet = useFleet();
@@ -568,41 +596,19 @@ export default function ResidentMobilePWA() {
     };
   }, [liveBanner, live]);
 
-  const dynamicBannerMessages = useMemo(
-    () => [
-      {
-        id: "greeting",
-        title: greetingTitle,
-        subtitle: new Date().toLocaleDateString("en-US", {
-          weekday: "long",
-          month: "long",
-          day: "numeric",
-        }),
-      },
-      ...(liveBanner ? [liveBanner] : []),
-      ...(pickupStatus ? [pickupStatus] : []),
-    ],
-    [greetingTitle, liveBanner, pickupStatus]
-  );
-
-  const [hasNewAnnouncement, setHasNewAnnouncement] = useState(true);
-
-  // If there are no new announcements, stay on user greeting; otherwise cycle announcements
-  useEffect(() => {
-    if (!hasNewAnnouncement) {
-      setBannerIndex(0);
-      return;
-    }
-    if (!mapReady) return;
-
-    const interval = setInterval(() => {
-      setBannerIndex((prev) => (prev + 1) % dynamicBannerMessages.length);
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [hasNewAnnouncement, dynamicBannerMessages.length, mapReady]);
-
-  const currentBanner = dynamicBannerMessages[bannerIndex] || dynamicBannerMessages[0];
+  const currentBanner = useMemo(() => {
+    if (liveBanner) return liveBanner;
+    if (pickupStatus && pickupStatus.subtitle !== "No schedules posted yet") return pickupStatus;
+    return {
+      id: "greeting",
+      title: greetingTitle,
+      subtitle: new Date().toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+      }),
+    };
+  }, [liveBanner, pickupStatus, greetingTitle]);
 
   // Modals for Header Profile
   const [showProfile, setShowProfile] = useState(false);
@@ -628,14 +634,7 @@ export default function ResidentMobilePWA() {
       }
     }
   );
-  // The resident's home sitio (chosen at signup) is the map's initial focus;
-  // coverage still spans their whole service area (Barangay Tejero for the
-  // pilot) so they see trucks collecting in neighboring sitios too.
-  const [mapCenter, setMapCenter] = useState(() => {
-    const sitioName = getResidentSession()?.sitio;
-    const sitio = sitioName ? TEJERO_SITOS[sitioName] : null;
-    return sitio ? [sitio.lat, sitio.lng] : [10.3025, 123.9095];
-  });
+
   const [mapZoom, setMapZoom] = useState(16);
 
   // Form State for Report
@@ -1203,13 +1202,13 @@ export default function ResidentMobilePWA() {
                     <div className="relative flex items-start justify-between gap-3">
                       <div>
                         <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                          Sitio Vilgon &bull; Today's Pickup
+                          {residentSession?.sitio || "Your Area"} &bull; Next Pickup
                         </span>
                         <h2 className="text-lg font-bold tracking-tight text-foreground mt-0.5">
-                          8:00 AM – 11:00 AM
+                          {displaySchedule?.id ? displaySchedule.time : "No Schedule Active"}
                         </h2>
                         <p className="text-xs font-semibold text-emerald-700 mt-0.5">
-                          Malata (Nabubulok)
+                          {displaySchedule?.id ? displaySchedule.collectionType : "Waiting for dispatch..."}
                         </p>
                       </div>
 
@@ -1218,11 +1217,13 @@ export default function ResidentMobilePWA() {
                           Truck Status
                         </span>
                         <span className="font-mono text-xs font-bold text-foreground">
-                          {routeCompleted
-                            ? "Route Done"
-                            : activeTs
-                              ? activeTs.tracking.eta
-                              : "Standby"}
+                          {displaySchedule?.id 
+                            ? (routeCompleted
+                                ? "Route Done"
+                                : activeTs
+                                  ? activeTs.tracking.eta
+                                  : "Standby")
+                            : "--"}
                         </span>
                       </div>
                     </div>
@@ -1764,7 +1765,7 @@ export default function ResidentMobilePWA() {
             </div>
             <div className="min-w-0 flex-1">
               <h3 className="text-base font-bold text-foreground truncate">{residentSession?.name || "Resident"}</h3>
-              <p className="text-xs font-semibold text-foreground mt-0.5">Sitio Vilgon</p>
+              <p className="text-xs font-semibold text-foreground mt-0.5">{residentSession?.sitio || "Unknown Sitio"}</p>
               <p className="text-[11px] text-muted-foreground">Brgy. Tejero, Cebu City</p>
             </div>
           </div>
@@ -1877,16 +1878,18 @@ export default function ResidentMobilePWA() {
               >
                 Cancel
               </Button>
-              <Link
-                href="/login"
-                onClick={() => {
-                  clearResidentSession();
-                  setShowSignOutModal(false);
-                }}
-                className="inline-flex select-none items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-bold text-rose-600 shadow-xs transition-all duration-150 hover:border-rose-600 hover:bg-rose-600 hover:text-white active:scale-[0.98] cursor-pointer"
-              >
-                Sign Out
-              </Link>
+              <button
+                  type="button"
+                  onClick={async () => {
+                    clearResidentSession();
+                    await supabase.auth.signOut();
+                    setShowSignOutModal(false);
+                    router.replace("/login");
+                  }}
+                  className="inline-flex select-none items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-bold text-rose-600 shadow-xs transition-all duration-150 hover:border-rose-600 hover:bg-rose-600 hover:text-white active:scale-[0.98] cursor-pointer"
+                >
+                  Sign Out
+                </button>
             </div>
           </motion.div>
         </div>

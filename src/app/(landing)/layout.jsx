@@ -136,7 +136,16 @@ export default function LandingLayout({ children }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[72px] flex items-center">
           <a 
             href="/#home" 
-            className="inline-flex items-center group pointer-events-auto transition-all duration-500 ease-out"
+            onClick={(e) => {
+              if (pathname === "/") {
+                e.preventDefault();
+                window.history.pushState(null, "", "/#home");
+                window.dispatchEvent(new Event("hashchange"));
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }
+            }}
+            className="inline-flex items-center group pointer-events-auto transition-transform duration-300 hover:scale-105 active:scale-95 cursor-pointer"
+            title="Back to top"
           >
             <img 
               src="/logo-green-v2.png" 
@@ -202,17 +211,25 @@ export default function LandingLayout({ children }) {
           
           <div className="flex-1 md:flex-none shrink-0 flex justify-end items-center gap-3">
             <button
+              type="button"
+              aria-label="Open menu"
               onClick={() => setIsMobileMenuOpen(true)}
-              className="md:hidden flex items-center justify-center w-10 h-10 rounded-xl text-zinc-600 transition-colors"
+              className="md:hidden flex items-center justify-center w-10 h-10 rounded-xl text-zinc-600 active:scale-95 transition-transform cursor-pointer touch-manipulation"
             >
               <Menu className="w-5 h-5" />
             </button>
           </div>
         </div>
       </header>
-      <main className="flex-1">
+      <motion.main
+        key={pathname}
+        initial={{ opacity: 0, y: 4 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: "easeInOut" }}
+        className="flex-1"
+      >
         {children}
-      </main>
+      </motion.main>
       <footer className="relative pt-20 pb-12 overflow-hidden border-t border-emerald-900/30 text-emerald-100">
         {/* Mobile: gradient sky + fixed-aspect hills so accordion toggling never rescales the art */}
         <div className="absolute inset-0 bg-gradient-to-b from-[#021410] via-[#051e18] to-[#082b21] md:hidden" />
@@ -227,11 +244,25 @@ export default function LandingLayout({ children }) {
           <div className="grid grid-cols-1 md:grid-cols-4 md:gap-12 pb-16 border-b border-emerald-800/20">
             {/* Brand / Info Column */}
             <div className="mb-10 md:mb-0 md:col-span-2 flex flex-col items-start">
-              <img 
-                src="/logo-green-v2.png" 
-                alt="Bin-Go Logo" 
-                className="h-16 w-auto object-contain origin-left scale-[1.65] brightness-0 invert" 
-              />
+              <a
+                href="/#home"
+                onClick={(e) => {
+                  if (pathname === "/") {
+                    e.preventDefault();
+                    window.history.pushState(null, "", "/#home");
+                    window.dispatchEvent(new Event("hashchange"));
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }
+                }}
+                className="inline-block cursor-pointer transition-transform duration-300 hover:scale-105 active:scale-95"
+                title="Back to top"
+              >
+                <img 
+                  src="/logo-green-v2.png" 
+                  alt="Bin-Go Logo" 
+                  className="h-16 w-auto object-contain origin-left scale-[1.65] brightness-0 invert" 
+                />
+              </a>
             </div>
             
             {/* Platform links column — accordion on mobile, static column on desktop */}
@@ -260,9 +291,21 @@ export default function LandingLayout({ children }) {
 
           {/* Bottom Section with Giant Brand Text */}
           <div className="pt-12 flex flex-col items-center">
-            <h2 className="text-[12vw] font-black text-white/8 tracking-tighter uppercase leading-none select-none my-8 text-center w-full">
+            <a
+              href="/#home"
+              onClick={(e) => {
+                if (pathname === "/") {
+                  e.preventDefault();
+                  window.history.pushState(null, "", "/#home");
+                  window.dispatchEvent(new Event("hashchange"));
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }
+              }}
+              className="text-[12vw] font-black text-white/8 hover:text-white/15 transition-colors tracking-tighter uppercase leading-none select-none my-8 text-center w-full cursor-pointer block"
+              title="Back to top"
+            >
               Bin&apos;Go
-            </h2>
+            </a>
             <div className="w-full flex justify-center text-center text-xs font-semibold text-emerald-400/60 pt-8 border-t border-emerald-800/10">
               <span>© {new Date().getFullYear()} Bin&apos;Go. All rights reserved.</span>
             </div>
@@ -271,64 +314,62 @@ export default function LandingLayout({ children }) {
         </div>
       </footer>
       {/* Mobile Menu Overlay */}
-      <AnimatePresence>
-        {isMobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[100] bg-white flex flex-col px-6 md:hidden"
+      <div
+        className={`fixed inset-0 z-[100] bg-white flex flex-col px-6 md:hidden transition-all duration-200 ease-out transform-gpu ${
+          isMobileMenuOpen 
+            ? "opacity-100 translate-y-0 pointer-events-auto" 
+            : "opacity-0 -translate-y-2 pointer-events-none"
+        }`}
+      >
+        {/* Top Bar inside Menu */}
+        <div className="flex items-center justify-end pt-4 shrink-0">
+          <button 
+            type="button"
+            aria-label="Close menu"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="w-10 h-10 flex items-center justify-center text-zinc-400 hover:text-zinc-900 active:scale-95 transition-transform cursor-pointer touch-manipulation"
           >
-            {/* Top Bar inside Menu */}
-            <div className="flex items-center justify-end pt-4 shrink-0">
-              <button 
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="w-10 h-10 flex items-center justify-center text-zinc-400 hover:text-zinc-900 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+            <X className="w-5 h-5" />
+          </button>
+        </div>
 
-            {/* Centered Navigation */}
-            <div className="flex-1 flex flex-col justify-center items-center">
-              <nav className="flex flex-col gap-6 text-3xl font-black tracking-tight text-center">
-                <a href="/#home" onClick={() => setIsMobileMenuOpen(false)} className={`transition-all px-6 py-2 rounded-2xl ${activeSection === "home" ? "text-emerald-700" : "text-zinc-900 hover:text-emerald-600 hover:bg-zinc-50"}`}>Home</a>
-                <a href="/#about" onClick={() => setIsMobileMenuOpen(false)} className={`transition-all px-6 py-2 rounded-2xl ${activeSection === "about" ? "text-emerald-700" : "text-zinc-900 hover:text-emerald-600 hover:bg-zinc-50"}`}>About</a>
-                <a href="/#features" onClick={() => setIsMobileMenuOpen(false)} className={`transition-all px-6 py-2 rounded-2xl ${activeSection === "features" ? "text-emerald-700" : "text-zinc-900 hover:text-emerald-600 hover:bg-zinc-50"}`}>Features</a>
-                <a href="/#faq" onClick={() => setIsMobileMenuOpen(false)} className={`transition-all px-6 py-2 rounded-2xl ${activeSection === "faq" ? "text-emerald-700" : "text-zinc-900 hover:text-emerald-600 hover:bg-zinc-50"}`}>FAQ</a>
+        {/* Centered Navigation */}
+        <div className="flex-1 flex flex-col justify-center items-center">
+          <nav className="flex flex-col gap-6 text-3xl font-black tracking-tight text-center">
+            <a href="/#home" onClick={() => setIsMobileMenuOpen(false)} className={`transition-all px-6 py-2 rounded-2xl touch-manipulation ${activeSection === "home" ? "text-emerald-700" : "text-zinc-900 hover:text-emerald-600 hover:bg-zinc-50"}`}>Home</a>
+            <a href="/#about" onClick={() => setIsMobileMenuOpen(false)} className={`transition-all px-6 py-2 rounded-2xl touch-manipulation ${activeSection === "about" ? "text-emerald-700" : "text-zinc-900 hover:text-emerald-600 hover:bg-zinc-50"}`}>About</a>
+            <a href="/#features" onClick={() => setIsMobileMenuOpen(false)} className={`transition-all px-6 py-2 rounded-2xl touch-manipulation ${activeSection === "features" ? "text-emerald-700" : "text-zinc-900 hover:text-emerald-600 hover:bg-zinc-50"}`}>Features</a>
+            <a href="/#faq" onClick={() => setIsMobileMenuOpen(false)} className={`transition-all px-6 py-2 rounded-2xl touch-manipulation ${activeSection === "faq" ? "text-emerald-700" : "text-zinc-900 hover:text-emerald-600 hover:bg-zinc-50"}`}>FAQ</a>
 
-                <Link
-                  href="/support"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="transition-all px-6 py-2 rounded-2xl text-emerald-600 hover:bg-emerald-50 text-center cursor-pointer"
-                >
-                  Contact Us
-                </Link>
-              </nav>
-            </div>
+            <Link
+              href="/support"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="transition-all px-6 py-2 rounded-2xl text-emerald-600 hover:bg-emerald-50 text-center cursor-pointer touch-manipulation"
+            >
+              Contact Us
+            </Link>
+          </nav>
+        </div>
 
-            {/* Bottom App Links */}
-            <div className="pb-8 shrink-0">
-              <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-4 text-center">Coming Soon to Mobile</p>
-              <div className="flex flex-col gap-3">
-                <div className="w-48 mx-auto flex items-center gap-3 px-4 py-3 text-zinc-500 rounded-2xl bg-zinc-50 border border-zinc-100 justify-center">
-                  <Play className="w-5 h-5 text-zinc-400 fill-zinc-400" />
-                  <div className="text-left">
-                    <p className="font-bold text-zinc-700 text-sm leading-none mb-1">Google Play</p>
-                  </div>
-                </div>
-                <div className="w-48 mx-auto flex items-center gap-3 px-4 py-3 text-zinc-500 rounded-2xl bg-zinc-50 border border-zinc-100 justify-center">
-                  <Apple className="w-5 h-5 text-zinc-400" />
-                  <div className="text-left">
-                    <p className="font-bold text-zinc-700 text-sm leading-none mb-1">App Store</p>
-                  </div>
-                </div>
+        {/* Bottom App Links */}
+        <div className="pb-8 shrink-0">
+          <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-4 text-center">Coming Soon to Mobile</p>
+          <div className="flex flex-col gap-3">
+            <div className="w-48 mx-auto flex items-center gap-3 px-4 py-3 text-zinc-500 rounded-2xl bg-zinc-50 border border-zinc-100 justify-center">
+              <Play className="w-5 h-5 text-zinc-400 fill-zinc-400" />
+              <div className="text-left">
+                <p className="font-bold text-zinc-700 text-sm leading-none mb-1">Google Play</p>
               </div>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <div className="w-48 mx-auto flex items-center gap-3 px-4 py-3 text-zinc-500 rounded-2xl bg-zinc-50 border border-zinc-100 justify-center">
+              <Apple className="w-5 h-5 text-zinc-400" />
+              <div className="text-left">
+                <p className="font-bold text-zinc-700 text-sm leading-none mb-1">App Store</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

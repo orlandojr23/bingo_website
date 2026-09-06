@@ -6,7 +6,7 @@ const cspHeader = `
   style-src 'self' 'unsafe-inline';
   img-src 'self' blob: data: https://picsum.photos https://tile.openstreetmap.org https://cdnjs.cloudflare.com;
   font-src 'self' data:;
-  connect-src 'self' https://*.supabase.co https://api.openrouteservice.org;
+  connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openrouteservice.org;
   object-src 'none';
   base-uri 'self';
   form-action 'self';

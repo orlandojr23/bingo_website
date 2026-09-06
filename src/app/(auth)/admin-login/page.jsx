@@ -104,7 +104,16 @@ export default function AdminLoginPage() {
       return;
     }
 
-    const role = data.user?.user_metadata?.role;
+    // Check the profiles table to see if this user was granted the 'admin' role
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', data.user.id)
+      .single();
+
+    // Fallback to user_metadata just in case (for the old mock setup)
+    const role = profile?.role || data.user?.user_metadata?.role;
+    
     if (role !== "admin") {
       await supabase.auth.signOut();
       setError("This account doesn't have admin access. Please sign in with an admin account.");
@@ -129,7 +138,7 @@ export default function AdminLoginPage() {
             Admin Portal
           </h1>
           <p className="mt-1 text-xs text-muted-foreground">
-            Sign in to manage the Barangay Tejero dashboard
+            Sign in to manage the {process.env.NEXT_PUBLIC_BARANGAY_NAME || "Barangay"} dashboard
           </p>
         </div>
 
@@ -246,10 +255,6 @@ export default function AdminLoginPage() {
               </Button>
             </div>
           </form>
-
-          <p className="mt-4 text-center text-xs text-muted-foreground">
-            Demo account: admin@bingo.com &middot; password: admin123
-          </p>
         </div>
       </div>
     </div>

@@ -36,27 +36,62 @@ export default function AdminLayout({ children }) {
   useAdminNotificationSound();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user?.user_metadata?.role === "admin") {
-        setAuthorized(true);
-      } else {
-        router.replace("/admin-login");
+    let active = true;
+
+    const checkAdmin = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          if (active) {
+            setChecking(false);
+            router.replace("/admin-login");
+          }
+          return;
+        }
+
+        // Check profiles table for the admin role
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .single();
+
+        const role = profile?.role || session.user?.user_metadata?.role;
+        
+        if (active) {
+          if (role === "admin") {
+            setAuthorized(true);
+          } else {
+            router.replace("/admin-login");
+          }
+          setChecking(false);
+        }
+      } catch (err) {
+        if (active) {
+          setChecking(false);
+          router.replace("/admin-login");
+        }
       }
-      setChecking(false);
-    }).catch(() => {
-      setChecking(false);
-      router.replace("/admin-login");
-    });
+    };
+
+    checkAdmin();
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      const isAdmin = session?.user?.user_metadata?.role === "admin";
-      setAuthorized(isAdmin);
-      if (!isAdmin) router.replace("/admin-login");
+      if (!session) {
+        setAuthorized(false);
+        router.replace("/admin-login");
+      } else {
+        // Re-check profile on session change
+        checkAdmin();
+      }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
   }, [router]);
 
   if (checking || !authorized) {

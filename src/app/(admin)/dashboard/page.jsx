@@ -87,7 +87,7 @@ export default function DashboardPage() {
             ) : (
               <>
                 <span className="block font-medium text-foreground/80">{todayLabel}</span>
-                <span className="block">Here&apos;s today&apos;s overview of waste reports in Barangay Tejero</span>
+                <span className="block">Here&apos;s today&apos;s overview of waste reports in {process.env.NEXT_PUBLIC_BARANGAY_NAME || "your barangay"}</span>
               </>
             )
           }

@@ -5,8 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { getDriverSession, setDriverSession } from "@/lib/driver-session";
-import { getDriverAccount, saveDriverAccount } from "@/lib/driver-accounts";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import InstallAppButton from "@/components/pwa/InstallAppButton";
 
@@ -55,7 +54,15 @@ export default function DriverLoginPage() {
   const emailSuggestionSuffix = getEmailSuggestionSuffix(email);
 
   useEffect(() => {
-    if (getDriverSession()) router.replace("/driver");
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        supabase.from('profiles').select('role').eq('id', session.user.id).single().then(({ data }) => {
+          if (data?.role === 'driver' || session.user?.user_metadata?.role === 'driver') {
+            router.replace('/driver');
+          }
+        });
+      }
+    });
   }, [router]);
 
   const handleFieldChange = (field, value, setter) => {
@@ -79,7 +86,7 @@ export default function DriverLoginPage() {
     }
   };
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
 
     const newErrors = {};
@@ -90,8 +97,6 @@ export default function DriverLoginPage() {
     }
     if (!password) {
       newErrors.password = "Please enter your password.";
-    } else if (password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters.";
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -99,25 +104,36 @@ export default function DriverLoginPage() {
       return;
     }
     setErrors({});
+    setIsLoading(true);
 
-    const account = getDriverAccount(email);
-    if (account && account.password !== password) {
-      setErrors({ password: "Incorrect password. Please try again." });
+    const { data, error: signInError } = await supabase.auth.signInWithPassword({
+      email: email.trim().toLowerCase(),
+      password,
+    });
+
+    if (signInError) {
+      setErrors({ password: signInError.message });
+      setIsLoading(false);
       return;
     }
 
-    setIsLoading(true);
+    // Check profiles table for driver role
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', data.user.id)
+      .single();
 
-    setTimeout(() => {
-      const trimmedEmail = email.trim().toLowerCase();
-      saveDriverAccount({
-        email: trimmedEmail,
-        name: account?.name || nameFromEmail(trimmedEmail),
-        password,
-      });
-      setDriverSession({ email: trimmedEmail, name: account?.name || nameFromEmail(trimmedEmail) });
-      router.replace("/driver");
-    }, 900);
+    const role = profile?.role || data.user?.user_metadata?.role;
+    
+    if (role !== "driver") {
+      await supabase.auth.signOut();
+      setErrors({ password: "This account is not authorized as a driver." });
+      setIsLoading(false);
+      return;
+    }
+
+    router.replace("/driver");
   };
 
   return (

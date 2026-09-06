@@ -1,12 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { User, Mail, Lock, Eye, EyeOff, Loader2, MapPin, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { setResidentSession } from "@/lib/resident-session";
-import { getAccount, createAccount } from "@/lib/resident-accounts";
+import { supabase } from "@/lib/supabase";
 import { TEJERO_SITOS, PILOT_AREA } from "@/lib/mock-data";
 import { Button } from "@/components/ui/button";
 import PasswordStrengthHint from "@/components/ui/password-strength-hint";
@@ -71,8 +70,21 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [needsOtp, setNeedsOtp] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [otpError, setOtpError] = useState("");
+  const [isResending, setIsResending] = useState(false);
+  const [resendStatus, setResendStatus] = useState("");
 
   const emailSuggestionSuffix = getEmailSuggestionSuffix(email);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        router.replace('/report');
+      }
+    });
+  }, [router]);
 
   const handleFieldChange = (field, value, setter) => {
     setter(value);
@@ -95,7 +107,23 @@ export default function SignupPage() {
     }
   };
 
-  const handleSignup = (e) => {
+  const handleResendOtp = async () => {
+    setIsResending(true);
+    setResendStatus("");
+    setOtpError("");
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: email.trim().toLowerCase(),
+    });
+    setIsResending(false);
+    if (error) {
+      setOtpError(error.message);
+    } else {
+      setResendStatus("A new 6-digit code has been sent to your email.");
+    }
+  };
+
+  const handleSignup = async (e) => {
     e.preventDefault();
 
     const newErrors = {};
@@ -106,11 +134,9 @@ export default function SignupPage() {
       newErrors.email = "Please enter your email address.";
     } else if (!validateEmail(email)) {
       newErrors.email = "Please enter a valid email address.";
-    } else if (getAccount(email)) {
-      newErrors.email = "An account with this email already exists. Try signing in.";
     }
     if (!sitio) {
-      newErrors.sitio = "Please select your sitio — the pilot launch covers Barangay Tejero only.";
+      newErrors.sitio = `Please select your sitio — the pilot launch covers ${process.env.NEXT_PUBLIC_BARANGAY_NAME || "your barangay"} only.`;
     }
     if (!password) {
       newErrors.password = "Please create a password.";
@@ -130,12 +156,53 @@ export default function SignupPage() {
     setErrors({});
     setIsLoading(true);
 
-    setTimeout(() => {
-      const trimmedEmail = email.trim().toLowerCase();
-      createAccount({ name: name.trim(), email: trimmedEmail, password, sitio, address: { ...PILOT_AREA } });
-      setResidentSession({ email: trimmedEmail, name: name.trim(), sitio, address: { ...PILOT_AREA } });
-      router.replace("/report");
-    }, 900);
+    const trimmedEmail = email.trim().toLowerCase();
+    const { data, error: signUpError } = await supabase.auth.signUp({
+      email: trimmedEmail,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/report`,
+        data: {
+          role: 'resident',
+          full_name: name.trim(),
+          sitio: sitio,
+          barangay: PILOT_AREA.barangay
+        }
+      }
+    });
+
+    if (signUpError) {
+      setErrors({ email: signUpError.message });
+      setIsLoading(false);
+      return;
+    }
+
+    setNeedsOtp(true);
+    setIsLoading(false);
+  };
+
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    if (otp.length < 6) {
+      setOtpError("Please enter the 6-digit code.");
+      return;
+    }
+    setOtpError("");
+    setIsLoading(true);
+
+    const { error } = await supabase.auth.verifyOtp({
+      email: email.trim().toLowerCase(),
+      token: otp,
+      type: 'signup'
+    });
+
+    if (error) {
+      setOtpError(error.message);
+      setIsLoading(false);
+      return;
+    }
+
+    router.replace("/report");
   };
 
   return (
@@ -148,15 +215,84 @@ export default function SignupPage() {
             alt="Bin'Go Logo"
             className="h-28 w-28 object-contain"
           />
-          <h1 className="mt-5 text-2xl font-black tracking-tight text-foreground">
-            Create your account
-          </h1>
-          <p className="mt-1.5 text-sm font-medium text-muted-foreground">
-            Join Bin&apos;Go to track collections in your barangay
-          </p>
+          {needsOtp ? (
+            <>
+              <h1 className="mt-5 text-2xl font-black tracking-tight text-foreground">
+                Check your email
+              </h1>
+              <p className="mt-1.5 text-sm font-medium text-muted-foreground">
+                We sent a 6-digit code to <span className="font-semibold text-foreground">{email}</span>
+              </p>
+            </>
+          ) : (
+            <>
+              <h1 className="mt-5 text-2xl font-black tracking-tight text-foreground">
+                Create your account
+              </h1>
+              <p className="mt-1.5 text-sm font-medium text-muted-foreground">
+                Join Bin&apos;Go to track collections in your barangay
+              </p>
+            </>
+          )}
         </div>
 
-        <form className="flex flex-col gap-4" onSubmit={handleSignup} noValidate>
+        {needsOtp ? (
+          <form className="flex flex-col gap-4" onSubmit={handleVerifyOtp} noValidate>
+            {resendStatus && (
+              <p className="rounded-lg bg-emerald-500/10 p-3 text-center text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                {resendStatus}
+              </p>
+            )}
+
+            <div className="flex flex-col gap-1.5">
+              <input
+                type="text"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                maxLength={6}
+                autoComplete="one-time-code"
+                className="w-full rounded-xl border border-border bg-card px-3 py-4 text-center text-3xl font-bold tracking-[0.2em] text-foreground outline-none transition-colors focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                placeholder="000000"
+              />
+              <ErrorLine message={otpError} />
+            </div>
+
+            <Button
+              variant="primary"
+              size="lg"
+              type="submit"
+              disabled={isLoading || otp.length < 6}
+              className="mt-2 w-full py-3.5"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Verifying...</span>
+                </>
+              ) : (
+                "Verify Code"
+              )}
+            </Button>
+            <div className="flex items-center justify-between pt-1">
+              <button
+                type="button"
+                onClick={handleResendOtp}
+                disabled={isResending}
+                className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 disabled:opacity-50 transition-colors"
+              >
+                {isResending ? "Sending code..." : "Resend Code"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setNeedsOtp(false)}
+                className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Use a different email
+              </button>
+            </div>
+          </form>
+        ) : (
+          <form className="flex flex-col gap-4" onSubmit={handleSignup} noValidate>
           <div className="flex flex-col gap-1.5">
             <div className="relative">
               <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-muted-foreground/70">
@@ -248,16 +384,16 @@ export default function SignupPage() {
                 <select
                   value={sitio}
                   onChange={(e) => handleFieldChange("sitio", e.target.value, setSitio)}
-                  aria-label="Home sitio in Barangay Tejero"
+                  aria-label={`Home sitio in ${process.env.NEXT_PUBLIC_BARANGAY_NAME || "Barangay"}`}
                   className={`${fieldClass(!!errors.sitio)} cursor-pointer appearance-none ${
-                    sitio ? "" : "text-muted-foreground/50"
+                    sitio ? "text-foreground font-medium" : "text-muted-foreground/60"
                   }`}
                 >
-                  <option value="" disabled>
+                  <option value="" disabled className="text-zinc-400 bg-white dark:bg-zinc-900">
                     Select your sitio
                   </option>
                   {SITIO_OPTIONS.map((s) => (
-                    <option key={s} value={s}>
+                    <option key={s} value={s} className="text-zinc-900 bg-white font-semibold dark:bg-zinc-900 dark:text-zinc-100">
                       {s}
                     </option>
                   ))}
@@ -331,7 +467,8 @@ export default function SignupPage() {
               "Create Account"
             )}
           </Button>
-        </form>
+          </form>
+        )}
 
         <p className="mt-6 text-center text-xs font-medium text-muted-foreground">
           Already have an account?{" "}

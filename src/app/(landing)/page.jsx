@@ -37,6 +37,7 @@ export default function LandingPage() {
   // False until just after mount, so a page refresh snaps the phone to the
   // section's orientation instead of replaying the spin.
   const [hashInitialized, setHashInitialized] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
   // The SSR markup always renders the home layout, and it paints before the
   // hash-driven section switch commits. Keep the hero invisible until
   // hydration completes with the correct section so section-hash loads never
@@ -56,10 +57,20 @@ export default function LandingPage() {
     // orientation snap has committed, so reloads never replay the spin.
     const t = setTimeout(() => setHashInitialized(true), 100);
 
+    let resizeTimer;
+    const handleWindowResize = () => {
+      setIsResizing(true);
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => setIsResizing(false), 200);
+    };
+    window.addEventListener("resize", handleWindowResize);
+
     return () => {
       window.removeEventListener("hashchange", scrollToTop);
       window.removeEventListener("popstate", scrollToTop);
+      window.removeEventListener("resize", handleWindowResize);
       clearTimeout(t);
+      clearTimeout(resizeTimer);
     };
   }, []);
 
@@ -81,7 +92,7 @@ export default function LandingPage() {
             {/* Content Column (First in DOM so it stacks on top in Mobile) */}
             <motion.div 
               layout
-              transition={{ type: "spring", stiffness: 50, damping: 20 }}
+              transition={hashInitialized && !isResizing ? { type: "spring", stiffness: 50, damping: 20 } : { duration: 0 }}
               className="relative flex justify-center w-full lg:w-[480px] xl:w-[540px] shrink-0"
             >
               <AnimatePresence mode="popLayout">
@@ -111,8 +122,8 @@ export default function LandingPage() {
             <motion.div
               layout
               initial={false}
-              animate={{ rotateY: isDesktop && (activeSection === "about" || activeSection === "faq") ? 360 : 0 }}
-              transition={hashInitialized ? { type: "spring", stiffness: 50, damping: 20 } : { duration: 0 }}
+              animate={{ rotateY: activeSection === "about" || activeSection === "faq" ? 360 : 0 }}
+              transition={hashInitialized && !isResizing ? { type: "spring", stiffness: 50, damping: 20 } : { duration: 0 }}
               style={{ perspective: 1200 }}
               className="flex justify-center shrink-0 z-20"
             >

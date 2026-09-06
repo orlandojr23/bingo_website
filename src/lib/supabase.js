@@ -1,6 +1,16 @@
-// Front-end-only mock Supabase client. Sessions are persisted in localStorage so
-// the admin dashboard requires signing in through /admin-login first.
+import { createClient } from "@supabase/supabase-js";
 
+// ------------------------------------------------------------------
+// REAL SUPABASE CLIENT
+// ------------------------------------------------------------------
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://gppsioamafeutjazpueb.supabase.co";
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_FbOMzhUokMJwm5mTdrzBvQ_qYz0PkXX";
+
+export const realSupabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// ------------------------------------------------------------------
+// MOCK SUPABASE CLIENT (Currently active for frontend testing)
+// ------------------------------------------------------------------
 const SESSION_KEY = "bingo_admin_session";
 
 const DEMO_ADMIN = {
@@ -131,4 +141,4 @@ const mockSupabase = {
   },
 };
 
-export const supabase = mockSupabase;
+export const supabase = realSupabase;

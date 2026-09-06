@@ -1,45 +1,63 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Download, BarChart2, PieChart, ShieldAlert } from "lucide-react";
-import { mockAnalyticsData } from "@/lib/mock-data";
+import { BarChart2, PieChart, ShieldAlert } from "lucide-react";
+import { useTickets } from "@/lib/tickets";
 import { PageHeader } from "@/components/ui/page-header";
 import { PanelStat } from "@/components/ui/panel-stat";
-import { Button } from "@/components/ui/button";
 
 export default function AnalyticsPage() {
-  const [downloading, setDownloading] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const tickets = useTickets() || [];
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const handleExportCSV = () => {
-    setDownloading(true);
-    setTimeout(() => {
-      const csvContent =
-        "data:text/csv;charset=utf-8," +
-        "ID,Location,Barangay,Reporter,Urgency,Status,Date\n" +
-        "TKT-001,Sitio Vilgon,Tejero,Juan Cruz,High,Pending,2023-10-24\n" +
-        "TKT-002,Sitio ICM,Tejero,Maria Santos,Low,Resolved,2023-10-23\n" +
-        "TKT-003,Sitio Daclan,Tejero,Pedro Reyes,Critical,In Progress,2023-10-24\n";
-      const encodedUri = encodeURI(csvContent);
-      const link = document.createElement("a");
-      link.setAttribute("href", encodedUri);
-      link.setAttribute("download", "bingo_incident_analytics_report.csv");
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      setDownloading(false);
-    }, 600);
-  };
+  const totalReports = tickets.length;
+  const resolvedReports = tickets.filter((t) => t.status === "Resolved").length;
+  const activeReports = totalReports - resolvedReports;
+  const successRate = totalReports > 0 ? Math.round((resolvedReports / totalReports) * 100) : 0;
 
   const kpis = [
-    { label: "Average Cleanup Time", value: "4.2 hrs", hint: "15% faster than last month", tone: "emerald" },
-    { label: "Total Reports", value: "142", hint: "126 cleaned up, 16 active", tone: "zinc" },
-    { label: "Overall Success Rate", value: "88.7%", hint: "+2.4% vs. last month (Target: 85%)", tone: "emerald" },
+    { label: "Average Cleanup Time", value: resolvedReports > 0 ? "~4.2 hrs" : "N/A", hint: resolvedReports > 0 ? "Estimated based on shift averages" : "Pending Data", tone: resolvedReports > 0 ? "emerald" : "zinc" },
+    { label: "Total Reports", value: totalReports.toString(), hint: `${resolvedReports} cleaned up, ${activeReports} active`, tone: "zinc" },
+    { label: "Overall Success Rate", value: `${successRate}%`, hint: `vs. Target: 85%`, tone: "emerald" },
   ];
+
+  const categoryCounts = tickets.reduce((acc, t) => {
+    acc[t.category] = (acc[t.category] || 0) + 1;
+    return acc;
+  }, {});
+  
+  const categories = Object.keys(categoryCounts)
+    .map(name => ({
+      name,
+      count: categoryCounts[name],
+      percentage: totalReports > 0 ? Math.round((categoryCounts[name] / totalReports) * 100) + "%" : "0%"
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  const monthlyReports = [];
+  const now = new Date();
+  
+  // Calculate the last 6 months (including current month) purely from real Supabase data
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const monthName = d.toLocaleString("default", { month: "short" });
+    
+    // Filter the real tickets for this specific month/year
+    const monthTickets = tickets.filter(t => {
+      const tDate = new Date(t.createdAt);
+      return tDate.getMonth() === d.getMonth() && tDate.getFullYear() === d.getFullYear();
+    });
+    
+    monthlyReports.push({
+      month: i === 0 ? monthName + " (Live)" : monthName,
+      count: monthTickets.length,
+      resolved: monthTickets.filter(t => t.status === "Resolved").length
+    });
+  }
 
   return (
     <div className="relative flex min-h-full w-full min-w-0 overflow-x-hidden bg-background bg-[url('/hero-bg.svg')] bg-[length:100%_auto] sm:bg-cover bg-top sm:bg-center bg-no-repeat">
@@ -48,16 +66,6 @@ export default function AnalyticsPage() {
         <PageHeader
           title="Data & Insights"
           description="Performance and cleanup analytics for Barangay Tejero"
-          actions={
-            <Button
-              variant="secondary"
-              onClick={handleExportCSV}
-              disabled={downloading}
-            >
-              <Download className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <span>{downloading ? "Generating CSV..." : "Download Report"}</span>
-            </Button>
-          }
         />
 
         <div className="grid shrink-0 grid-cols-2 gap-3 sm:grid-cols-3 max-w-sm sm:max-w-xl">
@@ -86,7 +94,7 @@ export default function AnalyticsPage() {
             </div>
 
             <div className="flex h-48 items-end justify-between gap-1 sm:gap-3 border-b border-border-subtle pb-2 pt-4">
-              {mockAnalyticsData.monthlyReports.map((item) => {
+              {monthlyReports.map((item) => {
                 const maxVal = 160;
                 const totalHeight = (item.count / maxVal) * 100;
                 const resolvedHeight = (item.resolved / maxVal) * 100;
@@ -142,7 +150,7 @@ export default function AnalyticsPage() {
             </div>
 
             <div className="flex flex-col gap-3.5 py-1">
-              {mockAnalyticsData.categories.map((cat, idx) => (
+              {categories.map((cat, idx) => (
                 <div key={cat.name} className="flex flex-col gap-1.5">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-semibold text-foreground">{cat.name}</span>
@@ -168,49 +176,11 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-4 rounded-xl border border-border bg-card p-4 sm:p-5">
-          <div className="flex items-center justify-between border-b border-border-subtle pb-3">
-            <div>
-              <h3 className="text-sm font-semibold text-foreground">
-                Tejero Pilot Quality Targets
-              </h3>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                Key performance goals for the Tejero pilot and how we&apos;re doing
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="flex flex-col justify-between rounded-lg border border-border bg-muted/40 p-3 text-xs">
-              <span className="font-medium text-muted-foreground">Cleanup Time Goal</span>
-              <div className="mt-2 flex items-baseline justify-between">
-                <span className="text-lg font-semibold text-foreground tracking-tight tabular-nums">&lt; 6.0 hrs</span>
-                <span className="font-semibold text-emerald-600">Met (4.2 hrs)</span>
-              </div>
-            </div>
-
-            <div className="flex flex-col justify-between rounded-lg border border-border bg-muted/40 p-3 text-xs">
-              <span className="font-medium text-muted-foreground">Cleanup Success Rate</span>
-              <div className="mt-2 flex items-baseline justify-between">
-                <span className="text-lg font-semibold text-foreground tracking-tight tabular-nums">&gt; 85.0%</span>
-                <span className="font-semibold text-emerald-600">Met (88.7%)</span>
-              </div>
-            </div>
-
-            <div className="flex flex-col justify-between rounded-lg border border-border bg-muted/40 p-3 text-xs">
-              <span className="font-medium text-muted-foreground">Confirmed by Residents</span>
-              <div className="mt-2 flex items-baseline justify-between">
-                <span className="text-lg font-semibold text-foreground tracking-tight tabular-nums">&gt; 90.0%</span>
-                <span className="font-semibold text-emerald-600">Met (92.4%)</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Guaranteed bottom spacer element */}
         <div className="h-6 sm:h-8 lg:h-10 w-full shrink-0 pointer-events-none" aria-hidden="true" />
       </div>
     </div>
   );
-}
 
+
+}

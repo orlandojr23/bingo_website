@@ -40,6 +40,7 @@ import { MapSkeleton } from "@/components/ui/skeletons";
 import PasswordStrengthHint from "@/components/ui/password-strength-hint";
 import { useToast } from "@/components/pwa/Toast";
 import BottomSheet from "@/components/pwa/BottomSheet";
+import { supabase } from "@/lib/supabase";
 
 // Minimalist High-DPI Leaflet MapCanvas
 const MapCanvas = dynamic(() => import("@/components/map/map-canvas"), {
@@ -269,15 +270,26 @@ export default function DriverPage() {
 
   const router = useRouter();
   const [sessionReady, setSessionReady] = useState(false);
-  useEffect(() => {
-    if (!getDriverSession()) {
-      router.replace("/driver-login");
-      return;
-    }
-    setSessionReady(true);
-  }, [router]);
+  const [driverSession, setDriverSession] = useState(null);
 
-  const driverSession = useMemo(() => getDriverSession(), []);
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        router.replace("/driver-login");
+        return;
+      }
+      
+      supabase.from('profiles').select('role, full_name, id').eq('id', session.user.id).single().then(({ data }) => {
+        const role = data?.role || session.user.user_metadata?.role;
+        if (role !== 'driver') {
+          router.replace("/driver-login");
+        } else {
+          setDriverSession({ email: session.user.email, name: data?.full_name || session.user.user_metadata?.full_name || "Driver", id: session.user.id });
+          setSessionReady(true);
+        }
+      });
+    });
+  }, [router]);
 
   // Live Driver Tickets State
   const [driverTickets, setDriverTickets] = useState(mockTickets);
@@ -455,7 +467,7 @@ export default function DriverPage() {
     enabled: driverOnDuty,
   });
 
-  const driverName = (liveDriver || "Driver").split(" ")[0];
+  const driverName = (driverSession?.name || "Driver").split(" ")[0];
   const greetingTitle = useMemo(() => {
     const hour = new Date().getHours();
     if (hour >= 5 && hour < 12) return `Good morning, ${driverName}!`;
@@ -464,89 +476,69 @@ export default function DriverPage() {
     return `Hello, ${driverName}!`;
   }, [driverName]);
 
-  const bannerMessages = useMemo(() => {
-    // Keep taglines compact: start time only
+  const currentBanner = useMemo(() => {
     const zoneName = assignedAreaName;
     const startTime = String(assignedSchedule?.time || "")
       .split("-")[0]
       .trim();
-    const msgs = [
-      {
-        id: "greeting",
-        Icon: null,
-        title: greetingTitle,
-        subtitle: `${new Date().toLocaleDateString("en-US", {
-          weekday: "long",
-          month: "long",
-          day: "numeric",
-        })}`,
-      },
-    ];
+
     const isPaused =
       !!truckState &&
       (truckState.phase === "enroute" || truckState.phase === "onsite") &&
       !truckState.tracking.isActive;
 
     if (truckState?.phase === "completed") {
-      msgs.push({
+      return {
         id: "status",
         Icon: Waze3DCleanIcon,
         title: "Route completed",
         subtitle: zoneName ? `Next up: ${zoneName}` : "No more routes today",
-      });
-    } else if (isOnDuty && truckState.phase === "onsite") {
-      msgs.push({
+      };
+    }
+    if (isOnDuty && truckState?.phase === "onsite") {
+      return {
         id: "status",
         Icon: Waze3DHeaderTruckIcon,
         title: `Collecting at ${currentPoint?.name ?? "stop"}`,
-        subtitle: `Stop ${truckState.stopIndex + 1} of ${routePoints.length}`,
-      });
-    } else if (isOnDuty) {
-      msgs.push({
+        subtitle: `Stop ${(truckState?.stopIndex ?? 0) + 1} of ${routePoints.length}`,
+      };
+    }
+    if (isOnDuty) {
+      return {
         id: "status",
         Icon: Waze3DHeaderTruckIcon,
         title: `En route to ${currentPoint?.name ?? "next stop"}`,
-        subtitle: `Stop ${(truckState?.stopIndex ?? 0) + 1} of ${routePoints.length} • ${currentPoint?.time ?? ""}`,
-      });
-    } else if (isPaused) {
-      msgs.push({
+        subtitle: `Stop ${(truckState?.stopIndex ?? 0) + 1} of ${routePoints.length}${startTime ? ` • ${startTime}` : ""}`,
+      };
+    }
+    if (isPaused) {
+      return {
         id: "status",
         Icon: Waze3DHeaderTruckIcon,
         title: "Route paused",
         subtitle: "Start Route to resume",
-      });
-    } else if (assignedSchedule) {
-      msgs.push({
+      };
+    }
+    if (assignedSchedule) {
+      return {
         id: "status",
         Icon: Waze3DRouteIcon,
         title: `${pendingAssignments} new assignment${pendingAssignments === 1 ? "" : "s"}`,
         subtitle: `${zoneName ?? "New route"}${startTime ? ` • ${startTime}` : ""}`,
-      });
-    } else {
-      msgs.push({
-        id: "status",
-        Icon: Waze3DRouteIcon,
-        title: "No assignments for today",
-        subtitle: "You're all done — rest up",
-      });
+      };
     }
-    return msgs;
+
+    return {
+      id: "greeting",
+      Icon: null,
+      title: greetingTitle,
+      subtitle: `${new Date().toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+      })}`,
+    };
   }, [greetingTitle, assignedAreaName, assignedSchedule, truckState, isOnDuty, currentPoint, routePoints.length, pendingAssignments]);
-
-  const [bannerIndex, setBannerIndex] = useState(0);
-  const [mapReady, setMapReady] = useState(false);
-  const handleMapReady = useCallback(() => setMapReady(true), []);
-  useEffect(() => {
-    if (bannerMessages.length < 2) return;
-    if (!mapReady) return;
-    const interval = setInterval(() => {
-      setBannerIndex((prev) => (prev + 1) % bannerMessages.length);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [bannerMessages.length, mapReady]);
-
-  const currentBanner =
-    bannerMessages[bannerIndex % bannerMessages.length] || bannerMessages[0];
 
   const pendingCount = driverTickets.filter((t) => t.status !== "Resolved").length;
 
@@ -1472,16 +1464,18 @@ export default function DriverPage() {
               >
                 Cancel
               </Button>
-              <Link
-                href="/driver-login"
-                onClick={() => {
+              <button
+                type="button"
+                onClick={async () => {
                   clearDriverSession();
+                  await supabase.auth.signOut();
                   setShowSignOutModal(false);
+                  router.replace("/driver-login");
                 }}
                 className="inline-flex select-none items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-bold text-rose-600 shadow-xs transition-all duration-150 hover:border-rose-600 hover:bg-rose-600 hover:text-white active:scale-[0.98] cursor-pointer"
               >
                 Sign Out
-              </Link>
+              </button>
             </div>
           </motion.div>
         </div>

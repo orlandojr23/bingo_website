@@ -1,78 +1,111 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { mockPilotData } from "@/lib/mock-data";
+import { supabase } from "@/lib/supabase";
 
-const KEY = "bingo_fleet_v1";
-const CHANGE_EVENT = "bingo-fleet-change";
+const listeners = new Set();
+let cache = [];
+let isFetching = false;
+let initialized = false;
 
-function readStore() {
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (raw) {
-      const list = JSON.parse(raw);
-      if (Array.isArray(list)) return list;
-    }
-  } catch {}
-  return mockPilotData.trucks.map((t) => ({ ...t }));
+function notify() {
+  for (const listener of listeners) listener();
 }
 
-function writeStore(list) {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(list));
-  } catch {}
-  if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent(CHANGE_EVENT));
+function mapToFrontend(dbRow) {
+  return {
+    id: dbRow.id,
+    plate: dbRow.plate_number,
+    capacity: dbRow.capacity,
+    driver: dbRow.driver_name,
+    isActive: dbRow.is_active,
+  };
+}
+
+async function fetchFleet() {
+  if (isFetching) return;
+  isFetching = true;
+  
+  const { data, error } = await supabase
+    .from('trucks')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (data) {
+    cache = data.map(mapToFrontend);
+    initialized = true;
+    notify();
+  }
+  isFetching = false;
+}
+
+if (typeof window !== "undefined") {
+  supabase.channel('public:trucks')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'trucks' }, () => {
+      fetchFleet();
+    })
+    .subscribe();
 }
 
 export function normalizeCode(code) {
   return code.trim().toUpperCase();
 }
 
-export function addTruck({ id, plate, driver, capacity }) {
-  const list = readStore();
+export async function addTruck({ id, plate, driver, capacity }) {
   const code = normalizeCode(id);
   const plateClean = plate.trim().toUpperCase();
   if (!code || !plateClean) return { error: "Truck code and plate number are required." };
-  if (list.some((t) => normalizeCode(t.id) === code)) return { error: `Truck code ${code} already exists.` };
-  if (list.some((t) => (t.plate || "").trim().toUpperCase() === plateClean)) return { error: `Plate ${plateClean} is already registered.` };
-  const truck = { id: code, plate: plateClean, driver: driver?.trim() || "", capacity: capacity?.trim() || "" };
-  writeStore([...list, truck]);
-  return { truck };
+  
+  const { error } = await supabase.from('trucks').insert({
+    id: code,
+    plate_number: plateClean,
+    driver_name: driver?.trim() || "",
+    capacity: capacity?.trim() || "",
+  });
+  
+  if (error) {
+    if (error.code === '23505') { // Unique violation
+      return { error: `Truck code or Plate is already registered.` };
+    }
+    return { error: error.message };
+  }
+  return { truck: { id: code, plate: plateClean, driver: driver?.trim(), capacity: capacity?.trim() } };
 }
 
-export function updateTruck(id, patch) {
-  const list = readStore();
-  const target = list.find((t) => t.id === id);
-  if (!target) return { error: "Truck not found." };
-  const next = { ...target, ...patch };
+export async function updateTruck(id, patch) {
+  const next = { ...cache.find(t => t.id === id), ...patch };
   const code = normalizeCode(next.id);
   const plateClean = (next.plate || "").trim().toUpperCase();
+  
   if (!code || !plateClean) return { error: "Truck code and plate number are required." };
-  if (list.some((t) => t.id !== id && normalizeCode(t.id) === code)) return { error: `Truck code ${code} already exists.` };
-  if (list.some((t) => t.id !== id && (t.plate || "").trim().toUpperCase() === plateClean)) return { error: `Plate ${plateClean} is already registered.` };
-  next.id = code;
-  next.plate = plateClean;
-  writeStore(list.map((t) => (t.id === id ? next : t)));
+
+  const { error } = await supabase.from('trucks').update({
+    id: code,
+    plate_number: plateClean,
+    driver_name: next.driver?.trim() || "",
+    capacity: next.capacity?.trim() || "",
+  }).eq('id', id);
+
+  if (error) return { error: error.message };
   return { truck: next };
 }
 
-export function removeTruck(id) {
-  const list = readStore();
-  writeStore(list.filter((t) => t.id !== id));
+export async function removeTruck(id) {
+  const { error } = await supabase.from('trucks').delete().eq('id', id);
+  if (error) console.error("Error deleting truck:", error);
 }
 
 export function useFleet() {
-  const [fleet, setFleet] = useState(() => mockPilotData.trucks);
+  const [fleet, setFleet] = useState(() => cache);
 
   useEffect(() => {
-    const sync = () => setFleet(readStore());
-    sync();
-    window.addEventListener(CHANGE_EVENT, sync);
-    window.addEventListener("storage", sync);
-    return () => {
-      window.removeEventListener(CHANGE_EVENT, sync);
-      window.removeEventListener("storage", sync);
-    };
+    if (!initialized) fetchFleet();
+    
+    const sync = () => setFleet(cache);
+    sync(); // Make sure we have latest state right after mount
+    
+    listeners.add(sync);
+    return () => listeners.delete(sync);
   }, []);
 
   return fleet;

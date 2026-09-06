@@ -3,38 +3,16 @@ import { mockPilotData, TEJERO_SITOS } from "@/lib/mock-data";
 import { nearestEdge } from "@/lib/router";
 import { routeCache, cacheKeyFor, blocksSignature } from "@/lib/route-cache";
 import { pushNotification } from "@/lib/notifications";
+import { supabase } from "@/lib/supabase";
 
 const STORAGE_KEY = "bingo-live-route-v1";
 const STORE_VERSION = 5;
 
 function buildSeed() {
   const scheduleStatus = {};
-  for (const s of mockPilotData.schedules) scheduleStatus[s.id] = s.status;
-
   const schedules = {};
-  for (const s of mockPilotData.schedules) schedules[s.id] = { ...s };
-
   const trucks = {};
-  for (const t of mockPilotData.trucks) {
-    const tr = mockPilotData.activeTracking[t.id];
-    trucks[t.id] = {
-      truckId: t.id,
-      scheduleId: null,
-      phase: "idle",
-      stopIndex: 0,
-      onsite: false,
-      tracking: {
-        lat: tr?.lat ?? mockPilotData.center[0],
-        lng: tr?.lng ?? mockPilotData.center[1],
-        heading: tr?.heading ?? 0,
-        eta: tr?.eta ?? "Standby",
-        isActive: false,
-      },
-    };
-  }
-
   const driverByTruck = {};
-  for (const t of mockPilotData.trucks) driverByTruck[t.id] = t.driver ?? null;
 
   return { v: STORE_VERSION, rev: 0, trucks, schedules, scheduleStatus, driverByTruck, roadBlocks: [] };
 }
@@ -43,47 +21,137 @@ const SEED = buildSeed();
 
 const listeners = new Set();
 let cache = null;
-let storageListenerInstalled = false;
 
 function notify() {
   for (const listener of listeners) listener();
 }
 
-function readStore() {
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed && parsed.v === STORE_VERSION && parsed.trucks && parsed.schedules && parsed.scheduleStatus && parsed.driverByTruck) {
-        if (!Array.isArray(parsed.roadBlocks)) parsed.roadBlocks = [];
-        return parsed;
-      }
-    }
-  } catch {
-    // corrupt storage falls through to re-seed
-  }
-  return SEED;
-}
-
 function getSnapshot() {
-  if (typeof window === "undefined") return SEED;
-  if (!cache) cache = readStore();
+  if (!cache) {
+    cache = SEED;
+    if (typeof window !== "undefined") {
+      initSupabaseSync();
+    }
+  }
   return cache;
 }
 
-function installStorageListener() {
-  if (storageListenerInstalled || typeof window === "undefined") return;
-  storageListenerInstalled = true;
-  window.addEventListener("storage", (e) => {
-    if (e.key === STORAGE_KEY || e.key === null) {
-      cache = readStore();
-      notify();
+let syncInitialized = false;
+
+async function initSupabaseSync() {
+  if (syncInitialized) return;
+  syncInitialized = true;
+
+  const [schedulesRes, trackingRes] = await Promise.all([
+    supabase.from('schedules').select('*'),
+    supabase.from('live_tracking').select('*')
+  ]);
+
+  write((next) => {
+    if (schedulesRes.data) {
+      for (const s of schedulesRes.data) {
+        next.schedules[s.id] = {
+          id: s.id,
+          zoneId: s.zone_id,
+          truckId: s.truck_id,
+          driverId: s.driver_id,
+          collectionType: s.collection_type,
+          collectionDays: s.collection_days,
+          time: s.collection_time,
+          isArchived: s.is_archived,
+          routePoints: s.route_points || [],
+          status: s.status || "Scheduled",
+        };
+        next.scheduleStatus[s.id] = s.status || "Scheduled";
+      }
+    }
+
+    if (trackingRes.data) {
+      for (const t of trackingRes.data) {
+        next.trucks[t.truck_id] = {
+          truckId: t.truck_id,
+          scheduleId: t.schedule_id,
+          phase: t.phase || "idle",
+          stopIndex: t.stop_index || 0,
+          onsite: t.onsite || false,
+          tracking: {
+            lat: t.lat || mockPilotData.center[0],
+            lng: t.lng || mockPilotData.center[1],
+            heading: t.heading || 0,
+            eta: t.eta || "Standby",
+            isActive: t.is_active || false,
+          },
+        };
+        if (t.driver_id) {
+          next.driverByTruck[t.truck_id] = t.driver_id;
+        }
+      }
     }
   });
+
+  supabase
+    .channel('public:schedules')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'schedules' }, (payload) => {
+      const s = payload.new;
+      if (s && s.id) {
+        write((next) => {
+          if (payload.eventType === 'DELETE') {
+            delete next.schedules[payload.old.id];
+            delete next.scheduleStatus[payload.old.id];
+          } else {
+            next.schedules[s.id] = {
+              id: s.id,
+              zoneId: s.zone_id,
+              truckId: s.truck_id,
+              driverId: s.driver_id,
+              collectionType: s.collection_type,
+              collectionDays: s.collection_days,
+              time: s.collection_time,
+              isArchived: s.is_archived,
+              routePoints: s.route_points || [],
+              status: s.status || "Scheduled",
+            };
+            next.scheduleStatus[s.id] = s.status || "Scheduled";
+          }
+        });
+      }
+    })
+    .subscribe();
+
+  supabase
+    .channel('public:live_tracking')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'live_tracking' }, (payload) => {
+      const t = payload.new;
+      if (t && t.truck_id) {
+        write((next) => {
+          if (payload.eventType === 'DELETE') {
+            delete next.trucks[payload.old.truck_id];
+          } else {
+            next.trucks[t.truck_id] = {
+              truckId: t.truck_id,
+              scheduleId: t.schedule_id,
+              phase: t.phase || "idle",
+              stopIndex: t.stop_index || 0,
+              onsite: t.onsite || false,
+              tracking: {
+                lat: t.lat || mockPilotData.center[0],
+                lng: t.lng || mockPilotData.center[1],
+                heading: t.heading || 0,
+                eta: t.eta || "Standby",
+                isActive: t.is_active || false,
+              },
+            };
+            if (t.driver_id) {
+              next.driverByTruck[t.truck_id] = t.driver_id;
+            }
+          }
+        });
+      }
+    })
+    .subscribe();
 }
 
 function subscribe(listener) {
-  installStorageListener();
   listeners.add(listener);
   return () => listeners.delete(listener);
 }
@@ -93,13 +161,6 @@ function write(mutator) {
   const result = mutator(next);
   next.rev = (next.rev || 0) + 1;
   cache = next;
-  if (typeof window !== "undefined") {
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    } catch {
-      // storage unavailable — in-tab sync still works
-    }
-  }
   notify();
   return result;
 }
@@ -122,7 +183,6 @@ export function nextScheduleId() {
   return `SCH-${String(max + 1).padStart(3, "0")}`;
 }
 
-// Parses the start time out of a range like "08:00 AM - 11:00 AM"
 function parseStartMinutes(timeStr) {
   const m = String(timeStr || "").match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
   if (!m) return null;
@@ -142,8 +202,6 @@ function minutesToLabel(total) {
   return `${h12}:${String(min).padStart(2, "0")} ${mer}`;
 }
 
-// New dispatch assignments get stops traced along their zone's corners so
-// drivers and residents immediately see a real route trajectory.
 export function buildZoneRoutePoints(zoneId, timeStr) {
   const zone = mockPilotData.zones.find((z) => z.id === zoneId);
   const corners = zone?.coordinates ?? [];
@@ -157,9 +215,6 @@ export function buildZoneRoutePoints(zoneId, timeStr) {
   }));
 }
 
-// Sitio-picked assignments: the admin searches and orders sitios of Barangay
-// Tejero; each pick becomes a stop at the sitio's anchor coordinate with an
-// estimated time (+45 min per stop from the schedule start).
 export function buildSitioRoutePoints(sitioNames, timeStr) {
   const start = parseStartMinutes(timeStr);
   return (sitioNames || [])
@@ -176,19 +231,15 @@ export function buildSitioRoutePoints(sitioNames, timeStr) {
     .filter(Boolean);
 }
 
-// Estimated time label for the stop at `index` given a schedule time range.
 export function estimateStopTime(timeStr, index) {
   const start = parseStartMinutes(timeStr);
   return start != null ? minutesToLabel(start + index * 45) : "TBD";
 }
 
-// Re-times existing stops in place after the admin edits the collection time.
 export function retimeRoutePoints(points, timeStr) {
   return (points || []).map((p, i) => ({ ...p, time: estimateStopTime(timeStr, i) }));
 }
 
-// Display name for a schedule anywhere in the app: the legacy zone name when
-// present, otherwise the ordered sitio stops ("A → B" or "A +N more").
 export function scheduleLabel(schedule) {
   if (!schedule) return "Barangay Tejero";
   const zone = mockPilotData.zones.find((z) => z.id === schedule.zoneId);
@@ -199,17 +250,34 @@ export function scheduleLabel(schedule) {
   return `${names[0]} → ${names[1]} +${names.length - 2} more`;
 }
 
-export function addSchedule(fields) {
+export async function addSchedule(fields) {
+  const id = nextScheduleId();
+  const routePoints = fields.routePoints?.length
+    ? fields.routePoints
+    : fields.zoneId
+      ? buildZoneRoutePoints(fields.zoneId, fields.time)
+      : [];
+
+  const { error } = await supabase.from('schedules').insert({
+    id,
+    zone_id: fields.zoneId,
+    truck_id: fields.truckId,
+    driver_id: fields.driverId,
+    collection_type: fields.collectionType,
+    collection_days: fields.collectionDays,
+    collection_time: fields.time,
+    is_archived: false,
+    route_points: routePoints,
+    status: fields.status || "Scheduled",
+  });
+
+  if (error) throw error;
+
   return write((next) => {
-    const id = nextScheduleId();
     const schedule = {
       ...fields,
       id,
-      routePoints: fields.routePoints?.length
-        ? fields.routePoints
-        : fields.zoneId
-          ? buildZoneRoutePoints(fields.zoneId, fields.time)
-          : [],
+      routePoints,
     };
     next.schedules = { ...next.schedules, [id]: schedule };
     next.scheduleStatus = { ...next.scheduleStatus, [id]: schedule.status || "Scheduled" };
@@ -217,13 +285,32 @@ export function addSchedule(fields) {
   });
 }
 
-export function updateSchedule(id, patch) {
+export async function updateSchedule(id, patch) {
+  const dbPatch = {};
+  if (patch.zoneId !== undefined) dbPatch.zone_id = patch.zoneId;
+  if (patch.truckId !== undefined) dbPatch.truck_id = patch.truckId;
+  if (patch.driverId !== undefined) dbPatch.driver_id = patch.driverId;
+  if (patch.collectionType !== undefined) dbPatch.collection_type = patch.collectionType;
+  if (patch.collectionDays !== undefined) dbPatch.collection_days = patch.collectionDays;
+  if (patch.time !== undefined) dbPatch.collection_time = patch.time;
+  if (patch.isArchived !== undefined) dbPatch.is_archived = patch.isArchived;
+  if (patch.status !== undefined) dbPatch.status = patch.status;
+  if (patch.routePoints !== undefined) dbPatch.route_points = patch.routePoints;
+
+  const current = getSnapshot().schedules?.[id];
+  if (patch.zoneId && patch.zoneId !== current?.zoneId && !patch.routePoints) {
+    dbPatch.route_points = buildZoneRoutePoints(patch.zoneId, patch.time || current?.time);
+  }
+
+  const { error } = await supabase.from('schedules').update(dbPatch).eq('id', id);
+  if (error) throw error;
+
   return write((next) => {
-    const current = next.schedules?.[id];
-    if (!current) return;
-    const updated = { ...current, ...patch };
-    if (patch.zoneId && patch.zoneId !== current.zoneId && !patch.routePoints) {
-      updated.routePoints = buildZoneRoutePoints(patch.zoneId, updated.time);
+    const cur = next.schedules?.[id];
+    if (!cur) return;
+    const updated = { ...cur, ...patch };
+    if (dbPatch.route_points) {
+      updated.routePoints = dbPatch.route_points;
     }
     next.schedules = { ...next.schedules, [id]: updated };
     if (patch.status) {
@@ -232,7 +319,9 @@ export function updateSchedule(id, patch) {
   });
 }
 
-export function removeSchedule(id) {
+export async function removeSchedule(id) {
+  const { error } = await supabase.from('schedules').update({ is_archived: true }).eq('id', id);
+  if (error) throw error;
   return write((next) => {
     const schedules = { ...next.schedules };
     if (schedules[id]) {
@@ -242,7 +331,9 @@ export function removeSchedule(id) {
   });
 }
 
-export function restoreSchedule(id) {
+export async function restoreSchedule(id) {
+  const { error } = await supabase.from('schedules').update({ is_archived: false }).eq('id', id);
+  if (error) throw error;
   return write((next) => {
     const schedules = { ...next.schedules };
     if (schedules[id]) {
@@ -252,7 +343,9 @@ export function restoreSchedule(id) {
   });
 }
 
-export function hardDeleteSchedule(id) {
+export async function hardDeleteSchedule(id) {
+  const { error } = await supabase.from('schedules').delete().eq('id', id);
+  if (error) throw error;
   return write((next) => {
     const schedules = { ...next.schedules };
     delete schedules[id];
@@ -263,7 +356,9 @@ export function hardDeleteSchedule(id) {
   });
 }
 
-export function acceptAssignment(scheduleId) {
+export async function acceptAssignment(scheduleId) {
+  const { error } = await supabase.from('schedules').update({ status: 'Accepted' }).eq('id', scheduleId);
+  if (error) throw error;
   return write((next) => {
     if (next.schedules?.[scheduleId]) {
       next.scheduleStatus = { ...next.scheduleStatus, [scheduleId]: "Accepted" };
@@ -271,67 +366,74 @@ export function acceptAssignment(scheduleId) {
   });
 }
 
-export function startRoute(truckId) {
-  const startedId = write((next) => {
-    const ts = next.trucks[truckId];
-    if (!ts) return null;
+export async function startRoute(truckId) {
+  const snap = getSnapshot();
+  const ts = snap.trucks[truckId];
+  if (!ts) return null;
 
-    const status = next.scheduleStatus;
-    const mine = Object.values(next.schedules || {}).filter((s) => s.activeTruckId === truckId);
+  const status = snap.scheduleStatus;
+  const mine = Object.values(snap.schedules || {}).filter((s) => s.truckId === truckId || s.activeTruckId === truckId);
+  
+  let startedId = null;
+  let newPhase = null;
+  let newTracking = null;
 
-    // Resume only if the held route is still open (a completed route must
-    // never be re-activated — Start then picks the next assignment instead)
-    if (
-      ts.phase !== "idle" &&
-      ts.scheduleId &&
-      status[ts.scheduleId] !== "Completed"
-    ) {
-      next.trucks = {
-        ...next.trucks,
-        [truckId]: {
-          ...ts,
-          tracking: {
-            ...ts.tracking,
-            isActive: true,
-            eta: ts.phase === "onsite" ? "On Site" : "5 mins",
-          },
-        },
-      };
-      return ts.scheduleId;
-    }
-
+  if (
+    ts.phase !== "idle" &&
+    ts.scheduleId &&
+    status[ts.scheduleId] !== "Completed"
+  ) {
+    startedId = ts.scheduleId;
+    newPhase = ts.phase;
+    newTracking = {
+      ...ts.tracking,
+      isActive: true,
+      eta: ts.phase === "onsite" ? "On Site" : "5 mins",
+    };
+  } else {
     const inProgress = mine.filter((s) => status[s.id] === "In Progress");
     const scheduled = mine.filter((s) => status[s.id] === "Scheduled" || status[s.id] === "Assigned" || status[s.id] === "Accepted");
-    // Prefer the newest assignment so a freshly dispatch is what starts
-    const pick =
-      inProgress[inProgress.length - 1] || scheduled[scheduled.length - 1];
+    const pick = inProgress[inProgress.length - 1] || scheduled[scheduled.length - 1];
     if (!pick) return null;
 
+    startedId = pick.id;
+    newPhase = "enroute";
     const first = pick.routePoints?.[0];
+    newTracking = {
+      lat: first?.lat ?? ts.tracking.lat,
+      lng: first?.lng ?? ts.tracking.lng,
+      heading: ts.tracking.heading,
+      eta: "5 mins",
+      isActive: true,
+    };
+  }
+
+  await supabase.from('live_tracking').update({
+    schedule_id: startedId,
+    phase: newPhase,
+    is_active: newTracking.isActive,
+    eta: newTracking.eta,
+    lat: newTracking.lat,
+    lng: newTracking.lng,
+    heading: newTracking.heading,
+  }).eq('truck_id', truckId);
+
+  await supabase.from('schedules').update({ status: 'In Progress' }).eq('id', startedId);
+
+  write((next) => {
     next.trucks = {
       ...next.trucks,
       [truckId]: {
-        truckId,
-        scheduleId: pick.id,
-        phase: "enroute",
-        stopIndex: 0,
-        onsite: false,
-        tracking: {
-          lat: first?.lat ?? ts.tracking.lat,
-          lng: first?.lng ?? ts.tracking.lng,
-          heading: ts.tracking.heading,
-          eta: "5 mins",
-          isActive: true,
-        },
+        ...next.trucks[truckId],
+        scheduleId: startedId,
+        phase: newPhase,
+        onsite: newPhase === "onsite",
+        tracking: newTracking,
       },
     };
-    next.scheduleStatus = { ...status, [pick.id]: "In Progress" };
-    return pick.id;
+    next.scheduleStatus = { ...next.scheduleStatus, [startedId]: "In Progress" };
   });
 
-  // Tell admins the driver pressed Start Route (their feed + ding). Residents
-  // get the same moment through the live header banner and their own ding, so
-  // nothing is pushed for them. Dedupe keeps pause→resume from re-firing.
   if (startedId) {
     const first = getSchedule(startedId)?.routePoints?.[0];
     pushNotification({
@@ -350,10 +452,26 @@ export function startRoute(truckId) {
   return startedId;
 }
 
-export function stopByAtPoint(truckId) {
+export async function stopByAtPoint(truckId) {
   const ts = getSnapshot().trucks[truckId];
   if (!ts || !ts.scheduleId) return;
   const point = getSchedule(ts.scheduleId)?.routePoints?.[ts.stopIndex];
+
+  const newTracking = {
+    ...ts.tracking,
+    lat: point?.lat ?? ts.tracking.lat,
+    lng: point?.lng ?? ts.tracking.lng,
+    eta: "On Site",
+  };
+
+  await supabase.from('live_tracking').update({
+    phase: "onsite",
+    onsite: true,
+    eta: newTracking.eta,
+    lat: newTracking.lat,
+    lng: newTracking.lng,
+  }).eq('truck_id', truckId);
+
   write((next) => {
     const cur = next.trucks[truckId];
     if (!cur || !cur.scheduleId) return;
@@ -363,20 +481,11 @@ export function stopByAtPoint(truckId) {
         ...cur,
         phase: "onsite",
         onsite: true,
-        tracking: {
-          ...cur.tracking,
-          lat: point?.lat ?? cur.tracking.lat,
-          lng: point?.lng ?? cur.tracking.lng,
-          eta: "On Site",
-        },
+        tracking: newTracking,
       },
     };
   });
 
-  // Broadcast the arrival to admins: the truck reached the pin point they
-  // scheduled. Residents already see the arrival via their live header banner
-  // (driven by this same store), so no resident feed entry is pushed. The
-  // dedupe key keeps repeated presses on the same stop from double-firing.
   const stopName = point?.name ?? "a stop";
   const dedupeKey = `${ts.scheduleId}:${ts.stopIndex}:stopby`;
   pushNotification({
@@ -393,58 +502,97 @@ export function stopByAtPoint(truckId) {
   });
 }
 
-export function continueRoute(truckId) {
+export async function continueRoute(truckId) {
+  const ts = getSnapshot().trucks[truckId];
+  if (!ts || !ts.scheduleId) return;
+  const points = getSchedule(ts.scheduleId)?.routePoints ?? [];
+  const newIndex = Math.min(ts.stopIndex + 1, points.length - 1);
+
+  await supabase.from('live_tracking').update({
+    phase: "enroute",
+    onsite: false,
+    stop_index: newIndex,
+    eta: "5 mins",
+  }).eq('truck_id', truckId);
+
   write((next) => {
-    const ts = next.trucks[truckId];
-    if (!ts || !ts.scheduleId) return;
-    const points = getSchedule(ts.scheduleId)?.routePoints ?? [];
+    const cur = next.trucks[truckId];
     next.trucks = {
       ...next.trucks,
       [truckId]: {
-        ...ts,
+        ...cur,
         phase: "enroute",
         onsite: false,
-        stopIndex: Math.min(ts.stopIndex + 1, points.length - 1),
-        tracking: { ...ts.tracking, eta: "5 mins" },
+        stopIndex: newIndex,
+        tracking: { ...cur.tracking, eta: "5 mins" },
       },
     };
   });
 }
 
-export function completeRoute(truckId) {
+export async function completeRoute(truckId) {
+  const ts = getSnapshot().trucks[truckId];
+  if (!ts || !ts.scheduleId) return;
+  const points = getSchedule(ts.scheduleId)?.routePoints ?? [];
+  const newIndex = Math.max(points.length - 1, 0);
+
+  await supabase.from('live_tracking').update({
+    phase: "completed",
+    onsite: false,
+    stop_index: newIndex,
+    is_active: false,
+    eta: "Route Done",
+  }).eq('truck_id', truckId);
+
+  await supabase.from('schedules').update({ status: 'Completed' }).eq('id', ts.scheduleId);
+
   write((next) => {
-    const ts = next.trucks[truckId];
-    if (!ts || !ts.scheduleId) return;
-    const points = getSchedule(ts.scheduleId)?.routePoints ?? [];
+    const cur = next.trucks[truckId];
     next.trucks = {
       ...next.trucks,
       [truckId]: {
-        ...ts,
+        ...cur,
         phase: "completed",
         onsite: false,
-        stopIndex: Math.max(points.length - 1, 0),
-        tracking: { ...ts.tracking, isActive: false, eta: "Route Done" },
+        stopIndex: newIndex,
+        tracking: { ...cur.tracking, isActive: false, eta: "Route Done" },
       },
     };
     next.scheduleStatus = { ...next.scheduleStatus, [ts.scheduleId]: "Completed" };
   });
 }
 
-export function endRoute(truckId) {
+export async function endRoute(truckId) {
+  const ts = getSnapshot().trucks[truckId];
+  if (!ts) return;
+
+  await supabase.from('live_tracking').update({
+    is_active: false,
+    eta: "Paused",
+  }).eq('truck_id', truckId);
+
   write((next) => {
-    const ts = next.trucks[truckId];
-    if (!ts) return;
+    const cur = next.trucks[truckId];
     next.trucks = {
       ...next.trucks,
       [truckId]: {
-        ...ts,
-        tracking: { ...ts.tracking, isActive: false, eta: "Paused" },
+        ...cur,
+        tracking: { ...cur.tracking, isActive: false, eta: "Paused" },
       },
     };
   });
 }
 
-export function updateTracking(truckId, patch) {
+export async function updateTracking(truckId, patch) {
+  const dbPatch = {};
+  if (patch.lat !== undefined) dbPatch.lat = patch.lat;
+  if (patch.lng !== undefined) dbPatch.lng = patch.lng;
+  if (patch.heading !== undefined) dbPatch.heading = patch.heading;
+  if (patch.eta !== undefined) dbPatch.eta = patch.eta;
+  if (patch.isActive !== undefined) dbPatch.is_active = patch.isActive;
+
+  await supabase.from('live_tracking').update(dbPatch).eq('truck_id', truckId);
+
   write((next) => {
     const ts = next.trucks[truckId];
     if (!ts) return;
@@ -455,13 +603,16 @@ export function updateTracking(truckId, patch) {
   });
 }
 
-export function setScheduleStatus(scheduleId, status) {
+export async function setScheduleStatus(scheduleId, status) {
+  await supabase.from('schedules').update({ status }).eq('id', scheduleId);
   write((next) => {
     next.scheduleStatus = { ...next.scheduleStatus, [scheduleId]: status };
   });
 }
 
-export function assignDriver(truckId, driverName) {
+export async function assignDriver(truckId, driverName) {
+  await supabase.from('live_tracking').update({ driver_id: driverName }).eq('truck_id', truckId);
+
   write((next) => {
     const map = { ...next.driverByTruck };
     if (driverName) {
@@ -484,7 +635,16 @@ export function reportRoadBlock() {
 
 export function clearRoadBlock() {}
 
-export function swapDrivers(truckIdA, truckIdB) {
+export async function swapDrivers(truckIdA, truckIdB) {
+  const snap = getSnapshot();
+  const driverA = snap.driverByTruck[truckIdA];
+  const driverB = snap.driverByTruck[truckIdB];
+
+  await Promise.all([
+    supabase.from('live_tracking').update({ driver_id: driverB }).eq('truck_id', truckIdA),
+    supabase.from('live_tracking').update({ driver_id: driverA }).eq('truck_id', truckIdB),
+  ]);
+
   write((next) => {
     const map = { ...next.driverByTruck };
     const tmp = map[truckIdA];
@@ -498,6 +658,7 @@ export function useLiveRoute() {
   ensureRouteSim();
   return useSyncExternalStore(subscribe, getSnapshot, () => SEED);
 }
+
 
 // ---- Live movement sim: advance on-duty trucks toward their next stop every
 // 4 seconds so the marker glides in realtime on every map (admin, resident,

@@ -177,18 +177,20 @@ export default function DispatchPage() {
     status,
   });
 
-  const handleAddSchedule = (e) => {
+  const handleAddSchedule = async (e) => {
     e.preventDefault();
     if (!truckId || !type || !days || !time || stopOrder.length === 0) return;
 
-    addSchedule({
+    await addSchedule({
       ...buildScheduleFields(),
       routePoints: stopOrder,
     });
+    
     setIsAdding(false);
+    resetForm();
   };
 
-  const handleUpdateSchedule = (e) => {
+  const handleUpdateSchedule = async (e) => {
     e.preventDefault();
     if (!selectedSchedule || !truckId || !type || !days || !time || stopOrder.length === 0) return;
 
@@ -197,14 +199,15 @@ export default function DispatchPage() {
       return;
     }
 
-    updateSchedule(selectedSchedule.id, {
+    await updateSchedule(selectedSchedule.id, {
       ...buildScheduleFields(),
       routePoints: stopOrder,
     });
     setSelectedSchedule(null);
+    resetForm();
   };
 
-  const handleDeleteSchedule = (id) => {
+  const handleDeleteSchedule = async (id) => {
     if (live.scheduleStatus[id] === "In Progress") {
       toast("Cannot delete a schedule while it is in progress.", { variant: "warning" });
       setScheduleToDelete(null);
@@ -212,9 +215,9 @@ export default function DispatchPage() {
     }
 
     if (viewMode === "trash") {
-      hardDeleteSchedule(id);
+      await hardDeleteSchedule(id);
     } else {
-      removeSchedule(id);
+      await removeSchedule(id);
     }
 
     if (selectedSchedule?.id === id) {
@@ -223,8 +226,8 @@ export default function DispatchPage() {
     setScheduleToDelete(null);
   };
 
-  const handleRestoreSchedule = (id) => {
-    restoreSchedule(id);
+  const handleRestoreSchedule = async (id) => {
+    await restoreSchedule(id);
   };
 
   const openTruckSheet = (mode, truck) => {
@@ -247,17 +250,17 @@ export default function DispatchPage() {
     setTruckSheet({ mode, truck: truck ?? null });
   };
 
-  const handleTruckSubmit = (e) => {
+  const handleTruckSubmit = async (e) => {
     e.preventDefault();
-    const res =
-      truckSheet.mode === "add"
-        ? addTruck(truckForm)
-        : updateTruck(truckSheet.truck.id, truckForm);
+    const res = await (truckSheet.mode === "add"
+      ? addTruck(truckForm)
+      : updateTruck(truckSheet.truck.id, truckForm));
     if (res.error) {
       setTruckError(res.error);
       return;
     }
     assignDriver(truckForm.id, truckForm.driver || null);
+    
     setTruckSheet(null);
   };
 
@@ -271,10 +274,10 @@ export default function DispatchPage() {
     setTruckToRemove(t);
   };
 
-  const handleTruckDelete = () => {
+  const handleTruckDelete = async () => {
     const t = truckToRemove;
     if (!t) return;
-    removeTruck(t.id);
+    await removeTruck(t.id);
     setTruckToRemove(null);
     setTruckSheet(null);
   };
@@ -314,7 +317,7 @@ export default function DispatchPage() {
 
   const formFields = (
     <>
-      <Field label="Pickup Stops — Search sitios in Brgy. Tejero">
+      <Field label={`Pickup Stops — Search sitios in ${process.env.NEXT_PUBLIC_BARANGAY_NAME || "Barangay"}`}>
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <input
@@ -346,7 +349,7 @@ export default function DispatchPage() {
                 {filteredSitios.length === 0 ? (
                   <li className="px-3 py-2 text-xs text-muted-foreground">
                     {sitioQuery.trim()
-                      ? "No matching sitio in Barangay Tejero."
+                      ? `No matching sitio in ${process.env.NEXT_PUBLIC_BARANGAY_NAME || "Barangay"}.`
                       : "All sitios are already on this route."}
                   </li>
                 ) : (

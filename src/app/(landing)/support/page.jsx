@@ -102,7 +102,12 @@ export default function SupportPage() {
   return (
     <div className="min-h-screen bg-zinc-50 pt-24 sm:pt-32 pb-16 sm:pb-24">
       <div className="max-w-xl mx-auto px-4 sm:px-6">
-        <div className="text-center mb-10 sm:mb-14">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: "easeInOut" }}
+          className="text-center mb-10 sm:mb-14"
+        >
           <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-zinc-900 mb-4 leading-[1.15]">
             Contact <span className="text-emerald-600">Support.</span>
           </h1>
@@ -110,9 +115,14 @@ export default function SupportPage() {
             Have a question or need assistance with the Bin&apos;Go platform?
             Send us a message and our support team will help you out.
           </p>
-        </div>
+        </motion.div>
 
-        <div className="bg-white rounded-3xl border border-zinc-100 shadow-sm p-6 sm:p-10">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1, ease: "easeInOut" }}
+          className="bg-white rounded-3xl border border-zinc-100 shadow-sm p-6 sm:p-10"
+        >
           {success ? (
             <div className="flex flex-col items-center text-center gap-4 py-8">
               <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50">
@@ -258,7 +268,7 @@ export default function SupportPage() {
               </div>
             </form>
           )}
-        </div>
+        </motion.div>
       </div>
     </div>
   );

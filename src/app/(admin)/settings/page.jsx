@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 import { CheckCircle2, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
@@ -39,23 +40,44 @@ export default function SettingsPage() {
     }, 3000);
   };
 
+  const [userId, setUserId] = useState(null);
   const [profile, setProfile] = useState({
-    entityName: "LGU City of Cebu - Solid Waste Management Division",
-    adminName: "Officer Maria Santos",
-    email: "m.santos@cebucity.gov.ph",
-    phone: "+63 (032) 253-1111",
-    jurisdiction: "Barangay Tejero (Cebu City)",
-    officeAddress: "City Hall Bldg, M.C. Briones St, Cebu City",
+    full_name: "",
+    email: "",
   });
   const [savingProfile, setSavingProfile] = useState(false);
 
-  const handleProfileSave = (e) => {
+  useEffect(() => {
+    async function loadProfile() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
+        const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+        if (data) {
+          setProfile({
+            full_name: data.full_name || "",
+            email: user.email || "",
+          });
+        }
+      }
+    }
+    loadProfile();
+  }, []);
+
+  const handleProfileSave = async (e) => {
     e.preventDefault();
+    if (!userId) return;
     setSavingProfile(true);
-    setTimeout(() => {
-      setSavingProfile(false);
-      showToast("Administrator profile saved.");
-    }, 500);
+    const { error } = await supabase.from('profiles').update({
+      full_name: profile.full_name
+    }).eq('id', userId);
+    
+    setSavingProfile(false);
+    if (error) {
+      showToast("Error saving profile: " + error.message);
+    } else {
+      showToast("Admin profile saved successfully.");
+    }
   };
 
   const [notifications, setNotifications] = useState({
@@ -74,23 +96,6 @@ export default function SettingsPage() {
     });
   };
 
-  const [params, setParams] = useState({
-    geofenceRadius: "500",
-    maxOpenTickets: "10",
-    slaEscalationHours: "24",
-    routingMode: "auto-nearest",
-  });
-  const [savingParams, setSavingParams] = useState(false);
-
-  const handleParamsSave = (e) => {
-    e.preventDefault();
-    setSavingParams(true);
-    setTimeout(() => {
-      setSavingParams(false);
-      showToast("Operations settings saved.");
-    }, 500);
-  };
-
   const [passwords, setPasswords] = useState({
     currentPassword: "",
     newPassword: "",
@@ -100,10 +105,10 @@ export default function SettingsPage() {
   const [showNew, setShowNew] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
 
-  const handlePasswordUpdate = (e) => {
+  const handlePasswordUpdate = async (e) => {
     e.preventDefault();
-    if (!passwords.currentPassword || !passwords.newPassword) {
-      showToast("Please fill out required password fields.");
+    if (!passwords.newPassword) {
+      showToast("Please enter a new password.");
       return;
     }
     if (passwords.newPassword !== passwords.confirmPassword) {
@@ -111,15 +116,17 @@ export default function SettingsPage() {
       return;
     }
     setSavingPassword(true);
-    setTimeout(() => {
-      setSavingPassword(false);
-      setPasswords({
-        currentPassword: "",
-        newPassword: "",
-        confirmPassword: "",
-      });
+    const { error } = await supabase.auth.updateUser({
+      password: passwords.newPassword
+    });
+    setSavingPassword(false);
+    
+    if (error) {
+      showToast("Error updating password: " + error.message);
+    } else {
+      setPasswords({ currentPassword: "", newPassword: "", confirmPassword: "" });
       showToast("Password updated successfully.");
-    }, 600);
+    }
   };
 
   const sectionCard = "flex flex-col gap-4 rounded-xl border border-border bg-card p-4 sm:p-5";
@@ -158,40 +165,20 @@ export default function SettingsPage() {
           {/* Profile Section */}
           <section className={sectionCard}>
             <div className={sectionHeader}>
-              <User className="h-4 w-4 text-emerald-600" />
               <h2 className="text-sm font-semibold text-foreground">
-                Account & Office Profile
+                Admin Profile
               </h2>
             </div>
 
             <form onSubmit={handleProfileSave} className="space-y-4">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-1.5">
-                  <label className={labelClass}>Office / Department Name</label>
-                  <input
-                    type="text"
-                    value={profile.entityName}
-                    onChange={(e) =>
-                      setProfile({ ...profile, entityName: formatNameInput(e.target.value) })
-                    }
-                    onBlur={() =>
-                      setProfile({ ...profile, entityName: formatNameInput(profile.entityName) })
-                    }
-                    className={inputClass}
-                    required
-                  />
-                </div>
-
-                <div className="flex flex-col gap-1.5">
                   <label className={labelClass}>Admin Name</label>
                   <input
                     type="text"
-                    value={profile.adminName}
+                    value={profile.full_name}
                     onChange={(e) =>
-                      setProfile({ ...profile, adminName: formatNameInput(e.target.value) })
-                    }
-                    onBlur={() =>
-                      setProfile({ ...profile, adminName: formatNameInput(profile.adminName) })
+                      setProfile({ ...profile, full_name: formatNameInput(e.target.value) })
                     }
                     className={inputClass}
                     required
@@ -203,54 +190,9 @@ export default function SettingsPage() {
                   <input
                     type="email"
                     value={profile.email}
-                    onChange={(e) =>
-                      setProfile({ ...profile, email: e.target.value.toLowerCase() })
-                    }
-                    pattern="[^\s@]+@[^\s@]+\.[^\s@]+"
-                    className={inputClass}
-                    required
-                  />
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className={labelClass}>Contact Number</label>
-                  <input
-                    type="text"
-                    value={profile.phone}
-                    onChange={(e) =>
-                      setProfile({ ...profile, phone: e.target.value })
-                    }
-                    className={inputClass}
-                    required
-                  />
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className={labelClass}>Coverage Area (Barangay)</label>
-                  <select
-                    value={profile.jurisdiction}
-                    onChange={(e) =>
-                      setProfile({ ...profile, jurisdiction: e.target.value })
-                    }
-                    className={cn(inputClass, "cursor-pointer")}
-                  >
-                    <option value="Barangay Tejero (Cebu City)">Barangay Tejero (Cebu City)</option>
-                    <option value="Other parts of Metro Cebu (Coming Soon...)">
-                      Other parts of Metro Cebu (Coming Soon...)
-                    </option>
-                  </select>
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className={labelClass}>Office Address</label>
-                  <input
-                    type="text"
-                    value={profile.officeAddress}
-                    onChange={(e) =>
-                      setProfile({ ...profile, officeAddress: e.target.value })
-                    }
-                    className={inputClass}
-                    required
+                    disabled
+                    className={cn(inputClass, "opacity-60 cursor-not-allowed")}
+                    title="Email cannot be changed here"
                   />
                 </div>
               </div>
@@ -327,88 +269,6 @@ export default function SettingsPage() {
                 />
               </div>
             </div>
-          </section>
-
-          <section className={sectionCard}>
-            <div className={sectionHeader}>
-              <div>
-                <h2 className="text-sm font-semibold text-foreground">Operations Settings</h2>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  Control how reports are handled and how trucks are assigned
-                </p>
-              </div>
-            </div>
-
-            <form onSubmit={handleParamsSave} className="space-y-4">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="flex flex-col gap-1.5">
-                  <label className={labelClass}>Truck Arrival Radius (meters)</label>
-                  <input
-                    type="number"
-                    min="100"
-                    max="2000"
-                    step="50"
-                    value={params.geofenceRadius}
-                    onChange={(e) =>
-                      setParams({ ...params, geofenceRadius: e.target.value })
-                    }
-                    className={inputClass}
-                    required
-                  />
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className={labelClass}>Max Reports per Truck at One Time</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="30"
-                    value={params.maxOpenTickets}
-                    onChange={(e) =>
-                      setParams({ ...params, maxOpenTickets: e.target.value })
-                    }
-                    className={inputClass}
-                    required
-                  />
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className={labelClass}>Escalate Unresolved Reports After (hours)</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="72"
-                    value={params.slaEscalationHours}
-                    onChange={(e) =>
-                      setParams({ ...params, slaEscalationHours: e.target.value })
-                    }
-                    className={inputClass}
-                    required
-                  />
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className={labelClass}>How Trucks Are Assigned</label>
-                  <select
-                    value={params.routingMode}
-                    onChange={(e) =>
-                      setParams({ ...params, routingMode: e.target.value })
-                    }
-                    className={cn(inputClass, "cursor-pointer")}
-                  >
-                    <option value="auto-nearest">Auto-assign the nearest available truck</option>
-                    <option value="manual">Assign trucks manually</option>
-                    <option value="barangay-supervisor">Require barangay supervisor approval</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex justify-end border-t border-border-subtle pt-4">
-                <Button variant="primary" type="submit" disabled={savingParams}>
-                  {savingParams ? "Saving..." : "Save Settings"}
-                </Button>
-              </div>
-            </form>
           </section>
 
           <section className={sectionCard}>
