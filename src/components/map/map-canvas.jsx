@@ -28,6 +28,19 @@ const METRO_CEBU_MAX_BOUNDS = [
 const METRO_CEBU_MIN_ZOOM = 11;
 const METRO_CEBU_BOUNDS_VISCOSITY = 0.3;
 
+function toLatLngTuple(pos) {
+  if (!pos) return null;
+  const lat = Array.isArray(pos) ? pos[0] : (pos.lat ?? pos.latitude);
+  const lng = Array.isArray(pos) ? pos[1] : (pos.lng ?? pos.longitude);
+  if (typeof lat !== "number" || typeof lng !== "number" || isNaN(lat) || isNaN(lng)) return null;
+  return [lat, lng];
+}
+
+function sanitizePositions(positions) {
+  if (!Array.isArray(positions)) return [];
+  return positions.map(toLatLngTuple).filter(Boolean);
+}
+
 const getUrgencyColor = (urgency) => {
   switch (urgency) {
     case "Critical":
@@ -402,6 +415,8 @@ function AnimatedRoute({ route, fading }) {
   const casingRef = useRef(null);
   const lineRef = useRef(null);
 
+  const cleanPositions = useMemo(() => sanitizePositions(route.positions), [route.positions]);
+
   useEffect(() => {
     const els = [casingRef.current?.getElement(), lineRef.current?.getElement()].filter(Boolean);
     if (!els.length) return;
@@ -424,16 +439,18 @@ function AnimatedRoute({ route, fading }) {
     return () => cancelAnimationFrame(raf);
   }, [fading]);
 
+  if (cleanPositions.length < 2) return null;
+
   return (
     <span>
       <Polyline
         ref={casingRef}
-        positions={route.positions}
+        positions={cleanPositions}
         pathOptions={{ color: "#ffffff", weight: 7, opacity: 0.9, interactive: false }}
       />
       <Polyline
         ref={lineRef}
-        positions={route.positions}
+        positions={cleanPositions}
         pathOptions={{ color: "#059669", weight: 4, opacity: 0.9, lineCap: "round", lineJoin: "round", interactive: false }}
       />
     </span>
@@ -443,7 +460,7 @@ function AnimatedRoute({ route, fading }) {
 function MapCameraController({ center, zoom, onMapDrag, onBoundsChange, flySignal, bearing, onUserRotate }) {
   const map = useMap();
   const isFirstRender = useRef(true);
-  const prevCenterRef = useRef(center);
+  const prevCenterRef = useRef(toLatLngTuple(center) || [10.3025, 123.9095]);
   const prevZoomRef = useRef(zoom);
   const centerRef = useRef(center);
   const zoomRef = useRef(zoom);
@@ -494,7 +511,8 @@ function MapCameraController({ center, zoom, onMapDrag, onBoundsChange, flySigna
   // recenter button sends identical center/zoom values; flySignal forces the fly.
   useEffect(() => {
     if (!flySignal) return;
-    map.flyTo(centerRef.current, zoomRef.current, { animate: true, duration: 0.8 });
+    const tuple = toLatLngTuple(centerRef.current);
+    if (tuple) map.flyTo(tuple, zoomRef.current, { animate: true, duration: 0.8 });
   }, [flySignal, map]);
 
   useEffect(() => {
@@ -544,17 +562,20 @@ function MapCameraController({ center, zoom, onMapDrag, onBoundsChange, flySigna
   }, [map]);
 
   useEffect(() => {
+    const tuple = toLatLngTuple(center);
+    if (!tuple) return;
+    const [lat, lng] = tuple;
+
     if (isFirstRender.current) {
       isFirstRender.current = false;
-      prevCenterRef.current = center;
+      prevCenterRef.current = [lat, lng];
       prevZoomRef.current = zoom;
       return;
     }
-    const [lat, lng] = center;
     const [prevLat, prevLng] = prevCenterRef.current || [];
     const centerChanged = lat !== prevLat || lng !== prevLng;
     const zoomChanged = zoom !== prevZoomRef.current;
-    if (centerChanged) prevCenterRef.current = center;
+    if (centerChanged) prevCenterRef.current = [lat, lng];
     if (zoomChanged) prevZoomRef.current = zoom;
     if (zoomChanged) {
       map.flyTo([lat, lng], zoom, { animate: true, duration: 0.8 });
@@ -652,8 +673,14 @@ export default function MapCanvas({ tickets = [], trucks = [], routes = [], mapM
   // next stop fades the old leg out while the new leg fades in; GPS wobble
   // on the origin vertex does not trigger a hand-off.
   const routeSig = (r) => {
+    if (!r) return "-";
     const last = r.positions?.[r.positions.length - 1];
-    return `${r.id}|${last ? `${last[0].toFixed(4)},${last[1].toFixed(4)}` : "-"}`;
+    if (!last) return `${r.id || "route"}|-`;
+    const lat = Array.isArray(last) ? last[0] : (last.lat ?? last.latitude);
+    const lng = Array.isArray(last) ? last[1] : (last.lng ?? last.longitude);
+    const latStr = typeof lat === "number" ? lat.toFixed(4) : "-";
+    const lngStr = typeof lng === "number" ? lng.toFixed(4) : "-";
+    return `${r.id || "route"}|${latStr},${lngStr}`;
   };
   const [fadingRoutes, setFadingRoutes] = useState([]);
   const prevRoutesRef = useRef(routes || []);

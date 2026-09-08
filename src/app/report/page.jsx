@@ -316,15 +316,7 @@ function Waze3DFocusTruckIcon({ className = "h-9 w-9" }) {
 
 function getTimeBasedGreeting(fullName = "Resident") {
   const name = fullName.split(" ")[0];
-  const hour = new Date().getHours();
-  if (hour >= 5 && hour < 12) {
-    return `Good morning, ${name}!`;
-  } else if (hour >= 12 && hour < 17) {
-    return `Good afternoon, ${name}!`;
-  } else if (hour >= 17 && hour < 22) {
-    return `Good evening, ${name}!`;
-  }
-  return `Hello, ${name}!`;
+  return `Hi, ${name}!`;
 }
 
 // Approximate meters along a lat/lng polyline (equirectangular projection —
@@ -422,8 +414,6 @@ export default function ResidentMobilePWA() {
 
   // The truck currently running a route: assigned, past idle, and actually
   // broadcasting (or finished). A paused/ended route (isActive false while
-  // enroute/onsite) is not live — residents fall back to the schedule banner
-  // instead of seeing a stale "Paused away" message.
   const activeTs = useMemo(
     () =>
       Object.values(live.trucks || {}).find(
@@ -502,28 +492,28 @@ export default function ResidentMobilePWA() {
     if (!activeTs || !activeSchedule) return null;
     if (activeTs.phase === "completed") {
       return {
-        id: "truck-live",
-        Icon: Waze3DTruckIcon,
+        id: "truck-live-completed",
+        mascot: "/mascot/star-pose.png",
         title: "Collection complete",
-        subtitle: "All pickups are done — see you next schedule!",
+        subtitle: "All pickups complete",
       };
     }
-    const point = activeSchedule.routePoints?.[activeTs.stopIndex];
+    const point = activeSchedule.routePoints?.[activeTs.stopIndex] || activeSchedule.routePoints?.[0];
     if (activeTs.onsite) {
       return {
-        id: "truck-live",
-        Icon: Waze3DTruckIcon,
+        id: "truck-live-arrived",
+        mascot: "/mascot/arms-open-pose.png",
         title: "Truck arrived",
         subtitle: `Collecting at ${point?.name ?? "your stop"}`,
       };
     }
     return {
-      id: "truck-live",
-      Icon: Waze3DTurnArrow,
+      id: "truck-live-enroute",
+      Icon: Waze3DTruckIcon,
       title:
         liveEta === "Arriving now"
           ? "Truck arriving now"
-          : `Truck is ${liveEta ?? "a few mins"} away`,
+          : `Truck is ${liveEta ?? "3 mins"} away`,
       subtitle: `Approaching ${point?.name ?? "your stop"}`,
     };
   }, [activeTs, activeSchedule, liveEta]);
@@ -566,8 +556,9 @@ export default function ResidentMobilePWA() {
     if (today) {
       const start = String(today.time || "").split("-")[0].trim();
       return {
-        id: "pickup-status",
+        id: "pickup-status-today",
         Icon: Waze3DCalendarIcon,
+        mascot: "/mascot/arms-open-pose.png",
         title: "Pickup today",
         subtitle: `${today.type}${start ? ` • ${start}` : ""}`,
       };
@@ -581,34 +572,77 @@ export default function ResidentMobilePWA() {
         const label = off === 1 ? "Tomorrow" : name;
         const start = String(hit.time || "").split("-")[0].trim();
         return {
-          id: "pickup-status",
+          id: "pickup-status-next",
           Icon: Waze3DCalendarIcon,
+          mascot: "/mascot/coffee-pose.png",
           title: "No pickup today",
           subtitle: `Next: ${label}${start ? ` at ${start}` : ""}`,
         };
       }
     }
     return {
-      id: "pickup-status",
+      id: "pickup-status-none",
       Icon: Waze3DCalendarIcon,
+      mascot: "/mascot/coffee-pose.png",
       title: "No pickup today",
-      subtitle: "No schedules posted yet",
+      subtitle: "No schedule posted",
     };
   }, [liveBanner, live]);
 
+  // Dynamic banner onboarding sequence: Step 0 (Greeting, 4s) -> Step 1 (Spotted Waste?, 4s) -> Step 2 (Schedule Status, Fixed)
+  const [bannerStep, setBannerStep] = useState(0);
+
+  useEffect(() => {
+    if (liveBanner) return;
+    const timer1 = setTimeout(() => {
+      setBannerStep(1);
+    }, 4000);
+    const timer2 = setTimeout(() => {
+      setBannerStep(2);
+    }, 8000);
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
+  }, [liveBanner]);
+
+  const idleBanners = useMemo(() => {
+    const list = [
+      {
+        id: "greeting",
+        mascot: "/mascot/star-pose.png",
+        title: greetingTitle,
+        subtitle: new Date().toLocaleDateString("en-US", {
+          weekday: "long",
+          month: "long",
+          day: "numeric",
+        }),
+      },
+      {
+        id: "report-action",
+        mascot: "/mascot/pointing-pose.png",
+        title: "Spotted Waste?",
+        subtitle: "Tap Report below",
+      },
+    ];
+
+    if (pickupStatus) {
+      list.push(pickupStatus);
+    }
+
+    return list;
+  }, [greetingTitle, pickupStatus]);
+
   const currentBanner = useMemo(() => {
     if (liveBanner) return liveBanner;
-    if (pickupStatus && pickupStatus.subtitle !== "No schedules posted yet") return pickupStatus;
-    return {
-      id: "greeting",
-      title: greetingTitle,
-      subtitle: new Date().toLocaleDateString("en-US", {
-        weekday: "long",
-        month: "long",
-        day: "numeric",
-      }),
-    };
-  }, [liveBanner, pickupStatus, greetingTitle]);
+    return idleBanners[bannerStep % idleBanners.length] || idleBanners[0];
+  }, [liveBanner, idleBanners, bannerStep]);
+
+  const handleHeaderClick = () => {
+    if (liveBanner) return;
+    setBannerStep((prev) => (prev + 1) % idleBanners.length);
+    haptic();
+  };
 
   // Modals for Header Profile
   const [showProfile, setShowProfile] = useState(false);
@@ -932,7 +966,7 @@ export default function ResidentMobilePWA() {
         {/* Waze-Style Flush Top Navigation Banner (Light Glass Theme - Dynamic Slide-from-Top Readout) */}
         <div className="pointer-events-auto absolute top-0 inset-x-0 z-20 w-full border-b border-border bg-card/98 px-5 py-4 text-foreground backdrop-blur-md flex items-center justify-between gap-3.5 select-none overflow-hidden h-20 shadow-sm">
           {/* Left: Dynamic 3D Vector SVG Icon & Dynamic Slide-from-Top Readout */}
-          <div className="min-w-0 flex-1 overflow-hidden relative h-14 flex items-center">
+          <div onClick={handleHeaderClick} className="min-w-0 flex-1 overflow-hidden relative h-14 flex items-center cursor-pointer">
             {!mapReady ? (
               <div className="flex items-center gap-3.5 w-full">
                 <div className="h-10 w-10 shrink-0 rounded-xl bg-foreground/10 animate-pulse" />
@@ -945,17 +979,25 @@ export default function ResidentMobilePWA() {
             <AnimatePresence mode="wait">
               <motion.div
                 key={currentBanner.id}
-                initial={{ y: -20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: 20, opacity: 0 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
                 transition={{ duration: 0.35, ease: "easeOut" }}
                 className="flex items-center gap-3.5 min-w-0 w-full"
               >
-                {currentBanner.Icon && (
+                {currentBanner.mascot ? (
+                  <div className="flex h-14 w-14 items-center justify-center shrink-0">
+                    <img
+                      src={currentBanner.mascot}
+                      alt="Binny Mascot"
+                      className="h-13 w-13 shrink-0 object-contain drop-shadow-xs"
+                    />
+                  </div>
+                ) : currentBanner.Icon ? (
                   <div className="flex h-10 w-10 items-center justify-center shrink-0">
                     <currentBanner.Icon className="h-8 w-8 shrink-0" />
                   </div>
-                )}
+                ) : null}
 
                 <div className="min-w-0 flex-1">
                   <h3 className="text-lg font-semibold tracking-tight text-foreground truncate leading-tight">

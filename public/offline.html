@@ -18,7 +18,7 @@
       background-repeat: no-repeat;
       background-position: top center;
       background-size: 100% auto;
-      color: #09090b;
+      color: #0f172a;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
@@ -33,65 +33,135 @@
         background-position: center;
       }
     }
+    .brand-logo {
+      height: 44px;
+      width: auto;
+      object-fit: contain;
+      margin-bottom: 24px;
+      mix-blend-mode: multiply;
+    }
+    .card {
+      background-color: #ffffff;
+      border: 1px solid #f4f4f5;
+      border-radius: 24px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
+      padding: 32px 24px;
+      max-width: 380px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background-color: #fff1f2;
+      border: 1px solid #ffe4e6;
+      color: #e11d48;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      margin-bottom: 20px;
+    }
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: #e11d48;
+      box-shadow: 0 0 0 2px rgba(225, 29, 72, 0.2);
+    }
     .icon-wrapper {
       color: #059669;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 16px;
-      width: 56px;
-      height: 56px;
-      border-radius: 16px;
+      margin-bottom: 20px;
+      width: 64px;
+      height: 64px;
+      border-radius: 20px;
       background-color: #ecfdf5;
       border: 1px solid #d1fae5;
+      box-shadow: 0 4px 12px -2px rgba(5, 150, 105, 0.12);
     }
     .icon-wrapper svg {
-      width: 28px;
-      height: 28px;
+      width: 32px;
+      height: 32px;
     }
     h1 {
-      font-size: 18px;
-      font-weight: 700;
-      color: #09090b;
+      font-size: 22px;
+      font-weight: 900;
+      color: #0f172a;
       margin-bottom: 8px;
-      letter-spacing: -0.01em;
+      letter-spacing: -0.02em;
     }
     p {
-      font-size: 13px;
-      color: #71717a;
+      font-size: 14px;
+      color: #52525b;
       line-height: 1.5;
-      max-width: 320px;
-      margin-bottom: 20px;
+      font-weight: 500;
+      margin-bottom: 24px;
+      max-width: 300px;
     }
     .btn {
+      width: 100%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
       background-color: #059669;
       color: #ffffff;
-      font-weight: 600;
-      font-size: 13px;
-      padding: 10px 24px;
-      border-radius: 10px;
+      font-weight: 700;
+      font-size: 14px;
+      padding: 12px 24px;
+      border-radius: 12px;
       border: none;
       cursor: pointer;
-      box-shadow: 0 1px 2px rgba(5, 150, 105, 0.2);
-      transition: background-color 0.2s, transform 0.1s;
+      box-shadow: 0 10px 20px -5px rgba(5, 150, 105, 0.3);
+      transition: all 0.2s ease;
     }
     .btn:hover {
       background-color: #047857;
+      transform: translateY(-1px);
+      box-shadow: 0 12px 24px -5px rgba(5, 150, 105, 0.4);
     }
     .btn:active {
-      transform: scale(0.98);
+      transform: translateY(0);
       background-color: #047857;
+    }
+    .btn svg {
+      width: 16px;
+      height: 16px;
     }
   </style>
 </head>
 <body>
-  <div class="icon-wrapper">
-    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 4.243a9 9 0 01-2.828-6.364 9 9 0 012.828-6.364m2.828 2.828a5 5 0 00-1.414 3.536c0 1.38.56 2.63 1.414 3.536m0 0L3 3" />
-    </svg>
+  <img src="/logo-green-v2.png" alt="Bin'Go Logo" class="brand-logo" />
+
+  <div class="card">
+    <div class="badge">
+      <span class="badge-dot"></span>
+      Offline Mode
+    </div>
+
+    <div class="icon-wrapper">
+      <svg fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 4.243a9 9 0 01-2.828-6.364 9 9 0 012.828-6.364m2.828 2.828a5 5 0 00-1.414 3.536c0 1.38.56 2.63 1.414 3.536m0 0L3 3" />
+      </svg>
+    </div>
+
+    <h1>You're Offline</h1>
+    <p>Check your internet connection, then try again. Bin'Go will reconnect automatically.</p>
+
+    <button class="btn" onclick="window.location.reload()">
+      <svg fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+      </svg>
+      Retry Connection
+    </button>
   </div>
-  <h1>You're Offline</h1>
-  <p>Check your internet connection, then try again.</p>
-  <button class="btn" onclick="window.location.reload()">Retry</button>
 </body>
 </html>

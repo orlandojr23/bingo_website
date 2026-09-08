@@ -241,8 +241,10 @@ export default function DriverPage() {
   const [mapZoom, setMapZoom] = useState(16);
   const [truckFocused, setTruckFocused] = useState(false);
   const [mapBounds, setMapBounds] = useState(null);
+  const [mapReady, setMapReady] = useState(false);
   const [flySignal, setFlySignal] = useState(0);
 
+  const handleMapReady = useCallback(() => setMapReady(true), []);
   const handleMapBoundsChange = useCallback((b) => setMapBounds(b), []);
   const isPointInView = useCallback(
     (lat, lng) =>
@@ -469,11 +471,7 @@ export default function DriverPage() {
 
   const driverName = (driverSession?.name || "Driver").split(" ")[0];
   const greetingTitle = useMemo(() => {
-    const hour = new Date().getHours();
-    if (hour >= 5 && hour < 12) return `Good morning, ${driverName}!`;
-    if (hour >= 12 && hour < 17) return `Good afternoon, ${driverName}!`;
-    if (hour >= 17 && hour < 22) return `Good evening, ${driverName}!`;
-    return `Hello, ${driverName}!`;
+    return `Hi, ${driverName}!`;
   }, [driverName]);
 
   const currentBanner = useMemo(() => {
@@ -530,7 +528,7 @@ export default function DriverPage() {
 
     return {
       id: "greeting",
-      Icon: null,
+      mascot: "/mascot/star-pose.png",
       title: greetingTitle,
       subtitle: `${new Date().toLocaleDateString("en-US", {
         weekday: "long",
@@ -924,11 +922,19 @@ export default function DriverPage() {
                 transition={{ duration: 0.35, ease: "easeOut" }}
                 className="flex items-center gap-3.5 min-w-0 w-full"
               >
-                {currentBanner.Icon && (
+                {currentBanner.mascot ? (
+                  <div className="flex h-14 w-14 items-center justify-center shrink-0">
+                    <img
+                      src={currentBanner.mascot}
+                      alt="Binny Mascot"
+                      className="h-13 w-13 shrink-0 object-contain drop-shadow-xs"
+                    />
+                  </div>
+                ) : currentBanner.Icon ? (
                   <div className="flex h-10 w-10 items-center justify-center shrink-0">
                     <currentBanner.Icon className="h-8 w-8 shrink-0" />
                   </div>
-                )}
+                ) : null}
 
                 <div className="min-w-0 flex-1">
                   <h3 className="text-lg font-semibold tracking-tight text-foreground truncate leading-tight">

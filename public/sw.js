@@ -7,6 +7,7 @@ const PRECACHE_ASSETS = [
   "/offline.html",
   "/icon.png",
   "/logo-green-v2.png",
+  "/hero-bg.svg",
   "/favicon.ico",
   "/manifest.webmanifest",
 ];
