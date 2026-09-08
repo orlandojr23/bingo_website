@@ -1389,7 +1389,7 @@ export default function ResidentMobilePWA() {
                           Report Dispatched
                         </h2>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          Ticket <span className="font-mono font-bold text-emerald-700">{submittedTicket.id}</span> assigned to Juan Dela Cruz.
+                          Ticket <span className="font-mono font-bold text-emerald-700">{submittedTicket.id}</span> submitted successfully & dispatched.
                         </p>
                       </div>
 

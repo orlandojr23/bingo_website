@@ -332,13 +332,13 @@ export const mockPilotData = {
       id: "TRK-01",
       plate: "GW-8821",
       capacity: "10 Tons",
-      driver: "Juan Dela Cruz"
+      driver: null
     },
     {
       id: "TRK-02",
       plate: "XYZ-1234",
       capacity: "12 Tons",
-      driver: "Pedro Reyes"
+      driver: null
     },
     {
       id: "TRK-03",
