@@ -3,10 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
+import ModernRobotCheckbox from "@/components/ui/ModernRobotCheckbox";
 import {
   User,
   Mail,
   Building2,
+  Phone,
   MessageSquare,
   Loader2,
   CheckCircle2,
@@ -38,6 +40,7 @@ export default function DemoPage() {
   const [email, setEmail] = useState("");
   const [org, setOrg] = useState("");
   const [message, setMessage] = useState("");
+  const [isCaptchaVerified, setIsCaptchaVerified] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
   const [success, setSuccess] = useState(false);
@@ -70,16 +73,17 @@ export default function DemoPage() {
     setErrors({});
 
     const newErrors = {};
-    if (name.trim().length < 2) {
-      newErrors.name = "Please enter your name (at least 2 characters).";
+    if (!name.trim()) {
+      newErrors.name = "Full name is required";
     }
     if (!email.trim()) {
-      newErrors.email = "Please enter your email address.";
-    } else if (!validateEmail(email)) {
-      newErrors.email = "Please enter a valid email address.";
+      newErrors.email = "Work email is required";
+    } else if (!validateEmail(email.trim())) {
+      newErrors.email = "Please enter a valid email address";
     }
-    if (org.trim().length < 2) {
-      newErrors.org = "Please tell us your barangay or organization.";
+
+    if (!isCaptchaVerified) {
+      newErrors.captcha = "Please check the box to verify you are not a robot.";
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -95,7 +99,7 @@ export default function DemoPage() {
   };
 
   const fieldClass = (hasError) =>
-    `w-full pl-11 pr-4 py-3.5 bg-zinc-50 border rounded-xl text-sm font-medium outline-none transition-all placeholder:text-zinc-400 text-zinc-900 disabled:opacity-60 resize-none ${
+    `w-full pl-11 pr-4 py-3 bg-white rounded-xl border text-sm font-medium text-zinc-900 transition-all outline-none disabled:opacity-60 disabled:cursor-not-allowed ${
       hasError
         ? "border-rose-300 focus:border-rose-400"
         : "border-zinc-200 focus:border-zinc-400"
@@ -128,17 +132,17 @@ export default function DemoPage() {
                 at {email.trim()} to schedule your walkthrough.
               </p>
               <Link
-                href="/#home"
-                className="mt-2 px-8 py-3 bg-zinc-900 text-white rounded-xl text-sm font-bold hover:bg-zinc-800 transition-colors"
+                href="/"
+                className="mt-4 px-6 py-2.5 bg-zinc-900 text-white rounded-xl text-xs font-bold hover:bg-zinc-800 transition-colors"
               >
                 Back to Home
               </Link>
             </div>
           ) : (
-            <form className="space-y-5" onSubmit={handleSubmit} noValidate>
+            <form onSubmit={handleSubmit} className="space-y-5" noValidate>
               <div className="space-y-1">
                 <label className="text-xs font-bold text-zinc-700 uppercase tracking-wider">
-                  Your Name
+                  Full Name <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-zinc-400">
@@ -150,17 +154,16 @@ export default function DemoPage() {
                     onChange={(e) => handleFieldChange("name", e.target.value, setName)}
                     disabled={isSubmitting}
                     className={fieldClass(!!errors.name)}
-                    placeholder="Ramon Villanueva"
+                    placeholder="e.g. Maria Santos"
                   />
                 </div>
-                <AnimatePresence initial={false}>
+                <AnimatePresence>
                   {errors.name && (
                     <motion.p
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.25, ease: "easeInOut" }}
-                      className="overflow-hidden mt-1 text-xs font-medium text-rose-500"
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0 }}
+                      className="text-xs font-semibold text-rose-500"
                     >
                       {errors.name}
                     </motion.p>
@@ -170,21 +173,12 @@ export default function DemoPage() {
 
               <div className="space-y-1">
                 <label className="text-xs font-bold text-zinc-700 uppercase tracking-wider">
-                  Email Address
+                  Work Email <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-zinc-400 z-10">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-zinc-400">
                     <Mail className="w-5 h-5" />
                   </div>
-                  {emailSuggestionSuffix && (
-                    <div
-                      className="absolute inset-0 pl-11 pr-4 py-3.5 flex items-center pointer-events-none text-sm font-medium whitespace-pre overflow-hidden z-10"
-                      aria-hidden="true"
-                    >
-                      <span className="opacity-0">{email}</span>
-                      <span className="text-zinc-400/60 select-none">{emailSuggestionSuffix}</span>
-                    </div>
-                  )}
                   <input
                     type="email"
                     value={email}
@@ -192,17 +186,26 @@ export default function DemoPage() {
                     onKeyDown={handleEmailKeyDown}
                     disabled={isSubmitting}
                     className={fieldClass(!!errors.email)}
-                    placeholder="ramon.villanueva@gmail.com"
+                    placeholder="maria@barangay.gov.ph"
                   />
+                  {emailSuggestionSuffix && !errors.email && (
+                    <div className="absolute inset-y-0 left-0 pl-11 flex items-center pointer-events-none overflow-hidden pr-4">
+                      <span className="text-sm font-medium opacity-0 select-none whitespace-pre">
+                        {email}
+                      </span>
+                      <span className="text-sm font-medium text-zinc-400/60 select-none pointer-events-none">
+                        {emailSuggestionSuffix}
+                      </span>
+                    </div>
+                  )}
                 </div>
-                <AnimatePresence initial={false}>
+                <AnimatePresence>
                   {errors.email && (
                     <motion.p
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.25, ease: "easeInOut" }}
-                      className="overflow-hidden mt-1 text-xs font-medium text-rose-500"
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0 }}
+                      className="text-xs font-semibold text-rose-500"
                     >
                       {errors.email}
                     </motion.p>
@@ -212,7 +215,7 @@ export default function DemoPage() {
 
               <div className="space-y-1">
                 <label className="text-xs font-bold text-zinc-700 uppercase tracking-wider">
-                  Barangay / Organization
+                  Barangay / Organization (optional)
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-zinc-400">
@@ -223,23 +226,10 @@ export default function DemoPage() {
                     value={org}
                     onChange={(e) => handleFieldChange("org", e.target.value, setOrg)}
                     disabled={isSubmitting}
-                    className={fieldClass(!!errors.org)}
-                    placeholder="Brgy. Tejero, Cebu City"
+                    className={fieldClass(false)}
+                    placeholder="e.g. Barangay Poblacion"
                   />
                 </div>
-                <AnimatePresence initial={false}>
-                  {errors.org && (
-                    <motion.p
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.25, ease: "easeInOut" }}
-                      className="overflow-hidden mt-1 text-xs font-medium text-rose-500"
-                    >
-                      {errors.org}
-                    </motion.p>
-                  )}
-                </AnimatePresence>
               </div>
 
               <div className="space-y-1">
@@ -259,6 +249,24 @@ export default function DemoPage() {
                     placeholder="What would you like to see? e.g. live truck tracking, dispatch dashboard..."
                   />
                 </div>
+              </div>
+
+              {/* Modern I'm Not A Robot Checkbox Widget */}
+              <div className="pt-2">
+                <ModernRobotCheckbox
+                  onVerify={(val) => {
+                    setIsCaptchaVerified(val);
+                    if (errors.captcha) {
+                      setErrors((prev) => {
+                        const next = { ...prev };
+                        delete next.captcha;
+                        return next;
+                      });
+                    }
+                  }}
+                  isVerified={isCaptchaVerified}
+                  errorMsg={errors.captcha}
+                />
               </div>
 
               <div className="pt-2">

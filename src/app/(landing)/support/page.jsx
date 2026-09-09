@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
+import ModernRobotCheckbox from "@/components/ui/ModernRobotCheckbox";
 import {
   User,
   Mail,
@@ -36,6 +37,7 @@ export default function SupportPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
+  const [captchaToken, setCaptchaToken] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
   const [success, setSuccess] = useState(false);
@@ -78,6 +80,10 @@ export default function SupportPage() {
     }
     if (message.trim().length < 10) {
       newErrors.message = "Please provide a bit more detail (at least 10 characters).";
+    }
+
+    if (!captchaToken) {
+      newErrors.captcha = "Please complete the anti-bot verification check.";
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -238,6 +244,23 @@ export default function SupportPage() {
                     </motion.p>
                   )}
                 </AnimatePresence>
+              </div>
+
+              {/* Modern "I'm not a robot" Checkbox CAPTCHA */}
+              <div className="pt-2">
+                <ModernRobotCheckbox
+                  onVerify={(token) => {
+                    setCaptchaToken(token);
+                    if (errors.captcha) {
+                      setErrors((prev) => {
+                        const next = { ...prev };
+                        delete next.captcha;
+                        return next;
+                      });
+                    }
+                  }}
+                  error={errors.captcha}
+                />
               </div>
 
               <div className="pt-2">
