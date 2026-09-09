@@ -68,7 +68,7 @@ export default function DemoPage() {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setErrors({});
 
@@ -92,10 +92,26 @@ export default function DemoPage() {
     }
 
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      if (typeof isCaptchaVerified === "string") {
+        const verifyRes = await fetch("/api/verify-turnstile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: isCaptchaVerified, action: "demo" }),
+        });
+        const verifyData = await verifyRes.json();
+        if (!verifyData.success && verifyData.error !== "Missing Turnstile secret key") {
+          setErrors({ captcha: "Anti-bot verification failed. Please try again." });
+          setIsSubmitting(false);
+          return;
+        }
+      }
       setSuccess(true);
-    }, 1200);
+    } catch {
+      setSuccess(true);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const fieldClass = (hasError) =>
