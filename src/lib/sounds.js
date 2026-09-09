@@ -60,6 +60,9 @@ export function setSoundEnabled(enabled) {
     // storage unavailable — the in-memory preference still applies
   }
   for (const listener of prefListeners) listener();
+  if (enabled) {
+    playDing();
+  }
 }
 
 function subscribePref(listener) {

@@ -1132,7 +1132,7 @@ export default function DriverPage() {
                   transition={{ duration: 0.25, ease: "easeInOut" }}
                   className="overflow-hidden"
                 >
-                  <div className="h-[340px] overflow-y-auto space-y-4 pr-0.5 pt-1 px-4 pb-4 scrollbar-hide">
+                  <div className="h-[340px] overflow-y-auto space-y-4 pt-1 px-4 pb-4 scrollbar-hide">
 
                     {/* Tab 1: Route & Telemetry Controls */}
                     {activeTab === "route" && (
@@ -1311,7 +1311,7 @@ export default function DriverPage() {
         onClose={() => setShowProfile(false)}
         title="Driver Terminal & Settings"
       >
-        <div className="h-[362px] overflow-y-auto space-y-4 pr-0.5 pt-2 scrollbar-hide">
+        <div className="h-[362px] overflow-y-auto space-y-4 pt-2 scrollbar-hide">
           {/* Driver Profile Summary Card */}
           <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4">
             <div className="flex h-13 w-13 items-center justify-center rounded-full bg-emerald-600 text-2xl font-semibold leading-none text-white shadow-sm shrink-0">
