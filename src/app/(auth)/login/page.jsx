@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, Loader2, CheckCircle2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
@@ -55,6 +55,7 @@ export default function ResidentLoginPage() {
   const [otpError, setOtpError] = useState("");
   const [isResending, setIsResending] = useState(false);
   const [resendStatus, setResendStatus] = useState("");
+  const [resendTimer, setResendTimer] = useState(60);
 
   const emailSuggestionSuffix = getEmailSuggestionSuffix(email);
 
@@ -65,6 +66,27 @@ export default function ResidentLoginPage() {
       }
     });
   }, [router]);
+
+  useEffect(() => {
+    let interval = null;
+    if (needsOtp && resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [needsOtp, resendTimer]);
+
+  useEffect(() => {
+    if (resendStatus) {
+      const timer = setTimeout(() => {
+        setResendStatus("");
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendStatus]);
 
   const handleFieldChange = (field, value, setter) => {
     setter(value);
@@ -88,6 +110,7 @@ export default function ResidentLoginPage() {
   };
 
   const handleResendOtp = async () => {
+    if (resendTimer > 0 || isResending) return;
     setIsResending(true);
     setResendStatus("");
     setOtpError("");
@@ -100,6 +123,7 @@ export default function ResidentLoginPage() {
       setOtpError(error.message);
     } else {
       setResendStatus("A new 6-digit code has been sent to your email.");
+      setResendTimer(60);
     }
   };
 
@@ -132,6 +156,7 @@ export default function ResidentLoginPage() {
 
     if (signInError) {
       if (signInError.message.toLowerCase().includes("not confirmed")) {
+        setResendTimer(60);
         setNeedsOtp(true);
         setIsLoading(false);
         setResendStatus("A new 6-digit verification code has been automatically sent to your email.");
@@ -208,11 +233,20 @@ export default function ResidentLoginPage() {
 
         {needsOtp ? (
           <form className="flex flex-col gap-4" onSubmit={handleVerifyOtp} noValidate>
-            {resendStatus && (
-              <p className="rounded-lg bg-emerald-500/10 p-3 text-center text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                {resendStatus}
-              </p>
-            )}
+            <AnimatePresence>
+              {resendStatus && (
+                <motion.div
+                  initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -6, scale: 0.98 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className="flex items-center justify-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3.5 py-2.5 text-center text-xs font-medium text-emerald-600 dark:text-emerald-400 backdrop-blur-sm"
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                  <span>{resendStatus}</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             <div className="flex flex-col gap-1.5">
               <input
@@ -260,10 +294,14 @@ export default function ResidentLoginPage() {
               <button
                 type="button"
                 onClick={handleResendOtp}
-                disabled={isResending}
-                className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 disabled:opacity-50 transition-colors"
+                disabled={isResending || resendTimer > 0}
+                className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 disabled:text-muted-foreground/60 disabled:cursor-not-allowed transition-colors"
               >
-                {isResending ? "Sending code..." : "Resend Code"}
+                {isResending
+                  ? "Sending code..."
+                  : resendTimer > 0
+                  ? `Resend Code (${resendTimer}s)`
+                  : "Resend Code"}
               </button>
               <button
                 type="button"

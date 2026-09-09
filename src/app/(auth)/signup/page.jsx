@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { User, Mail, Lock, Eye, EyeOff, Loader2, MapPin, ChevronDown } from "lucide-react";
+import { User, Mail, Lock, Eye, EyeOff, Loader2, MapPin, ChevronDown, CheckCircle2, Check, Phone } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase";
 import { TEJERO_SITOS, PILOT_AREA } from "@/lib/mock-data";
@@ -17,6 +17,21 @@ const SITIO_OPTIONS = Object.keys(TEJERO_SITOS);
 const PUBLIC_DOMAINS = ["gmail.com", "yahoo.com", "outlook.com", "hotmail.com", "icloud.com"];
 
 const validateEmail = (emailStr) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailStr);
+
+const validatePhPhone = (phoneStr) => {
+  const clean = phoneStr.trim().replace(/[\s-]/g, "");
+  if (!clean) return "Please enter your mobile number.";
+  if (clean.startsWith("+63")) {
+    if (!clean.startsWith("+639")) return "PH mobile number must start with +639 (e.g. +639171234567) or 09.";
+    if (clean.length !== 13) return "PH mobile number with +639 must be 13 characters.";
+    if (!/^\+639\d{9}$/.test(clean)) return "Please enter a valid PH mobile number.";
+  } else {
+    if (!clean.startsWith("09")) return "PH mobile number must start with 09 (e.g. 09171234567).";
+    if (clean.length !== 11) return "PH mobile number must be exactly 11 digits (e.g. 09171234567).";
+    if (!/^09\d{9}$/.test(clean)) return "Please enter a valid PH mobile number.";
+  }
+  return null;
+};
 
 const getEmailSuggestionSuffix = (emailVal, domains = PUBLIC_DOMAINS) => {
   if (!emailVal || emailVal.includes(" ")) return "";
@@ -62,7 +77,9 @@ function ErrorLine({ message }) {
 
 export default function SignupPage() {
   const router = useRouter();
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [sitio, setSitio] = useState("");
   const [password, setPassword] = useState("");
@@ -75,8 +92,21 @@ export default function SignupPage() {
   const [otpError, setOtpError] = useState("");
   const [isResending, setIsResending] = useState(false);
   const [resendStatus, setResendStatus] = useState("");
+  const [resendTimer, setResendTimer] = useState(60);
+  const [isSitioOpen, setIsSitioOpen] = useState(false);
+  const sitioDropdownRef = useRef(null);
 
   const emailSuggestionSuffix = getEmailSuggestionSuffix(email);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (sitioDropdownRef.current && !sitioDropdownRef.current.contains(e.target)) {
+        setIsSitioOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -85,6 +115,27 @@ export default function SignupPage() {
       }
     });
   }, [router]);
+
+  useEffect(() => {
+    let interval = null;
+    if (needsOtp && resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [needsOtp, resendTimer]);
+
+  useEffect(() => {
+    if (resendStatus) {
+      const timer = setTimeout(() => {
+        setResendStatus("");
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendStatus]);
 
   const handleFieldChange = (field, value, setter) => {
     setter(value);
@@ -108,6 +159,7 @@ export default function SignupPage() {
   };
 
   const handleResendOtp = async () => {
+    if (resendTimer > 0 || isResending) return;
     setIsResending(true);
     setResendStatus("");
     setOtpError("");
@@ -120,6 +172,7 @@ export default function SignupPage() {
       setOtpError(error.message);
     } else {
       setResendStatus("A new 6-digit code has been sent to your email.");
+      setResendTimer(60);
     }
   };
 
@@ -127,8 +180,15 @@ export default function SignupPage() {
     e.preventDefault();
 
     const newErrors = {};
-    if (name.trim().length < 2) {
-      newErrors.name = "Please enter your full name (at least 2 characters).";
+    if (firstName.trim().length < 2) {
+      newErrors.firstName = "Please enter your first name.";
+    }
+    if (lastName.trim().length < 2) {
+      newErrors.lastName = "Please enter your last name.";
+    }
+    const phoneErr = validatePhPhone(phone);
+    if (phoneErr) {
+      newErrors.phone = phoneErr;
     }
     if (!email.trim()) {
       newErrors.email = "Please enter your email address.";
@@ -140,8 +200,12 @@ export default function SignupPage() {
     }
     if (!password) {
       newErrors.password = "Please create a password.";
-    } else if (password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters.";
+    } else if (password.length < 8) {
+      newErrors.password = "Password must be at least 8 characters long.";
+    } else if (!/[a-zA-Z]/.test(password)) {
+      newErrors.password = "Password must contain at least one letter.";
+    } else if (!/\d/.test(password)) {
+      newErrors.password = "Password must contain at least one number.";
     }
     if (!confirm) {
       newErrors.confirm = "Please re-enter your password.";
@@ -157,6 +221,7 @@ export default function SignupPage() {
     setIsLoading(true);
 
     const trimmedEmail = email.trim().toLowerCase();
+    const fullName = `${firstName.trim()} ${lastName.trim()}`;
     const { data, error: signUpError } = await supabase.auth.signUp({
       email: trimmedEmail,
       password,
@@ -164,7 +229,10 @@ export default function SignupPage() {
         emailRedirectTo: `${window.location.origin}/report`,
         data: {
           role: 'resident',
-          full_name: name.trim(),
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+          full_name: fullName,
+          phone: cleanPhone,
           sitio: sitio,
           barangay: PILOT_AREA.barangay
         }
@@ -177,6 +245,7 @@ export default function SignupPage() {
       return;
     }
 
+    setResendTimer(60);
     setNeedsOtp(true);
     setIsLoading(false);
   };
@@ -238,11 +307,20 @@ export default function SignupPage() {
 
         {needsOtp ? (
           <form className="flex flex-col gap-4" onSubmit={handleVerifyOtp} noValidate>
-            {resendStatus && (
-              <p className="rounded-lg bg-emerald-500/10 p-3 text-center text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                {resendStatus}
-              </p>
-            )}
+            <AnimatePresence>
+              {resendStatus && (
+                <motion.div
+                  initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -6, scale: 0.98 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className="flex items-center justify-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3.5 py-2.5 text-center text-xs font-medium text-emerald-600 dark:text-emerald-400 backdrop-blur-sm"
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                  <span>{resendStatus}</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             <div className="flex flex-col gap-1.5">
               <input
@@ -277,10 +355,14 @@ export default function SignupPage() {
               <button
                 type="button"
                 onClick={handleResendOtp}
-                disabled={isResending}
-                className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 disabled:opacity-50 transition-colors"
+                disabled={isResending || resendTimer > 0}
+                className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 disabled:text-muted-foreground/60 disabled:cursor-not-allowed transition-colors"
               >
-                {isResending ? "Sending code..." : "Resend Code"}
+                {isResending
+                  ? "Sending code..."
+                  : resendTimer > 0
+                  ? `Resend Code (${resendTimer}s)`
+                  : "Resend Code"}
               </button>
               <button
                 type="button"
@@ -293,29 +375,81 @@ export default function SignupPage() {
           </form>
         ) : (
           <form className="flex flex-col gap-4" onSubmit={handleSignup} noValidate>
-          <div className="flex flex-col gap-1.5">
-            <div className="relative">
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-muted-foreground/70">
-                <User className="h-4 w-4" />
+            {/* First Name & Last Name */}
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="flex flex-col gap-1.5">
+                <div className="relative">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-muted-foreground/70">
+                    <User className="h-4 w-4" />
+                  </div>
+                  <input
+                    type="text"
+                    value={firstName}
+                    onChange={(e) =>
+                      handleFieldChange(
+                        "firstName",
+                        e.target.value.replace(/[^a-zA-ZÀ-ÿÑñ'’ .-]/g, "").replace(/\s{2,}/g, " "),
+                        setFirstName
+                      )
+                    }
+                    maxLength={35}
+                    autoComplete="given-name"
+                    className={fieldClass(!!errors.firstName)}
+                    placeholder="First name"
+                  />
+                </div>
+                <ErrorLine message={errors.firstName} />
               </div>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) =>
-                  handleFieldChange(
-                    "name",
-                    e.target.value.replace(/[^a-zA-ZÀ-ÿÑñ'’ .-]/g, "").replace(/\s{2,}/g, " "),
-                    setName
-                  )
-                }
-                maxLength={60}
-                autoComplete="name"
-                className={fieldClass(!!errors.name)}
-                placeholder="Full name"
-              />
+
+              <div className="flex flex-col gap-1.5">
+                <div className="relative">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-muted-foreground/70">
+                    <User className="h-4 w-4" />
+                  </div>
+                  <input
+                    type="text"
+                    value={lastName}
+                    onChange={(e) =>
+                      handleFieldChange(
+                        "lastName",
+                        e.target.value.replace(/[^a-zA-ZÀ-ÿÑñ'’ .-]/g, "").replace(/\s{2,}/g, " "),
+                        setLastName
+                      )
+                    }
+                    maxLength={35}
+                    autoComplete="family-name"
+                    className={fieldClass(!!errors.lastName)}
+                    placeholder="Last name"
+                  />
+                </div>
+                <ErrorLine message={errors.lastName} />
+              </div>
             </div>
-            <ErrorLine message={errors.name} />
-          </div>
+
+            {/* Mobile / Contact Number */}
+            <div className="flex flex-col gap-1.5">
+              <div className="relative">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-muted-foreground/70">
+                  <Phone className="h-4 w-4" />
+                </div>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) =>
+                    handleFieldChange(
+                      "phone",
+                      e.target.value.replace(/[^\d+]/g, "").slice(0, 13),
+                      setPhone
+                    )
+                  }
+                  maxLength={13}
+                  autoComplete="tel"
+                  className={fieldClass(!!errors.phone)}
+                  placeholder="Mobile number (09171234567)"
+                />
+              </div>
+              <ErrorLine message={errors.phone} />
+            </div>
 
           <div className="flex flex-col gap-1.5">
             <div className="relative">
@@ -354,53 +488,74 @@ export default function SignupPage() {
           <div className="flex flex-col gap-2.5">
             <div className="grid grid-cols-2 gap-2.5">
               {[
-                { label: "Region", value: PILOT_AREA.region },
-                { label: "Province", value: PILOT_AREA.province },
-                { label: "City / Municipality", value: PILOT_AREA.city },
-                { label: "Barangay", value: PILOT_AREA.barangay },
+                { label: "Region", value: PILOT_AREA.region, fullWidth: true },
+                { label: "Province", value: PILOT_AREA.province, fullWidth: false },
+                { label: "City / Municipality", value: PILOT_AREA.city, fullWidth: false },
+                { label: "Barangay", value: PILOT_AREA.barangay, fullWidth: true },
               ].map((field) => (
-                <div key={field.label} className="flex flex-col gap-1">
+                <div key={field.label} className={`flex flex-col gap-1 ${field.fullWidth ? "col-span-2" : "col-span-1"}`}>
                   <span className="pl-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
                     {field.label}
                   </span>
-                  <select
-                    aria-label={field.label}
-                    className="w-full cursor-pointer rounded-xl border border-border bg-card px-3 py-2.5 text-xs font-semibold text-foreground outline-none transition-colors hover:border-zinc-300 focus:border-zinc-400"
-                  >
-                    <option value={field.value}>{field.value}</option>
-                  </select>
+                  <div className="flex min-h-[42px] w-full items-center rounded-xl border border-border/70 bg-card px-3.5 py-2.5 text-xs font-semibold text-foreground/80 leading-normal">
+                    <span>{field.value}</span>
+                  </div>
                 </div>
               ))}
             </div>
 
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1" ref={sitioDropdownRef}>
               <span className="pl-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
                 Sitio
               </span>
               <div className="relative">
-                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-muted-foreground/70">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-muted-foreground/70 z-10">
                   <MapPin className="h-4 w-4" />
                 </div>
-                <select
-                  value={sitio}
-                  onChange={(e) => handleFieldChange("sitio", e.target.value, setSitio)}
-                  aria-label={`Home sitio in ${process.env.NEXT_PUBLIC_BARANGAY_NAME || "Barangay"}`}
-                  className={`${fieldClass(!!errors.sitio)} cursor-pointer appearance-none ${
+                <button
+                  type="button"
+                  onClick={() => setIsSitioOpen((prev) => !prev)}
+                  className={`${fieldClass(!!errors.sitio)} flex items-center justify-between text-left cursor-pointer ${
                     sitio ? "text-foreground font-medium" : "text-muted-foreground/60"
                   }`}
                 >
-                  <option value="" disabled className="text-zinc-400 bg-white dark:bg-zinc-900">
-                    Select your sitio
-                  </option>
-                  {SITIO_OPTIONS.map((s) => (
-                    <option key={s} value={s} className="text-zinc-900 bg-white font-semibold dark:bg-zinc-900 dark:text-zinc-100">
-                      {s}
-                    </option>
-                  ))}
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5 text-muted-foreground/70">
-                  <ChevronDown className="h-4 w-4" />
-                </div>
+                  <span className="truncate">{sitio || "Select your sitio"}</span>
+                  <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground/70 transition-transform duration-200 ${isSitioOpen ? "rotate-180" : ""}`} />
+                </button>
+
+                <AnimatePresence>
+                  {isSitioOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -4, scale: 0.98 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -4, scale: 0.98 }}
+                      transition={{ duration: 0.15, ease: "easeOut" }}
+                      className="absolute left-0 right-0 top-full z-50 mt-1.5 max-h-56 overflow-y-auto rounded-xl border border-border bg-card py-1.5 shadow-xl backdrop-blur-md"
+                    >
+                      {SITIO_OPTIONS.map((s) => {
+                        const isSelected = sitio === s;
+                        return (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => {
+                              handleFieldChange("sitio", s, setSitio);
+                              setIsSitioOpen(false);
+                            }}
+                            className={`flex w-full items-center justify-between px-3.5 py-2.5 text-xs font-semibold transition-colors ${
+                              isSelected
+                                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold"
+                                : "text-foreground hover:bg-emerald-500/10 hover:text-emerald-600"
+                            }`}
+                          >
+                            <span>{s}</span>
+                            {isSelected && <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />}
+                          </button>
+                        );
+                      })}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
             <ErrorLine message={errors.sitio} />
@@ -430,6 +585,19 @@ export default function SignupPage() {
               </button>
             </div>
             <PasswordStrengthHint password={password} />
+            {password && (
+              <div className="flex flex-wrap gap-x-3 gap-y-1 pt-0.5 text-[11px] font-medium text-muted-foreground/70">
+                <span className={password.length >= 8 ? "text-emerald-600 dark:text-emerald-400 font-semibold" : ""}>
+                  {password.length >= 8 ? "✓" : "•"} 8+ characters
+                </span>
+                <span className={/[a-zA-Z]/.test(password) ? "text-emerald-600 dark:text-emerald-400 font-semibold" : ""}>
+                  {/[a-zA-Z]/.test(password) ? "✓" : "•"} 1 letter
+                </span>
+                <span className={/\d/.test(password) ? "text-emerald-600 dark:text-emerald-400 font-semibold" : ""}>
+                  {/\d/.test(password) ? "✓" : "•"} 1 number
+                </span>
+              </div>
+            )}
             <ErrorLine message={errors.password} />
           </div>
 

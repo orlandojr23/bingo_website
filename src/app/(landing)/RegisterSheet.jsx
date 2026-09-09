@@ -153,17 +153,23 @@ export default function RegisterSheet({ isOpen, onClose }) {
 
     setIsSubmitting(true);
 
+    const nameParts = fullName.trim().split(" ");
+    const firstName = nameParts[0] || fullName.trim();
+    const lastName = nameParts.slice(1).join(" ") || "";
+
     // Register
     const { error: signUpError } = await supabase.auth.signUp({
       email: email.trim().toLowerCase(),
       password,
       options: {
         data: {
+          first_name: firstName,
+          last_name: lastName,
           full_name: fullName.trim(),
           phone: phone.trim(),
-          barangay: "Barangay Tejero, Cebu City",
+          barangay: "Tejero",
           sitio: sitio,
-          role: "citizen",
+          role: "resident",
         },
       },
     });
