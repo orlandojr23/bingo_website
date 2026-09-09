@@ -21,15 +21,21 @@ export default function ModernRobotCheckbox({ onVerify, error }) {
   return (
     <div className="w-full flex flex-col items-center">
       {siteKey ? (
-        <Turnstile
-          siteKey={siteKey}
-          onSuccess={(token) => {
-            setStatus("verified");
-            if (onVerify) onVerify(token);
-          }}
-          onError={() => setStatus("idle")}
-          onExpire={() => setStatus("idle")}
-        />
+        <div className="flex justify-center w-full py-1">
+          <Turnstile
+            siteKey={siteKey}
+            onSuccess={(token) => {
+              setStatus("verified");
+              if (onVerify) onVerify(token);
+            }}
+            onError={() => setStatus("idle")}
+            onExpire={() => setStatus("idle")}
+            options={{
+              theme: "light",
+              size: "normal",
+            }}
+          />
+        </div>
       ) : (
         /* Cloudflare Turnstile Styled Checkbox Widget */
         <div

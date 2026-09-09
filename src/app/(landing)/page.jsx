@@ -92,7 +92,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative w-full z-10">
           
           {/* Single Grid switching between left and right layout orders */}
-          <div className={`w-full flex flex-col lg:flex-row items-center justify-center gap-8 sm:gap-12 lg:gap-16 xl:gap-20 ${sectionSettled ? "" : "invisible"} ${
+          <div className={`w-full flex flex-col lg:flex-row items-center justify-center gap-8 sm:gap-12 lg:gap-16 xl:gap-20 ${
             activeSection === "about" || activeSection === "faq" ? "lg:flex-row-reverse" : "lg:flex-row"
           }`}>
             
