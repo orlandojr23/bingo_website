@@ -94,6 +94,7 @@ export default function LandingLayout({ children }) {
     window.addEventListener("popstate", handleHashChange);
     handleHashChange();
     
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
     return () => {
       window.removeEventListener("hashchange", handleHashChange);
       window.removeEventListener("popstate", handleHashChange);
@@ -223,9 +224,9 @@ export default function LandingLayout({ children }) {
       </header>
       <motion.main
         key={pathname}
-        initial={{ opacity: 0, y: 4 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, ease: "easeInOut" }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.2, ease: "easeOut" }}
         className="flex-1"
       >
         {children}

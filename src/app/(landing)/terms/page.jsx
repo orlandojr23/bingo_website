@@ -27,9 +27,9 @@ export default function TermsOfServicePage() {
 
         {/* Content Section */}
         <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.25 }}
           className="bg-white rounded-3xl shadow-sm border border-zinc-200 p-6 sm:p-12 space-y-8 sm:space-y-12"
         >
           {/* Term Item */}
