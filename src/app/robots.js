@@ -1,4 +1,4 @@
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://simplybingo.onrender.com";
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://simplybingo.vercel.app";
 
 export default function robots() {
   return {
