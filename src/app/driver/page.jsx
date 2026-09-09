@@ -100,37 +100,84 @@ function Waze3DFocusTruckIcon({ className = "h-9 w-9" }) {
 
 function Waze3DHeaderTruckIcon({ className = "h-8 w-8" }) {
   return (
-    <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+    <svg viewBox="0 0 44 36" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
       <defs>
-        <linearGradient id="driverHeaderTruckBody" x1="0%" y1="0%" x2="100%" y2="100%">
+        <filter id="driverSideTruckShadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="1.5" stdDeviation="1" floodColor="#0f172a" floodOpacity="0.3" />
+        </filter>
+        <linearGradient id="driverSideBodyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" stopColor="#34d399" />
-          <stop offset="50%" stopColor="#10b981" />
+          <stop offset="40%" stopColor="#10b981" />
+          <stop offset="100%" stopColor="#059669" />
+        </linearGradient>
+        <linearGradient id="driverSideCabGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#10b981" />
           <stop offset="100%" stopColor="#047857" />
         </linearGradient>
-        <linearGradient id="driverHeaderTruckCab" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#059669" />
-          <stop offset="100%" stopColor="#064e3b" />
-        </linearGradient>
-        <linearGradient id="driverHeaderTruckWindshield" x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient id="driverSideWindowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#e0f2fe" />
           <stop offset="100%" stopColor="#38bdf8" />
         </linearGradient>
-        <filter id="driverHeaderTruckShadow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="1.5" stdDeviation="1" floodColor="#000000" floodOpacity="0.35" />
-        </filter>
       </defs>
-      <g filter="url(#driverHeaderTruckShadow)">
-        <rect x="4" y="10" width="16" height="13" rx="2.5" fill="url(#driverHeaderTruckBody)" />
-        <line x1="8" y1="12" x2="8" y2="21" stroke="#065f46" strokeWidth="1.2" />
-        <line x1="12" y1="12" x2="12" y2="21" stroke="#065f46" strokeWidth="1.2" />
-        <line x1="16" y1="12" x2="16" y2="21" stroke="#065f46" strokeWidth="1.2" />
-        <path d="M 20 13 H 28 C 30 13 31 14.8 31 16.5 L 31 23 H 20 V 13 Z" fill="url(#driverHeaderTruckCab)" />
-        <path d="M 22 14.5 H 28 L 29 18.5 H 22 V 14.5 Z" fill="url(#driverHeaderTruckWindshield)" />
-        <rect x="29.5" y="20.5" width="2" height="2.5" rx="0.5" fill="#f4f4f5" />
-        <circle cx="9" cy="24" r="3.2" fill="#18181b" />
-        <circle cx="9" cy="24" r="1.3" fill="#e4e4e7" />
-        <circle cx="25" cy="24" r="3.2" fill="#18181b" />
-        <circle cx="25" cy="24" r="1.3" fill="#e4e4e7" />
+
+      <g filter="url(#driverSideTruckShadow)">
+        {/* Chassis Under-Frame */}
+        <rect x="5" y="24" width="34" height="3" rx="1" fill="#0f172a" />
+
+        {/* --- REAR COMPACTOR CONTAINER --- */}
+        {/* Main Compactor Body Box */}
+        <path d="M 5 9 C 5 7.5 6.2 6.5 7.5 6.5 H 25 V 24 H 5 V 9 Z" fill="url(#driverSideBodyGrad)" stroke="#047857" strokeWidth="0.8" />
+        
+        {/* Top 3D Roof Highlight Plate */}
+        <path d="M 7 7.5 H 25 V 10.5 H 6.5 C 6.5 9.5 7 7.5 7 7.5 Z" fill="#6ee7b7" opacity="0.65" />
+
+        {/* Compactor Rib Grooves */}
+        <line x1="10" y1="7" x2="10" y2="23" stroke="#047857" strokeWidth="1.2" />
+        <line x1="15" y1="7" x2="15" y2="23" stroke="#047857" strokeWidth="1.2" />
+        <line x1="20" y1="7" x2="20" y2="23" stroke="#047857" strokeWidth="1.2" />
+
+        {/* Yellow Hazard Accents on Body */}
+        <rect x="5.5" y="14" width="3" height="1.8" rx="0.4" fill="#facc15" />
+        <rect x="5.5" y="18" width="3" height="1.8" rx="0.4" fill="#facc15" />
+
+        {/* Rear Hopper Loader Unit */}
+        <path d="M 2.5 13 L 5 11 V 24 H 3 C 2.5 24 2 23.5 2 23 V 14 C 2 13.5 2.2 13 2.5 13 Z" fill="#064e3b" stroke="#047857" strokeWidth="0.6" />
+        <rect x="1.5" y="21" width="2" height="2" rx="0.5" fill="#facc15" />
+
+        {/* --- FRONT DRIVER CAB --- */}
+        {/* Cab Hood Structure */}
+        <path d="M 25 11 H 35 C 37.5 11 39 12.8 39 15 V 24 H 25 V 11 Z" fill="url(#driverSideCabGrad)" stroke="#047857" strokeWidth="0.8" />
+
+        {/* Glossy Sky Blue Side Window */}
+        <path d="M 27 13 H 34 C 35.2 13 36 13.8 36 15 V 18 H 27 V 13 Z" fill="url(#driverSideWindowGrad)" stroke="#e0f2fe" strokeWidth="0.6" />
+        <line x1="31" y1="13.5" x2="34" y2="17.5" stroke="#ffffff" strokeWidth="1" opacity="0.85" />
+
+        {/* Door Handle & Side Mirror Bracket */}
+        <rect x="28" y="19.5" width="2.5" height="1" rx="0.3" fill="#cbd5e1" />
+        <rect x="36.5" y="14" width="1.5" height="3" rx="0.4" fill="#047857" />
+
+        {/* Front Bumper & LED Headlight */}
+        <path d="M 38.5 20 H 40.5 C 41 20 41.5 20.5 41.5 21 V 24 H 38.5 V 20 Z" fill="#1e293b" />
+        <rect x="38" y="21" width="2.5" height="2" rx="0.5" fill="#facc15" />
+
+        {/* --- 3D WHEELS --- */}
+        {/* Rear Dual Wheels */}
+        <g>
+          <circle cx="10" cy="25" r="4.2" fill="#18181b" stroke="#09090b" strokeWidth="0.6" />
+          <circle cx="10" cy="25" r="2.2" fill="#e4e4e7" />
+          <circle cx="10" cy="25" r="1.1" fill="#18181b" />
+        </g>
+        <g>
+          <circle cx="18.5" cy="25" r="4.2" fill="#18181b" stroke="#09090b" strokeWidth="0.6" />
+          <circle cx="18.5" cy="25" r="2.2" fill="#e4e4e7" />
+          <circle cx="18.5" cy="25" r="1.1" fill="#18181b" />
+        </g>
+        {/* Front Steering Wheel */}
+        <g>
+          <circle cx="33" cy="25" r="4.2" fill="#18181b" stroke="#09090b" strokeWidth="0.6" />
+          <circle cx="33" cy="25" r="2.2" fill="#e4e4e7" />
+          <circle cx="33" cy="25" r="1.1" fill="#18181b" />
+        </g>
       </g>
     </svg>
   );
@@ -186,11 +233,60 @@ function Waze3DPlayIcon({ className = "h-4 w-4" }) {
 
 function Waze3DRouteIcon({ className = "h-4 w-4" }) {
   return (
-    <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <path d="M 6 24 C 12 24 12 8 20 8 C 24 8 26 12 26 16" stroke="#10b981" strokeWidth="3" strokeLinecap="round" fill="none" />
-      <circle cx="6" cy="24" r="3" fill="#047857" />
-      <circle cx="26" cy="16" r="4" fill="#ef4444" />
-      <circle cx="26" cy="16" r="1.5" fill="#ffffff" />
+    <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <defs>
+        <filter id="assignment3dShadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="1.5" stdDeviation="1.2" floodColor="#0f172a" floodOpacity="0.25" />
+        </filter>
+        <linearGradient id="assignBoardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#3b82f6" />
+          <stop offset="100%" stopColor="#1d4ed8" />
+        </linearGradient>
+        <linearGradient id="assignPaperGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="100%" stopColor="#f1f5f9" />
+        </linearGradient>
+        <linearGradient id="assignClipGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#94a3b8" />
+          <stop offset="50%" stopColor="#cbd5e1" />
+          <stop offset="100%" stopColor="#64748b" />
+        </linearGradient>
+        <linearGradient id="assignPinGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#ef4444" />
+          <stop offset="100%" stopColor="#b91c1c" />
+        </linearGradient>
+      </defs>
+
+      <g filter="url(#assignment3dShadow)">
+        {/* 3D Board Base Side Depth */}
+        <rect x="5.5" y="6.5" width="20" height="25" rx="3.5" fill="#1e3a8a" />
+        
+        {/* Main Board Face */}
+        <rect x="5.5" y="4.5" width="20" height="25" rx="3.5" fill="url(#assignBoardGrad)" />
+
+        {/* Paper Sheet */}
+        <rect x="8" y="8.5" width="15" height="19" rx="2" fill="url(#assignPaperGrad)" />
+
+        {/* Paper Checklist / Route lines */}
+        <rect x="10.5" y="11.5" width="6.5" height="2" rx="1" fill="#3b82f6" />
+        <rect x="10.5" y="15.5" width="10" height="1.5" rx="0.75" fill="#94a3b8" />
+        <rect x="10.5" y="19" width="8" height="1.5" rx="0.75" fill="#94a3b8" />
+        <rect x="10.5" y="22.5" width="6" height="1.5" rx="0.75" fill="#94a3b8" />
+
+        {/* Green Checkmark Badge */}
+        <circle cx="20" cy="12.5" r="2.5" fill="#10b981" />
+        <path d="M 18.8 12.5 L 19.6 13.3 L 21.2 11.7" stroke="#ffffff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+
+        {/* Metallic Top Clip */}
+        <rect x="11.5" y="3" width="8" height="3" rx="1" fill="url(#assignClipGrad)" />
+        <rect x="13.5" y="2" width="4" height="2" rx="0.75" fill="#475569" />
+
+        {/* 3D Floating Location Pin Overlay */}
+        <g transform="translate(4, 3)">
+          <path d="M 22 17 C 22 21 18 24.5 18 24.5 C 18 24.5 14 21 14 17 C 14 14.8 15.8 13 18 13 C 20.2 13 22 14.8 22 17 Z" fill="url(#assignPinGrad)" />
+          <circle cx="18" cy="17" r="1.8" fill="#ffffff" />
+        </g>
+      </g>
     </svg>
   );
 }
@@ -1150,6 +1246,7 @@ export default function DriverPage() {
                                 }}
                                 className="flex h-12 w-full items-center justify-center gap-2 rounded-xl text-xs font-bold transition-all active:scale-[0.98] cursor-pointer shadow-xs bg-indigo-600 text-white hover:bg-indigo-700"
                               >
+                                <Waze3DRouteIcon className="h-5 w-5 shrink-0" />
                                 Accept Assignment
                               </button>
                             ) : (
