@@ -6,7 +6,13 @@ import { ArrowRight, ShieldCheck, Clock, Wifi, Battery, MapPin, Download } from 
 import { motion, AnimatePresence } from "framer-motion";
 
 function useMediaQuery(query) {
-  const [matches, setMatches] = useState(false);
+  const [matches, setMatches] = useState(() => {
+    if (typeof window !== "undefined") {
+      return window.matchMedia(query).matches;
+    }
+    return false;
+  });
+
   useEffect(() => {
     const mq = window.matchMedia(query);
     setMatches(mq.matches);
@@ -14,6 +20,7 @@ function useMediaQuery(query) {
     mq.addEventListener("change", onChange);
     return () => mq.removeEventListener("change", onChange);
   }, [query]);
+
   return matches;
 }
 
@@ -109,7 +116,6 @@ export default function LandingPage() {
                       : "lg:border-r lg:pr-10 xl:pr-14"
                   } lg:border-zinc-200/60 w-full`}
                 >
-                  
                   {activeSection === "home" && <HomeContent />}
                   {activeSection === "about" && <AboutContent />}
                   {activeSection === "features" && <FeaturesContent />}
@@ -122,7 +128,7 @@ export default function LandingPage() {
             <motion.div
               layout
               initial={false}
-              animate={{ rotateY: activeSection === "about" || activeSection === "faq" ? 360 : 0 }}
+              animate={{ rotateY: isDesktop && (activeSection === "about" || activeSection === "faq") ? 360 : 0 }}
               transition={hashInitialized && !isResizing ? { type: "spring", stiffness: 50, damping: 20 } : { duration: 0 }}
               style={{ perspective: 1200 }}
               className="flex justify-center shrink-0 z-20"

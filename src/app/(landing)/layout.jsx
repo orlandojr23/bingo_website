@@ -78,6 +78,13 @@ export default function LandingLayout({ children }) {
 
 
   useEffect(() => {
+    setIsMobileMenuOpen(false);
+    if (pathname !== "/") {
+      setActiveSection("");
+      setScrolled(false);
+      setHideLogo(false);
+    }
+
     const handleHashChange = () => {
       if (pathname !== "/") {
         setActiveSection("");
@@ -284,9 +291,9 @@ export default function LandingLayout({ children }) {
               isOpen={openFooterCol === "legal"}
               onToggle={() => setOpenFooterCol(openFooterCol === "legal" ? null : "legal")}
             >
-              <Link href="/privacy" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">Privacy Policy</Link>
-              <Link href="/terms" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">Terms of Service</Link>
-              <Link href="/support" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium text-left">Contact Support</Link>
+              <Link prefetch={true} href="/privacy" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">Privacy Policy</Link>
+              <Link prefetch={true} href="/terms" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">Terms of Service</Link>
+              <Link prefetch={true} href="/support" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium text-left">Contact Support</Link>
             </FooterColumn>
           </div>
 
@@ -316,10 +323,10 @@ export default function LandingLayout({ children }) {
       </footer>
       {/* Mobile Menu Overlay */}
       <div
-        className={`fixed inset-0 z-[100] bg-white flex flex-col px-6 md:hidden transition-all duration-200 ease-out transform-gpu ${
+        className={`fixed inset-0 z-[100] bg-white flex flex-col px-6 md:hidden ${
           isMobileMenuOpen 
-            ? "opacity-100 translate-y-0 pointer-events-auto" 
-            : "opacity-0 -translate-y-2 pointer-events-none"
+            ? "opacity-100 pointer-events-auto" 
+            : "opacity-0 pointer-events-none hidden"
         }`}
       >
         {/* Top Bar inside Menu */}
@@ -343,6 +350,7 @@ export default function LandingLayout({ children }) {
             <a href="/#faq" onClick={() => setIsMobileMenuOpen(false)} className={`transition-all px-6 py-2 rounded-2xl touch-manipulation ${activeSection === "faq" ? "text-emerald-700" : "text-zinc-900 hover:text-emerald-600 hover:bg-zinc-50"}`}>FAQ</a>
 
             <Link
+              prefetch={true}
               href="/support"
               onClick={() => setIsMobileMenuOpen(false)}
               className="transition-all px-6 py-2 rounded-2xl text-emerald-600 hover:bg-emerald-50 text-center cursor-pointer touch-manipulation"
