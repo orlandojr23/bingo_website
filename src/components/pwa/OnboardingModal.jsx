@@ -32,23 +32,41 @@ const ONBOARDING_STEPS = [
 ];
 
 export default function OnboardingModal({ isOpen, onComplete }) {
-  const [currentStep, setCurrentStep] = useState(0);
+  const [[currentStep, direction], setStepState] = useState([0, 1]);
 
   if (!isOpen) return null;
 
   const isLastStep = currentStep === ONBOARDING_STEPS.length - 1;
   const stepData = ONBOARDING_STEPS[currentStep];
 
+  const goToStep = (newStep) => {
+    const dir = newStep > currentStep ? 1 : -1;
+    setStepState([newStep, dir]);
+  };
+
   const handleNext = () => {
     if (isLastStep) {
       onComplete();
     } else {
-      setCurrentStep((prev) => prev + 1);
+      goToStep(currentStep + 1);
     }
   };
 
   const handleSkip = () => {
     onComplete();
+  };
+
+  // Clean, crisp opacity fade transition for steps
+  const stepVariants = {
+    enter: { opacity: 0 },
+    center: {
+      opacity: 1,
+      transition: { duration: 0.3, ease: "easeOut" },
+    },
+    exit: {
+      opacity: 0,
+      transition: { duration: 0.2, ease: "easeIn" },
+    },
   };
 
   return (
@@ -69,7 +87,7 @@ export default function OnboardingModal({ isOpen, onComplete }) {
         {/* Soft Ambient Radial Glow behind Mascot */}
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 sm:w-96 sm:h-96 bg-emerald-400/15 rounded-full blur-3xl pointer-events-none" />
 
-        {/* Header Bar: Skip Button */}
+        {/* Header Bar: Step Tracker & Skip Button */}
         <div className="relative z-10 flex items-center justify-between w-full max-w-md mx-auto h-10">
           <div className="flex items-center gap-1.5">
             <span className="text-xs font-semibold text-emerald-300/80 uppercase tracking-wider">
@@ -88,17 +106,17 @@ export default function OnboardingModal({ isOpen, onComplete }) {
         </div>
 
         {/* Main Content Carousel Area */}
-        <div className="relative z-10 my-auto flex flex-col items-center justify-center w-full max-w-md mx-auto space-y-6 sm:space-y-8">
+        <div className="relative z-10 my-auto flex flex-col items-center justify-center w-full max-w-md mx-auto space-y-6 sm:space-y-8 py-4">
           <AnimatePresence mode="wait">
             <motion.div
               key={stepData.id}
-              initial={{ opacity: 0, x: 25, scale: 0.95 }}
-              animate={{ opacity: 1, x: 0, scale: 1 }}
-              exit={{ opacity: 0, x: -25, scale: 0.95 }}
-              transition={{ duration: 0.35, ease: "easeOut" }}
+              variants={stepVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
               className="flex flex-col items-center text-center w-full"
             >
-              {/* Mascot Pose Display */}
+              {/* Mascot Pose Display (Clean & Stable) */}
               <div className="relative w-52 h-52 xs:w-60 xs:h-60 sm:w-72 sm:h-72 max-h-[38vh] aspect-square flex items-center justify-center mb-6 sm:mb-8">
                 <div className="w-full h-full relative drop-shadow-2xl">
                   <Image
@@ -135,7 +153,7 @@ export default function OnboardingModal({ isOpen, onComplete }) {
               <button
                 key={step.id}
                 type="button"
-                onClick={() => setCurrentStep(idx)}
+                onClick={() => goToStep(idx)}
                 aria-label={`Go to step ${idx + 1}`}
                 className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
                   currentStep === idx
@@ -159,4 +177,5 @@ export default function OnboardingModal({ isOpen, onComplete }) {
     </AnimatePresence>
   );
 }
+
 
