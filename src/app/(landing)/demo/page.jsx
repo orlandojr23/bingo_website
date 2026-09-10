@@ -12,6 +12,7 @@ import {
   MessageSquare,
   Loader2,
   CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 
 const PUBLIC_DOMAINS = ["gmail.com", "yahoo.com", "outlook.com", "hotmail.com", "icloud.com"];
@@ -133,8 +134,9 @@ export default function DemoPage() {
           form: resData?.errors?.[0]?.message || "Submission failed. Please try again.",
         });
       }
-    } catch {
-      setErrors({ form: "Network error occurred. Please try again." });
+    } catch (err) {
+      console.error("Demo form submission error:", err);
+      setErrors({ form: "Network error occurred. Please check your connection or ad blocker and try again." });
     } finally {
       setIsSubmitting(false);
     }
@@ -162,31 +164,40 @@ export default function DemoPage() {
 
         <div className="bg-white rounded-3xl border border-zinc-100 shadow-sm p-6 sm:p-10">
           {success ? (
-            <div className="flex flex-col items-center text-center gap-4 py-8">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50">
-                <CheckCircle2 className="w-7 h-7 text-emerald-600" />
-              </div>
-              <h2 className="text-xl font-black tracking-tight text-zinc-900">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              className="flex flex-col items-center text-center py-6 gap-3"
+            >
+              <h2 className="text-xl font-bold tracking-tight text-zinc-900">
                 Demo request received!
               </h2>
-              <p className="text-sm text-zinc-500 font-medium leading-relaxed max-w-sm">
-                Thank you, {name.trim().split(" ")[0]}. Our team will reach out
-                at {email.trim()} to schedule your walkthrough.
+              <p className="text-xs sm:text-sm text-zinc-500 font-medium leading-relaxed max-w-xs">
+                Thank you, {name.trim().split(" ")[0]}. Our team will reach out at{" "}
+                <span className="font-semibold text-emerald-600">{email.trim()}</span> to schedule your walkthrough.
               </p>
               <Link
                 href="/"
-                className="mt-4 px-6 py-2.5 bg-zinc-900 text-white rounded-xl text-xs font-bold hover:bg-zinc-800 transition-colors"
+                className="mt-2 px-6 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition-all shadow-md shadow-emerald-600/20 hover:shadow-lg hover:-translate-y-0.5"
               >
                 Back to Home
               </Link>
-            </div>
+            </motion.div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5" noValidate>
-              {errors.form && (
-                <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-xs font-semibold text-rose-600">
-                  {errors.form}
-                </div>
-              )}
+              <AnimatePresence>
+                {errors.form && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="text-xs font-semibold text-rose-500"
+                  >
+                    {errors.form}
+                  </motion.p>
+                )}
+              </AnimatePresence>
               <div className="space-y-1">
                 <label className="text-xs font-bold text-zinc-700 uppercase tracking-wider">
                   Full Name <span className="text-rose-500">*</span>
