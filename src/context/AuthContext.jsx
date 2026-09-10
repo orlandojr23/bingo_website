@@ -11,17 +11,13 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setRole(session?.user?.user_metadata?.role ?? null);
-      setLoading(false);
-    });
-
-    // Listen for auth state changes
+    // onAuthStateChange fires immediately with the current session on mount,
+    // which is more reliable than a separate getSession() call. We use it as
+    // the single source of truth for both initial load and live changes.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       setRole(session?.user?.user_metadata?.role ?? null);
+      setLoading(false); // Always clear loading after first event
     });
 
     return () => subscription.unsubscribe();

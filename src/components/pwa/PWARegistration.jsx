@@ -5,6 +5,21 @@ import { useEffect } from "react";
 export default function PWARegistration() {
   useEffect(() => {
     if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+      const isLocalhost =
+        Boolean(window.location.hostname === "localhost") ||
+        Boolean(window.location.hostname === "[::1]") ||
+        Boolean(window.location.hostname.match(/^127(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}$/));
+
+      if (process.env.NODE_ENV === "development" || isLocalhost) {
+        // In local development, unregister service worker to prevent RSC/HMR fetch conflicts
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          for (let registration of registrations) {
+            registration.unregister();
+          }
+        });
+        return;
+      }
+
       const registerSW = async () => {
         try {
           const registration = await navigator.serviceWorker.register("/sw.js", {

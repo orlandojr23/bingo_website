@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { User, Mail, Lock, Eye, EyeOff, Loader2, MapPin, ChevronDown, CheckCircle2, Check, Phone } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/context/AuthContext";
 import { TEJERO_SITOS, PILOT_AREA } from "@/lib/mock-data";
 import { Button } from "@/components/ui/button";
 import PasswordStrengthHint from "@/components/ui/password-strength-hint";
@@ -77,6 +78,16 @@ function ErrorLine({ message }) {
 
 export default function SignupPage() {
   const router = useRouter();
+  const { user } = useAuth();
+  
+  useEffect(() => {
+    if (user) {
+      window.location.href = '/report';
+    }
+  }, [user]);
+
+  const [hasUpperCase, setHasUpperCase] = useState(false);
+  const [hasNumber, setHasNumber] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
@@ -220,34 +231,41 @@ export default function SignupPage() {
     setErrors({});
     setIsLoading(true);
 
-    const trimmedEmail = email.trim().toLowerCase();
-    const fullName = `${firstName.trim()} ${lastName.trim()}`;
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email: trimmedEmail,
-      password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/report`,
-        data: {
-          role: 'resident',
-          first_name: firstName.trim(),
-          last_name: lastName.trim(),
-          full_name: fullName,
-          phone: cleanPhone,
-          sitio: sitio,
-          barangay: PILOT_AREA.barangay
+    try {
+      const trimmedEmail = email.trim().toLowerCase();
+      const cleanPhone = phone.trim().replace(/[\s-]/g, "");
+      const fullName = `${firstName.trim()} ${lastName.trim()}`;
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: trimmedEmail,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/report`,
+          data: {
+            role: 'resident',
+            first_name: firstName.trim(),
+            last_name: lastName.trim(),
+            full_name: fullName,
+            phone: cleanPhone,
+            sitio: sitio,
+            barangay: PILOT_AREA.barangay
+          }
         }
+      });
+
+      if (signUpError) {
+        setErrors({ email: signUpError.message });
+        setIsLoading(false);
+        return;
       }
-    });
 
-    if (signUpError) {
-      setErrors({ email: signUpError.message });
+      setResendTimer(60);
+      setNeedsOtp(true);
       setIsLoading(false);
-      return;
+    } catch (err) {
+      console.error("Signup exception:", err);
+      setErrors({ email: err?.message || "Connection error. Please try again." });
+      setIsLoading(false);
     }
-
-    setResendTimer(60);
-    setNeedsOtp(true);
-    setIsLoading(false);
   };
 
   const handleVerifyOtp = async (e) => {
@@ -271,7 +289,7 @@ export default function SignupPage() {
       return;
     }
 
-    router.replace("/report");
+    window.location.href = "/report";
   };
 
   return (

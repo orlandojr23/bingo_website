@@ -20,6 +20,7 @@ import {
   ShieldCheck,
   X,
   Search,
+  Plus,
 } from "lucide-react";
 import { mockPilotData, TEJERO_SITOS } from "@/lib/mock-data";
 import { useTickets, addTicket, nextTicketId, updateTicket, removeTicket } from "@/lib/tickets";
@@ -39,6 +40,7 @@ import { MapSkeleton } from "@/components/ui/skeletons";
 import { InfoRow } from "@/components/ui/info-row";
 import BottomSheet from "@/components/pwa/BottomSheet";
 import { useToast } from "@/components/pwa/Toast";
+import OnboardingModal from "@/components/pwa/OnboardingModal";
 
 const MapCanvas = dynamic(() => import("@/components/map/map-canvas"), {
   ssr: false,
@@ -390,6 +392,22 @@ export default function ResidentMobilePWA() {
         });
       });
     }, [router, user, authLoading]);
+
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  useEffect(() => {
+    if (!sessionReady || !residentSession?.id) return;
+    // Always show onboarding on login for design & testing purposes
+    setShowOnboarding(true);
+  }, [sessionReady, residentSession]);
+
+  const handleCompleteOnboarding = () => {
+    if (residentSession?.id) {
+      localStorage.setItem(`bingo_onboarding_completed_${residentSession.id}`, "true");
+    }
+    setShowOnboarding(false);
+    setActiveTab("map");
+  };
 
   const greetingTitle = useMemo(
     () => getTimeBasedGreeting(residentSession?.name || "Resident"),
@@ -897,11 +915,12 @@ export default function ResidentMobilePWA() {
     );
   }
 
+  if (showOnboarding) {
+    return <OnboardingModal isOpen={showOnboarding} onComplete={handleCompleteOnboarding} />;
+  }
+
   return (
     <div className="flex h-dvh w-full flex-col bg-background text-foreground font-sans selection:bg-emerald-100 selection:text-emerald-900 overflow-hidden select-none">
-
-
-
       {/* Main 1-Screen Body: Full-Screen Map Canvas as Permanent Backdrop */}
       <div className="relative flex-1 w-full overflow-hidden select-none">
         {/* Permanent Background Map Canvas */}

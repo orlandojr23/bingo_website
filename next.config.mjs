@@ -11,8 +11,7 @@ const cspHeader = `
   object-src 'none';
   base-uri 'self';
   form-action 'self' https://formspree.io https://*.formspree.io;
-  ${isDev ? '' : "frame-ancestors 'none';"}
-  upgrade-insecure-requests;
+  ${isDev ? '' : "frame-ancestors 'none'; upgrade-insecure-requests;"}
 `;
 
 const nextConfig = {
@@ -40,6 +39,10 @@ const nextConfig = {
                   key: 'X-Frame-Options',
                   value: 'DENY',
                 },
+                {
+                  key: 'Strict-Transport-Security',
+                  value: 'max-age=63072000; includeSubDomains; preload',
+                },
               ]),
           {
             key: 'X-Content-Type-Options',
@@ -48,10 +51,6 @@ const nextConfig = {
           {
             key: 'Referrer-Policy',
             value: 'strict-origin-when-cross-origin',
-          },
-          {
-            key: 'Strict-Transport-Security',
-            value: 'max-age=63072000; includeSubDomains; preload',
           },
           {
             key: 'Permissions-Policy',

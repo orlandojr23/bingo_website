@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Mail, Lock, Eye, EyeOff, Loader2, CheckCircle2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import InstallAppButton from "@/components/pwa/InstallAppButton";
 
@@ -59,13 +60,13 @@ export default function ResidentLoginPage() {
 
   const emailSuggestionSuffix = getEmailSuggestionSuffix(email);
 
+  const { user } = useAuth();
+
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        router.replace('/report');
-      }
-    });
-  }, [router]);
+    if (user) {
+      window.location.href = '/report';
+    }
+  }, [user]);
 
   useEffect(() => {
     let interval = null;
@@ -148,31 +149,36 @@ export default function ResidentLoginPage() {
     setErrors({});
     setIsLoading(true);
 
-    const targetEmail = email.trim().toLowerCase();
-    const { data, error: signInError } = await supabase.auth.signInWithPassword({
-      email: targetEmail,
-      password,
-    });
+    try {
+      const targetEmail = email.trim().toLowerCase();
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email: targetEmail,
+        password,
+      });
 
-    if (signInError) {
-      if (signInError.message.toLowerCase().includes("not confirmed")) {
-        setResendTimer(60);
-        setNeedsOtp(true);
+      if (signInError) {
+        if (signInError.message.toLowerCase().includes("not confirmed")) {
+          setResendTimer(60);
+          setNeedsOtp(true);
+          setIsLoading(false);
+          setResendStatus("A new 6-digit verification code has been automatically sent to your email.");
+          // Automatically dispatch a fresh OTP email for unconfirmed accounts
+          supabase.auth.resend({
+            type: 'signup',
+            email: targetEmail,
+          }).catch(() => {});
+          return;
+        }
+        setErrors({ password: signInError.message });
         setIsLoading(false);
-        setResendStatus("A new 6-digit verification code has been automatically sent to your email.");
-        // Automatically dispatch a fresh OTP email for unconfirmed accounts
-        supabase.auth.resend({
-          type: 'signup',
-          email: targetEmail,
-        }).catch(() => {});
         return;
       }
-      setErrors({ password: signInError.message });
+      window.location.href = "/report";
+    } catch (err) {
+      console.error("Login exception:", err);
+      setErrors({ password: err?.message || "Connection error. Please try again." });
       setIsLoading(false);
-      return;
     }
-
-    router.replace("/report");
   };
 
   const handleVerifyOtp = async (e) => {
@@ -196,7 +202,7 @@ export default function ResidentLoginPage() {
       return;
     }
 
-    router.replace("/report");
+    window.location.href = "/report";
   };
 
   return (

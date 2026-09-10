@@ -49,10 +49,12 @@ self.addEventListener("fetch", (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Ignore non-GET requests, non-http protocols, external map tiles, or Cloudflare Turnstile
+  // Ignore non-GET requests, non-http protocols, _rsc payloads, /api/ routes, external map tiles, or Cloudflare Turnstile
   if (
     request.method !== "GET" ||
     !url.protocol.startsWith("http") ||
+    url.searchParams.has("_rsc") ||
+    url.pathname.startsWith("/api/") ||
     url.hostname.includes("cartocdn.com") ||
     url.hostname.includes("cloudflare.com") ||
     url.hostname.includes("openstreetmap.org") ||

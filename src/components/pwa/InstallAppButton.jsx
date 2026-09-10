@@ -21,8 +21,9 @@ export default function InstallAppButton({ className = "" }) {
     const ua = window.navigator.userAgent.toLowerCase();
     const ios =
       /iphone|ipad|ipod/.test(ua) && !ua.includes("crios") && !ua.includes("fxios");
-    setIsIOS(ios);
+    
     if (ios) {
+      setIsIOS(ios);
       setHidden(false);
       return;
     }
