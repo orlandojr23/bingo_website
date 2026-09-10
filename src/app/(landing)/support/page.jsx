@@ -106,9 +106,34 @@ export default function SupportPage() {
           return;
         }
       }
-      setSuccess(true);
+
+      const formspreeUrl =
+        process.env.NEXT_PUBLIC_FORMSPREE_SUPPORT_URL || "https://formspree.io/f/xbgjqbzj";
+
+      const formRes = await fetch(formspreeUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          message: message.trim(),
+          _subject: `New Support Message from ${name.trim()}`,
+        }),
+      });
+
+      if (formRes.ok) {
+        setSuccess(true);
+      } else {
+        const resData = await formRes.json().catch(() => ({}));
+        setErrors({
+          form: resData?.errors?.[0]?.message || "Failed to send message. Please try again.",
+        });
+      }
     } catch {
-      setSuccess(true);
+      setErrors({ form: "Network error occurred. Please try again." });
     } finally {
       setIsSubmitting(false);
     }
@@ -156,6 +181,11 @@ export default function SupportPage() {
             </div>
           ) : (
             <form className="space-y-5" onSubmit={handleSubmit} noValidate>
+              {errors.form && (
+                <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-xs font-semibold text-rose-600">
+                  {errors.form}
+                </div>
+              )}
               <div className="space-y-1">
                 <label className="text-xs font-bold text-zinc-700 uppercase tracking-wider">
                   Your Name

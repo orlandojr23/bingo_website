@@ -106,9 +106,35 @@ export default function DemoPage() {
           return;
         }
       }
-      setSuccess(true);
+
+      const formspreeUrl =
+        process.env.NEXT_PUBLIC_FORMSPREE_DEMO_URL || "https://formspree.io/f/xdeoyjlz";
+
+      const formRes = await fetch(formspreeUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          organization: org.trim() || "N/A",
+          notes: message.trim() || "N/A",
+          _subject: `New Demo Request from ${name.trim()}`,
+        }),
+      });
+
+      if (formRes.ok) {
+        setSuccess(true);
+      } else {
+        const resData = await formRes.json().catch(() => ({}));
+        setErrors({
+          form: resData?.errors?.[0]?.message || "Submission failed. Please try again.",
+        });
+      }
     } catch {
-      setSuccess(true);
+      setErrors({ form: "Network error occurred. Please try again." });
     } finally {
       setIsSubmitting(false);
     }
@@ -156,6 +182,11 @@ export default function DemoPage() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+              {errors.form && (
+                <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-xs font-semibold text-rose-600">
+                  {errors.form}
+                </div>
+              )}
               <div className="space-y-1">
                 <label className="text-xs font-bold text-zinc-700 uppercase tracking-wider">
                   Full Name <span className="text-rose-500">*</span>
