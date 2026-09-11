@@ -38,6 +38,7 @@ export default function BottomNav({
               <button
                 key={tab.id}
                 type="button"
+                data-tour={`nav-tab-${tab.id}`}
                 onClick={() => onChange(tab.id)}
                 aria-label={tab.label}
                 className="flex min-w-0 flex-1 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-full transition-transform active:scale-[0.97]"
@@ -66,6 +67,7 @@ export default function BottomNav({
             <button
               key={tab.id}
               type="button"
+              data-tour={`nav-tab-${tab.id}`}
               onClick={() => onChange(tab.id)}
               className={cn(
                 "relative flex min-w-0 flex-1 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-2xl py-1 transition-transform active:scale-[0.97]",

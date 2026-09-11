@@ -41,6 +41,7 @@ import { InfoRow } from "@/components/ui/info-row";
 import BottomSheet from "@/components/pwa/BottomSheet";
 import { useToast } from "@/components/pwa/Toast";
 import OnboardingModal from "@/components/pwa/OnboardingModal";
+import ProductTour from "@/components/pwa/ProductTour";
 
 const MapCanvas = dynamic(() => import("@/components/map/map-canvas"), {
   ssr: false,
@@ -394,6 +395,7 @@ export default function ResidentMobilePWA() {
     }, [router, user, authLoading]);
 
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [runProductTour, setRunProductTour] = useState(false);
 
   useEffect(() => {
     if (!sessionReady || !residentSession?.id) return;
@@ -407,6 +409,10 @@ export default function ResidentMobilePWA() {
     }
     setShowOnboarding(false);
     setActiveTab("map");
+    // Launch product tour right after onboarding modal completes
+    setTimeout(() => {
+      setRunProductTour(true);
+    }, 400);
   };
 
   const greetingTitle = useMemo(
@@ -985,7 +991,7 @@ export default function ResidentMobilePWA() {
         {/* Waze-Style Flush Top Navigation Banner (Light Glass Theme - Dynamic Slide-from-Top Readout) */}
         <div className="pointer-events-auto absolute top-0 inset-x-0 z-20 w-full border-b border-border bg-card/98 px-5 py-4 text-foreground backdrop-blur-md flex items-center justify-between gap-3.5 select-none overflow-hidden h-20 shadow-sm">
           {/* Left: Dynamic 3D Vector SVG Icon & Dynamic Slide-from-Top Readout */}
-          <div onClick={handleHeaderClick} className="min-w-0 flex-1 overflow-hidden relative h-14 flex items-center cursor-pointer">
+          <div data-tour="live-banner" onClick={handleHeaderClick} className="min-w-0 flex-1 overflow-hidden relative h-14 flex items-center cursor-pointer">
             {!mapReady ? (
               <div className="flex items-center gap-3.5 w-full">
                 <div className="h-10 w-10 shrink-0 rounded-xl bg-foreground/10 animate-pulse" />
@@ -1037,6 +1043,7 @@ export default function ResidentMobilePWA() {
           <div className="flex shrink-0 items-center gap-2.5">
             <button
               type="button"
+              data-tour="profile-btn"
               onClick={() => {
                 setIsMapSheetExpanded(false);
                 setSelectedTicket(null);
@@ -1183,6 +1190,7 @@ export default function ResidentMobilePWA() {
             >
               <button
                 type="button"
+                data-tour="nav-tab-schedule"
                 onClick={() => {
                   switchTab("schedule");
                   if (!isMapSheetExpanded) setIsMapSheetExpanded(true);
@@ -1200,6 +1208,7 @@ export default function ResidentMobilePWA() {
 
               <button
                 type="button"
+                data-tour="nav-tab-report"
                 onClick={() => {
                   switchTab("report");
                   if (!isMapSheetExpanded) setIsMapSheetExpanded(true);
@@ -1220,6 +1229,7 @@ export default function ResidentMobilePWA() {
 
               <button
                 type="button"
+                data-tour="nav-tab-tickets"
                 onClick={() => {
                   switchTab("tickets");
                   if (!isMapSheetExpanded) setIsMapSheetExpanded(true);
@@ -1955,6 +1965,18 @@ export default function ResidentMobilePWA() {
           </motion.div>
         </div>
       )}
+
+      <ProductTour
+        run={runProductTour}
+        onComplete={() => {
+          setRunProductTour(false);
+          if (residentSession?.id) {
+            localStorage.setItem(`bingo_product_tour_completed_${residentSession.id}`, "true");
+          }
+        }}
+        onTabChange={(tabId) => setActiveTab(tabId)}
+        activeTab={activeTab}
+      />
 
       {ToastViewport}
     </div>
