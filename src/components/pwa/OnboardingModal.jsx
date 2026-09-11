@@ -7,7 +7,7 @@ import Image from "next/image";
 const ONBOARDING_STEPS = [
   {
     id: "welcome",
-    mascot: "/mascot/star-pose.png",
+    mascot: "/mascot/arms-open-pose-clean.png",
     title: "Welcome to Bin'Go",
     subtitle: "Your personal companion that helps you track waste collection in real-time.",
   },
@@ -87,18 +87,24 @@ export default function OnboardingModal({ isOpen, onComplete }) {
         {/* Soft Ambient Radial Glow behind Mascot */}
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 sm:w-96 sm:h-96 bg-emerald-400/15 rounded-full blur-3xl pointer-events-none" />
 
-        {/* Header Bar: Step Tracker & Skip Button */}
+        {/* Header Bar: Minimalist Step Counter & Skip Button */}
         <div className="relative z-10 flex items-center justify-between w-full max-w-md mx-auto h-10">
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs font-semibold text-emerald-300/80 uppercase tracking-wider">
-              Step {currentStep + 1} of {ONBOARDING_STEPS.length}
+          {/* Step Indicator */}
+          <div className="flex items-center gap-1">
+            <span className="text-xs font-semibold text-white/50 tracking-wide">
+              <span className="text-emerald-400 font-bold">{currentStep + 1}</span>
+              <span className="mx-1 text-white/40 font-normal">of</span>
+              <span className="text-white/70">{ONBOARDING_STEPS.length}</span>
+              <span className="ml-1 text-white/40 font-normal">steps</span>
             </span>
           </div>
+
+          {/* Skip Button */}
           {!isLastStep && (
             <button
               type="button"
               onClick={handleSkip}
-              className="text-xs font-semibold text-zinc-300 hover:text-white transition-colors px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/15 backdrop-blur-xs cursor-pointer active:scale-95"
+              className="text-xs font-medium text-white/60 hover:text-white transition-colors cursor-pointer py-1 px-2"
             >
               Skip
             </button>
