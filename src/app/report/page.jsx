@@ -399,8 +399,10 @@ export default function ResidentMobilePWA() {
 
   useEffect(() => {
     if (!sessionReady || !residentSession?.id) return;
-    // Always show onboarding on login for design & testing purposes
-    setShowOnboarding(true);
+    const completed = localStorage.getItem(`bingo_onboarding_completed_${residentSession.id}`);
+    if (!completed) {
+      setShowOnboarding(true);
+    }
   }, [sessionReady, residentSession]);
 
   const handleCompleteOnboarding = () => {
@@ -409,10 +411,15 @@ export default function ResidentMobilePWA() {
     }
     setShowOnboarding(false);
     setActiveTab("map");
-    // Launch product tour right after onboarding modal completes
-    setTimeout(() => {
-      setRunProductTour(true);
-    }, 400);
+    // Launch product tour right after first-time onboarding completes
+    if (residentSession?.id) {
+      const tourCompleted = localStorage.getItem(`bingo_product_tour_completed_${residentSession.id}`);
+      if (!tourCompleted) {
+        setTimeout(() => {
+          setRunProductTour(true);
+        }, 400);
+      }
+    }
   };
 
   const greetingTitle = useMemo(

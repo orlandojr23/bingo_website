@@ -9,7 +9,7 @@ const ONBOARDING_STEPS = [
     id: "welcome",
     mascot: "/mascot/arms-open-pose-clean.png",
     title: "Welcome to Bin'Go",
-    subtitle: "Your personal companion that helps you track waste collection in real-time.",
+    subtitle: "Track collection trucks live, report uncollected waste, and keep your community clean.",
   },
   {
     id: "tracking",
