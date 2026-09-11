@@ -617,7 +617,10 @@ export default function ResidentMobilePWA() {
   const [bannerStep, setBannerStep] = useState(0);
 
   useEffect(() => {
-    if (liveBanner) return;
+    if (liveBanner || showOnboarding || runProductTour) {
+      setBannerStep(0);
+      return;
+    }
     const timer1 = setTimeout(() => {
       setBannerStep(1);
     }, 4000);
@@ -628,7 +631,7 @@ export default function ResidentMobilePWA() {
       clearTimeout(timer1);
       clearTimeout(timer2);
     };
-  }, [liveBanner]);
+  }, [liveBanner, showOnboarding, runProductTour]);
 
   const idleBanners = useMemo(() => {
     const list = [
@@ -663,7 +666,7 @@ export default function ResidentMobilePWA() {
   }, [liveBanner, idleBanners, bannerStep]);
 
   const handleHeaderClick = () => {
-    if (liveBanner) return;
+    if (liveBanner || showOnboarding || runProductTour) return;
     setBannerStep((prev) => (prev + 1) % idleBanners.length);
     haptic();
   };
