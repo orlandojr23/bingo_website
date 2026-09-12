@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Inbox } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useTickets, updateTicket, removeTicket } from "@/lib/tickets";
+import { useTickets, useArchivedTickets, updateTicket, removeTicket, restoreTicket, hardDeleteTicket } from "@/lib/tickets";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
 import { PanelStat } from "@/components/ui/panel-stat";
@@ -16,7 +16,11 @@ import ConfirmModal from "@/components/ui/confirm-modal";
 
 export default function TicketsPage() {
   const router = useRouter();
-  const tickets = useTickets();
+  const activeTickets = useTickets();
+  const archivedTickets = useArchivedTickets();
+  const [viewMode, setViewMode] = useState("active"); // "active" | "trash"
+  const tickets = viewMode === "active" ? activeTickets : archivedTickets;
+
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [urgencyFilter, setUrgencyFilter] = useState("All");
@@ -31,11 +35,22 @@ export default function TicketsPage() {
   };
 
   const handleDeleteTicket = (id) => {
-    removeTicket(id);
+    if (viewMode === "active") {
+      removeTicket(id);
+    } else {
+      hardDeleteTicket(id);
+    }
     if (selectedTicket?.id === id) {
       setSelectedTicket(null);
     }
     setTicketToDelete(null);
+  };
+
+  const handleRestoreTicket = (id) => {
+    restoreTicket(id);
+    if (selectedTicket?.id === id) {
+      setSelectedTicket(null);
+    }
   };
 
   const handleLocateOnMap = (t) => {
@@ -53,8 +68,8 @@ export default function TicketsPage() {
     return matchSearch && matchStatus && matchUrgency;
   });
 
-  const totalReports = tickets.length;
-  const pendingReports = tickets.filter((t) => t.status === "Pending").length;
+  const totalReports = activeTickets.length;
+  const pendingReports = activeTickets.filter((t) => t.status === "Pending").length;
   const isSheetOpen = selectedTicket !== null;
 
   return (
@@ -65,6 +80,21 @@ export default function TicketsPage() {
           title="Reports"
           description="All waste reports submitted by residents and their current status"
         />
+
+        <div className="flex bg-muted/50 p-1 rounded-lg w-fit">
+          <button 
+            className={cn("px-4 py-1.5 text-sm font-medium rounded-md transition-colors cursor-pointer", viewMode === "active" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}
+            onClick={() => setViewMode("active")}
+          >
+            Active Reports
+          </button>
+          <button 
+            className={cn("px-4 py-1.5 text-sm font-medium rounded-md transition-colors cursor-pointer", viewMode === "trash" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}
+            onClick={() => setViewMode("trash")}
+          >
+            Trash Bin {archivedTickets.length > 0 && `(${archivedTickets.length})`}
+          </button>
+        </div>
 
         <div className="grid shrink-0 grid-cols-2 gap-3.5 max-w-sm sm:max-w-md">
           <PanelStat label="Total Reports" value={totalReports} hint="All submitted reports" />
@@ -168,7 +198,20 @@ export default function TicketsPage() {
                       <InfoRow label="Reported By" value={t.reporter} />
                     </div>
 
-                    <div className="mt-2 flex shrink-0 items-center justify-end">
+                    <div className="mt-2 flex shrink-0 items-center justify-end gap-2">
+                      {viewMode === "trash" && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRestoreTicket(t.id);
+                          }}
+                          className="rounded-md border border-emerald-200 bg-card px-2.5 py-1 text-xs font-medium text-emerald-600 transition-colors hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer"
+                          title="Restore Report"
+                        >
+                          Restore
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={(e) => {
@@ -176,9 +219,9 @@ export default function TicketsPage() {
                           setTicketToDelete(t);
                         }}
                         className="rounded-md border border-rose-200 bg-card px-2.5 py-1 text-xs font-medium text-rose-600 transition-colors hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 cursor-pointer"
-                        title="Delete Report"
+                        title={viewMode === "trash" ? "Permanently Delete" : "Move to Trash"}
                       >
-                        Delete Report
+                        {viewMode === "trash" ? "Purge" : "Move to Trash"}
                       </button>
                     </div>
                   </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Users, Plus, X } from "lucide-react";
+import { Search, Users, Plus, X, Loader2, Eye, EyeOff, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { StatusBadge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
@@ -19,8 +19,12 @@ import {
   removeDriverAccount,
   renameDriverAccount,
 } from "@/lib/driver-accounts";
-import { loadStaffRoster, saveStaffRoster } from "@/lib/staff";
+import { useStaffRoster, saveStaffRoster, fetchStaffRoster } from "@/lib/staff";
 import ConfirmModal from "@/components/ui/confirm-modal";
+import { supabase } from "@/lib/supabase";
+
+const formatNameInput = (str) =>
+  str ? str.replace(/\s+/g, " ").replace(/(^\w|\s\w)/g, (m) => m.toUpperCase()) : "";
 
 function Field({ label, children, hint }) {
   return (
@@ -35,30 +39,31 @@ function Field({ label, children, hint }) {
 export default function StaffPage() {
   const live = useLiveRoute();
   const fleet = useFleet();
-  const [staff, setStaff] = useState(loadStaffRoster);
+  const [staff, setStaff] = useStaffRoster();
   const [searchQuery, setSearchQuery] = useState("");
-
-  useEffect(() => {
-    saveStaffRoster(staff);
-  }, [staff]);
   const [selectedDriver, setSelectedDriver] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
   const [driverToDelete, setDriverToDelete] = useState(null);
 
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [truck, setTruck] = useState("");
   const [status, setStatus] = useState("Active");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const truckOf = (driverName) =>
     fleet.find((t) => live.driverByTruck[t.id] === driverName) || null;
   const truckLabel = (t) => `${t.id} (${t.plate})`;
 
   const resetForm = () => {
-    setName("");
+    setFirstName("");
+    setLastName("");
     setUsername("");
     setPassword("");
+    setShowPassword(false);
     setTruck("");
     setStatus("Active");
     setFormError("");
@@ -66,11 +71,19 @@ export default function StaffPage() {
 
   useEffect(() => {
     if (selectedDriver) {
-      setName(selectedDriver.name);
+      const parts = (selectedDriver.name || "").trim().split(" ");
+      if (parts.length > 1) {
+        setFirstName(parts.slice(0, -1).join(" "));
+        setLastName(parts[parts.length - 1]);
+      } else {
+        setFirstName(selectedDriver.name || "");
+        setLastName("");
+      }
       setUsername(selectedDriver.username);
       setTruck(truckOf(selectedDriver.name)?.id ?? "");
       setStatus(selectedDriver.status || "Active");
       setPassword("");
+      setShowPassword(false);
       setIsAdding(false);
     } else {
       resetForm();
@@ -87,11 +100,25 @@ export default function StaffPage() {
 
   const [formError, setFormError] = useState("");
 
-  const handleAddDriver = (e) => {
+  const handleAddDriver = async (e) => {
     e.preventDefault();
     setFormError("");
     const loginEmail = username.trim().toLowerCase();
-    if (!name.trim() || !loginEmail) return;
+    const fName = firstName.trim();
+    const lName = lastName.trim();
+
+    if (!lName) {
+      setFormError("Please enter the driver's last name.");
+      return;
+    }
+    if (!fName) {
+      setFormError("Please enter the driver's first name.");
+      return;
+    }
+    if (!loginEmail) {
+      setFormError("Please enter a login email.");
+      return;
+    }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginEmail)) {
       setFormError("Login email must be a valid email address.");
       return;
@@ -101,62 +128,159 @@ export default function StaffPage() {
       return;
     }
 
-    saveDriverAccount({ name: name.trim(), email: loginEmail, password });
+    setIsSubmitting(true);
+    const fullName = `${fName} ${lName}`;
 
-    const newDriver = {
+    // 1. Save locally for driver-accounts / mock login
+    saveDriverAccount({ name: fullName, email: loginEmail, password });
+
+    const newDriverObj = {
       id: `DRV-${String(staff.length + 1).padStart(3, "0")}`,
-      name: name.trim(),
+      name: fullName,
       role: "Driver",
       username: loginEmail,
-      status,
+      status: "Active",
     };
 
-    if (truck) assignDriver(truck, newDriver.name);
-    setStaff([...staff, newDriver]);
+    try {
+      // 2. Save in Supabase Auth & profiles table
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: loginEmail,
+        password,
+        options: {
+          data: {
+            role: "driver",
+            first_name: fName,
+            last_name: lName,
+            full_name: fullName,
+          },
+        },
+      });
+
+      if (!signUpError && data?.user?.id) {
+        const { error: upsertErr } = await supabase.from("profiles").upsert({
+          id: data.user.id,
+          role: "driver",
+          full_name: fullName,
+          first_name: fName,
+          last_name: lName,
+          email: loginEmail,
+          status: "Active",
+        });
+        if (upsertErr) console.warn("Upsert error:", upsertErr);
+      } else {
+        const { error: upsertErr } = await supabase.from("profiles").upsert({
+          role: "driver",
+          full_name: fullName,
+          first_name: fName,
+          last_name: lName,
+          email: loginEmail,
+          status: "Active",
+        });
+        if (upsertErr) console.warn("Upsert error:", upsertErr);
+      }
+    } catch (err) {
+      console.warn("Supabase driver creation warning:", err);
+    }
+
+    // 3. Update staff roster state and localStorage
+    setStaff((prev) => {
+      if (prev.some((d) => (d.username || "").toLowerCase() === loginEmail.toLowerCase())) {
+        return prev;
+      }
+      const updated = [...prev, newDriverObj];
+      saveStaffRoster(updated);
+      return updated;
+    });
+
+    if (truck) assignDriver(truck, fullName);
+
+    // 4. Fetch updated roster asynchronously and stop loading state
+    fetchStaffRoster();
+    setIsSubmitting(false);
     setIsAdding(false);
     resetForm();
   };
 
-  const handleUpdateDriver = (e) => {
+  const handleUpdateDriver = async (e) => {
     e.preventDefault();
     setFormError("");
     const loginEmail = username.trim().toLowerCase();
-    if (!name.trim() || !loginEmail) return;
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginEmail)) {
+    const fName = firstName.trim();
+    const lName = lastName.trim();
+
+    if (!lName || !fName) {
+      setFormError("Please enter both last name and first name.");
+      return;
+    }
+    if (!loginEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginEmail)) {
       setFormError("Login email must be a valid email address.");
       return;
     }
 
+    setIsSubmitting(true);
+    const fullName = `${fName} ${lName}`;
+
     if (getDriverAccount(selectedDriver.username)) {
-      renameDriverAccount(selectedDriver.username, loginEmail, name.trim());
+      renameDriverAccount(selectedDriver.username, loginEmail, fullName);
     }
 
     const prevTruck = truckOf(selectedDriver.name);
     if (prevTruck && prevTruck.id !== truck) assignDriver(prevTruck.id, null);
-    if (truck) assignDriver(truck, name.trim());
+    if (truck) assignDriver(truck, fullName);
+
+    // Bug 6 fix: sync updated name/email back to Supabase profiles table
+    if (selectedDriver.supabaseId) {
+      const { error: updateErr } = await supabase
+        .from("profiles")
+        .update({
+          full_name: fullName,
+          first_name: fName,
+          last_name: lName,
+          email: loginEmail,
+          status,
+        })
+        .eq("id", selectedDriver.supabaseId);
+      if (updateErr) console.warn("Profile update error:", updateErr);
+    }
 
     setStaff(
       staff.map((drv) =>
         drv.id === selectedDriver.id
-          ? { ...drv, name: name.trim(), username: loginEmail, status }
+          ? { ...drv, name: fullName, username: loginEmail, status }
           : drv
       )
     );
+    await fetchStaffRoster(); // Refresh from DB to stay in sync
     setSelectedDriver(null);
     resetForm();
+    setIsSubmitting(false);
   };
 
-  const handleDeleteDriver = (id) => {
+  // Bug 3 fix: soft-delete from Supabase by setting role to 'inactive'.
+  // This prevents the driver from appearing in the roster and blocks driver terminal access.
+  // Full auth account deletion requires a service-role key and should be done from Supabase dashboard.
+  const handleDeleteDriver = async (id) => {
     const person = staff.find((drv) => drv.id === id);
     if (person) {
       const held = truckOf(person.name);
       if (held) assignDriver(held.id, null);
       removeDriverAccount(person.username);
+
+      // Soft-delete: mark role as inactive in Supabase so they no longer appear
+      if (person.supabaseId) {
+        const { error } = await supabase
+          .from("profiles")
+          .update({ role: "inactive" })
+          .eq("id", person.supabaseId);
+        if (error) console.warn("Profile deactivation error:", error);
+      }
     }
     setStaff(staff.filter((drv) => drv.id !== id));
     if (selectedDriver?.id === id) {
       setSelectedDriver(null);
     }
+    await fetchStaffRoster(); // Refresh from DB
     setDriverToDelete(null);
   };
 
@@ -200,87 +324,88 @@ export default function StaffPage() {
             <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <input
               type="text"
-              placeholder="Search driver or truck..."
+              placeholder="Filter by driver or truck..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className={cn(inputClass, "pl-9")}
+              className="w-full rounded-xl border border-border bg-card/80 pl-9 pr-4 py-2 text-xs font-medium text-foreground placeholder:text-muted-foreground/60 outline-none transition-colors hover:border-zinc-300 focus:border-emerald-500 focus:bg-card"
             />
           </div>
         </div>
 
-        {filteredStaff.length === 0 ? (
-          <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-border bg-card p-10 text-center">
-            <Users className="mb-2.5 h-8 w-8 text-zinc-300" />
-            <h3 className="text-sm font-semibold text-foreground">
-              {searchQuery ? "No Drivers Found" : "No Drivers Yet"}
-            </h3>
-            <p className="mt-1 max-w-[240px] text-xs text-muted-foreground">
-              {searchQuery ? (
-                <>We couldn&apos;t find any drivers matching &quot;{searchQuery}&quot;.</>
-              ) : (
-                "Add your first driver to start assigning trucks and managing collections."
-              )}
-            </p>
+        <div className="flex-1 min-w-0 rounded-2xl border border-border bg-card/95 shadow-sm overflow-hidden flex flex-col">
+          <div className="flex-1 overflow-x-auto min-h-0">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-border bg-muted/40 font-semibold text-muted-foreground">
+                  <th className="py-3 px-4">Driver ID</th>
+                  <th className="py-3 px-4">Full Name</th>
+                  <th className="py-3 px-4">Login Email</th>
+                  <th className="py-3 px-4">Assigned Truck</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/60">
+                {filteredStaff.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-muted-foreground">
+                      No drivers match your search filter.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredStaff.map((person) => {
+                    const assigned = truckOf(person.name);
+                    return (
+                      <tr
+                        key={person.id}
+                        onClick={() => setSelectedDriver(person)}
+                        className={`transition-colors cursor-pointer hover:bg-muted/50 ${
+                          selectedDriver?.id === person.id ? "bg-emerald-50/50 dark:bg-emerald-950/20" : ""
+                        }`}
+                      >
+                        <td className="py-3 px-4 font-mono font-bold text-foreground">
+                          {person.id}
+                        </td>
+                        <td className="py-3 px-4 font-bold text-foreground">
+                          {person.name}
+                        </td>
+                        <td className="py-3 px-4 font-mono text-muted-foreground">
+                          {person.username}
+                        </td>
+                        <td className="py-3 px-4 font-medium text-foreground">
+                          {assigned ? (
+                            <span className="inline-flex items-center gap-1.5 font-bold text-emerald-700 dark:text-emerald-400">
+                              {truckLabel(assigned)}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground/70 italic">Unassigned</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4">
+                          <StatusBadge status={person.status || "Active"} />
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDriverToDelete(person);
+                            }}
+                            className="gap-1.5 shadow-xs"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            Remove
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {filteredStaff.map((person) => {
-              const isSelected = selectedDriver?.id === person.id;
-              const personTruck = truckOf(person.name);
-
-              return (
-                <div
-                  key={person.id}
-                  onClick={() => setSelectedDriver(person)}
-                  className={`group flex w-full cursor-pointer select-none flex-col justify-between rounded-xl border bg-card p-4 text-left transition-all ${
-                    isSelected
-                      ? "border-emerald-400 shadow-xs ring-1 ring-emerald-400/20"
-                      : "border-border hover:border-zinc-300 hover:bg-muted/40"
-                  }`}
-                >
-                  <div>
-                    <div className="mb-2 flex items-center justify-between">
-                      <span className="text-xs font-semibold text-foreground tracking-tight tabular-nums">{person.id}</span>
-                      <StatusBadge status={person.status} />
-                    </div>
-
-                    <div className="truncate text-sm font-semibold leading-tight text-foreground">
-                      {person.name}
-                    </div>
-                    <div className="mt-1 text-xs font-medium uppercase tracking-wide text-emerald-600">
-                      {person.role}
-                    </div>
-
-                    <div className="mt-4 border-t border-border-subtle pt-2">
-                      <InfoRow
-                        label="Assigned Truck"
-                        value={personTruck ? truckLabel(personTruck) : "Unassigned"}
-                      />
-                      <InfoRow
-                        label="Login Email"
-                        value={<span className="text-xs font-medium text-foreground">{person.username}</span>}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-2 flex shrink-0 items-center justify-end gap-1.5">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDriverToDelete(person);
-                      }}
-                      className="rounded-md border border-rose-200 bg-card px-2.5 py-1 text-xs font-medium text-rose-600 transition-colors hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 cursor-pointer"
-                      title="Delete Driver"
-                    >
-                      Delete Driver
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+        </div>
 
         {/* Guaranteed bottom spacer element */}
         <div className="h-6 sm:h-8 lg:h-10 w-full shrink-0 pointer-events-none" aria-hidden="true" />
@@ -330,33 +455,47 @@ export default function StaffPage() {
 
                 <div className="flex-1 overflow-y-auto py-3 gap-5 flex flex-col min-h-0">
                   <div className="flex flex-col gap-4">
-                    <Field label="Full Name">
+                    <Field label="Last Name">
                       <input
                         required
                         type="text"
-                        value={name}
-                        onChange={(e) => setName(formatNameInput(e.target.value))}
-                        onBlur={() => setName(formatNameInput(name))}
-                        placeholder={isAdding ? "e.g. Maria Santos" : undefined}
+                        value={lastName}
+                        onChange={(e) => setLastName(formatNameInput(e.target.value))}
+                        onBlur={() => setLastName(formatNameInput(lastName))}
+                        placeholder={isAdding ? "e.g. Santos" : undefined}
                         className={inputClass}
                       />
                     </Field>
 
-                    <Field label="Assigned Truck">
-                      <select
-                        value={truck}
-                        onChange={(e) => setTruck(e.target.value)}
-                        className={cn(inputClass, "cursor-pointer")}
-                      >
-                        <option value="">Unassigned</option>
-                        {fleet.map((t) => (
-                          <option key={t.id} value={t.id}>
-                            {truckLabel(t)}
-                            {live.driverByTruck[t.id] ? ` — ${live.driverByTruck[t.id]}` : ""}
-                          </option>
-                        ))}
-                      </select>
+                    <Field label="First Name">
+                      <input
+                        required
+                        type="text"
+                        value={firstName}
+                        onChange={(e) => setFirstName(formatNameInput(e.target.value))}
+                        onBlur={() => setFirstName(formatNameInput(firstName))}
+                        placeholder={isAdding ? "e.g. Maria" : undefined}
+                        className={inputClass}
+                      />
                     </Field>
+
+                    {!isAdding && (
+                      <Field label="Assigned Truck">
+                        <select
+                          value={truck}
+                          onChange={(e) => setTruck(e.target.value)}
+                          className={cn(inputClass, "cursor-pointer")}
+                        >
+                          <option value="">Unassigned</option>
+                          {fleet.map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {truckLabel(t)}
+                              {live.driverByTruck[t.id] ? ` — ${live.driverByTruck[t.id]}` : ""}
+                            </option>
+                          ))}
+                        </select>
+                      </Field>
+                    )}
 
                     <div className={cn("flex flex-col gap-4", isAdding && "border-t border-border-subtle pt-4")}>
                       <Field label="Login Email">
@@ -365,7 +504,7 @@ export default function StaffPage() {
                           type="text"
                           value={username}
                           onChange={(e) => setUsername(e.target.value)}
-                          placeholder={isAdding ? "e.g. maria.santos@example.com" : undefined}
+                          placeholder={isAdding ? "driver@bingo.com" : undefined}
                           className={cn(inputClass, "font-mono")}
                         />
                       </Field>
@@ -375,15 +514,38 @@ export default function StaffPage() {
                           label="Temporary Password"
                           hint="Share this temporary password with the driver to log in"
                         >
-                          <input
-                            required
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            placeholder="Set temp password..."
-                            className={cn(inputClass, "font-mono")}
-                          />
+                          <div className="relative">
+                            <input
+                              required
+                              type={showPassword ? "text" : "password"}
+                              value={password}
+                              onChange={(e) => setPassword(e.target.value.replace(/\s/g, ""))}
+                              placeholder="Set temp password..."
+                              className={cn(inputClass, "font-mono pr-10")}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPassword(!showPassword)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                              aria-label={showPassword ? "Hide password" : "Show password"}
+                            >
+                              {showPassword ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                            </button>
+                          </div>
                           <PasswordStrengthHint password={password} />
+                          {password && (
+                            <div className="flex flex-wrap gap-x-3 gap-y-1 pt-0.5 text-[11px] font-medium text-muted-foreground/70">
+                              <span className={password.length >= 6 ? "text-emerald-600 dark:text-emerald-400 font-semibold" : ""}>
+                                {password.length >= 6 ? "✓" : "•"} 6+ characters
+                              </span>
+                              <span className={/[a-zA-Z]/.test(password) ? "text-emerald-600 dark:text-emerald-400 font-semibold" : ""}>
+                                {/[a-zA-Z]/.test(password) ? "✓" : "•"} 1 letter
+                              </span>
+                              <span className={/\d/.test(password) ? "text-emerald-600 dark:text-emerald-400 font-semibold" : ""}>
+                                {/\d/.test(password) ? "✓" : "•"} 1 number
+                              </span>
+                            </div>
+                          )}
                         </Field>
                       ) : (
                         <div className="flex shrink-0 flex-col gap-2">
@@ -423,12 +585,22 @@ export default function StaffPage() {
                       variant="secondary"
                       size="sm"
                       type="button"
+                      disabled={isSubmitting}
                       onClick={() => (isAdding ? setIsAdding(false) : setSelectedDriver(null))}
                     >
                       Cancel
                     </Button>
-                    <Button variant="primary" size="sm" type="submit">
-                      {isAdding ? "Create Driver" : "Save Changes"}
+                    <Button variant="primary" size="sm" type="submit" disabled={isSubmitting}>
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          <span>Creating...</span>
+                        </>
+                      ) : isAdding ? (
+                        "Create Driver"
+                      ) : (
+                        "Save Changes"
+                      )}
                     </Button>
                   </div>
                 </div>

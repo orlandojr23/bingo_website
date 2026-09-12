@@ -408,7 +408,9 @@ export async function startRoute(truckId) {
     };
   }
 
-  await supabase.from('live_tracking').update({
+  // Bug 8 fix: use upsert so new trucks (with no live_tracking row yet) get one created automatically
+  await supabase.from('live_tracking').upsert({
+    truck_id: truckId,
     schedule_id: startedId,
     phase: newPhase,
     is_active: newTracking.isActive,
@@ -416,7 +418,7 @@ export async function startRoute(truckId) {
     lat: newTracking.lat,
     lng: newTracking.lng,
     heading: newTracking.heading,
-  }).eq('truck_id', truckId);
+  }, { onConflict: 'truck_id' });
 
   await supabase.from('schedules').update({ status: 'In Progress' }).eq('id', startedId);
 

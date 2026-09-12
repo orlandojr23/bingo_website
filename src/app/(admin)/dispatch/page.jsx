@@ -8,7 +8,7 @@ import { TEJERO_SITOS } from "@/lib/mock-data";
 import { useLiveRoute, getSchedules, addSchedule, updateSchedule, removeSchedule, restoreSchedule, hardDeleteSchedule, assignDriver, estimateStopTime, retimeRoutePoints, scheduleLabel } from "@/lib/live-route";
 import { useRoutePath } from "@/lib/use-route-path";
 import { useFleet, addTruck, updateTruck, removeTruck } from "@/lib/fleet";
-import { loadStaffRoster } from "@/lib/staff";
+import { useStaffRoster } from "@/lib/staff";
 import ConfirmModal from "@/components/ui/confirm-modal";
 import { StatusBadge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
@@ -59,12 +59,8 @@ export default function DispatchPage() {
   const [stopOrder, setStopOrder] = useState([]);
   const [scheduleToDelete, setScheduleToDelete] = useState(null);
   const [truckToRemove, setTruckToRemove] = useState(null);
-  const [driverRoster, setDriverRoster] = useState([]);
+  const [driverRoster] = useStaffRoster();
   const [viewMode, setViewMode] = useState("active");
-
-  useEffect(() => {
-    setDriverRoster(loadStaffRoster());
-  }, []);
 
   const live = useLiveRoute();
   const fleet = useFleet();
@@ -881,13 +877,14 @@ export default function DispatchPage() {
                         required
                       />
                     </Field>
-                    <Field label="Assign Driver (optional)">
+                    <Field label="Assign Driver">
                       <select
+                        required
                         value={truckForm.driver}
                         onChange={(e) => setTruckForm({ ...truckForm, driver: e.target.value })}
                         className={cn(inputClass, "cursor-pointer")}
                       >
-                        <option value="">Unassigned</option>
+                        <option value="">Select a driver...</option>
                         {driverRoster
                           .filter((p) => p.status === "Active")
                           .map((p) => (

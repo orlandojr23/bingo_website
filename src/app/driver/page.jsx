@@ -14,7 +14,8 @@ import {
   X,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { mockPilotData, mockTickets } from "@/lib/mock-data";
+import { mockPilotData } from "@/lib/mock-data";
+import { useTickets, updateTicket } from "@/lib/tickets";
 import {
   useLiveRoute,
   startRoute,
@@ -325,7 +326,7 @@ function assignedAreaTagline(schedule, zone) {
 }
 
 export default function DriverPage() {
-  const [selectedTruckId, setSelectedTruckId] = useState("TRK-01");
+  const [selectedTruckId, setSelectedTruckId] = useState("");
   const [wakeLockActive, setWakeLockActive] = useState(false);
   const [wakeLockSupported, setWakeLockSupported] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
@@ -376,21 +377,30 @@ export default function DriverPage() {
         router.replace("/driver-login");
         return;
       }
-      
-      supabase.from('profiles').select('role, full_name, id').eq('id', session.user.id).single().then(({ data }) => {
-        const role = data?.role || session.user.user_metadata?.role;
+
+      supabase.from('profiles').select('role, full_name, id').eq('id', session.user.id).single().then(({ data: profile }) => {
+        const role = profile?.role || session.user.user_metadata?.role;
         if (role !== 'driver') {
           router.replace("/driver-login");
-        } else {
-          setDriverSession({ email: session.user.email, name: data?.full_name || session.user.user_metadata?.full_name || "Driver", id: session.user.id });
-          setSessionReady(true);
+          return;
         }
+
+        const driverFullName = profile?.full_name || session.user.user_metadata?.full_name || "";
+        setDriverSession({ email: session.user.email, name: driverFullName || "Driver", id: session.user.id });
+
+        // Bug 1 fix: resolve the truck assigned to this driver by name from the trucks table
+        supabase.from('trucks').select('id').eq('driver_name', driverFullName).maybeSingle().then(({ data: truck }) => {
+          if (truck?.id) {
+            setSelectedTruckId(truck.id);
+          }
+          setSessionReady(true);
+        });
       });
     });
   }, [router]);
 
-  // Live Driver Tickets State
-  const [driverTickets, setDriverTickets] = useState(mockTickets);
+  // Live Driver Tickets State — sourced from Supabase via tickets.js (Bug 9 fix)
+  const driverTickets = useTickets();
 
   // Live Telemetry State
   const [coords, setCoords] = useState({
@@ -420,7 +430,9 @@ export default function DriverPage() {
     }
   };
 
-  const handleChangePassword = () => {
+  // Bug 5 fix: password change uses Supabase Auth (supabase.auth.updateUser) instead of localStorage.
+  // Current password is verified by re-authenticating before updating.
+  const handleChangePassword = async () => {
     const newErrors = {};
     if (!currentPassword) {
       newErrors.current = "Please enter your current password.";
@@ -445,17 +457,26 @@ export default function DriverPage() {
     setPwErrors({});
     setPwSaving(true);
 
-    setTimeout(() => {
-      const result = changeDriverPassword(driverSession?.email || "", currentPassword, newPassword);
-      setPwSaving(false);
-      if (result === "wrong-current") {
+    try {
+      // Verify current password by re-signing in
+      const { error: verifyErr } = await supabase.auth.signInWithPassword({
+        email: driverSession?.email || "",
+        password: currentPassword,
+      });
+      if (verifyErr) {
         setPwErrors({ current: "Your current password is incorrect." });
+        setPwSaving(false);
         return;
       }
-      if (result === "no-account") {
-        setPwErrors({ current: "Account not found. Please sign out and sign in again." });
+
+      // Update password in Supabase Auth
+      const { error: updateErr } = await supabase.auth.updateUser({ password: newPassword });
+      if (updateErr) {
+        setPwErrors({ newPassword: updateErr.message });
+        setPwSaving(false);
         return;
       }
+
       setCurrentPassword("");
       setNewPassword("");
       setConfirmNewPassword("");
@@ -464,7 +485,11 @@ export default function DriverPage() {
       setShowConfirm(false);
       toast("Password changed successfully.");
       haptic();
-    }, 700);
+    } catch (err) {
+      setPwErrors({ current: "Something went wrong. Please try again." });
+    } finally {
+      setPwSaving(false);
+    }
   };
 
   const live = useLiveRoute();
@@ -481,26 +506,31 @@ export default function DriverPage() {
   const liveDriver = live.driverByTruck[selectedTruckId] ?? currentTruck.driver;
 
   const assignedSchedule = useMemo(() => {
+    if (!selectedTruckId) return null;
     const status = live.scheduleStatus;
-    const mine = getSchedules().filter(
-      (s) => s.activeTruckId === selectedTruckId
-    );
+    // Bug 2 fix: use s.truckId (the actual DB field), not s.activeTruckId which doesn't exist
+    const mine = getSchedules().filter((s) => s.truckId === selectedTruckId);
     const inProgress = mine.filter((s) => status[s.id] === "In Progress");
-    const scheduled = mine.filter((s) => status[s.id] === "Scheduled" || status[s.id] === "Assigned" || status[s.id] === "Accepted");
-    return (
-      inProgress[inProgress.length - 1] ||
-      scheduled[scheduled.length - 1] ||
-      null
+    const scheduled = mine.filter(
+      (s) => status[s.id] === "Scheduled" || status[s.id] === "Assigned" || status[s.id] === "Accepted"
     );
+    return inProgress[inProgress.length - 1] || scheduled[scheduled.length - 1] || null;
   }, [selectedTruckId, live]);
+
+  const hasAvailableAssignment =
+    isOnDuty ||
+    (!!truckState &&
+      (truckState.phase === "enroute" || truckState.phase === "onsite")) ||
+    !!assignedSchedule;
 
   // How many routes are still queued for this truck — drives the banner's
   // "N new assignments" headline so it stays truthful with multiple queued.
   const pendingAssignments = useMemo(() => {
+    if (!selectedTruckId) return 0;
     const status = live.scheduleStatus;
     return getSchedules().filter(
       (s) =>
-        s.activeTruckId === selectedTruckId &&
+        s.truckId === selectedTruckId &&
         (status[s.id] === "In Progress" || status[s.id] === "Scheduled" || status[s.id] === "Assigned" || status[s.id] === "Accepted")
     ).length;
   }, [selectedTruckId, live]);
@@ -805,9 +835,16 @@ export default function DriverPage() {
         !!truckState &&
         (truckState.phase === "enroute" || truckState.phase === "onsite") &&
         !truckState.tracking.isActive;
-      const scheduleId = startRoute(selectedTruckId);
+
+      if (!wasPaused && !assignedSchedule) {
+        toast("No route assignments available.", { variant: "error" });
+        return;
+      }
+
+      // Bug 4 fix: await startRoute so GPS and wake lock don't activate before route is recorded
+      const scheduleId = await startRoute(selectedTruckId);
       if (!scheduleId) {
-        toast("No route assignments.");
+        toast("No route assignments available.", { variant: "error" });
         return;
       }
       setBroadcastStatus("Broadcasting live");
@@ -860,7 +897,7 @@ export default function DriverPage() {
     await stopGpsWatch();
     const next = getSchedules().find(
       (s) =>
-        s.activeTruckId === selectedTruckId &&
+        s.truckId === selectedTruckId &&
         ((live.scheduleStatus[s.id] ?? s.status) === "Scheduled" || (live.scheduleStatus[s.id] ?? s.status) === "Assigned" || (live.scheduleStatus[s.id] ?? s.status) === "Accepted")
     );
     toast(
@@ -877,12 +914,11 @@ export default function DriverPage() {
     toast("Route ended.");
   };
 
-  const handleResolveTicket = (ticketId) => {
-    setDriverTickets((prev) =>
-      prev.map((t) => (t.id === ticketId ? { ...t, status: "Resolved" } : t))
-    );
+  // Bug 9 fix: persist ticket resolution to Supabase so admin sees "Resolved" status
+  const handleResolveTicket = async (ticketId) => {
     haptic(15);
-    toast(`Ticket ${ticketId} marked Cleaned Up.`);
+    await updateTicket(ticketId, { status: "Resolved" });
+    toast(`Ticket marked as Cleaned Up.`);
   };
 
   const trucksForMap = useMemo(() => {
@@ -1253,17 +1289,26 @@ export default function DriverPage() {
                               <button
                                 type="button"
                                 onClick={handlePrimaryAction}
+                                disabled={!isOnDuty && !hasAvailableAssignment}
                                 className={cn(
-                                  "flex h-12 w-full items-center justify-center gap-2 rounded-xl text-xs font-bold transition-all active:scale-[0.98] cursor-pointer shadow-xs",
-                                  isOnDuty && truckState?.phase === "enroute"
-                                    ? "bg-amber-600 text-white hover:bg-amber-700"
-                                    : "bg-emerald-600 text-white hover:bg-emerald-700"
+                                  "flex h-12 w-full items-center justify-center gap-2 rounded-xl text-xs font-bold transition-all active:scale-[0.98] shadow-xs",
+                                  !isOnDuty && !hasAvailableAssignment
+                                    ? "bg-zinc-200 text-zinc-400 cursor-not-allowed border border-zinc-300 dark:bg-zinc-800 dark:text-zinc-500 dark:border-zinc-700 opacity-80"
+                                    : isOnDuty && truckState?.phase === "enroute"
+                                      ? "bg-amber-600 text-white hover:bg-amber-700 cursor-pointer"
+                                      : "bg-emerald-600 text-white hover:bg-emerald-700 cursor-pointer"
                                 )}
                               >
                                 {!isOnDuty ? (
-                                  <>
-                                    <Play className="h-4 w-4 fill-white" /> Start Route
-                                  </>
+                                  hasAvailableAssignment ? (
+                                    <>
+                                      <Play className="h-4 w-4 fill-white" /> Start Route
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Play className="h-4 w-4 fill-zinc-400 dark:fill-zinc-500" /> No Assignment Available
+                                    </>
+                                  )
                                 ) : truckState.phase === "enroute" ? (
                                   <>
                                     Stop By: {currentPoint?.name ?? "Stop"}
@@ -1358,7 +1403,7 @@ export default function DriverPage() {
                         {(() => {
                           const history = getSchedules().filter(
                             (s) =>
-                              s.activeTruckId === selectedTruckId &&
+                              s.truckId === selectedTruckId &&
                               live.scheduleStatus[s.id] === "Completed" &&
                               !s.isArchived
                           );

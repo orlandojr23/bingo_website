@@ -412,13 +412,22 @@ function TruckMarker({ trk, fading, bearing = 0 }) {
 }
 
 function AnimatedRoute({ route, fading }) {
-  const casingRef = useRef(null);
+  const shadowRef = useRef(null);
+  const outerGlowRef = useRef(null);
+  const whiteCasingRef = useRef(null);
   const lineRef = useRef(null);
+  const highlightRef = useRef(null);
 
   const cleanPositions = useMemo(() => sanitizePositions(route.positions), [route.positions]);
 
   useEffect(() => {
-    const els = [casingRef.current?.getElement(), lineRef.current?.getElement()].filter(Boolean);
+    const els = [
+      shadowRef.current?.getElement(),
+      outerGlowRef.current?.getElement(),
+      whiteCasingRef.current?.getElement(),
+      lineRef.current?.getElement(),
+      highlightRef.current?.getElement(),
+    ].filter(Boolean);
     if (!els.length) return;
     if (fading) {
       els.forEach((el) => {
@@ -441,17 +450,66 @@ function AnimatedRoute({ route, fading }) {
 
   if (cleanPositions.length < 2) return null;
 
+  const isFuture = !!route.future || String(route.id || "").includes("future");
+
+  if (isFuture) {
+    return (
+      <span>
+        {/* Soft Casing for Future Leg */}
+        <Polyline
+          ref={whiteCasingRef}
+          positions={cleanPositions}
+          pathOptions={{ color: "#ffffff", weight: 6, opacity: 0.7, lineCap: "round", lineJoin: "round", interactive: false }}
+        />
+        {/* Sleek Dashed Emerald Trajectory */}
+        <Polyline
+          ref={lineRef}
+          positions={cleanPositions}
+          pathOptions={{
+            color: "#059669",
+            weight: 3.5,
+            opacity: 0.75,
+            dashArray: "6, 9",
+            lineCap: "round",
+            lineJoin: "round",
+            interactive: false,
+          }}
+        />
+      </span>
+    );
+  }
+
   return (
     <span>
+      {/* Layer 1: Ambient Drop Shadow for 3D Elevation */}
       <Polyline
-        ref={casingRef}
+        ref={shadowRef}
         positions={cleanPositions}
-        pathOptions={{ color: "#ffffff", weight: 7, opacity: 0.9, interactive: false }}
+        pathOptions={{ color: "#022c22", weight: 12, opacity: 0.22, lineCap: "round", lineJoin: "round", interactive: false }}
       />
+      {/* Layer 2: Deep Emerald Outer Casing */}
+      <Polyline
+        ref={outerGlowRef}
+        positions={cleanPositions}
+        pathOptions={{ color: "#047857", weight: 9, opacity: 0.65, lineCap: "round", lineJoin: "round", interactive: false }}
+      />
+      {/* Layer 3: Crisp White Border Casing */}
+      <Polyline
+        ref={whiteCasingRef}
+        positions={cleanPositions}
+        pathOptions={{ color: "#ffffff", weight: 7, opacity: 0.95, lineCap: "round", lineJoin: "round", interactive: false }}
+      />
+      {/* Layer 4: Main Vibrant Emerald Core Line */}
       <Polyline
         ref={lineRef}
         positions={cleanPositions}
-        pathOptions={{ color: "#059669", weight: 4, opacity: 0.9, lineCap: "round", lineJoin: "round", interactive: false }}
+        pathOptions={{ color: "#10b981", weight: 4.5, opacity: 1, lineCap: "round", lineJoin: "round", interactive: false }}
+      />
+      {/* Layer 5: Ultra-sleek Inner Glass / Neon Core Highlight */}
+      <Polyline
+        ref={highlightRef}
+        positions={cleanPositions}
+        pathOptions={{ color: "#a7f3d0", weight: 1.8, opacity: 0.9, lineCap: "round", lineJoin: "round", interactive: false }}
       />
     </span>
   );
