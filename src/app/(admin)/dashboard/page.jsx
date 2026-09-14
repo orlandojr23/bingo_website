@@ -190,7 +190,7 @@ export default function DashboardPage() {
                     </div>
 
                     <div className="mt-4 border-t border-border-subtle pt-2">
-                      <InfoRow label="Status" value={<StatusBadge status={t.status} className="p-0" />} />
+                      <InfoRow label="Status" value={<StatusBadge status={t.status} showDot={false} className="p-0" />} />
                       <InfoRow
                         label="Reported"
                         value={

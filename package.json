@@ -1,5 +1,5 @@
 {
-  "name": "bingo-web-temp",
+  "name": "bingo-web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -14,22 +14,19 @@
     "clsx": "^2.1.1",
     "driver.js": "^1.8.0",
     "framer-motion": "^13.1.0",
-    "jimp": "^0.16.1",
-    "js-cookie": "^3.0.8",
     "leaflet": "^1.9.4",
     "leaflet-rotate": "^0.2.8",
     "lucide-react": "^1.31.0",
-    "next": "16.3.0",
+    "next": "16.3.5",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "react-google-recaptcha": "^3.1.0",
     "react-leaflet": "^5.0.0",
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "eslint": "^9",
-    "eslint-config-next": "16.3.0",
+    "eslint-config-next": "16.3.5",
     "tailwindcss": "^4"
   }
 }

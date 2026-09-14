@@ -23,6 +23,7 @@ import { useStaffRoster, saveStaffRoster, fetchStaffRoster } from "@/lib/staff";
 import ConfirmModal from "@/components/ui/confirm-modal";
 import { supabase } from "@/lib/supabase";
 
+
 const formatNameInput = (str) =>
   str ? str.replace(/\s+/g, " ").replace(/(^\w|\s\w)/g, (m) => m.toUpperCase()) : "";
 
@@ -53,9 +54,14 @@ export default function StaffPage() {
   const [truck, setTruck] = useState("");
   const [status, setStatus] = useState("Active");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [pendingDriver, setPendingDriver] = useState(null);
+  const [resendTimer, setResendTimer] = useState(60);
+  const [isResending, setIsResending] = useState(false);
 
   const truckOf = (driverName) =>
-    fleet.find((t) => live.driverByTruck[t.id] === driverName) || null;
+    fleet.find((t) => t.driver && t.driver.trim().toLowerCase() === driverName?.trim().toLowerCase()) || null;
   const truckLabel = (t) => `${t.id} (${t.plate})`;
 
   const resetForm = () => {
@@ -67,7 +73,25 @@ export default function StaffPage() {
     setTruck("");
     setStatus("Active");
     setFormError("");
+    setIsVerifyingOtp(false);
+    setOtpCode("");
+    setPendingDriver(null);
+    setResendTimer(60);
+    setIsResending(false);
   };
+
+  // Countdown timer for OTP resend
+  useEffect(() => {
+    if (!isVerifyingOtp) return;
+    setResendTimer(60);
+    const interval = setInterval(() => {
+      setResendTimer((prev) => {
+        if (prev <= 1) { clearInterval(interval); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isVerifyingOtp]);
 
   useEffect(() => {
     if (selectedDriver) {
@@ -143,7 +167,7 @@ export default function StaffPage() {
     };
 
     try {
-      // 2. Save in Supabase Auth & profiles table
+      // 2. Save in Supabase Auth (This will trigger an OTP email if email confirmations are enabled)
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: loginEmail,
         password,
@@ -157,49 +181,105 @@ export default function StaffPage() {
         },
       });
 
-      if (!signUpError && data?.user?.id) {
+      if (signUpError) {
+        setFormError(signUpError.message);
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Transition to OTP verification step
+      setPendingDriver({
+        id: data?.user?.id,
+        newDriverObj,
+        fullName,
+        fName,
+        lName,
+        loginEmail,
+      });
+      setIsVerifyingOtp(true);
+      setIsSubmitting(false);
+      return; // Stop here and wait for OTP input
+
+    } catch (err) {
+      console.warn("Supabase driver creation warning:", err);
+      setFormError("Failed to create driver account.");
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    setFormError("");
+
+    if (!otpCode || otpCode.length !== 6) {
+      setFormError("Please enter a valid 6-digit code.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // verifyOtp does not affect the current admin session
+      const { data, error: verifyError } = await supabase.auth.verifyOtp({
+        email: pendingDriver.loginEmail,
+        token: otpCode,
+        type: "signup",
+      });
+
+      if (verifyError) {
+        setFormError(verifyError.message);
+        setIsSubmitting(false);
+        return;
+      }
+
+      const userId = pendingDriver.id || data?.user?.id;
+      
+      // Verification successful, create profile
+      if (userId) {
         const { error: upsertErr } = await supabase.from("profiles").upsert({
-          id: data.user.id,
+          id: userId,
           role: "driver",
-          full_name: fullName,
-          first_name: fName,
-          last_name: lName,
-          email: loginEmail,
+          full_name: pendingDriver.fullName,
+          first_name: pendingDriver.fName,
+          last_name: pendingDriver.lName,
+          email: pendingDriver.loginEmail,
           status: "Active",
         });
         if (upsertErr) console.warn("Upsert error:", upsertErr);
       } else {
         const { error: upsertErr } = await supabase.from("profiles").upsert({
           role: "driver",
-          full_name: fullName,
-          first_name: fName,
-          last_name: lName,
-          email: loginEmail,
+          full_name: pendingDriver.fullName,
+          first_name: pendingDriver.fName,
+          last_name: pendingDriver.lName,
+          email: pendingDriver.loginEmail,
           status: "Active",
         });
         if (upsertErr) console.warn("Upsert error:", upsertErr);
       }
+
+      // Update staff roster state and localStorage
+      setStaff((prev) => {
+        if (prev.some((d) => (d.username || "").toLowerCase() === pendingDriver.loginEmail.toLowerCase())) {
+          return prev;
+        }
+        const updated = [...prev, pendingDriver.newDriverObj];
+        saveStaffRoster(updated);
+        return updated;
+      });
+
+      if (truck) assignDriver(truck, pendingDriver.fullName);
+
+      fetchStaffRoster();
+      setIsSubmitting(false);
+      setIsAdding(false);
+      resetForm();
+
     } catch (err) {
-      console.warn("Supabase driver creation warning:", err);
+      console.warn("OTP verification warning:", err);
+      setFormError("Verification failed.");
+      setIsSubmitting(false);
     }
-
-    // 3. Update staff roster state and localStorage
-    setStaff((prev) => {
-      if (prev.some((d) => (d.username || "").toLowerCase() === loginEmail.toLowerCase())) {
-        return prev;
-      }
-      const updated = [...prev, newDriverObj];
-      saveStaffRoster(updated);
-      return updated;
-    });
-
-    if (truck) assignDriver(truck, fullName);
-
-    // 4. Fetch updated roster asynchronously and stop loading state
-    fetchStaffRoster();
-    setIsSubmitting(false);
-    setIsAdding(false);
-    resetForm();
   };
 
   const handleUpdateDriver = async (e) => {
@@ -382,7 +462,7 @@ export default function StaffPage() {
                           )}
                         </td>
                         <td className="py-3 px-4">
-                          <StatusBadge status={person.status || "Active"} />
+                          <StatusBadge status={person.status || "Active"} showDot={false} />
                         </td>
                         <td className="py-3 px-4 text-right">
                           <Button
@@ -429,7 +509,7 @@ export default function StaffPage() {
               className="relative z-10 flex h-auto max-h-[85dvh] sm:h-full sm:max-h-full w-full max-w-md flex-col overflow-hidden rounded-t-2xl sm:rounded-none border-t sm:border-t-0 sm:border-l border-border bg-card p-4 sm:p-6 shadow-2xl pointer-events-auto self-end sm:self-auto"
             >
               <form
-                onSubmit={isAdding ? handleAddDriver : handleUpdateDriver}
+                onSubmit={isVerifyingOtp ? handleVerifyOtp : (isAdding ? handleAddDriver : handleUpdateDriver)}
                 className="flex h-full flex-col justify-between overflow-hidden"
               >
                 <div className="flex shrink-0 items-start justify-between border-b border-border pb-3">
@@ -454,124 +534,179 @@ export default function StaffPage() {
                 </div>
 
                 <div className="flex-1 overflow-y-auto py-3 gap-5 flex flex-col min-h-0">
-                  <div className="flex flex-col gap-4">
-                    <Field label="Last Name">
-                      <input
-                        required
-                        type="text"
-                        value={lastName}
-                        onChange={(e) => setLastName(formatNameInput(e.target.value))}
-                        onBlur={() => setLastName(formatNameInput(lastName))}
-                        placeholder={isAdding ? "e.g. Santos" : undefined}
-                        className={inputClass}
-                      />
-                    </Field>
-
-                    <Field label="First Name">
-                      <input
-                        required
-                        type="text"
-                        value={firstName}
-                        onChange={(e) => setFirstName(formatNameInput(e.target.value))}
-                        onBlur={() => setFirstName(formatNameInput(firstName))}
-                        placeholder={isAdding ? "e.g. Maria" : undefined}
-                        className={inputClass}
-                      />
-                    </Field>
-
-                    {!isAdding && (
-                      <Field label="Assigned Truck">
-                        <select
-                          value={truck}
-                          onChange={(e) => setTruck(e.target.value)}
-                          className={cn(inputClass, "cursor-pointer")}
-                        >
-                          <option value="">Unassigned</option>
-                          {fleet.map((t) => (
-                            <option key={t.id} value={t.id}>
-                              {truckLabel(t)}
-                              {live.driverByTruck[t.id] ? ` — ${live.driverByTruck[t.id]}` : ""}
-                            </option>
-                          ))}
-                        </select>
-                      </Field>
-                    )}
-
-                    <div className={cn("flex flex-col gap-4", isAdding && "border-t border-border-subtle pt-4")}>
-                      <Field label="Login Email">
+                  {isVerifyingOtp ? (
+                    <div className="flex flex-col gap-6 items-center justify-center text-center py-8">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full text-emerald-600 mb-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-mail-check"><path d="M22 13V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12c0 1.1.9 2 2 2h8"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/><path d="m16 19 2 2 4-4"/></svg>
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-foreground mb-1">Verify Driver Email</h3>
+                        <p className="text-sm text-muted-foreground px-4">
+                          A 6-digit code has been sent to <br/><strong className="text-foreground">{pendingDriver?.loginEmail}</strong>.<br/><br/>
+                          Ask the driver for the code to activate their account.
+                        </p>
+                      </div>
+                      <div className="w-full max-w-[240px]">
                         <input
                           required
                           type="text"
-                          value={username}
-                          onChange={(e) => setUsername(e.target.value)}
-                          placeholder={isAdding ? "driver@bingo.com" : undefined}
-                          className={cn(inputClass, "font-mono")}
+                          value={otpCode}
+                          onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                          placeholder="000000"
+                          className={cn(inputClass, "font-mono text-center text-2xl tracking-[0.5em] p-4 h-14 bg-emerald-50/50 border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500/20")}
+                        />
+                      </div>
+
+                      {/* Resend row */}
+                      <div className="flex flex-col items-center gap-1">
+                        <button
+                          type="button"
+                          disabled={resendTimer > 0 || isResending}
+                          onClick={async () => {
+                            if (resendTimer > 0 || isResending || !pendingDriver?.loginEmail) return;
+                            setIsResending(true);
+                            setFormError("");
+                            const { error } = await supabase.auth.resend({
+                              type: "signup",
+                              email: pendingDriver.loginEmail,
+                            });
+                            setIsResending(false);
+                            if (error) {
+                              setFormError(error.message);
+                            } else {
+                              setResendTimer(60);
+                            }
+                          }}
+                          className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 disabled:text-muted-foreground/50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {isResending
+                            ? "Sending..."
+                            : resendTimer > 0
+                            ? `Resend Code (${resendTimer}s)`
+                            : "Resend Code"}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-4">
+                      <Field label="Last Name">
+                        <input
+                          required
+                          type="text"
+                          value={lastName}
+                          onChange={(e) => setLastName(formatNameInput(e.target.value))}
+                          onBlur={() => setLastName(formatNameInput(lastName))}
+                          placeholder={isAdding ? "e.g. Santos" : undefined}
+                          className={inputClass}
                         />
                       </Field>
 
-                      {isAdding ? (
-                        <Field
-                          label="Temporary Password"
-                          hint="Share this temporary password with the driver to log in"
-                        >
-                          <div className="relative">
-                            <input
-                              required
-                              type={showPassword ? "text" : "password"}
-                              value={password}
-                              onChange={(e) => setPassword(e.target.value.replace(/\s/g, ""))}
-                              placeholder="Set temp password..."
-                              className={cn(inputClass, "font-mono pr-10")}
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setShowPassword(!showPassword)}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
-                              aria-label={showPassword ? "Hide password" : "Show password"}
-                            >
-                              {showPassword ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                            </button>
-                          </div>
-                          <PasswordStrengthHint password={password} />
-                          {password && (
-                            <div className="flex flex-wrap gap-x-3 gap-y-1 pt-0.5 text-[11px] font-medium text-muted-foreground/70">
-                              <span className={password.length >= 6 ? "text-emerald-600 dark:text-emerald-400 font-semibold" : ""}>
-                                {password.length >= 6 ? "✓" : "•"} 6+ characters
-                              </span>
-                              <span className={/[a-zA-Z]/.test(password) ? "text-emerald-600 dark:text-emerald-400 font-semibold" : ""}>
-                                {/[a-zA-Z]/.test(password) ? "✓" : "•"} 1 letter
-                              </span>
-                              <span className={/\d/.test(password) ? "text-emerald-600 dark:text-emerald-400 font-semibold" : ""}>
-                                {/\d/.test(password) ? "✓" : "•"} 1 number
-                              </span>
-                            </div>
-                          )}
-                        </Field>
-                      ) : (
-                        <div className="flex shrink-0 flex-col gap-2">
-                          <span className={labelClass}>Account Status</span>
-                          <div className="grid grid-cols-2 gap-0.5 rounded-lg bg-muted p-0.5">
-                            {["Active", "Suspended"].map((option) => (
-                              <button
-                                key={option}
-                                type="button"
-                                onClick={() => setStatus(option)}
-                                className={`rounded-md py-1.5 text-xs font-medium transition-colors cursor-pointer ${
-                                  status === option
-                                    ? option === "Active"
-                                      ? "bg-emerald-600 text-white shadow-xs"
-                                      : "bg-rose-600 text-white shadow-xs"
-                                    : "text-muted-foreground hover:text-foreground"
-                                }`}
-                              >
-                                {option}
-                              </button>
+                      <Field label="First Name">
+                        <input
+                          required
+                          type="text"
+                          value={firstName}
+                          onChange={(e) => setFirstName(formatNameInput(e.target.value))}
+                          onBlur={() => setFirstName(formatNameInput(firstName))}
+                          placeholder={isAdding ? "e.g. Maria" : undefined}
+                          className={inputClass}
+                        />
+                      </Field>
+
+                      {!isAdding && (
+                        <Field label="Assigned Truck">
+                          <select
+                            value={truck}
+                            onChange={(e) => setTruck(e.target.value)}
+                            className={cn(inputClass, "cursor-pointer")}
+                          >
+                            <option value="">Unassigned</option>
+                            {fleet.map((t) => (
+                              <option key={t.id} value={t.id}>
+                                {truckLabel(t)}
+                                {live.driverByTruck[t.id] ? ` — ${live.driverByTruck[t.id]}` : ""}
+                              </option>
                             ))}
-                          </div>
-                        </div>
+                          </select>
+                        </Field>
                       )}
+
+                      <div className={cn("flex flex-col gap-4", isAdding && "border-t border-border-subtle pt-4")}>
+                        <Field label="Login Email">
+                          <input
+                            required
+                            type="text"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            placeholder={isAdding ? "driver@bingo.com" : undefined}
+                            className={cn(inputClass, "font-mono")}
+                          />
+                        </Field>
+
+                        {isAdding ? (
+                          <Field
+                            label="Temporary Password"
+                            hint="Share this temporary password with the driver to log in"
+                          >
+                            <div className="relative">
+                              <input
+                                required
+                                type={showPassword ? "text" : "password"}
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value.replace(/\s/g, ""))}
+                                placeholder="Set temp password..."
+                                className={cn(inputClass, "font-mono pr-10")}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                                aria-label={showPassword ? "Hide password" : "Show password"}
+                              >
+                                {showPassword ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                              </button>
+                            </div>
+                            <PasswordStrengthHint password={password} />
+                            {password && (
+                              <div className="flex flex-wrap gap-x-3 gap-y-1 pt-0.5 text-[11px] font-medium text-muted-foreground/70">
+                                <span className={password.length >= 6 ? "text-emerald-600 dark:text-emerald-400 font-semibold" : ""}>
+                                  {password.length >= 6 ? "✓" : "•"} 6+ characters
+                                </span>
+                                <span className={/[a-zA-Z]/.test(password) ? "text-emerald-600 dark:text-emerald-400 font-semibold" : ""}>
+                                  {/[a-zA-Z]/.test(password) ? "✓" : "•"} 1 letter
+                                </span>
+                                <span className={/\d/.test(password) ? "text-emerald-600 dark:text-emerald-400 font-semibold" : ""}>
+                                  {/\d/.test(password) ? "✓" : "•"} 1 number
+                                </span>
+                              </div>
+                            )}
+                          </Field>
+                        ) : (
+                          <div className="flex shrink-0 flex-col gap-2">
+                            <span className={labelClass}>Account Status</span>
+                            <div className="grid grid-cols-2 gap-0.5 rounded-lg bg-muted p-0.5">
+                              {["Active", "Suspended"].map((option) => (
+                                <button
+                                  key={option}
+                                  type="button"
+                                  onClick={() => setStatus(option)}
+                                  className={`rounded-md py-1.5 text-xs font-medium transition-colors cursor-pointer ${
+                                    status === option
+                                      ? option === "Active"
+                                        ? "bg-emerald-600 text-white shadow-xs"
+                                        : "bg-rose-600 text-white shadow-xs"
+                                      : "text-muted-foreground hover:text-foreground"
+                                  }`}
+                                >
+                                  {option}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 <div className="mt-auto shrink-0 flex flex-col gap-3 border-t border-border-subtle pt-4">
@@ -590,14 +725,19 @@ export default function StaffPage() {
                     >
                       Cancel
                     </Button>
-                    <Button variant="primary" size="sm" type="submit" disabled={isSubmitting}>
+                    <Button
+                      variant="primary"
+                      type="submit"
+                      disabled={isSubmitting || (isVerifyingOtp && otpCode.length !== 6)}
+                      className="w-full shrink-0 h-11"
+                    >
                       {isSubmitting ? (
                         <>
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          <span>Creating...</span>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          {isVerifyingOtp ? "Verifying..." : "Saving..."}
                         </>
                       ) : isAdding ? (
-                        "Create Driver"
+                        isVerifyingOtp ? "Verify & Confirm" : "Create Account"
                       ) : (
                         "Save Changes"
                       )}

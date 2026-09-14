@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Inbox } from "lucide-react";
+import { Search, Inbox, Trash2, ListTodo } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTickets, useArchivedTickets, updateTicket, removeTicket, restoreTicket, hardDeleteTicket } from "@/lib/tickets";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
@@ -81,17 +81,19 @@ export default function TicketsPage() {
           description="All waste reports submitted by residents and their current status"
         />
 
-        <div className="flex bg-muted/50 p-1 rounded-lg w-fit">
+        <div className="flex bg-muted/50 p-1 rounded-lg w-fit border border-border/50">
           <button 
-            className={cn("px-4 py-1.5 text-sm font-medium rounded-md transition-colors cursor-pointer", viewMode === "active" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}
+            className={cn("flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all cursor-pointer", viewMode === "active" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5")}
             onClick={() => setViewMode("active")}
           >
+            <ListTodo className="w-4 h-4" />
             Active Reports
           </button>
           <button 
-            className={cn("px-4 py-1.5 text-sm font-medium rounded-md transition-colors cursor-pointer", viewMode === "trash" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}
+            className={cn("flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all cursor-pointer", viewMode === "trash" ? "bg-card text-rose-600 dark:text-rose-400 shadow-sm" : "text-muted-foreground hover:text-rose-600 dark:hover:text-rose-400 hover:bg-black/5 dark:hover:bg-white/5")}
             onClick={() => setViewMode("trash")}
           >
+            <Trash2 className="w-4 h-4" />
             Trash Bin {archivedTickets.length > 0 && `(${archivedTickets.length})`}
           </button>
         </div>
@@ -184,7 +186,7 @@ export default function TicketsPage() {
                     </div>
 
                     <div className="mt-4 border-t border-border-subtle pt-2">
-                      <InfoRow label="Status" value={<StatusBadge status={t.status} className="p-0" />} />
+                      <InfoRow label="Status" value={<StatusBadge status={t.status} showDot={false} className="p-0" />} />
                       <InfoRow
                         label="Reported"
                         value={
@@ -218,9 +220,10 @@ export default function TicketsPage() {
                           e.stopPropagation();
                           setTicketToDelete(t);
                         }}
-                        className="rounded-md border border-rose-200 bg-card px-2.5 py-1 text-xs font-medium text-rose-600 transition-colors hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 cursor-pointer"
+                        className="flex items-center gap-1.5 rounded-md border border-rose-200 bg-card px-2.5 py-1 text-xs font-medium text-rose-600 transition-colors hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 cursor-pointer"
                         title={viewMode === "trash" ? "Permanently Delete" : "Move to Trash"}
                       >
+                        <Trash2 className="w-3.5 h-3.5" />
                         {viewMode === "trash" ? "Purge" : "Move to Trash"}
                       </button>
                     </div>

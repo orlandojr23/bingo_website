@@ -29,6 +29,7 @@ import {
   scheduleLabel,
   acceptAssignment,
   removeSchedule,
+  reinitSupabaseSync,
 } from "@/lib/live-route";
 import { cn, haptic } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -393,7 +394,9 @@ export default function DriverPage() {
           if (truck?.id) {
             setSelectedTruckId(truck.id);
           }
-          setSessionReady(true);
+          reinitSupabaseSync().then(() => {
+            setSessionReady(true);
+          });
         });
       });
     });
@@ -562,6 +565,9 @@ export default function DriverPage() {
         : null,
     points: truckState?.phase === "completed" ? [] : routeStops,
   });
+
+  const driverRouteRef = useRef(driverRoute);
+  useEffect(() => { driverRouteRef.current = driverRoute; }, [driverRoute]);
 
   // Single "current stop" pin: shown only once the driver has started the
   // route (an active schedule exists); hidden once the route is completed.
@@ -772,17 +778,31 @@ export default function DriverPage() {
   }, []);
 
   const startGpsWatch = () => {
-    if (watchIdRef.current !== null || !("geolocation" in navigator)) return;
+    if (watchIdRef.current !== null) return;
+    
+    // Automatic GPS Simulator removed at user request. The app will now 
+    // strictly use real GPS movement like Uber/Waze.
+
+    if (!("geolocation" in navigator)) return;
     const id = navigator.geolocation.watchPosition(
       (pos) => {
         const { latitude, longitude, speed, heading, accuracy } = pos.coords;
-        setCoords({
-          lat: latitude,
-          lng: longitude,
-          speed: speed ? Math.round(speed * 3.6) : 0,
-          heading: heading || 90,
-          accuracy: Math.round(accuracy),
+        let finalHeading = 90;
+
+        setCoords((prev) => {
+          // If stationary, the device might return null/NaN for heading. Keep the previous heading so the truck doesn't spin wildly.
+          // Also fix bug where heading=0 (North) evaluated to false in `heading || 90`.
+          finalHeading = (heading !== null && !isNaN(heading)) ? heading : prev.heading;
+          
+          return {
+            lat: latitude,
+            lng: longitude,
+            speed: speed ? Math.round(speed * 3.6) : 0,
+            heading: finalHeading,
+            accuracy: Math.round(accuracy),
+          };
         });
+
         if (truckFocusedRef.current) {
           setMapCenter([latitude, longitude]);
         }
@@ -801,7 +821,7 @@ export default function DriverPage() {
           updateTracking(selectedTruckIdRef.current, {
             lat: latitude,
             lng: longitude,
-            heading: heading != null ? (Math.round(heading) + 90) % 360 : 90,
+            heading: Math.round(finalHeading), // Fixed: Removed the erroneous +90 offset!
             lastGpsAt: now,
           });
         }
@@ -815,12 +835,16 @@ export default function DriverPage() {
         maximumAge: 0,
       }
     );
-    watchIdRef.current = id;
+    watchIdRef.current = { type: 'real', id };
   };
 
   const stopGpsWatch = async () => {
     if (watchIdRef.current !== null) {
-      navigator.geolocation.clearWatch(watchIdRef.current);
+      if (watchIdRef.current.type === 'sim') {
+        clearInterval(watchIdRef.current.id);
+      } else {
+        navigator.geolocation.clearWatch(watchIdRef.current.id);
+      }
       watchIdRef.current = null;
     }
     await releaseWakeLock();
@@ -842,7 +866,7 @@ export default function DriverPage() {
       }
 
       // Bug 4 fix: await startRoute so GPS and wake lock don't activate before route is recorded
-      const scheduleId = await startRoute(selectedTruckId);
+      const scheduleId = await startRoute(selectedTruckId, coords);
       if (!scheduleId) {
         toast("No route assignments available.", { variant: "error" });
         return;
@@ -931,12 +955,12 @@ export default function DriverPage() {
         capacity: currentTruck.capacity,
         lat: truckState.tracking.lat,
         lng: truckState.tracking.lng,
-        heading: driverRoute.heading ?? truckState.tracking.heading,
+        heading: truckState.tracking.heading,
         eta: isOnDuty ? "Active On Route" : "Standby",
         isActive: truckState.tracking.isActive,
       },
     ];
-  }, [currentTruck, truckState, isOnDuty, driverRoute.heading, liveDriver]);
+  }, [currentTruck, truckState, isOnDuty, liveDriver]);
 
   // Waze-style course-up camera while driving: heading up, auto-follow truck.
   // Use the live travel heading so the camera matches actual motion.
@@ -1011,7 +1035,7 @@ export default function DriverPage() {
             flySignal={flySignal}
             rotatable
             bearing={navBearing}
-            perspective3D={false}
+            perspective3D={isOnDuty && truckFocused}
           />
         </div>
 
@@ -1107,7 +1131,7 @@ export default function DriverPage() {
               const tracking = truckState?.tracking;
               const focusLat = tracking?.lat != null ? tracking.lat : coords?.lat != null ? coords.lat : 10.3025;
               const focusLng = tracking?.lng != null ? tracking.lng : coords?.lng != null ? coords.lng : 123.9095;
-              return !isPointInView(focusLat, focusLng) && (
+              return isOnDuty && !isPointInView(focusLat, focusLng) && (
                 <motion.button
                   key="focus-compactor-unit"
                   type="button"
@@ -1270,7 +1294,7 @@ export default function DriverPage() {
                     {activeTab === "route" && (
                       <div className="space-y-4">
                         {/* Main Route Workflow Control */}
-                        <div className="relative rounded-2xl border border-emerald-500/25 bg-[url('/hero-bg.svg')] bg-cover bg-center bg-no-repeat p-4 space-y-3 shadow-md overflow-hidden">
+                        <div className="relative rounded-2xl border border-emerald-500/25 bg-emerald-50/30 p-4 space-y-3 shadow-md overflow-hidden">
                           <div className="relative z-10 space-y-3">
                             {(!isOnDuty && assignedSchedule && (live.scheduleStatus[assignedSchedule.id] === "Scheduled" || live.scheduleStatus[assignedSchedule.id] === "Assigned")) ? (
                               <button
@@ -1389,8 +1413,15 @@ export default function DriverPage() {
                             <InfoRow label="Assigned Unit" value={`${currentTruck.id} (${currentTruck.plate})`} />
                             <InfoRow label="Driver Operator" value={liveDriver || "—"} />
                             <InfoRow label="Payload Capacity" value={currentTruck.capacity} />
-                            <InfoRow label="Waste Collection" value={assignedSchedule?.type ?? "—"} />
-                            <InfoRow label="Scheduled Days" value={assignedSchedule?.days.join(", ") ?? "—"} />
+                            <InfoRow label="Waste Collection" value={assignedSchedule?.collectionType ?? "—"} />
+                            <InfoRow
+                              label="Scheduled Days"
+                              value={
+                                Array.isArray(assignedSchedule?.collectionDays)
+                                  ? assignedSchedule.collectionDays.join(", ")
+                                  : (assignedSchedule?.collectionDays ?? "—")
+                              }
+                            />
                             <InfoRow label="Scheduled Hours" value={assignedSchedule?.time ?? "—"} />
                           </div>
                         </div>

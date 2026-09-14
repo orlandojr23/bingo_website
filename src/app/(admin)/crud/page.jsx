@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, Plus, X, FilePlus2 } from "lucide-react";
+import { CheckCircle2, Plus, X, FilePlus2, Trash2, ListTodo } from "lucide-react";
 
 // Title-case helper for name-like text inputs (Location, Barangay, Reporter)
 function formatNameInput(val) {
@@ -15,7 +15,7 @@ import { PanelStat } from "@/components/ui/panel-stat";
 import { inputClass, labelClass } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import CrudDeleteModal from "@/components/modals/crud-delete-modal";
-import { useTickets, useArchivedTickets, addTicket, updateTicket, removeTicket, restoreTicket, hardDeleteTicket, nextTicketId } from "@/lib/tickets";
+import { useTickets, useArchivedTickets, addTicket, updateTicket, removeTicket, restoreTicket, hardDeleteTicket } from "@/lib/tickets";
 
 export default function CrudPage() {
   const activeRecords = useTickets();
@@ -51,12 +51,11 @@ export default function CrudPage() {
     }
 
     if (editingId) {
-      updateTicket(editingId, { ...form });
+      await updateTicket(editingId, { ...form });
       showToast(`Record ${editingId} updated.`);
     } else {
       const payload = {
         ...form,
-        id: nextTicketId(),
         city: "Cebu City",
         date: new Date().toLocaleDateString("en-CA"),
         time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
@@ -64,8 +63,8 @@ export default function CrudPage() {
         lng: form.lng ?? 123.9086,
         category: form.category || "Solid Waste",
       };
-      addTicket(payload);
-      showToast(`Record ${payload.id} created.`);
+      await addTicket(payload);
+      showToast(`New record created successfully.`);
     }
 
     resetForm();
@@ -149,17 +148,19 @@ export default function CrudPage() {
           }
         />
 
-        <div className="flex bg-muted/50 p-1 rounded-lg w-fit">
+        <div className="flex bg-muted/50 p-1 rounded-lg w-fit border border-border/50">
           <button 
-            className={cn("px-4 py-1.5 text-sm font-medium rounded-md transition-colors", viewMode === "active" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}
+            className={cn("flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all cursor-pointer", viewMode === "active" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5")}
             onClick={() => setViewMode("active")}
           >
+            <ListTodo className="w-4 h-4" />
             Active Reports
           </button>
           <button 
-            className={cn("px-4 py-1.5 text-sm font-medium rounded-md transition-colors", viewMode === "trash" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}
+            className={cn("flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all cursor-pointer", viewMode === "trash" ? "bg-card text-rose-600 dark:text-rose-400 shadow-sm" : "text-muted-foreground hover:text-rose-600 dark:hover:text-rose-400 hover:bg-black/5 dark:hover:bg-white/5")}
             onClick={() => setViewMode("trash")}
           >
+            <Trash2 className="w-4 h-4" />
             Trash Bin
           </button>
         </div>
@@ -204,18 +205,18 @@ export default function CrudPage() {
                       isSelected ? "bg-muted/80 font-medium" : "hover:bg-muted/40"
                     }`}
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-semibold text-foreground tracking-tight tabular-nums">{r.id}</span>
-                      <div className="flex items-center gap-1.5">
-                        <UrgencyBadge urgency={r.urgency} />
-                        <StatusBadge status={r.status} />
-                      </div>
-                    </div>
                     <div className="min-w-0">
-                      <p className="truncate text-xs font-semibold text-foreground">{r.location}</p>
-                      <p className="text-[11px] text-muted-foreground">
-                        {r.barangay} · {r.reporter}
+                      <p className="truncate text-sm font-semibold text-foreground">{r.location}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {r.category || "Solid Waste"}
                       </p>
+                    </div>
+
+                    <div className="mt-3 border-t border-border-subtle pt-2 space-y-1">
+                      <InfoRow label="Status" value={<StatusBadge status={r.status} showDot={false} />} />
+                      <InfoRow label="Barangay" value={r.barangay} />
+                      <InfoRow label="Reported By" value={r.reporter} />
+                      <InfoRow label="Urgency" value={<UrgencyBadge urgency={r.urgency} />} />
                     </div>
                     <div className="flex items-center justify-end gap-3 pt-1" onClick={(e) => e.stopPropagation()}>
                       {viewMode === "trash" ? (
@@ -309,7 +310,7 @@ export default function CrudPage() {
                           <UrgencyBadge urgency={r.urgency} />
                         </td>
                         <td className="p-3.5">
-                          <StatusBadge status={r.status} />
+                          <StatusBadge status={r.status} showDot={false} />
                         </td>
                         <td className="p-3.5 pr-5 text-right">
                           <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
@@ -326,8 +327,9 @@ export default function CrudPage() {
                                 <button
                                   type="button"
                                   onClick={() => setRecordToDelete(r)}
-                                  className="font-medium text-rose-600 transition-colors hover:text-rose-700 cursor-pointer"
+                                  className="flex items-center gap-1 font-medium text-rose-600 transition-colors hover:text-rose-700 cursor-pointer"
                                 >
+                                  <Trash2 className="w-3.5 h-3.5" />
                                   Permanently Delete
                                 </button>
                               </>
@@ -344,8 +346,9 @@ export default function CrudPage() {
                                 <button
                                   type="button"
                                   onClick={() => setRecordToDelete(r)}
-                                  className="font-medium text-rose-600 transition-colors hover:text-rose-700 cursor-pointer"
+                                  className="flex items-center gap-1 font-medium text-rose-600 transition-colors hover:text-rose-700 cursor-pointer"
                                 >
+                                  <Trash2 className="w-3.5 h-3.5" />
                                   Delete Record
                                 </button>
                               </>

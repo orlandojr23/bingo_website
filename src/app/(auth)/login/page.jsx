@@ -64,7 +64,7 @@ export default function ResidentLoginPage() {
 
   useEffect(() => {
     if (user) {
-      window.location.href = '/report';
+      router.replace('/report');
     }
   }, [user]);
 
@@ -173,7 +173,7 @@ export default function ResidentLoginPage() {
         setIsLoading(false);
         return;
       }
-      window.location.href = "/report";
+      router.replace("/report");
     } catch (err) {
       console.error("Login exception:", err);
       setErrors({ password: err?.message || "Connection error. Please try again." });
@@ -202,7 +202,7 @@ export default function ResidentLoginPage() {
       return;
     }
 
-    window.location.href = "/report";
+    router.replace("/report");
   };
 
   return (

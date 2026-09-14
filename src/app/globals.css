@@ -188,9 +188,3 @@ textarea:focus-visible {
   scrollbar-width: none;
 }
 
-/* Hide Next.js dev indicator badge overlay on mobile test shells */
-nextjs-portal,
-[data-nextjs-toast] {
-  display: none !important;
-}
-

@@ -379,7 +379,12 @@ function TruckMarker({ trk, fading, bearing = 0 }) {
       inner.style.animation = "truckFadeOut 0.45s ease-in forwards";
       return;
     }
-    inner.style.transform = `rotate(${view.rot - 90 - bearing}deg)`;
+    // Update: SVG is now rotated directly in the new logic, but wait, this is the old animation loop!
+    // We should apply the rotation to the SVG to avoid conflicting with the pop-in scale animation.
+    const svg = inner.querySelector('svg');
+    if (svg) {
+      svg.style.transform = `rotate(${view.rot - bearing}deg)`;
+    }
   }, [view.rot, bearing, fading]);
 
   return (
@@ -393,7 +398,7 @@ function TruckMarker({ trk, fading, bearing = 0 }) {
         <div className="p-3 flex flex-col gap-1.5 min-w-[200px] text-zinc-900 font-sans">
           <div className="flex items-center gap-1.5 pb-1 border-b border-zinc-100">
             <span className="font-semibold text-xs text-zinc-900">
-              Truck {trk.id}
+              {trk.id}
             </span>
             <span className="text-xs text-emerald-600 font-semibold">
               • On Duty
@@ -454,7 +459,7 @@ function AnimatedRoute({ route, fading }) {
 
   if (isFuture) {
     return (
-      <span>
+      <>
         {/* Soft Casing for Future Leg */}
         <Polyline
           ref={whiteCasingRef}
@@ -475,12 +480,12 @@ function AnimatedRoute({ route, fading }) {
             interactive: false,
           }}
         />
-      </span>
+      </>
     );
   }
 
   return (
-    <span>
+      <>
       {/* Layer 1: Ambient Drop Shadow for 3D Elevation */}
       <Polyline
         ref={shadowRef}
@@ -511,11 +516,11 @@ function AnimatedRoute({ route, fading }) {
         positions={cleanPositions}
         pathOptions={{ color: "#a7f3d0", weight: 1.8, opacity: 0.9, lineCap: "round", lineJoin: "round", interactive: false }}
       />
-    </span>
+      </>
   );
 }
 
-function MapCameraController({ center, zoom, onMapDrag, onBoundsChange, flySignal, bearing, onUserRotate }) {
+function MapCameraController({ center, zoom, onMapDrag, onBoundsChange, flySignal, bearing, onUserRotate, perspective3D }) {
   const map = useMap();
   const isFirstRender = useRef(true);
   const prevCenterRef = useRef(toLatLngTuple(center) || [10.3025, 123.9095]);
@@ -535,6 +540,25 @@ function MapCameraController({ center, zoom, onMapDrag, onBoundsChange, flySigna
     map.on("rotate", handler);
     return () => map.off("rotate", handler);
   }, [map, onUserRotate]);
+
+  // Reactive camera follow: smoothly pan as the center prop updates
+  useEffect(() => {
+    if (!center) return;
+    const tuple = toLatLngTuple(center);
+    if (!tuple) return;
+    if (
+      isFirstRender.current ||
+      !prevCenterRef.current ||
+      prevCenterRef.current[0] !== tuple[0] ||
+      prevCenterRef.current[1] !== tuple[1] ||
+      prevZoomRef.current !== zoom
+    ) {
+      map.setView(tuple, zoom, { animate: true, duration: 0.8 });
+      prevCenterRef.current = tuple;
+      prevZoomRef.current = zoom;
+      isFirstRender.current = false;
+    }
+  }, [center, zoom, map]);
 
   // Course-up camera (Waze-style): rotate the map so the travel heading is up.
   // bearing === null means the user is rotating manually; leave them alone.
@@ -603,7 +627,7 @@ function MapCameraController({ center, zoom, onMapDrag, onBoundsChange, flySigna
   }, [map, onBoundsChange]);
 
   useEffect(() => {
-    // Multi-phase invalidateSize to handle tab transitions and mobile shell animations
+    // Multi-phase invalidateSize to handle tab transitions, mobile shell animations, and perspective3D changes
     const t1 = setTimeout(() => map.invalidateSize(), 50);
     const t2 = setTimeout(() => map.invalidateSize(), 250);
     const t3 = setTimeout(() => map.invalidateSize(), 600);
@@ -617,7 +641,7 @@ function MapCameraController({ center, zoom, onMapDrag, onBoundsChange, flySigna
       clearTimeout(t3);
       window.removeEventListener("resize", handleResize);
     };
-  }, [map]);
+  }, [map, perspective3D]);
 
   useEffect(() => {
     const tuple = toLatLngTuple(center);
@@ -833,31 +857,8 @@ export default function MapCanvas({ tickets = [], trucks = [], routes = [], mapM
   const showCompass = rotatable || Math.abs(normBearing) > 2;
 
   return (
-    <div
-      className="w-full h-full relative overflow-hidden"
-      style={
-        perspective3D
-          ? {
-              perspective: "750px",
-              perspectiveOrigin: "50% 68%",
-            }
-          : undefined
-      }
-    >
-      <div
-        className="w-full h-full"
-        style={
-          perspective3D
-            ? {
-                transform: "rotateX(42deg) scale(1.24)",
-                transformOrigin: "50% 75%",
-                transition: "transform 0.5s cubic-bezier(0.25, 1, 0.5, 1)",
-              }
-            : {
-                transition: "transform 0.5s cubic-bezier(0.25, 1, 0.5, 1)",
-              }
-        }
-      >
+    <div className="w-full h-full relative overflow-hidden">
+      <div className="w-full h-full absolute transition-all duration-500">
         <MapContainer
           center={mapCenter}
           zoom={mapZoom}
@@ -872,7 +873,7 @@ export default function MapCanvas({ tickets = [], trucks = [], routes = [], mapM
           maxBoundsViscosity={METRO_CEBU_BOUNDS_VISCOSITY}
           className="w-full h-full z-10"
         >
-          <MapCameraController center={mapCenter} zoom={mapZoom} onMapDrag={onMapDrag} onBoundsChange={onBoundsChange} flySignal={flySignal} bearing={autoFollow ? (rotatable ? cameraBearing : 0) : null} onUserRotate={handleUserRotate} />
+          <MapCameraController center={mapCenter} zoom={mapZoom} onMapDrag={onMapDrag} onBoundsChange={onBoundsChange} flySignal={flySignal} bearing={autoFollow ? (rotatable ? cameraBearing : 0) : null} onUserRotate={handleUserRotate} perspective3D={perspective3D} />
           <BearingWatcher onBearing={handleBearing} />
           {showZoomControl && <ZoomControl position="topleft" />}
           

@@ -37,26 +37,34 @@ function getSnapshot() {
 }
 
 let syncInitialized = false;
+let subsInitialized = false;
 
-async function initSupabaseSync() {
-  if (syncInitialized) return;
-  syncInitialized = true;
-
+export async function reinitSupabaseSync() {
   const [schedulesRes, trackingRes] = await Promise.all([
     supabase.from('schedules').select('*'),
     supabase.from('live_tracking').select('*')
   ]);
 
   write((next) => {
+    // Clear old data when re-initializing to ensure deleted items are removed
+    next.schedules = {};
+    next.scheduleStatus = {};
+    next.trucks = {};
+    next.driverByTruck = {};
+
     if (schedulesRes.data) {
       for (const s of schedulesRes.data) {
+        const days = Array.isArray(s.collection_days)
+          ? s.collection_days.join(", ")
+          : (s.collection_days || "");
+
         next.schedules[s.id] = {
           id: s.id,
           zoneId: s.zone_id,
           truckId: s.truck_id,
           driverId: s.driver_id,
           collectionType: s.collection_type,
-          collectionDays: s.collection_days,
+          collectionDays: days,
           time: s.collection_time,
           isArchived: s.is_archived,
           routePoints: s.route_points || [],
@@ -88,6 +96,16 @@ async function initSupabaseSync() {
       }
     }
   });
+}
+
+async function initSupabaseSync() {
+  if (syncInitialized) return;
+  syncInitialized = true;
+
+  await reinitSupabaseSync();
+
+  if (subsInitialized) return;
+  subsInitialized = true;
 
   supabase
     .channel('public:schedules')
@@ -99,13 +117,17 @@ async function initSupabaseSync() {
             delete next.schedules[payload.old.id];
             delete next.scheduleStatus[payload.old.id];
           } else {
+            const days = Array.isArray(s.collection_days)
+              ? s.collection_days.join(", ")
+              : (s.collection_days || "");
+
             next.schedules[s.id] = {
               id: s.id,
               zoneId: s.zone_id,
               truckId: s.truck_id,
               driverId: s.driver_id,
               collectionType: s.collection_type,
-              collectionDays: s.collection_days,
+              collectionDays: days,
               time: s.collection_time,
               isArchived: s.is_archived,
               routePoints: s.route_points || [],
@@ -176,11 +198,8 @@ export function getSchedule(id) {
 }
 
 export function nextScheduleId() {
-  const max = getSchedules().reduce((acc, s) => {
-    const n = Number(String(s.id || "").replace(/\D/g, ""));
-    return Number.isFinite(n) ? Math.max(acc, n) : acc;
-  }, 0);
-  return `SCH-${String(max + 1).padStart(3, "0")}`;
+  // The schedules.id column in Supabase is type UUID — must use a valid UUID
+  return crypto.randomUUID();
 }
 
 function parseStartMinutes(timeStr) {
@@ -244,27 +263,30 @@ export function scheduleLabel(schedule) {
   if (!schedule) return "Barangay Tejero";
   const zone = mockPilotData.zones.find((z) => z.id === schedule.zoneId);
   if (zone) return zone.name;
-  const names = (schedule.routePoints || []).map((p) => p.name).filter(Boolean);
+  const names = (schedule.routePoints || [])
+    .map((p) => (typeof p === "string" ? p : p?.name))
+    .filter(Boolean);
   if (!names.length) return "Barangay Tejero";
-  if (names.length <= 2) return names.join(" → ");
-  return `${names[0]} → ${names[1]} +${names.length - 2} more`;
+  return names.join(", ");
 }
 
 export async function addSchedule(fields) {
   const id = nextScheduleId();
   const routePoints = fields.routePoints?.length
     ? fields.routePoints
-    : fields.zoneId
-      ? buildZoneRoutePoints(fields.zoneId, fields.time)
-      : [];
+    : [];
+
+  // Store collection_days as a comma-separated string (compatible with all Postgres text column types)
+  const collectionDaysStr = Array.isArray(fields.collectionDays)
+    ? fields.collectionDays.join(", ")
+    : (fields.collectionDays || "");
 
   const { error } = await supabase.from('schedules').insert({
     id,
-    zone_id: fields.zoneId,
     truck_id: fields.truckId,
-    driver_id: fields.driverId,
+    driver_id: fields.driverId || null,
     collection_type: fields.collectionType,
-    collection_days: fields.collectionDays,
+    collection_days: collectionDaysStr,
     collection_time: fields.time,
     is_archived: false,
     route_points: routePoints,
@@ -287,20 +309,19 @@ export async function addSchedule(fields) {
 
 export async function updateSchedule(id, patch) {
   const dbPatch = {};
-  if (patch.zoneId !== undefined) dbPatch.zone_id = patch.zoneId;
+  // zone_id column does not exist in the schedules table — removed
   if (patch.truckId !== undefined) dbPatch.truck_id = patch.truckId;
   if (patch.driverId !== undefined) dbPatch.driver_id = patch.driverId;
   if (patch.collectionType !== undefined) dbPatch.collection_type = patch.collectionType;
-  if (patch.collectionDays !== undefined) dbPatch.collection_days = patch.collectionDays;
+  if (patch.collectionDays !== undefined) {
+    dbPatch.collection_days = Array.isArray(patch.collectionDays)
+      ? patch.collectionDays.join(", ")
+      : patch.collectionDays;
+  }
   if (patch.time !== undefined) dbPatch.collection_time = patch.time;
   if (patch.isArchived !== undefined) dbPatch.is_archived = patch.isArchived;
   if (patch.status !== undefined) dbPatch.status = patch.status;
   if (patch.routePoints !== undefined) dbPatch.route_points = patch.routePoints;
-
-  const current = getSnapshot().schedules?.[id];
-  if (patch.zoneId && patch.zoneId !== current?.zoneId && !patch.routePoints) {
-    dbPatch.route_points = buildZoneRoutePoints(patch.zoneId, patch.time || current?.time);
-  }
 
   const { error } = await supabase.from('schedules').update(dbPatch).eq('id', id);
   if (error) throw error;
@@ -357,8 +378,11 @@ export async function hardDeleteSchedule(id) {
 }
 
 export async function acceptAssignment(scheduleId) {
-  const { error } = await supabase.from('schedules').update({ status: 'Accepted' }).eq('id', scheduleId);
-  if (error) throw error;
+  const { data, error } = await supabase.from('schedules').update({ status: 'Accepted' }).eq('id', scheduleId).select();
+  if (error) {
+    console.error("Failed to update schedule status:", error);
+    throw error;
+  }
   return write((next) => {
     if (next.schedules?.[scheduleId]) {
       next.scheduleStatus = { ...next.scheduleStatus, [scheduleId]: "Accepted" };
@@ -366,13 +390,19 @@ export async function acceptAssignment(scheduleId) {
   });
 }
 
-export async function startRoute(truckId) {
+export async function startRoute(truckId, coords = null) {
   const snap = getSnapshot();
-  const ts = snap.trucks[truckId];
-  if (!ts) return null;
+  let ts = snap.trucks[truckId];
+  if (!ts) {
+    ts = {
+      phase: "idle",
+      scheduleId: null,
+      tracking: { lat: null, lng: null, heading: 90, isActive: false }
+    };
+  }
 
   const status = snap.scheduleStatus;
-  const mine = Object.values(snap.schedules || {}).filter((s) => s.truckId === truckId || s.activeTruckId === truckId);
+  const mine = Object.values(snap.schedules || {}).filter((s) => s.truckId === truckId);
   
   let startedId = null;
   let newPhase = null;
@@ -399,17 +429,27 @@ export async function startRoute(truckId) {
     startedId = pick.id;
     newPhase = "enroute";
     const first = pick.routePoints?.[0];
+    const second = pick.routePoints?.[1];
+    let initialHeading = coords?.heading ?? ts.tracking.heading;
+    
+    // If we have a route, calculate the true initial heading instead of defaulting to 90 (East)
+    if (first && second) {
+      const dx = second.lng - first.lng;
+      const dy = second.lat - first.lat;
+      initialHeading = (Math.atan2(dx, dy) * 180) / Math.PI;
+      if (initialHeading < 0) initialHeading += 360;
+    }
+
     newTracking = {
-      lat: first?.lat ?? ts.tracking.lat,
-      lng: first?.lng ?? ts.tracking.lng,
-      heading: ts.tracking.heading,
+      lat: coords?.lat ?? first?.lat ?? ts.tracking.lat,
+      lng: coords?.lng ?? first?.lng ?? ts.tracking.lng,
+      heading: initialHeading,
       eta: "5 mins",
       isActive: true,
     };
   }
 
-  // Bug 8 fix: use upsert so new trucks (with no live_tracking row yet) get one created automatically
-  await supabase.from('live_tracking').upsert({
+  const { data: trackingData, error: trackingErr } = await supabase.from('live_tracking').upsert({
     truck_id: truckId,
     schedule_id: startedId,
     phase: newPhase,
@@ -418,9 +458,21 @@ export async function startRoute(truckId) {
     lat: newTracking.lat,
     lng: newTracking.lng,
     heading: newTracking.heading,
-  }, { onConflict: 'truck_id' });
+  }, { onConflict: 'truck_id' }).select();
+  
+  if (trackingErr) {
+    console.error("Failed to upsert live_tracking:", trackingErr);
+  } else if (!trackingData || trackingData.length === 0) {
+    console.error("live_tracking upsert succeeded but no rows were returned! (Silent RLS failure?)");
+  }
 
-  await supabase.from('schedules').update({ status: 'In Progress' }).eq('id', startedId);
+  const { data: schData, error: schErr } = await supabase.from('schedules').update({ status: 'In Progress' }).eq('id', startedId).select();
+  
+  if (schErr) {
+    console.error("Failed to update schedule status:", schErr);
+  } else if (!schData || schData.length === 0) {
+    console.error("schedules update succeeded but no rows were returned! (Silent RLS failure?)");
+  }
 
   write((next) => {
     next.trucks = {
@@ -593,7 +645,10 @@ export async function updateTracking(truckId, patch) {
   if (patch.eta !== undefined) dbPatch.eta = patch.eta;
   if (patch.isActive !== undefined) dbPatch.is_active = patch.isActive;
 
-  await supabase.from('live_tracking').update(dbPatch).eq('truck_id', truckId);
+  const { error } = await supabase.from('live_tracking').update(dbPatch).eq('truck_id', truckId);
+  if (error) {
+    console.error("Telemetry update failed:", error);
+  }
 
   write((next) => {
     const ts = next.trucks[truckId];

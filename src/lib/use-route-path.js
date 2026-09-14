@@ -138,8 +138,13 @@ export function useRoutePath({ scheduleId, stopIndex = 0, origin = null, points 
       return;
     }
 
-    if (!ORS_KEY) return;
-    if (Date.now() < backoffUntil) return;
+    if (!ORS_KEY || Date.now() < backoffUntil) {
+      const cached = routeCache.get(cacheKey);
+      const positions = cached ?? computeRoute(waypoints, blocks.map((b) => b.edge));
+      if (!cached) routeCache.set(cacheKey, positions);
+      setState({ positions, source: "local", ready: true });
+      return;
+    }
     const cached = routeCache.get(cacheKey);
     if (cached) {
       setState({ positions: cached, source: "ors", ready: true });
@@ -166,6 +171,13 @@ export function useRoutePath({ scheduleId, stopIndex = 0, origin = null, points 
         if (err.status === 401 || err.status === 403) backoffUntil = now + 5 * 60 * 1000;
         else if (err.status === 429) backoffUntil = now + 60 * 1000;
         else backoffUntil = now + 30 * 1000;
+
+        if (!cancelled) {
+          const cached = routeCache.get(cacheKey);
+          const positions = cached ?? computeRoute(waypoints, blocks.map((b) => b.edge));
+          if (!cached) routeCache.set(cacheKey, positions);
+          setState({ positions, source: "local", ready: true });
+        }
       });
     return () => {
       cancelled = true;

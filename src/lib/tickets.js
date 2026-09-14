@@ -111,7 +111,11 @@ export async function addTicket(ticket) {
     location_geo: wktPoint
   });
 
-  if (error) console.error("Error adding ticket:", error);
+  if (error) {
+    console.error("Error adding ticket:", error);
+  } else {
+    fetchTickets();
+  }
 }
 
 export async function updateTicket(id, patch) {
@@ -120,27 +124,37 @@ export async function updateTicket(id, patch) {
   if (patch.isArchived !== undefined) dbPatch.is_archived = patch.isArchived;
 
   const { error } = await supabase.from('tickets').update(dbPatch).eq('id', id);
-  if (error) console.error("Error updating ticket:", error);
+  if (error) {
+    console.error("Error updating ticket:", error);
+  } else {
+    fetchTickets();
+  }
 }
 
 export async function removeTicket(id) {
   const { error } = await supabase.from('tickets').update({ is_archived: true }).eq('id', id);
-  if (error) console.error("Error archiving ticket:", error);
+  if (error) {
+    console.error("Error archiving ticket:", error);
+  } else {
+    fetchTickets();
+  }
 }
 
 export async function restoreTicket(id) {
   const { error } = await supabase.from('tickets').update({ is_archived: false }).eq('id', id);
-  if (error) console.error("Error restoring ticket:", error);
+  if (error) {
+    console.error("Error restoring ticket:", error);
+  } else {
+    fetchTickets();
+  }
 }
 
 export async function hardDeleteTicket(id) {
   const { error } = await supabase.from('tickets').delete().eq('id', id);
-  if (error) console.error("Error deleting ticket:", error);
+  if (error) {
+    console.error("Error deleting ticket:", error);
+  } else {
+    fetchTickets();
+  }
 }
 
-export function nextTicketId() {
-  // We no longer need custom string IDs like TKT-001 since we use UUIDs.
-  // This function is kept to satisfy frontend components that might call it,
-  // but it's largely obsolete.
-  return null; 
-}

@@ -118,14 +118,40 @@ export async function pushNotification(entry) {
     .single();
 
   if (error) {
-    console.error("Error pushing notification", error);
-    return null;
+    console.warn("Could not push notification to Supabase:", error.message || JSON.stringify(error));
+    // Fallback to a local-only notification to keep the UI functioning
+    const localItem = {
+      id: "local-" + Date.now(),
+      audience: entry.audience || "admin",
+      type: entry.type || "Dispatch",
+      title: entry.title || "Notification",
+      message: entry.message || "",
+      isRead: false,
+      dedupeKey: entry.dedupeKey || null,
+      at: entry.at || new Date().toISOString(),
+      actionUrl: entry.actionUrl,
+      actionLabel: entry.actionLabel,
+      location: entry.location,
+      truckId: entry.truckId
+    };
+    return write((next) => {
+      if (!next.items.find(n => n.id === localItem.id)) {
+          next.items = [localItem, ...(next.items || [])].slice(0, MAX_ENTRIES);
+      }
+      return localItem;
+    });
   }
   
   // Realtime channel will pick it up and update the local store, 
   // but we can eagerly update it here for immediate UI response.
   return write((next) => {
     const item = dbToClient(data);
+    // Attach frontend-only fields since they aren't stored in DB
+    item.actionUrl = entry.actionUrl;
+    item.actionLabel = entry.actionLabel;
+    item.location = entry.location;
+    item.truckId = entry.truckId;
+    
     if (!next.items.find(n => n.id === item.id)) {
         next.items = [item, ...(next.items || [])].slice(0, MAX_ENTRIES);
     }

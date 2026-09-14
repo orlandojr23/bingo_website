@@ -23,7 +23,7 @@ import {
   Plus,
 } from "lucide-react";
 import { mockPilotData, TEJERO_SITOS } from "@/lib/mock-data";
-import { useTickets, addTicket, nextTicketId, updateTicket, removeTicket } from "@/lib/tickets";
+import { useTickets, addTicket, updateTicket, removeTicket } from "@/lib/tickets";
 import { useAuth } from "@/context/AuthContext";
 import { useLiveRoute, getSchedule, getSchedules, scheduleLabel } from "@/lib/live-route";
 import { playDing, playTrumpet, useSoundEnabled, setSoundEnabled } from "@/lib/sounds";
@@ -598,7 +598,7 @@ export default function ResidentMobilePWA() {
       const d = new Date(now);
       d.setDate(now.getDate() + off);
       const name = d.toLocaleDateString("en-US", { weekday: "long" });
-      const hit = open.find((s) => s.days?.includes(name));
+      const hit = open.find((s) => s.collectionDays?.includes(name));
       if (hit) {
         const label = off === 1 ? "Tomorrow" : name;
         const start = String(hit.time || "").split("-")[0].trim();
@@ -669,8 +669,9 @@ export default function ResidentMobilePWA() {
 
   const currentBanner = useMemo(() => {
     if (liveBanner) return liveBanner;
+    if (runProductTour && pickupStatus) return pickupStatus;
     return idleBanners[bannerStep % idleBanners.length] || idleBanners[0];
-  }, [liveBanner, idleBanners, bannerStep]);
+  }, [liveBanner, idleBanners, bannerStep, runProductTour, pickupStatus]);
 
   const handleHeaderClick = () => {
     if (liveBanner || showOnboarding || runProductTour) return;
@@ -867,7 +868,7 @@ export default function ResidentMobilePWA() {
 
     setIsSubmitting(true);
 
-    submitTimeoutRef.current = setTimeout(() => {
+    submitTimeoutRef.current = setTimeout(async () => {
       if (editingTicketId) {
         const patch = {
           location: locationName.trim(),
@@ -879,15 +880,13 @@ export default function ResidentMobilePWA() {
           description: description,
           photo: photoPreview,
         };
-        updateTicket(editingTicketId, patch);
+        await updateTicket(editingTicketId, patch);
         setSubmittedTicket({ id: editingTicketId, ...patch });
         setIsSubmitting(false);
         setEditingTicketId(null);
         haptic(20);
       } else {
-        const newId = nextTicketId();
         const created = {
-          id: newId,
           location: locationName.trim(),
           barangay: barangay,
           city: "Cebu City",
@@ -903,7 +902,7 @@ export default function ResidentMobilePWA() {
           photo: photoPreview,
         };
 
-        addTicket(created);
+        await addTicket(created);
         setSubmittedTicket(created);
         setIsSubmitting(false);
         haptic(20);
@@ -1075,7 +1074,7 @@ export default function ResidentMobilePWA() {
         {/* 1. Bottom-Left: Focus Active Truck (slides in when the truck is out of view, out when centered) */}
         <div className="pointer-events-none absolute bottom-[164px] left-4 z-20">
           <AnimatePresence>
-            {activeTrucks?.[0] && !isPointInView(activeTrucks[0].lat, activeTrucks[0].lng) && (
+            {activeTs?.tracking && !isPointInView(activeTs.tracking.lat, activeTs.tracking.lng) && (
               <motion.button
                 key="focus-active-truck"
                 type="button"
@@ -1087,9 +1086,8 @@ export default function ResidentMobilePWA() {
                   closeAllSheets();
                   setIsMapSheetExpanded(false);
                   setTruckFocused(true);
-                  const activeTruck = activeTrucks && activeTrucks[0];
-                  if (activeTruck) {
-                    setMapCenter([activeTruck.lat, activeTruck.lng]);
+                  if (activeTs?.tracking) {
+                    setMapCenter([activeTs.tracking.lat, activeTs.tracking.lng]);
                     setMapZoom(17);
                     setFlySignal((s) => s + 1);
                   }
@@ -1279,7 +1277,7 @@ export default function ResidentMobilePWA() {
                           className="space-y-4 pt-1"
                         >
 
-                  <div className="relative overflow-hidden rounded-2xl border border-border bg-[url('/hero-bg.svg')] bg-no-repeat [background-size:100%_100%] p-4 space-y-3 shadow-sm">
+                  <div className="relative overflow-hidden rounded-2xl border border-border bg-emerald-50/30 p-4 space-y-3 shadow-sm">
                     <div className="relative flex items-start justify-between gap-3">
                       <div>
                         <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
@@ -1348,8 +1346,8 @@ export default function ResidentMobilePWA() {
                   {/* Schedule List */}
                   <div className="space-y-3">
                     {filteredSchedules.map((sch) => {
-                      const isRecyclable = sch.type.includes("Recyclable");
-                      const isDiliMalata = sch.type.includes("Dili Malata");
+                      const isRecyclable = sch.type?.includes("Recyclable");
+                      const isDiliMalata = sch.type?.includes("Dili Malata");
                       const isBiodegradable = !isRecyclable && !isDiliMalata;
 
                       const areaTitle = scheduleLabel(sch);
@@ -1363,7 +1361,7 @@ export default function ResidentMobilePWA() {
                         Saturday: "Sat",
                         Sunday: "Sun",
                       };
-                      const formattedDays = sch.days.map((d) => DAY_ABBR[d] || d).join(", ");
+                      const formattedDays = (sch.days || []).map((d) => DAY_ABBR[d] || d).join(", ");
 
                       const categoryBadgeLabel = isBiodegradable
                         ? "Malata"
@@ -1695,12 +1693,7 @@ export default function ResidentMobilePWA() {
                               }}
                               className="w-full text-left cursor-pointer active:scale-[0.99]"
                             >
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="text-xs font-semibold text-foreground tracking-tight tabular-nums">{t.id}</span>
-                                <StatusBadge status={t.status} />
-                              </div>
-
-                              <div className="mt-2">
+                              <div>
                                 <h3 className="text-sm font-bold text-foreground leading-snug">
                                   {t.location}
                                 </h3>
@@ -1709,9 +1702,13 @@ export default function ResidentMobilePWA() {
                                 </p>
                               </div>
 
-                              <div className="flex items-center justify-between text-xs pt-2 mt-2 border-t border-border/60">
-                                <span className="font-medium text-muted-foreground tracking-tight tabular-nums">{t.date} &bull; {t.time}</span>
-                                <UrgencyBadge urgency={t.urgency} />
+                              <div className="mt-3 border-t border-border/60 pt-2 space-y-1">
+                                <InfoRow label="Status" value={<StatusBadge status={t.status} showDot={false} />} />
+                                <InfoRow
+                                  label="Reported"
+                                  value={`${t.date}${t.time ? ` · ${t.time}` : ""}`}
+                                />
+                                <InfoRow label="Urgency" value={<UrgencyBadge urgency={t.urgency} />} />
                               </div>
                             </button>
 

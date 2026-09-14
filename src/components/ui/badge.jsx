@@ -8,6 +8,12 @@ const statusConfig = {
   Completed: { color: "text-emerald-700" },
   Active: { color: "text-emerald-700" },
   Suspended: { color: "text-rose-700" },
+  Inactive: { color: "text-zinc-500" },
+  "On Duty": { color: "text-emerald-700" },
+  "Off Duty": { color: "text-zinc-500" },
+  Assigned: { color: "text-blue-700" },
+  Accepted: { color: "text-blue-700" },
+  Unassigned: { color: "text-zinc-500" },
 };
 
 const urgencyTextColors = {
@@ -17,7 +23,7 @@ const urgencyTextColors = {
   Low: "text-zinc-600",
 };
 
-export function StatusBadge({ status, className }) {
+export function StatusBadge({ status, className, showDot = true }) {
   const config = statusConfig[status] || { color: "text-zinc-700" };
   let displayStatus = status;
   if (status === "Pending") displayStatus = "Waiting";
@@ -32,7 +38,7 @@ export function StatusBadge({ status, className }) {
         className
       )}
     >
-      <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0 opacity-85" />
+      {showDot && <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0 opacity-85" />}
       {displayStatus}
     </span>
   );

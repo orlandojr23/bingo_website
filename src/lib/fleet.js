@@ -1,4 +1,3 @@
-"use client";
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -69,6 +68,7 @@ export async function addTruck({ id, plate, driver, capacity }) {
     }
     return { error: error.message };
   }
+  fetchFleet();
   return { truck: { id: code, plate: plateClean, driver: driver?.trim(), capacity: capacity?.trim() } };
 }
 
@@ -87,12 +87,17 @@ export async function updateTruck(id, patch) {
   }).eq('id', id);
 
   if (error) return { error: error.message };
+  fetchFleet();
   return { truck: next };
 }
 
 export async function removeTruck(id) {
   const { error } = await supabase.from('trucks').delete().eq('id', id);
-  if (error) console.error("Error deleting truck:", error);
+  if (error) {
+    console.error("Error deleting truck:", error);
+  } else {
+    fetchFleet();
+  }
 }
 
 export function useFleet() {

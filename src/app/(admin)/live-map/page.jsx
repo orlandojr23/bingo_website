@@ -402,15 +402,9 @@ function LiveMapContent() {
                       <TruckIcon
                         className={`h-4 w-4 ${trk.isActive ? "text-emerald-600" : "text-zinc-400"}`}
                       />
-                      <span className="text-xs font-semibold text-foreground">Truck {trk.id}</span>
+                      <span className="text-xs font-semibold text-foreground">{trk.id}</span>
                     </div>
-                    <span
-                      className={`text-xs font-medium ${
-                        trk.isActive ? "text-emerald-600" : "text-zinc-400"
-                      }`}
-                    >
-                      {trk.isActive ? "On Duty" : "Off Duty"}
-                    </span>
+                    <StatusBadge status={trk.isActive ? "On Duty" : "Off Duty"} className="p-0 text-xs font-medium" />
                   </div>
                   <div className="ml-6 flex flex-col gap-0.5 text-xs text-zinc-600">
                     <div>

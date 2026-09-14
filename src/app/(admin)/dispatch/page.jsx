@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { Calendar, Plus, Minus, X, Search, Truck, Shuffle, MapPin } from "lucide-react";
+import { Calendar, Plus, Minus, X, Search, Truck, Shuffle, MapPin, Trash2, ListTodo } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TEJERO_SITOS } from "@/lib/mock-data";
 import { useLiveRoute, getSchedules, addSchedule, updateSchedule, removeSchedule, restoreSchedule, hardDeleteSchedule, assignDriver, estimateStopTime, retimeRoutePoints, scheduleLabel } from "@/lib/live-route";
@@ -97,9 +97,14 @@ export default function DispatchPage() {
   useEffect(() => {
     if (selectedSchedule) {
       setIsAdding(false);
-      setTruckId(selectedSchedule.activeTruckId);
-      setType(selectedSchedule.type);
-      setDays(selectedSchedule.days.join(", "));
+      setTruckId(selectedSchedule.truckId);
+      setType(selectedSchedule.collectionType || "");
+      // collectionDays comes back from DB as a comma-separated string
+      setDays(
+        Array.isArray(selectedSchedule.collectionDays)
+          ? selectedSchedule.collectionDays.join(", ")
+          : selectedSchedule.collectionDays || ""
+      );
       setTime(selectedSchedule.time);
       setStatus(live.scheduleStatus[selectedSchedule.id] ?? selectedSchedule.status);
       setStopOrder(selectedSchedule.routePoints ?? []);
@@ -166,9 +171,9 @@ export default function DispatchPage() {
 
   const buildScheduleFields = () => ({
     zoneId: selectedSchedule?.zoneId ?? null,
-    activeTruckId: truckId,
-    type,
-    days: days.split(",").map((d) => d.trim()).filter(Boolean),
+    truckId,        // was activeTruckId — addSchedule reads fields.truckId
+    collectionType: type,
+    collectionDays: days.split(",").map((d) => d.trim()).filter(Boolean),
     time,
     status,
   });
@@ -283,16 +288,16 @@ export default function DispatchPage() {
     if (viewMode === "active" && isArchived) return false;
     if (viewMode === "trash" && !isArchived) return false;
 
-    const truck = fleet.find((t) => t.id === sch.activeTruckId);
+    const truck = fleet.find((t) => t.id === sch.truckId);
     const query = searchQuery.toLowerCase();
 
     return (
       sch.id.toLowerCase().includes(query) ||
       scheduleLabel(sch).toLowerCase().includes(query) ||
       (sch.routePoints || []).some((p) => (p.name || "").toLowerCase().includes(query)) ||
-      (driverOf(sch.activeTruckId) || "").toLowerCase().includes(query) ||
+      (driverOf(sch.truckId) || "").toLowerCase().includes(query) ||
       (truck?.id || "").toLowerCase().includes(query) ||
-      sch.type.toLowerCase().includes(query)
+      (sch.collectionType || "").toLowerCase().includes(query)
     );
   });
 
@@ -554,17 +559,19 @@ export default function DispatchPage() {
           }
         />
 
-        <div className="flex bg-muted/50 p-1 rounded-lg w-fit">
+        <div className="flex bg-muted/50 p-1 rounded-lg w-fit border border-border/50">
           <button 
-            className={cn("px-4 py-1.5 text-sm font-medium rounded-md transition-colors", viewMode === "active" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}
+            className={cn("flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all cursor-pointer", viewMode === "active" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5")}
             onClick={() => setViewMode("active")}
           >
+            <ListTodo className="w-4 h-4" />
             Active Assignments
           </button>
           <button 
-            className={cn("px-4 py-1.5 text-sm font-medium rounded-md transition-colors", viewMode === "trash" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}
+            className={cn("flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all cursor-pointer", viewMode === "trash" ? "bg-card text-rose-600 dark:text-rose-400 shadow-sm" : "text-muted-foreground hover:text-rose-600 dark:hover:text-rose-400 hover:bg-black/5 dark:hover:bg-white/5")}
             onClick={() => setViewMode("trash")}
           >
+            <Trash2 className="w-4 h-4" />
             Trash Bin
           </button>
         </div>
@@ -613,13 +620,7 @@ export default function DispatchPage() {
                             <span className="text-[11px] font-medium text-muted-foreground whitespace-nowrap truncate">{t.plate}</span>
                           </div>
                         </div>
-                        <span
-                          className={`shrink-0 text-xs font-medium ${
-                            isActive ? "text-emerald-600" : "text-zinc-400"
-                          }`}
-                        >
-                          {isActive ? "On Duty" : "Off Duty"}
-                        </span>
+                        <StatusBadge status={isActive ? "On Duty" : "Off Duty"} className="p-0 text-xs font-medium" />
                       </div>
 
                       <div className="mt-3 flex items-center justify-between border-t border-border-subtle pt-2.5 text-xs">
@@ -670,7 +671,7 @@ export default function DispatchPage() {
             <div className="grid grid-cols-1 gap-3.5 pb-6 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
               {filteredSchedules.map((sch) => {
                 const isSelected = selectedSchedule?.id === sch.id;
-                const truck = fleet.find((t) => t.id === sch.activeTruckId);
+                const truck = fleet.find((t) => t.id === sch.truckId);
 
                 return (
                   <div
@@ -683,23 +684,26 @@ export default function DispatchPage() {
                     }`}
                   >
                     <div>
-                      <div className="mb-2 flex items-center justify-between">
-                        <span className="text-xs font-semibold text-foreground tracking-tight tabular-nums">{sch.id}</span>
-                        <StatusBadge status={effStatus(sch)} />
-                      </div>
-
                       <div className="text-sm font-semibold leading-tight text-foreground">
                         {scheduleLabel(sch)}
                       </div>
 
-                      <div className="mt-4 border-t border-border-subtle pt-2">
-                        <InfoRow label="Collection Days" value={sch.days.join(", ")} />
+                      <div className="mt-3 border-t border-border-subtle pt-2">
+                        <InfoRow label="Status" value={<StatusBadge status={effStatus(sch)} showDot={false} />} />
+                        <InfoRow
+                          label="Collection Days"
+                          value={
+                            Array.isArray(sch.collectionDays)
+                              ? sch.collectionDays.join(", ")
+                              : sch.collectionDays || "—"
+                          }
+                        />
                         <InfoRow label="Collection Time" value={sch.time} />
                         <InfoRow
                           label="Assigned Truck"
-                          value={`${truck?.id || sch.activeTruckId} (${driverOf(sch.activeTruckId) || "Driver"})`}
+                          value={`${truck?.id || sch.truckId} (${driverOf(sch.truckId) || "Driver"})`}
                         />
-                        <InfoRow label="Waste Type" value={sch.type} />
+                        <InfoRow label="Waste Type" value={sch.collectionType || "—"} />
                       </div>
                     </div>
 
@@ -723,9 +727,10 @@ export default function DispatchPage() {
                               e.stopPropagation();
                               setScheduleToDelete(sch);
                             }}
-                            className="rounded-md border border-rose-200 bg-card px-2.5 py-1 text-xs font-medium text-rose-600 transition-colors hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 cursor-pointer"
+                            className="flex items-center gap-1.5 rounded-md border border-rose-200 bg-card px-2.5 py-1 text-xs font-medium text-rose-600 transition-colors hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 cursor-pointer"
                             title="Permanently Delete"
                           >
+                            <Trash2 className="w-3.5 h-3.5" />
                             Permanently Delete
                           </button>
                         </>
@@ -736,9 +741,10 @@ export default function DispatchPage() {
                             e.stopPropagation();
                             setScheduleToDelete(sch);
                           }}
-                          className="rounded-md border border-rose-200 bg-card px-2.5 py-1 text-xs font-medium text-rose-600 transition-colors hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 cursor-pointer"
+                          className="flex items-center gap-1.5 rounded-md border border-rose-200 bg-card px-2.5 py-1 text-xs font-medium text-rose-600 transition-colors hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 cursor-pointer"
                           title="Delete Assignment"
                         >
+                          <Trash2 className="w-3.5 h-3.5" />
                           Delete Assignment
                         </button>
                       )}
@@ -918,7 +924,8 @@ export default function DispatchPage() {
                 <div className="mt-auto shrink-0 flex items-center justify-between gap-2 border-t border-border-subtle pt-4">
                   <div>
                     {truckSheet.mode === "edit" && (
-                      <Button variant="secondary" type="button" onClick={handleTruckDeleteRequest} className="text-rose-600">
+                      <Button variant="secondary" type="button" onClick={handleTruckDeleteRequest} className="gap-1.5 text-rose-600">
+                        <Trash2 className="w-4 h-4" />
                         Remove Truck
                       </Button>
                     )}

@@ -8,6 +8,7 @@ import { AdminShellSkeleton } from "@/components/ui/skeletons";
 import { supabase } from "@/lib/supabase";
 import { useNotifications } from "@/lib/notifications";
 import { playDing } from "@/lib/sounds";
+import { reinitSupabaseSync } from "@/lib/live-route";
 
 // Dings whenever a new admin notification lands (route started, truck arrived
 // at a stop, ...). The snapshot present on mount is only recorded, so opening
@@ -60,7 +61,9 @@ export default function AdminLayout({ children }) {
         
         if (active) {
           if (role === "admin") {
-            setAuthorized(true);
+            reinitSupabaseSync().then(() => {
+              if (active) setAuthorized(true);
+            });
           } else {
             router.replace("/admin-login");
           }
