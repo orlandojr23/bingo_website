@@ -307,15 +307,11 @@ function InfoRow({ label, value }) {
   return (
     <div className="flex items-center justify-between text-xs py-1">
       <span className="text-muted-foreground font-medium">{label}</span>
-      <span className="font-semibold text-foreground tracking-tight tabular-nums">{value}</span>
+      <span className="font-semibold text-foreground tracking-tight font-sans">{value}</span>
     </div>
   );
 }
 
-// Compact, truthful area tagline for the header banners: the first pickup
-// stop plus how many more stops follow, so a multi-stop assignment never
-// reads as a single sitio. Falls back to the zone name when a schedule
-// carries no stop list.
 function assignedAreaTagline(schedule, zone) {
   if (!schedule) return null;
   const names = (schedule.routePoints || []).map((p) => p.name).filter(Boolean);
@@ -323,7 +319,7 @@ function assignedAreaTagline(schedule, zone) {
     return zone ? zone.name.split("&")[0].trim() : scheduleLabel(schedule);
   }
   if (names.length === 1) return names[0];
-  return `${names[0]} + ${names.length - 1} more stop${names.length === 2 ? "" : "s"}`;
+  return `${names[0]} +${names.length - 1} stops`;
 }
 
 export default function DriverPage() {
@@ -357,6 +353,7 @@ export default function DriverPage() {
   // Profile & Logout Modals
   const [showProfile, setShowProfile] = useState(false);
   const [showSignOutModal, setShowSignOutModal] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   // Change Password (settings sheet)
   const [currentPassword, setCurrentPassword] = useState("");
@@ -660,7 +657,7 @@ export default function DriverPage() {
 
     return {
       id: "greeting",
-      mascot: "/mascot/star-pose.png",
+      mascot: "/mascot/arms-open-pose-clean.png",
       title: greetingTitle,
       subtitle: `${new Date().toLocaleDateString("en-US", {
         weekday: "long",
@@ -1079,25 +1076,25 @@ export default function DriverPage() {
                 className="flex items-center gap-3.5 min-w-0 w-full"
               >
                 {currentBanner.mascot ? (
-                  <div className="flex h-14 w-14 items-center justify-center shrink-0">
+                  <div className="flex h-16 w-16 items-center justify-center shrink-0">
                     <img
                       src={currentBanner.mascot}
                       alt="Binny Mascot"
-                      className="h-13 w-13 shrink-0 object-contain drop-shadow-xs"
+                      className="h-16 w-16 shrink-0 object-contain drop-shadow-xs"
                     />
                   </div>
                 ) : currentBanner.Icon ? (
-                  <div className="flex h-10 w-10 items-center justify-center shrink-0">
-                    <currentBanner.Icon className="h-8 w-8 shrink-0" />
+                  <div className="flex h-11 w-11 items-center justify-center shrink-0">
+                    <currentBanner.Icon className="h-9 w-9 shrink-0" />
                   </div>
                 ) : null}
 
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-lg font-semibold tracking-tight text-foreground truncate leading-tight">
+                  <h3 className="text-lg font-semibold tracking-tight text-foreground leading-tight">
                     {currentBanner.title}
                   </h3>
                   {currentBanner.subtitle && (
-                    <p className="text-sm font-semibold text-emerald-800 truncate leading-tight mt-1">
+                    <p className="text-sm font-semibold text-emerald-800 leading-tight mt-1">
                       {currentBanner.subtitle}
                     </p>
                   )}
@@ -1125,7 +1122,7 @@ export default function DriverPage() {
 
         {/* Floating Circular 3D Map Action Buttons (Option B: Symmetrical Left & Right Split) */}
         {/* 1. Bottom-Left: Focus Active Truck (slides in when the truck is out of view, out when centered) */}
-        <div className="pointer-events-none absolute bottom-[104px] left-4 z-20">
+        <div className="pointer-events-none absolute bottom-32 left-4 z-20">
           <AnimatePresence>
             {(() => {
               const tracking = truckState?.tracking;
@@ -1165,7 +1162,7 @@ export default function DriverPage() {
         </div>
 
         {/* 2. Bottom-Right: Center GPS Location (slides in when driver is out of view, out when centered) */}
-        <div className="pointer-events-none absolute bottom-[104px] right-4 z-20">
+        <div className="pointer-events-none absolute bottom-32 right-4 z-20">
           <AnimatePresence>
             {coords?.lat != null && !isPointInView(coords.lat, coords.lng) && (
               <motion.button
@@ -1230,13 +1227,13 @@ export default function DriverPage() {
                     setIsMapSheetExpanded(true);
                   }}
                   className={cn(
-                    "flex h-11 flex-1 min-w-0 items-center justify-center gap-1.5 rounded-xl border px-1 sm:px-3 text-[11px] sm:text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95",
+                    "flex h-12 flex-1 items-center justify-center gap-1.5 rounded-2xl border px-2 text-xs font-extrabold transition-all cursor-pointer shadow-sm active:scale-95",
                     isMapSheetExpanded && activeTab === "route"
-                      ? "border-emerald-500 bg-emerald-600 text-white font-bold"
-                      : "border-border bg-card text-foreground hover:bg-muted"
+                      ? "border-emerald-600 bg-emerald-50/50 text-emerald-800 ring-1 ring-emerald-600/20"
+                      : "border-border bg-card text-zinc-800 hover:bg-muted"
                   )}
                 >
-                  <Waze3DPlayIcon className="h-5 sm:h-5.5 w-5 sm:w-5.5 shrink-0" />
+                  <Waze3DPlayIcon className="h-5 w-5 shrink-0" />
                   <span className="whitespace-nowrap">Route</span>
                 </button>
 
@@ -1248,13 +1245,13 @@ export default function DriverPage() {
                     setIsMapSheetExpanded(true);
                   }}
                   className={cn(
-                    "flex h-11 flex-1 min-w-0 items-center justify-center gap-1.5 rounded-xl border px-1 sm:px-3 text-[11px] sm:text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95",
+                    "flex h-12 flex-1 items-center justify-center gap-1.5 rounded-2xl border px-2 text-xs font-extrabold transition-all cursor-pointer shadow-sm active:scale-95",
                     isMapSheetExpanded && activeTab === "assignment"
-                      ? "border-emerald-500 bg-emerald-600 text-white font-bold"
-                      : "border-border bg-card text-foreground hover:bg-muted"
+                      ? "border-emerald-600 bg-emerald-50/50 text-emerald-800 ring-1 ring-emerald-600/20"
+                      : "border-border bg-card text-zinc-800 hover:bg-muted"
                   )}
                 >
-                  <Waze3DRouteIcon className="h-5 sm:h-5.5 w-5 sm:w-5.5 shrink-0" />
+                  <Waze3DRouteIcon className="h-5 w-5 shrink-0" />
                   <span className="whitespace-nowrap">Assignment</span>
                 </button>
 
@@ -1266,13 +1263,13 @@ export default function DriverPage() {
                     setIsMapSheetExpanded(true);
                   }}
                   className={cn(
-                    "flex h-11 flex-1 min-w-0 items-center justify-center gap-1.5 rounded-xl border px-1 sm:px-3 text-[11px] sm:text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95",
+                    "flex h-12 flex-1 items-center justify-center gap-1.5 rounded-2xl border px-2 text-xs font-extrabold transition-all cursor-pointer shadow-sm active:scale-95",
                     isMapSheetExpanded && activeTab === "history"
-                      ? "border-emerald-500 bg-emerald-600 text-white font-bold"
-                      : "border-border bg-card text-foreground hover:bg-muted"
+                      ? "border-emerald-600 bg-emerald-50/50 text-emerald-800 ring-1 ring-emerald-600/20"
+                      : "border-border bg-card text-zinc-800 hover:bg-muted"
                   )}
                 >
-                  <CheckCircle2 className="h-4 sm:h-5 w-4 sm:w-5 shrink-0" />
+                  <CheckCircle2 className="h-5 w-5 shrink-0 text-zinc-800" />
                   <span className="whitespace-nowrap">History</span>
                 </button>
               </div>
@@ -1296,20 +1293,6 @@ export default function DriverPage() {
                         {/* Main Route Workflow Control */}
                         <div className="relative rounded-2xl border border-emerald-500/25 bg-emerald-50/30 p-4 space-y-3 shadow-md overflow-hidden">
                           <div className="relative z-10 space-y-3">
-                            {(!isOnDuty && assignedSchedule && (live.scheduleStatus[assignedSchedule.id] === "Scheduled" || live.scheduleStatus[assignedSchedule.id] === "Assigned")) ? (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  haptic(15);
-                                  acceptAssignment(assignedSchedule.id);
-                                  toast("Assignment accepted.");
-                                }}
-                                className="flex h-12 w-full items-center justify-center gap-2 rounded-xl text-xs font-bold transition-all active:scale-[0.98] cursor-pointer shadow-xs bg-indigo-600 text-white hover:bg-indigo-700"
-                              >
-                                <Waze3DRouteIcon className="h-5 w-5 shrink-0" />
-                                Accept Assignment
-                              </button>
-                            ) : (
                               <button
                                 type="button"
                                 onClick={handlePrimaryAction}
@@ -1347,7 +1330,6 @@ export default function DriverPage() {
                                   </>
                                 )}
                               </button>
-                            )}
 
                             {isOnDuty && (
                               <button
@@ -1424,6 +1406,20 @@ export default function DriverPage() {
                             />
                             <InfoRow label="Scheduled Hours" value={assignedSchedule?.time ?? "—"} />
                           </div>
+                          
+                          {(!isOnDuty && assignedSchedule && (live.scheduleStatus[assignedSchedule.id] === "Scheduled" || live.scheduleStatus[assignedSchedule.id] === "Assigned")) && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                haptic(15);
+                                acceptAssignment(assignedSchedule.id);
+                                toast("Assignment accepted.");
+                              }}
+                              className="mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-xl text-xs font-bold transition-all active:scale-[0.98] cursor-pointer shadow-xs bg-indigo-600 text-white hover:bg-indigo-700"
+                            >
+                              Accept Assignment
+                            </button>
+                          )}
                         </div>
                       </div>
                     )}
@@ -1440,10 +1436,14 @@ export default function DriverPage() {
                           );
                           if (history.length === 0) {
                             return (
-                              <div className="rounded-2xl border border-border bg-card p-6 flex flex-col items-center justify-center text-center">
-                                <CheckCircle2 className="h-8 w-8 text-muted-foreground/50 mb-2" />
-                                <h3 className="text-sm font-bold text-foreground">No completed routes</h3>
-                                <p className="text-xs text-muted-foreground mt-1">Routes you finish today will appear here.</p>
+                              <div className="flex flex-col items-center justify-center py-10 px-4 text-center bg-card rounded-xl border border-dashed border-border mt-2">
+                                <div className="text-emerald-600 flex items-center justify-center mb-3">
+                                  <CheckCircle2 className="h-8 w-8" />
+                                </div>
+                                <h3 className="font-semibold text-foreground text-sm">No completed routes</h3>
+                                <p className="text-xs text-muted-foreground mt-1 max-w-[220px]">
+                                  Routes you finish today will appear here.
+                                </p>
                               </div>
                             );
                           }
@@ -1646,14 +1646,23 @@ export default function DriverPage() {
               <button
                 type="button"
                 onClick={async () => {
+                  setIsSigningOut(true);
                   clearDriverSession();
                   await supabase.auth.signOut();
                   setShowSignOutModal(false);
                   router.replace("/driver-login");
                 }}
-                className="inline-flex select-none items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-bold text-rose-600 shadow-xs transition-all duration-150 hover:border-rose-600 hover:bg-rose-600 hover:text-white active:scale-[0.98] cursor-pointer"
+                disabled={isSigningOut}
+                className="inline-flex select-none items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-bold text-rose-600 shadow-xs transition-all duration-150 hover:border-rose-600 hover:bg-rose-600 hover:text-white active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
               >
-                Sign Out
+                {isSigningOut ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Signing out...
+                  </>
+                ) : (
+                  "Sign Out"
+                )}
               </button>
             </div>
           </motion.div>

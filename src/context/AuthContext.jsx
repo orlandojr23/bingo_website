@@ -8,29 +8,58 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [role, setRole] = useState(null);
+  const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
     // onAuthStateChange fires immediately with the current session on mount,
     // which is more reliable than a separate getSession() call. We use it as
     // the single source of truth for both initial load and live changes.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      setRole(session?.user?.user_metadata?.role ?? null);
-      setLoading(false); // Always clear loading after first event
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const currentUser = session?.user ?? null;
+      if (isMounted) {
+        setUser(currentUser);
+        setRole(currentUser?.user_metadata?.role ?? null);
+      }
+
+      if (currentUser) {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", currentUser.id)
+          .single();
+          
+        if (isMounted) {
+          if (!error && data) {
+            setProfile(data);
+            if (data.role) setRole(data.role);
+          } else {
+            setProfile(null);
+          }
+        }
+      } else {
+        if (isMounted) setProfile(null);
+      }
+      
+      if (isMounted) setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    }
   }, []);
 
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
     setRole(null);
+    setProfile(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, role, loading, signOut }}>
+    <AuthContext.Provider value={{ user, role, profile, loading, signOut }}>
       {children}
     </AuthContext.Provider>
   );

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { Calendar, Plus, Minus, X, Search, Truck, Shuffle, MapPin, Trash2, ListTodo } from "lucide-react";
+import { Calendar, Plus, Minus, X, Search, Truck, Shuffle, MapPin, Trash2, ListTodo, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TEJERO_SITOS } from "@/lib/mock-data";
 import { useLiveRoute, getSchedules, addSchedule, updateSchedule, removeSchedule, restoreSchedule, hardDeleteSchedule, assignDriver, estimateStopTime, retimeRoutePoints, scheduleLabel } from "@/lib/live-route";
@@ -79,6 +79,19 @@ export default function DispatchPage() {
   const [days, setDays] = useState("");
   const [time, setTime] = useState("");
   const [status, setStatus] = useState("");
+  const [isSubmittingSchedule, setIsSubmittingSchedule] = useState(false);
+  const [isSubmittingTruck, setIsSubmittingTruck] = useState(false);
+
+  const resetForm = () => {
+    setTruckId("");
+    setType("");
+    setDays("");
+    setTime("");
+    setStatus("");
+    setStopOrder([]);
+    setSitioQuery("");
+    setSitioDropdownOpen(false);
+  };
 
   useEffect(() => {
     if (isAdding) {
@@ -111,12 +124,7 @@ export default function DispatchPage() {
       setSitioQuery("");
       setSitioDropdownOpen(false);
     } else {
-      setTruckId("");
-      setType("");
-      setDays("");
-      setTime("");
-      setStatus("");
-      setStopOrder([]);
+      resetForm();
     }
   }, [selectedSchedule]);
 
@@ -182,10 +190,12 @@ export default function DispatchPage() {
     e.preventDefault();
     if (!truckId || !type || !days || !time || stopOrder.length === 0) return;
 
+    setIsSubmittingSchedule(true);
     await addSchedule({
       ...buildScheduleFields(),
       routePoints: stopOrder,
     });
+    setIsSubmittingSchedule(false);
     
     setIsAdding(false);
     resetForm();
@@ -200,10 +210,12 @@ export default function DispatchPage() {
       return;
     }
 
+    setIsSubmittingSchedule(true);
     await updateSchedule(selectedSchedule.id, {
       ...buildScheduleFields(),
       routePoints: stopOrder,
     });
+    setIsSubmittingSchedule(false);
     setSelectedSchedule(null);
     resetForm();
   };
@@ -253,9 +265,11 @@ export default function DispatchPage() {
 
   const handleTruckSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmittingTruck(true);
     const res = await (truckSheet.mode === "add"
       ? addTruck(truckForm)
       : updateTruck(truckSheet.truck.id, truckForm));
+    setIsSubmittingTruck(false);
     if (res.error) {
       setTruckError(res.error);
       return;
@@ -594,10 +608,12 @@ export default function DispatchPage() {
           </div>
           <div className="w-full">
             {fleet.length === 0 ? (
-              <div className="flex w-full flex-col items-center rounded-lg border border-dashed border-border px-4 py-6 text-center">
-                <Truck className="h-6 w-6 text-zinc-300" />
-                <p className="mt-2 text-xs font-semibold text-foreground">No Trucks in Fleet</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
+              <div className="flex flex-col items-center justify-center py-10 px-4 text-center bg-card rounded-xl border border-dashed border-border">
+                <div className="text-emerald-600 flex items-center justify-center mb-3">
+                  <Truck className="h-8 w-8" />
+                </div>
+                <h3 className="font-semibold text-foreground text-sm">No Trucks in Fleet</h3>
+                <p className="mt-1 text-xs text-muted-foreground max-w-[240px]">
                   Click &quot;Add Truck&quot; to register your first collection truck.
                 </p>
               </div>
@@ -652,12 +668,14 @@ export default function DispatchPage() {
 
         <div>
           {filteredSchedules.length === 0 ? (
-            <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-border bg-card p-10 text-center">
-              <Calendar className="mb-2.5 h-8 w-8 text-zinc-300" />
-              <h3 className="text-sm font-semibold text-foreground">
+            <div className="flex flex-col items-center justify-center py-10 px-4 text-center bg-card rounded-xl border border-dashed border-border">
+              <div className="text-emerald-600 flex items-center justify-center mb-3">
+                <Calendar className="h-8 w-8" />
+              </div>
+              <h3 className="font-semibold text-foreground text-sm">
                 {searchQuery ? "No Schedules Found" : viewMode === "trash" ? "Trash is Empty" : "No Schedules Yet"}
               </h3>
-              <p className="mt-1 max-w-[240px] text-xs text-muted-foreground">
+              <p className="mt-1 text-xs text-muted-foreground max-w-[240px]">
                 {searchQuery ? (
                   <>We couldn&apos;t find any schedules matching &quot;{searchQuery}&quot;.</>
                 ) : viewMode === "trash" ? (
@@ -817,10 +835,17 @@ export default function DispatchPage() {
                   <Button
                     variant="primary"
                     type="submit"
-                    disabled={stopOrder.length === 0}
+                    disabled={stopOrder.length === 0 || isSubmittingSchedule}
                     title={stopOrder.length === 0 ? "Add at least one sitio stop first" : undefined}
                   >
-                    {isAdding ? "Create Schedule" : "Save Changes"}
+                    {isSubmittingSchedule ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin inline-block" />
+                        {isAdding ? "Creating..." : "Saving..."}
+                      </>
+                    ) : (
+                      isAdding ? "Create Schedule" : "Save Changes"
+                    )}
                   </Button>
                 </div>
               </form>
@@ -934,8 +959,15 @@ export default function DispatchPage() {
                     <Button variant="secondary" type="button" onClick={() => setTruckSheet(null)}>
                       Cancel
                     </Button>
-                    <Button variant="primary" type="submit">
-                      {truckSheet.mode === "add" ? "Add Truck" : "Save Changes"}
+                    <Button variant="primary" type="submit" disabled={isSubmittingTruck}>
+                      {isSubmittingTruck ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin inline-block" />
+                          {truckSheet.mode === "add" ? "Adding..." : "Saving..."}
+                        </>
+                      ) : (
+                        truckSheet.mode === "add" ? "Add Truck" : "Save Changes"
+                      )}
                     </Button>
                   </div>
                 </div>

@@ -21,6 +21,7 @@ import {
   X,
   Search,
   Plus,
+  Loader2,
 } from "lucide-react";
 import { mockPilotData, TEJERO_SITOS } from "@/lib/mock-data";
 import { useTickets, addTicket, updateTicket, removeTicket } from "@/lib/tickets";
@@ -383,10 +384,23 @@ export default function ResidentMobilePWA() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) return;
       supabase.from('profiles').select('role, full_name, sitio, id').eq('id', session.user.id).single().then(({ data }) => {
+          const role = data?.role || session.user.user_metadata?.role;
+          if (role && role !== 'resident') {
+             if (['admin', 'staff', 'dispatch'].includes(role)) {
+               router.replace('/dashboard');
+             } else if (role === 'driver') {
+               router.replace('/driver');
+             } else {
+               router.replace('/login');
+             }
+             return;
+          }
+
           setResidentSession({ 
             email: session.user.email, 
             name: data?.full_name || session.user.user_metadata?.full_name || "Resident", 
             sitio: data?.sitio || session.user.user_metadata?.sitio,
+            phone: session.user.user_metadata?.phone || data?.phone,
             id: session.user.id 
           });
           setSessionReady(true);
@@ -524,7 +538,7 @@ export default function ResidentMobilePWA() {
     if (activeTs.phase === "completed") {
       return {
         id: "truck-live-completed",
-        mascot: "/mascot/star-pose.png",
+        mascot: "/mascot/arms-open-pose-clean.png",
         title: "Collection complete",
         subtitle: "All pickups complete",
       };
@@ -644,7 +658,7 @@ export default function ResidentMobilePWA() {
     const list = [
       {
         id: "greeting",
-        mascot: "/mascot/star-pose.png",
+        mascot: "/mascot/arms-open-pose-clean.png",
         title: greetingTitle,
         subtitle: new Date().toLocaleDateString("en-US", {
           weekday: "long",
@@ -682,6 +696,7 @@ export default function ResidentMobilePWA() {
   // Modals for Header Profile
   const [showProfile, setShowProfile] = useState(false);
   const [showSignOutModal, setShowSignOutModal] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   const closeAllSheets = () => {
     setSelectedTicket(null);
@@ -911,7 +926,7 @@ export default function ResidentMobilePWA() {
   };
 
   const filteredSchedules = getSchedules().filter((s) => {
-    const matchesZone = selectedZone === "all" || s.zoneId === selectedZone;
+    const matchesZone = selectedZone === "all" || s.zoneId === selectedZone || (s.routePoints || []).some((p) => p.name === selectedZone);
     const q = searchQuery.toLowerCase();
     const matchesQuery =
       !searchQuery ||
@@ -1020,25 +1035,25 @@ export default function ResidentMobilePWA() {
                 className="flex items-center gap-3.5 min-w-0 w-full"
               >
                 {currentBanner.mascot ? (
-                  <div className="flex h-14 w-14 items-center justify-center shrink-0">
+                  <div className="flex h-16 w-16 items-center justify-center shrink-0">
                     <img
                       src={currentBanner.mascot}
                       alt="Binny Mascot"
-                      className="h-13 w-13 shrink-0 object-contain drop-shadow-xs"
+                      className="h-16 w-16 shrink-0 object-contain drop-shadow-xs"
                     />
                   </div>
                 ) : currentBanner.Icon ? (
-                  <div className="flex h-10 w-10 items-center justify-center shrink-0">
-                    <currentBanner.Icon className="h-8 w-8 shrink-0" />
+                  <div className="flex h-11 w-11 items-center justify-center shrink-0">
+                    <currentBanner.Icon className="h-9 w-9 shrink-0" />
                   </div>
                 ) : null}
 
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-lg font-semibold tracking-tight text-foreground truncate leading-tight">
+                  <h3 className="text-lg font-semibold tracking-tight text-foreground leading-tight">
                     {currentBanner.title}
                   </h3>
                   {currentBanner.subtitle && (
-                    <p className="text-sm font-semibold text-emerald-800 truncate leading-tight mt-1">
+                    <p className="text-sm font-semibold text-emerald-800 leading-tight mt-1">
                       {currentBanner.subtitle}
                     </p>
                   )}
@@ -1072,7 +1087,7 @@ export default function ResidentMobilePWA() {
 
         {/* Floating Circular 3D Map Action Buttons (Option B: Symmetrical Left & Right Split) */}
         {/* 1. Bottom-Left: Focus Active Truck (slides in when the truck is out of view, out when centered) */}
-        <div className="pointer-events-none absolute bottom-[164px] left-4 z-20">
+        <div className="pointer-events-none absolute bottom-44 left-4 z-20">
           <AnimatePresence>
             {activeTs?.tracking && !isPointInView(activeTs.tracking.lat, activeTs.tracking.lng) && (
               <motion.button
@@ -1104,7 +1119,7 @@ export default function ResidentMobilePWA() {
         </div>
 
         {/* 2. Bottom-Right: Center My Location (slides in when GPS is out of view, out when centered) */}
-        <div className="pointer-events-none absolute bottom-[164px] right-4 z-20">
+        <div className="pointer-events-none absolute bottom-44 right-4 z-20">
           <AnimatePresence>
             {(!gpsCoords || !isPointInView(gpsCoords.lat, gpsCoords.lng)) && (
               <motion.button
@@ -1204,14 +1219,14 @@ export default function ResidentMobilePWA() {
                   if (!isMapSheetExpanded) setIsMapSheetExpanded(true);
                 }}
                 className={cn(
-                  "flex h-11 flex-1 min-w-0 items-center justify-center gap-1.5 rounded-xl border px-2 text-[11px] font-bold transition-all cursor-pointer shadow-xs active:scale-95",
+                  "flex h-12 flex-1 items-center justify-center gap-1.5 rounded-2xl border px-2 text-xs font-extrabold transition-all cursor-pointer shadow-sm active:scale-95",
                   isMapSheetExpanded && (activeTab === "schedule" || activeTab === "map")
-                    ? "border-emerald-500 bg-emerald-600 text-white font-bold"
-                    : "border-border bg-card text-foreground hover:bg-muted"
+                    ? "border-emerald-600 bg-emerald-50/50 text-emerald-800 ring-1 ring-emerald-600/20"
+                    : "border-border bg-card text-zinc-800 hover:bg-muted"
                 )}
               >
-                <Waze3DCalendarIcon className="h-4 w-4 shrink-0" />
-                <span className="truncate whitespace-nowrap">Schedules</span>
+                <Waze3DCalendarIcon className="h-5 w-5 shrink-0" />
+                <span className="whitespace-nowrap">Schedule</span>
               </button>
 
               <button
@@ -1225,14 +1240,14 @@ export default function ResidentMobilePWA() {
                   }, 150);
                 }}
                 className={cn(
-                  "flex h-11 flex-1 min-w-0 items-center justify-center gap-1.5 rounded-xl border px-2 text-[11px] font-bold transition-all cursor-pointer shadow-xs active:scale-95",
+                  "flex h-12 flex-1 items-center justify-center gap-1.5 rounded-2xl border px-2 text-xs font-extrabold transition-all cursor-pointer shadow-sm active:scale-95",
                   isMapSheetExpanded && activeTab === "report"
-                    ? "border-emerald-500 bg-emerald-600 text-white font-bold"
-                    : "border-border bg-card text-foreground hover:bg-muted"
+                    ? "border-emerald-600 bg-emerald-50/50 text-emerald-800 ring-1 ring-emerald-600/20"
+                    : "border-border bg-card text-zinc-800 hover:bg-muted"
                 )}
               >
-                <Waze3DCameraIcon className="h-4 w-4 shrink-0" />
-                <span className="truncate whitespace-nowrap">Report</span>
+                <Waze3DCameraIcon className="h-5 w-5 shrink-0" />
+                <span className="whitespace-nowrap">Report</span>
               </button>
 
               <button
@@ -1243,14 +1258,14 @@ export default function ResidentMobilePWA() {
                   if (!isMapSheetExpanded) setIsMapSheetExpanded(true);
                 }}
                 className={cn(
-                  "flex h-11 flex-1 min-w-0 items-center justify-center gap-1.5 rounded-xl border px-2 text-[11px] font-bold transition-all cursor-pointer shadow-xs active:scale-95",
+                  "flex h-12 flex-1 items-center justify-center gap-1.5 rounded-2xl border px-2 text-xs font-extrabold transition-all cursor-pointer shadow-sm active:scale-95",
                   isMapSheetExpanded && activeTab === "tickets"
-                    ? "border-emerald-500 bg-emerald-600 text-white font-bold"
-                    : "border-border bg-card text-foreground hover:bg-muted"
+                    ? "border-emerald-600 bg-emerald-50/50 text-emerald-800 ring-1 ring-emerald-600/20"
+                    : "border-border bg-card text-zinc-800 hover:bg-muted"
                 )}
               >
-                <Waze3DTicketIcon className="h-4 w-4 shrink-0" />
-                <span className="truncate whitespace-nowrap">Tickets</span>
+                <Waze3DTicketIcon className="h-5 w-5 shrink-0" />
+                <span className="whitespace-nowrap">Tickets</span>
               </button>
             </div>
 
@@ -1295,7 +1310,7 @@ export default function ResidentMobilePWA() {
                         <span className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                           Truck Status
                         </span>
-                        <span className="font-mono text-xs font-bold text-foreground">
+                        <span className="font-sans text-xs font-bold text-foreground">
                           {displaySchedule?.id 
                             ? (routeCompleted
                                 ? "Route Done"
@@ -1308,44 +1323,21 @@ export default function ResidentMobilePWA() {
                     </div>
                   </div>
 
-                  {/* Zone Filter Chips (Admin Dashboard Style: rounded-xl) */}
-                  <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedZone("all")}
-                      className={cn(
-                        "shrink-0 rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer",
-                        selectedZone === "all"
-                          ? "bg-emerald-600 text-white font-bold shadow-xs"
-                          : "border border-border bg-card text-muted-foreground hover:bg-muted"
-                      )}
-                    >
-                      All Sitios
-                    </button>
-                    {mockPilotData.zones.map((z) => {
-                      const shortName = z.name.split(" &")[0];
 
-                      return (
-                        <button
-                          key={z.id}
-                          type="button"
-                          onClick={() => setSelectedZone(z.id)}
-                          className={cn(
-                            "shrink-0 rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer",
-                            selectedZone === z.id
-                              ? "bg-emerald-600 text-white font-bold shadow-xs"
-                              : "border border-border bg-card text-muted-foreground hover:bg-muted"
-                          )}
-                        >
-                          {shortName}
-                        </button>
-                      );
-                    })}
-                  </div>
 
                   {/* Schedule List */}
                   <div className="space-y-3">
-                    {filteredSchedules.map((sch) => {
+                    {filteredSchedules.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-10 px-4 text-center bg-card rounded-xl border border-dashed border-border mt-2">
+                        <div className="text-emerald-600 flex items-center justify-center mb-3">
+                          <Calendar className="h-8 w-8" />
+                        </div>
+                        <h3 className="font-semibold text-foreground text-sm">No schedules found</h3>
+                        <p className="text-xs text-muted-foreground mt-1 max-w-[220px]">
+                          There are no schedules matching your search.
+                        </p>
+                      </div>
+                    ) : filteredSchedules.map((sch) => {
                       const isRecyclable = sch.type?.includes("Recyclable");
                       const isDiliMalata = sch.type?.includes("Dili Malata");
                       const isBiodegradable = !isRecyclable && !isDiliMalata;
@@ -1376,7 +1368,7 @@ export default function ResidentMobilePWA() {
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0 flex-1">
-                              <h3 className="text-sm font-bold text-foreground truncate">
+                              <h3 className="text-sm font-bold text-foreground leading-snug">
                                 {areaTitle}
                               </h3>
                             </div>
@@ -1395,8 +1387,8 @@ export default function ResidentMobilePWA() {
                           </div>
 
                           <div className="flex flex-wrap items-center justify-between gap-y-1 gap-x-2 text-xs pt-2.5 border-t border-border/60">
-                            <span className="font-medium text-foreground truncate">{formattedDays}</span>
-                            <span className="font-mono text-xs font-semibold text-foreground whitespace-nowrap ml-auto">{sch.time}</span>
+                            <span className="font-medium text-foreground">{formattedDays}</span>
+                            <span className="font-sans text-xs font-semibold text-foreground whitespace-nowrap ml-auto">{sch.time}</span>
                           </div>
                         </div>
                       );
@@ -1426,7 +1418,7 @@ export default function ResidentMobilePWA() {
                           Report Dispatched
                         </h2>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          Ticket <span className="font-mono font-bold text-emerald-700">{submittedTicket.id}</span> submitted successfully & dispatched.
+                          Ticket <span className="font-sans font-bold text-emerald-700">{submittedTicket.id}</span> submitted successfully & dispatched.
                         </p>
                       </div>
 
@@ -1675,9 +1667,26 @@ export default function ResidentMobilePWA() {
                     </div>
 
                     <div className="space-y-2.5">
-                      {tickets
-                        .filter((t) => (ticketFilter === "all" ? true : t.status === ticketFilter))
-                        .map((t) => (
+                      {(() => {
+                        const filteredList = tickets.filter((t) => (ticketFilter === "all" ? true : t.status === ticketFilter));
+                        
+                        if (filteredList.length === 0) {
+                          return (
+                            <div className="flex flex-col items-center justify-center py-10 px-4 text-center bg-card rounded-xl border border-dashed border-border mt-2">
+                              <div className="text-emerald-600 flex items-center justify-center mb-3">
+                                <Ticket className="h-8 w-8" />
+                              </div>
+                              <h3 className="font-semibold text-foreground text-sm">No tickets found</h3>
+                              <p className="text-xs text-muted-foreground mt-1 max-w-[220px]">
+                                {ticketFilter === "all" 
+                                  ? "You haven't submitted any waste reports yet." 
+                                  : `There are no ${ticketFilter.toLowerCase()} reports at the moment.`}
+                              </p>
+                            </div>
+                          );
+                        }
+
+                        return filteredList.map((t) => (
                           <div
                             key={t.id}
                             className="w-full rounded-xl border border-border bg-card p-3.5 text-left transition-colors hover:border-zinc-300 space-y-2 flex flex-col"
@@ -1740,7 +1749,8 @@ export default function ResidentMobilePWA() {
                               </div>
                             )}
                           </div>
-                        ))}
+                        ));
+                      })()}
                     </div>
                   </motion.div>
                 )}
@@ -1777,7 +1787,7 @@ export default function ResidentMobilePWA() {
             )}
 
             <div className="flex items-center justify-between gap-2">
-              <span className="text-sm font-semibold text-emerald-700 tracking-tight tabular-nums">
+              <span className="text-sm font-semibold text-emerald-700 tracking-tight font-sans">
                 {selectedTicket.id}
               </span>
               <div className="flex items-center gap-1.5">
@@ -1801,11 +1811,11 @@ export default function ResidentMobilePWA() {
               />
               <InfoRow
                 label="Date"
-                value={<span className="font-medium text-foreground tracking-tight tabular-nums">{selectedTicket.date}</span>}
+                value={<span className="font-medium text-foreground tracking-tight font-sans">{selectedTicket.date}</span>}
               />
               <InfoRow
                 label="Time"
-                value={<span className="font-medium text-foreground tracking-tight tabular-nums">{selectedTicket.time}</span>}
+                value={<span className="font-medium text-foreground tracking-tight font-sans">{selectedTicket.time}</span>}
               />
               <InfoRow
                 label="Address"
@@ -1851,7 +1861,7 @@ export default function ResidentMobilePWA() {
           {/* Account Info Details */}
           <div className="rounded-xl border border-border bg-card p-3.5 space-y-2">
             <InfoRow label="Email" value={residentSession?.email || "—"} />
-            <InfoRow label="Mobile Phone" value="+63 917 888 1923" />
+            <InfoRow label="Mobile Phone" value={residentSession?.phone || "—"} />
             <InfoRow label="Reports Filed" value={`${tickets.length} tickets`} />
             <InfoRow label="Account Status" value={<span className="text-emerald-600 font-bold">Active / Verified</span>} />
           </div>
@@ -1959,14 +1969,23 @@ export default function ResidentMobilePWA() {
               <button
                   type="button"
                   onClick={async () => {
+                    setIsSigningOut(true);
                     clearResidentSession();
                     await supabase.auth.signOut();
                     setShowSignOutModal(false);
                     router.replace("/login");
                   }}
-                  className="inline-flex select-none items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-bold text-rose-600 shadow-xs transition-all duration-150 hover:border-rose-600 hover:bg-rose-600 hover:text-white active:scale-[0.98] cursor-pointer"
+                  disabled={isSigningOut}
+                  className="inline-flex select-none items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-bold text-rose-600 shadow-xs transition-all duration-150 hover:border-rose-600 hover:bg-rose-600 hover:text-white active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
                 >
-                  Sign Out
+                  {isSigningOut ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Signing out...
+                    </>
+                  ) : (
+                    "Sign Out"
+                  )}
                 </button>
             </div>
           </motion.div>

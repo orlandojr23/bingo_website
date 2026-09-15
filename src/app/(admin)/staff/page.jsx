@@ -22,7 +22,14 @@ import {
 import { useStaffRoster, saveStaffRoster, fetchStaffRoster } from "@/lib/staff";
 import ConfirmModal from "@/components/ui/confirm-modal";
 import { supabase } from "@/lib/supabase";
+import { createClient } from "@supabase/supabase-js";
 
+// Helper client to prevent auth operations from altering the current admin's session
+const authClient = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  { auth: { persistSession: false, autoRefreshToken: false } }
+);
 
 const formatNameInput = (str) =>
   str ? str.replace(/\s+/g, " ").replace(/(^\w|\s\w)/g, (m) => m.toUpperCase()) : "";
@@ -168,7 +175,8 @@ export default function StaffPage() {
 
     try {
       // 2. Save in Supabase Auth (This will trigger an OTP email if email confirmations are enabled)
-      const { data, error: signUpError } = await supabase.auth.signUp({
+      // Using authClient so it doesn't log the admin out
+      const { data, error: signUpError } = await authClient.auth.signUp({
         email: loginEmail,
         password,
         options: {
@@ -219,8 +227,8 @@ export default function StaffPage() {
     setIsSubmitting(true);
 
     try {
-      // verifyOtp does not affect the current admin session
-      const { data, error: verifyError } = await supabase.auth.verifyOtp({
+      // verifyOtp does not affect the current admin session because we use authClient
+      const { data, error: verifyError } = await authClient.auth.verifyOtp({
         email: pendingDriver.loginEmail,
         token: otpCode,
         type: "signup",
@@ -428,8 +436,16 @@ export default function StaffPage() {
               <tbody className="divide-y divide-border/60">
                 {filteredStaff.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-8 text-center text-muted-foreground">
-                      No drivers match your search filter.
+                    <td colSpan={6} className="p-4">
+                      <div className="flex flex-col items-center justify-center py-10 px-4 text-center bg-card rounded-xl border border-dashed border-border">
+                        <div className="text-emerald-600 flex items-center justify-center mb-3">
+                          <Users className="h-8 w-8" />
+                        </div>
+                        <h3 className="font-semibold text-foreground text-sm">No Staff Found</h3>
+                        <p className="mt-1 text-xs text-muted-foreground max-w-[240px]">
+                          No drivers match your search filter.
+                        </p>
+                      </div>
                     </td>
                   </tr>
                 ) : (
@@ -566,7 +582,7 @@ export default function StaffPage() {
                             if (resendTimer > 0 || isResending || !pendingDriver?.loginEmail) return;
                             setIsResending(true);
                             setFormError("");
-                            const { error } = await supabase.auth.resend({
+                            const { error } = await authClient.auth.resend({
                               type: "signup",
                               email: pendingDriver.loginEmail,
                             });

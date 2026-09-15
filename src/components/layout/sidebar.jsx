@@ -15,11 +15,14 @@ import {
   X,
   Truck,
   Users,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useUnreadCount } from "@/lib/notifications";
 import { motion, AnimatePresence } from "framer-motion";
+
+import { useAuth } from "@/context/AuthContext";
 
 const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutGrid },
@@ -35,9 +38,12 @@ export default function Sidebar({ isOpen, onClose }) {
   const pathname = usePathname();
   const router = useRouter();
   const [showSignOutModal, setShowSignOutModal] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const unreadNotifications = useUnreadCount("admin");
+  const { profile } = useAuth();
 
   const handleSignOut = async () => {
+    setIsSigningOut(true);
     try {
       await supabase.auth.signOut();
     } catch {}
@@ -109,15 +115,15 @@ export default function Sidebar({ isOpen, onClose }) {
 
       <div className="mt-auto flex shrink-0 flex-col gap-3 border-t border-border-subtle px-3 pb-4 pt-3">
         <div className="flex items-center gap-3 px-2 py-1">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-xs font-semibold text-zinc-700">
-            MS
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-xs font-semibold text-zinc-700 uppercase">
+            {profile?.full_name ? profile.full_name.substring(0, 2) : "MS"}
           </div>
           <div className="flex min-w-0 flex-col">
             <span className="truncate text-sm font-semibold leading-tight text-foreground">
               Brgy. Tejero
             </span>
             <span className="mt-0.5 truncate text-xs leading-tight text-muted-foreground">
-              Officer Maria Santos
+              {profile?.full_name || "Officer Maria Santos"}
             </span>
           </div>
         </div>
@@ -183,9 +189,17 @@ export default function Sidebar({ isOpen, onClose }) {
                 variant="secondary"
                 size="sm"
                 onClick={handleSignOut}
+                disabled={isSigningOut}
                 className="border-rose-200 text-rose-600 hover:border-rose-600 hover:bg-rose-600 hover:text-white"
               >
-                Sign Out
+                {isSigningOut ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin inline-block" />
+                    Signing out...
+                  </>
+                ) : (
+                  "Sign Out"
+                )}
               </Button>
             </div>
           </div>

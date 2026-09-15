@@ -54,6 +54,24 @@ export default function LandingPage() {
   const sectionSettled = hydrated && activeSection === getSectionFromHash();
   const isDesktop = useMediaQuery("(min-width: 1024px)");
 
+  const [phTime, setPhTime] = useState("12:00");
+
+  useEffect(() => {
+    const updateTime = () => {
+      const timeStr = new Intl.DateTimeFormat("en-US", {
+        timeZone: "Asia/Manila",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      }).format(new Date()).replace(/ [AP]M/, '');
+      setPhTime(timeStr);
+    };
+
+    updateTime();
+    const interval = setInterval(updateTime, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
   useEffect(() => {
     // Section links scroll back to the top so the hero is visible
     // instead of staying down near the footer.
@@ -133,7 +151,7 @@ export default function LandingPage() {
               style={{ perspective: 1200 }}
               className="flex justify-center shrink-0 z-20"
             >
-              <PhoneMockup activeSection={activeSection} />
+              <PhoneMockup activeSection={activeSection} phTime={phTime} />
             </motion.div>
 
           </div>
@@ -256,7 +274,7 @@ function FaqContent() {
   );
 }
 
-function PhoneMockup({ activeSection }) {
+function PhoneMockup({ activeSection, phTime }) {
   return (
     <div className="relative w-[240px] sm:w-[280px] md:w-[280px] lg:w-[300px] xl:w-[340px] h-[500px] sm:h-[580px] xl:h-[620px] z-10 transition-transform duration-700 hover:-translate-y-2 scale-[0.78] sm:scale-95 lg:scale-90 xl:scale-95 [@media(max-height:800px)]:scale-[0.8] [@media(max-height:720px)]:scale-[0.7] origin-top -mb-[80px] sm:-mb-[30px] lg:-mb-[60px] xl:-mb-[30px] [@media(max-height:800px)]:-mb-[120px] [@media(max-height:720px)]:-mb-[170px]">
       {/* Outer Phone Bezel */}
@@ -268,7 +286,7 @@ function PhoneMockup({ activeSection }) {
           {/* Top Status Bar & Dynamic Island */}
           <div className="pt-3 px-4 sm:px-6 flex justify-between items-center shrink-0 z-30 bg-white">
             <span className="text-[10px] font-semibold tracking-wide text-slate-900">
-              12:00
+              {phTime}
             </span>
             
             {/* Dynamic Island */}

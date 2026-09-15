@@ -51,8 +51,8 @@ const getEmailSuggestionSuffix = (emailVal, domains = PUBLIC_DOMAINS) => {
   return "";
 };
 
-const fieldClass = (hasError) =>
-  `w-full rounded-xl border bg-card pl-10 pr-4 py-3 text-sm font-medium text-foreground placeholder:text-muted-foreground/50 outline-none transition-colors ${
+const fieldClass = (hasError, noIcon = false) =>
+  `w-full rounded-xl border bg-card ${noIcon ? "px-4" : "pl-10 pr-4"} py-3 text-sm font-medium text-foreground placeholder:text-muted-foreground/50 outline-none transition-colors ${
     hasError
       ? "border-rose-300 focus:border-rose-400"
       : "border-border hover:border-zinc-300 focus:border-zinc-400"
@@ -421,22 +421,19 @@ export default function SignupPage() {
 
               <div className="flex flex-col gap-1.5">
                 <div className="relative">
-                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-muted-foreground/70">
-                    <User className="h-4 w-4" />
-                  </div>
                   <input
                     type="text"
                     value={lastName}
                     onChange={(e) =>
                       handleFieldChange(
                         "lastName",
-                        e.target.value.replace(/[^a-zA-ZÀ-ÿÑñ'’ .-]/g, "").replace(/\s{2,}/g, " "),
+                        e.target.value.replace(/[^a-zA-ZÑñ' .-]/g, "").replace(/\s{2,}/g, " "),
                         setLastName
                       )
                     }
                     maxLength={35}
                     autoComplete="family-name"
-                    className={fieldClass(!!errors.lastName)}
+                    className={fieldClass(!!errors.lastName, true)}
                     placeholder="Last name"
                   />
                 </div>
@@ -621,16 +618,13 @@ export default function SignupPage() {
 
           <div className="flex flex-col gap-1.5">
             <div className="relative">
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-muted-foreground/70">
-                <Lock className="h-4 w-4" />
-              </div>
               <input
                 type={showPassword ? "text" : "password"}
                 value={confirm}
                 onChange={(e) => handleFieldChange("confirm", e.target.value.replace(/\s/g, ""), setConfirm)}
                 maxLength={64}
                 autoComplete="new-password"
-                className={fieldClass(!!errors.confirm)}
+                className={fieldClass(!!errors.confirm, true) + " pr-11"}
                 placeholder="Re-enter your password"
               />
             </div>

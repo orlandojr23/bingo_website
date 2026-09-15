@@ -9,19 +9,15 @@ import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
 import { InfoRow } from "@/components/ui/info-row";
 import { DashboardSkeleton } from "@/components/ui/skeletons";
+import { PanelStat } from "@/components/ui/panel-stat";
 import { useTickets, updateTicket, removeTicket } from "@/lib/tickets";
 import TicketDetailsModal from "@/components/modals/ticket-details-modal";
 import ConfirmModal from "@/components/ui/confirm-modal";
-
-const hintTones = {
-  zinc: "text-muted-foreground",
-  rose: "text-rose-600",
-  blue: "text-blue-600",
-  emerald: "text-emerald-600",
-};
+import { useAuth } from "@/context/AuthContext";
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { profile } = useAuth();
   const tickets = useTickets();
   const [statusFilter, setStatusFilter] = useState("All");
   const [selectedTicket, setSelectedTicket] = useState(null);
@@ -74,13 +70,15 @@ export default function DashboardPage() {
     month: "long",
     day: "numeric",
   });
+  
+  const displayName = profile?.full_name || "Admin";
 
   return (
     <div className="relative flex min-h-full w-full min-w-0 overflow-x-hidden bg-background bg-[url('/hero-bg.svg')] bg-[length:100%_auto] sm:bg-cover bg-top sm:bg-center bg-no-repeat">
       <div className="absolute inset-0 bg-background/42 pointer-events-none" />
       <div className="relative z-10 flex flex-1 min-w-0 flex-col gap-5 p-4 [scrollbar-gutter:stable] sm:gap-6 sm:p-6 lg:p-8 pb-6 sm:pb-8 lg:pb-10">
         <PageHeader
-          title="Good morning, Officer Santos"
+          title={`Good morning, ${displayName}`}
           description={
             loading ? (
               "Here's today's overview of waste reports in Barangay Tejero"
@@ -99,20 +97,13 @@ export default function DashboardPage() {
           <>
         <div className="grid shrink-0 grid-cols-2 gap-3 sm:gap-3.5 lg:grid-cols-4">
           {kpis.map((kpi) => (
-            <div
+            <PanelStat
               key={kpi.label}
-              className="flex flex-col justify-between rounded-xl border border-border bg-card p-3.5 sm:p-4"
-            >
-              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                {kpi.label}
-              </span>
-              <span className="mt-1.5 font-mono text-xl sm:text-2xl font-semibold leading-tight text-foreground">
-                {kpi.value}
-              </span>
-              <span className={`mt-2 text-xs font-medium ${hintTones[kpi.tone]}`}>
-                {kpi.hint}
-              </span>
-            </div>
+              label={kpi.label}
+              value={kpi.value}
+              hint={kpi.hint}
+              tone={kpi.tone}
+            />
           ))}
         </div>
 
