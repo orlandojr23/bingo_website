@@ -158,6 +158,8 @@ export default function LandingLayout({ children }) {
             <img 
               src="/logo-green-v2.png" 
               alt="Bin-Go Logo" 
+              fetchPriority="high"
+              loading="eager"
               className={`h-16 w-auto object-contain origin-left scale-[1.65] transition-all duration-500 ease-out ${
                 hideLogo 
                   ? "opacity-0 scale-90 pointer-events-none" 
@@ -268,6 +270,8 @@ export default function LandingLayout({ children }) {
                 <img 
                   src="/logo-green-v2.png" 
                   alt="Bin-Go Logo" 
+                  fetchPriority="high"
+                  loading="eager"
                   className="h-16 w-auto object-contain origin-left scale-[1.65] brightness-0 invert" 
                 />
               </a>

@@ -132,6 +132,8 @@ export default function AdminLoginPage() {
           <img
             src="/logo-green-v2.png"
             alt="Bin-Go Logo"
+            fetchPriority="high"
+            loading="eager"
             className="h-32 w-32 object-contain"
           />
           <h1 className="mt-4 text-lg font-semibold tracking-tight text-foreground">

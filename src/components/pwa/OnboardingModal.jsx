@@ -122,12 +122,12 @@ export default function OnboardingModal({ isOpen, onComplete }) {
               {/* Mascot Pose Display (Clean & Bright) */}
               <div className="relative w-52 h-52 xs:w-60 xs:h-60 sm:w-72 sm:h-72 max-h-[38vh] aspect-square flex items-center justify-center mb-6 sm:mb-8">
                 <div className="w-full h-full relative drop-shadow-xl">
-                  <Image
+                  <img
                     src={stepData.mascot}
                     alt={stepData.title}
-                    fill
-                    priority
-                    className="object-contain"
+                    fetchPriority="high"
+                    loading="eager"
+                    className="object-contain w-full h-full"
                   />
                 </div>
               </div>

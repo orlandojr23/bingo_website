@@ -1080,6 +1080,8 @@ export default function DriverPage() {
                     <img
                       src={currentBanner.mascot}
                       alt="Binny Mascot"
+                      fetchPriority="high"
+                      loading="eager"
                       className="h-16 w-16 shrink-0 object-contain drop-shadow-xs"
                     />
                   </div>

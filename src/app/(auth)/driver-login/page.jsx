@@ -145,6 +145,8 @@ export default function DriverLoginPage() {
           <img
             src="/logo-green-v2.png"
             alt="Bin'Go Logo"
+            fetchPriority="high"
+            loading="eager"
             className="h-32 w-32 object-contain"
           />
           <h1 className="mt-5 text-2xl font-black tracking-tight text-foreground">

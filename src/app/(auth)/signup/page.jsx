@@ -300,6 +300,8 @@ export default function SignupPage() {
           <img
             src="/logo-green-v2.png"
             alt="Bin'Go Logo"
+            fetchPriority="high"
+            loading="eager"
             className="h-28 w-28 object-contain"
           />
           {needsOtp ? (

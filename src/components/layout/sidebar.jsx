@@ -57,6 +57,8 @@ export default function Sidebar({ isOpen, onClose }) {
           <img
             src="/logo-green-v2.png"
             alt="Bin-Go Logo"
+            fetchPriority="high"
+            loading="eager"
             className="h-12 w-auto shrink-0 object-contain origin-left scale-[2.05]"
           />
         </Link>

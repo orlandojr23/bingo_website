@@ -214,6 +214,8 @@ export default function ResidentLoginPage() {
           <img
             src="/logo-green-v2.png"
             alt="Bin'Go Logo"
+            fetchPriority="high"
+            loading="eager"
             className="h-32 w-32 object-contain"
           />
           {needsOtp ? (
