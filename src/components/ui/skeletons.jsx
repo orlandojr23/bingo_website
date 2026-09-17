@@ -76,3 +76,65 @@ export function AdminShellSkeleton() {
     </div>
   );
 }
+
+export function ResidentShellSkeleton() {
+  return (
+    <div className="relative h-[100dvh] w-full overflow-hidden bg-slate-50 flex flex-col" aria-hidden="true">
+      {/* Background Map Skeleton */}
+      <div className="absolute inset-0 z-0">
+        <MapSkeleton />
+      </div>
+
+      {/* Top Floating Search/Filter Bar */}
+      <div className="absolute top-4 left-4 right-4 z-10 flex gap-2">
+        <div className="flex-1 h-12 rounded-2xl bg-white/80 backdrop-blur-md shadow-sm border border-slate-200 animate-pulse" />
+        <div className="w-12 h-12 rounded-2xl bg-white/80 backdrop-blur-md shadow-sm border border-slate-200 animate-pulse flex-shrink-0" />
+      </div>
+
+      {/* Bottom Sheet Skeleton */}
+      <div className="absolute bottom-0 left-0 right-0 z-10 bg-white rounded-t-3xl shadow-[0_-8px_30px_-15px_rgba(0,0,0,0.1)] border-t border-slate-100 p-6 pt-3 flex flex-col gap-4">
+        {/* Drag handle */}
+        <div className="w-12 h-1.5 rounded-full bg-slate-200 mx-auto mb-2 animate-pulse" />
+        
+        {/* Main action area */}
+        <div className="h-24 w-full rounded-2xl bg-slate-100 animate-pulse" />
+        
+        <div className="flex justify-between items-center px-2 mt-2">
+          <div className="h-10 w-28 rounded-full bg-slate-100 animate-pulse" />
+          <div className="h-10 w-10 rounded-full bg-slate-100 animate-pulse" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function DriverShellSkeleton() {
+  return (
+    <div className="relative h-[100dvh] w-full overflow-hidden bg-slate-50 flex flex-col" aria-hidden="true">
+      {/* Background Map Skeleton */}
+      <div className="absolute inset-0 z-0">
+        <MapSkeleton />
+      </div>
+
+      {/* Top Status Pill */}
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
+        <div className="h-10 w-32 rounded-full bg-white/90 backdrop-blur-md shadow-sm border border-slate-200 animate-pulse" />
+      </div>
+      
+      {/* Floating Side Buttons */}
+      <div className="absolute top-16 right-4 z-10 flex flex-col gap-2">
+        <div className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-md shadow-sm border border-slate-200 animate-pulse" />
+        <div className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-md shadow-sm border border-slate-200 animate-pulse" />
+      </div>
+
+      {/* Bottom Action Panel Skeleton */}
+      <div className="absolute bottom-4 left-4 right-4 z-10 flex flex-col gap-2">
+        {/* Swipe button area */}
+        <div className="h-16 w-full rounded-2xl bg-white shadow-lg border border-slate-100 animate-pulse" />
+        
+        {/* Info row */}
+        <div className="h-20 w-full rounded-2xl bg-white/90 backdrop-blur-md shadow-sm border border-slate-100 animate-pulse" />
+      </div>
+    </div>
+  );
+}

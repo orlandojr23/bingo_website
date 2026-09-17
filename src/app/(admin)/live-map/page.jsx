@@ -201,6 +201,7 @@ function LiveMapContent() {
       <div className={cn("flex h-full w-full shrink-0 flex-col overflow-hidden border-l border-border bg-card lg:w-[340px]", mobileTab !== "panel" && "hidden lg:flex")}>
         <div className="shrink-0 border-b border-border px-5 pb-4 pt-5">
           <h2 className="text-sm font-semibold text-foreground">Map Control</h2>
+          <p className="mt-1 text-xs text-muted-foreground">Monitor real-time truck locations and active waste reports</p>
         </div>
 
         <div className="flex shrink-0 items-center gap-2 border-b border-border-subtle px-4 py-3">
@@ -305,9 +306,12 @@ function LiveMapContent() {
 
               <div className="flex flex-1 flex-col gap-2 overflow-y-auto px-4 pb-3">
                 {filteredTickets.length === 0 ? (
-                  <div className="flex flex-1 flex-col items-center justify-center gap-2 py-12 text-muted-foreground">
-                    <MapPin className="h-6 w-6 text-zinc-300" />
-                    <span className="text-xs font-medium">No reports match your filters.</span>
+                  <div className="flex flex-1 flex-col items-center justify-center gap-1 py-10 px-4 text-center bg-card rounded-xl border border-dashed border-border m-2">
+                    <div className="text-emerald-600 flex items-center justify-center mb-2">
+                      <MapPin className="h-7 w-7" />
+                    </div>
+                    <h3 className="font-semibold text-foreground text-sm">No Reports Match</h3>
+                    <span className="text-xs text-muted-foreground">Try adjusting your filters or keywords.</span>
                   </div>
                 ) : (
                   filteredTickets.map((t) => (

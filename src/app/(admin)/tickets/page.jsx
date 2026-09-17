@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Inbox, Trash2, ListTodo } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useTickets, useArchivedTickets, updateTicket, removeTicket, restoreTicket, hardDeleteTicket } from "@/lib/tickets";
+import { useTickets, updateTicket, removeTicket } from "@/lib/tickets";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
 import { PanelStat } from "@/components/ui/panel-stat";
@@ -16,14 +16,12 @@ import ConfirmModal from "@/components/ui/confirm-modal";
 
 export default function TicketsPage() {
   const router = useRouter();
-  const activeTickets = useTickets();
-  const archivedTickets = useArchivedTickets();
-  const [viewMode, setViewMode] = useState("active"); // "active" | "trash"
-  const tickets = viewMode === "active" ? activeTickets : archivedTickets;
+  const tickets = useTickets();
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [urgencyFilter, setUrgencyFilter] = useState("All");
+  const [dateFilter, setDateFilter] = useState("All");
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [ticketToDelete, setTicketToDelete] = useState(null);
 
@@ -35,22 +33,11 @@ export default function TicketsPage() {
   };
 
   const handleDeleteTicket = (id) => {
-    if (viewMode === "active") {
-      removeTicket(id);
-    } else {
-      hardDeleteTicket(id);
-    }
+    removeTicket(id);
     if (selectedTicket?.id === id) {
       setSelectedTicket(null);
     }
     setTicketToDelete(null);
-  };
-
-  const handleRestoreTicket = (id) => {
-    restoreTicket(id);
-    if (selectedTicket?.id === id) {
-      setSelectedTicket(null);
-    }
   };
 
   const handleLocateOnMap = (t) => {
@@ -65,11 +52,29 @@ export default function TicketsPage() {
       (t.barangay || "").toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "All" || t.status === statusFilter;
     const matchUrgency = urgencyFilter === "All" || t.urgency === urgencyFilter;
-    return matchSearch && matchStatus && matchUrgency;
+    
+    let matchDate = true;
+    if (dateFilter !== "All" && t.timestamp) {
+      const ticketDate = new Date(t.timestamp);
+      const now = new Date();
+      if (dateFilter === "Today") {
+        matchDate = ticketDate.toDateString() === now.toDateString();
+      } else if (dateFilter === "Last 7 Days") {
+        const sevenDaysAgo = new Date(now.setDate(now.getDate() - 7));
+        matchDate = ticketDate >= sevenDaysAgo;
+      } else if (dateFilter === "Last 30 Days") {
+        const thirtyDaysAgo = new Date(now.setDate(now.getDate() - 30));
+        matchDate = ticketDate >= thirtyDaysAgo;
+      } else if (dateFilter === "This Year") {
+        matchDate = ticketDate.getFullYear() === now.getFullYear();
+      }
+    }
+    
+    return matchSearch && matchStatus && matchUrgency && matchDate;
   });
 
-  const totalReports = activeTickets.length;
-  const pendingReports = activeTickets.filter((t) => t.status === "Pending").length;
+  const totalReports = tickets.length;
+  const pendingReports = tickets.filter((t) => t.status === "Pending").length;
   const isSheetOpen = selectedTicket !== null;
 
   return (
@@ -80,23 +85,6 @@ export default function TicketsPage() {
           title="Reports"
           description="All waste reports submitted by residents and their current status"
         />
-
-        <div className="flex bg-muted/50 p-1 rounded-lg w-fit border border-border/50">
-          <button 
-            className={cn("flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all cursor-pointer", viewMode === "active" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5")}
-            onClick={() => setViewMode("active")}
-          >
-            <ListTodo className="w-4 h-4" />
-            Active Reports
-          </button>
-          <button 
-            className={cn("flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all cursor-pointer", viewMode === "trash" ? "bg-card text-rose-600 dark:text-rose-400 shadow-sm" : "text-muted-foreground hover:text-rose-600 dark:hover:text-rose-400 hover:bg-black/5 dark:hover:bg-white/5")}
-            onClick={() => setViewMode("trash")}
-          >
-            <Trash2 className="w-4 h-4" />
-            Trash Bin {archivedTickets.length > 0 && `(${archivedTickets.length})`}
-          </button>
-        </div>
 
         <div className="grid shrink-0 grid-cols-2 gap-3.5 max-w-sm sm:max-w-md">
           <PanelStat label="Total Reports" value={totalReports} hint="All submitted reports" />
@@ -137,6 +125,18 @@ export default function TicketsPage() {
               <option value="Medium">Medium</option>
               <option value="High">High</option>
               <option value="Critical">Emergency</option>
+            </select>
+
+            <select
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              className={cn(inputClass, "cursor-pointer flex-1 sm:w-auto sm:flex-none")}
+            >
+              <option value="All">All Time</option>
+              <option value="Today">Today</option>
+              <option value="Last 7 Days">Last 7 Days</option>
+              <option value="Last 30 Days">Last 30 Days</option>
+              <option value="This Year">This Year</option>
             </select>
           </div>
         </div>
@@ -253,13 +253,15 @@ export default function TicketsPage() {
       />
 
       <ConfirmModal
-        open={!!ticketToDelete}
+        isOpen={!!ticketToDelete}
+        onClose={() => setTicketToDelete(null)}
+        onConfirm={() => handleDeleteTicket(ticketToDelete)}
         title="Delete Report"
-        description={`Are you sure you want to remove report ${ticketToDelete?.id} (${ticketToDelete?.location})? This cannot be undone.`}
-        onConfirm={() => handleDeleteTicket(ticketToDelete?.id)}
-        onCancel={() => setTicketToDelete(null)}
+        description="Are you sure you want to move this report to the bin?"
+        confirmText="Yes, delete"
+        cancelText="Cancel"
+        danger
       />
     </div>
   );
 }
-

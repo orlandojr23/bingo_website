@@ -16,6 +16,7 @@ import {
   Truck,
   Users,
   Loader2,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,7 @@ const navItems = [
   { name: "Reports", href: "/tickets", icon: Ticket },
   { name: "Data & Insights", href: "/analytics", icon: BarChart3 },
   { name: "Notifications", href: "/notifications", icon: Bell },
+  { name: "Bin", href: "/bin", icon: Trash2 },
 ];
 
 export default function Sidebar({ isOpen, onClose }) {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useLayoutEffect, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { ArrowRight, ShieldCheck, Clock, Wifi, Battery, MapPin, Download } from "lucide-react";
+import { ArrowRight, ShieldCheck, Clock, Wifi, Battery, MapPin, Download, Camera, CalendarDays, Map, Bell, Truck, FileText, CheckCircle2, Menu, X, LogOut, ChevronRight, Check, Ticket } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 function useMediaQuery(query) {
@@ -274,6 +274,106 @@ function FaqContent() {
   );
 }
 
+// ---------------- UI Mockups ----------------
+
+function MockupMinimalist({ pose, title, icon: Icon, bgClass, imgClass, delay = 0 }) {
+  return (
+    <div className={`flex h-full w-full flex-col items-center justify-center relative overflow-hidden select-none ${bgClass}`}>
+      
+      {/* Subtle Minimalist Grid Overlay */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#00000006_1px,transparent_1px),linear-gradient(to_bottom,#00000006_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_50%,#000_60%,transparent_100%)]"></div>
+      
+      {/* Very Soft Static Glow Behind Mascot for Depth */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[280px] h-[280px] rounded-full bg-white/60 filter blur-3xl pointer-events-none"></div>
+
+      {/* Floating Center Mascot */}
+      <motion.div 
+        initial={{ scale: 0.9, opacity: 0, y: 15 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1], delay }}
+        className="relative z-10 flex flex-col items-center justify-center pt-2"
+      >
+        <div className="relative">
+          <img 
+            src={`/mascot/${pose}.png`} 
+            alt="Binny" 
+            className={`object-contain relative z-10 drop-shadow-[0_15px_25px_rgba(0,0,0,0.1)] ${imgClass || "w-56 h-56"}`} 
+            fetchPriority="high" 
+            loading="eager" 
+          />
+        </div>
+      </motion.div>
+
+      {/* Refined Minimalist Floating Pill */}
+      <motion.div 
+        initial={{ y: 15, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.5, ease: "easeOut", delay: delay + 0.2 }}
+        className="absolute bottom-12 sm:bottom-16 z-20 flex items-center gap-2 sm:gap-3 rounded-full bg-white/90 backdrop-blur-xl p-1.5 sm:p-2 pr-4 sm:pr-5 shadow-[0_8px_24px_-6px_rgba(0,0,0,0.08)] border border-white ring-1 ring-slate-900/5"
+      >
+        {Icon && (
+          <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-emerald-500 text-white shadow-sm relative overflow-hidden">
+            <Icon className="h-4 w-4 relative z-10" />
+          </div>
+        )}
+        <span className="text-[12px] sm:text-[14px] font-bold tracking-tight text-slate-800">{title}</span>
+      </motion.div>
+    </div>
+  );
+}
+
+function MockupUserHome() {
+  return (
+    <MockupMinimalist 
+      pose="arms-open-pose" 
+      title="Arriving in 5 mins" 
+      icon={MapPin}
+      bgClass="bg-[#f8fafc]"
+      delay={0.1}
+      imgClass="w-48 h-48 sm:w-56 sm:h-56 scale-100 sm:scale-110 lg:scale-[1.2] -mt-2 sm:-mt-4"
+    />
+  );
+}
+
+function MockupUserFeatures() {
+  return (
+    <MockupMinimalist 
+      pose="arms-open-pose-clean" 
+      title="Tap to Snap" 
+      icon={Camera}
+      bgClass="bg-[#f8fafc]"
+      delay={0.2}
+      imgClass="w-48 h-48 sm:w-56 sm:h-56 scale-100 sm:scale-[1.15] lg:scale-[1.25] -mt-2 sm:-mt-5"
+    />
+  );
+}
+
+function MockupDriverAbout() {
+  return (
+    <MockupMinimalist 
+      pose="coffee-pose" 
+      title="Status: On Duty" 
+      icon={Truck}
+      bgClass="bg-[#f8fafc]"
+      delay={0.3}
+      imgClass="w-48 h-48 sm:w-56 sm:h-56"
+    />
+  );
+}
+
+function MockupFaq() {
+  return (
+    <MockupMinimalist 
+      pose="pointing-pose" 
+      title="Got questions?" 
+      icon={Bell}
+      bgClass="bg-[#f8fafc]"
+      delay={0.4}
+      imgClass="w-48 h-48 sm:w-56 sm:h-56 scale-100 sm:scale-110 lg:scale-[1.2] -mt-2 sm:-mt-4"
+    />
+  );
+}
+
 function PhoneMockup({ activeSection, phTime }) {
   return (
     <div className="relative w-[240px] sm:w-[280px] md:w-[280px] lg:w-[300px] xl:w-[340px] h-[500px] sm:h-[580px] xl:h-[620px] z-10 transition-transform duration-700 hover:-translate-y-2 scale-[0.78] sm:scale-95 lg:scale-90 xl:scale-95 [@media(max-height:800px)]:scale-[0.8] [@media(max-height:720px)]:scale-[0.7] origin-top -mb-[80px] sm:-mb-[30px] lg:-mb-[60px] xl:-mb-[30px] [@media(max-height:800px)]:-mb-[120px] [@media(max-height:720px)]:-mb-[170px]">
@@ -281,10 +381,29 @@ function PhoneMockup({ activeSection, phTime }) {
       <div className="absolute inset-0 bg-slate-900 rounded-[2.5rem] sm:rounded-[3rem] shadow-2xl overflow-hidden border-[6px] sm:border-[8px] border-slate-900 flex flex-col pointer-events-auto">
         
         {/* Screen Content Area */}
-        <div className="flex-1 bg-white relative w-full h-full overflow-hidden rounded-[2rem] sm:rounded-[2.5rem] flex flex-col justify-between">
+        <div className="flex-1 relative w-full h-full overflow-hidden rounded-[2rem] sm:rounded-[2.5rem] bg-zinc-50">
           
-          {/* Top Status Bar & Dynamic Island */}
-          <div className="pt-3 px-4 sm:px-6 flex justify-between items-center shrink-0 z-30 bg-white">
+          {/* Dynamic App Mockup Content (Fills entire screen) */}
+          <div className="absolute inset-0 z-0">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeSection}
+                initial={{ opacity: 0, scale: 0.98, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.98, y: -10 }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+                className="absolute inset-0 w-full h-full"
+              >
+                {activeSection === "home" && <MockupUserHome />}
+                {activeSection === "features" && <MockupUserFeatures />}
+                {activeSection === "about" && <MockupDriverAbout />}
+                {activeSection === "faq" && <MockupFaq />}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+
+          {/* Top Status Bar & Dynamic Island (Absolute Overlay) */}
+          <div className="absolute top-0 inset-x-0 pt-3 px-4 sm:px-6 flex justify-between items-center z-30 pointer-events-none">
             <span className="text-[10px] font-semibold tracking-wide text-slate-900">
               {phTime}
             </span>
@@ -302,12 +421,9 @@ function PhoneMockup({ activeSection, phTime }) {
             </div>
           </div>
 
-          {/* Dynamic App Mockup Content */}
-          <div className="flex-1 relative w-full overflow-hidden bg-zinc-50 flex flex-col pt-2" />
-
-          {/* Bottom iOS Home Bar */}
-          <div className="pb-1.5 pt-1 flex justify-center shrink-0 z-30 bg-white border-t border-slate-100">
-            <div className="w-20 xl:w-24 h-1 bg-slate-900 rounded-full" />
+          {/* Bottom iOS Home Bar (Absolute Overlay) */}
+          <div className="absolute bottom-2 inset-x-0 flex justify-center z-30 pointer-events-none">
+            <div className="w-20 xl:w-24 h-1 bg-slate-900 rounded-full shadow-sm opacity-80" />
           </div>
           
         </div>

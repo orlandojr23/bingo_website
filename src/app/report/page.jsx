@@ -722,6 +722,8 @@ export default function ResidentMobilePWA() {
   const [mapZoom, setMapZoom] = useState(16);
 
   // Form State for Report
+  const [soundSettingsVisible, setSoundSettingsVisible] = useState(false);
+  const [showMyReports, setShowMyReports] = useState(false);
   const [editingTicketId, setEditingTicketId] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
   const [category, setCategory] = useState("Overflowing Bin");
@@ -1065,8 +1067,21 @@ export default function ResidentMobilePWA() {
             )}
           </div>
 
-          {/* Right: Top-Right Circular Profile Button */}
-          <div className="flex shrink-0 items-center gap-2.5">
+          {/* Right: Top-Right Buttons */}
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setIsMapSheetExpanded(false);
+                setSelectedTicket(null);
+                setShowMyReports(true);
+                haptic();
+              }}
+              className="flex h-9 px-3 shrink-0 items-center justify-center rounded-full bg-white text-sm font-semibold text-slate-700 shadow-xs hover:bg-slate-50 active:scale-95 transition-all cursor-pointer border border-slate-200"
+              title="My Reports"
+            >
+              My Reports
+            </button>
             <button
               type="button"
               data-tour="profile-btn"
@@ -1936,6 +1951,56 @@ export default function ResidentMobilePWA() {
               <span>Sign Out</span>
             </button>
           </div>
+        </div>
+      </BottomSheet>
+
+      {/* Resident My Reports Sheet */}
+      <BottomSheet
+        open={showMyReports}
+        onClose={() => setShowMyReports(false)}
+        title="My Reports"
+        description="History of all waste reports you have submitted."
+        height="85vh"
+        snapPoints={["85vh", "50vh"]}
+      >
+        <div className="flex flex-col gap-4 py-4 px-4 h-full overflow-y-auto">
+          {activeTickets
+            .filter((t) => t.reporter === residentSession?.name)
+            .sort((a, b) => b.id.localeCompare(a.id))
+            .map((ticket) => (
+              <div key={ticket.id} className="flex flex-col gap-2 rounded-xl border border-border bg-card p-4 shadow-xs relative overflow-hidden">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-foreground line-clamp-1 max-w-[65%]">
+                    {ticket.location}
+                  </span>
+                  <StatusBadge status={ticket.status} />
+                </div>
+                
+                {ticket.description && (
+                  <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
+                    {ticket.description}
+                  </p>
+                )}
+                
+                <div className="mt-2 flex items-center justify-between border-t border-border pt-2 text-[11px] font-medium text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
+                    {new Date(ticket.createdAt).toLocaleDateString()}
+                  </span>
+                  <span className="flex items-center gap-1 capitalize">
+                    {ticket.urgency} Priority
+                  </span>
+                </div>
+              </div>
+            ))}
+            
+          {activeTickets.filter((t) => t.reporter === residentSession?.name).length === 0 && (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Ticket className="h-12 w-12 text-muted-foreground/30 mb-3" />
+              <h3 className="text-sm font-medium text-foreground">No Reports Yet</h3>
+              <p className="mt-1 text-xs text-muted-foreground">When you submit a report, you can track its progress here.</p>
+            </div>
+          )}
         </div>
       </BottomSheet>
 

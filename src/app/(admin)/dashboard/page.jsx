@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FileText, ChevronRight, Trash2 } from "lucide-react";
+import { FileText, ChevronRight, Trash2, Inbox } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
@@ -138,16 +138,16 @@ export default function DashboardPage() {
 
         <div>
           {filteredTickets.length === 0 ? (
-            <div className="flex items-center justify-center rounded-xl border border-border bg-card p-8 text-center">
-              <div className="flex max-w-xs flex-col items-center">
-                <Trash2 className="mb-2.5 h-8 w-8 text-zinc-300" />
-                <h3 className="text-sm font-semibold text-foreground">No Recent Reports</h3>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {statusFilter === "All"
-                    ? "New waste reports from residents will appear here."
-                    : `There are no reports with a "${statusFilter}" status right now.`}
-                </p>
+            <div className="flex flex-col items-center justify-center py-10 px-4 text-center bg-card rounded-xl border border-dashed border-border">
+              <div className="text-emerald-600 flex items-center justify-center mb-3">
+                <Inbox className="h-8 w-8" />
               </div>
+              <h3 className="font-semibold text-foreground text-sm">No Recent Reports</h3>
+              <p className="mt-1 text-xs text-muted-foreground max-w-[240px]">
+                {statusFilter === "All"
+                  ? "New waste reports from residents will appear here."
+                  : `There are no reports with a "${statusFilter}" status right now.`}
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">

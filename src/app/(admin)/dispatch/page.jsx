@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { Calendar, Plus, Minus, X, Search, Truck, Shuffle, MapPin, Trash2, ListTodo, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TEJERO_SITOS } from "@/lib/mock-data";
-import { useLiveRoute, getSchedules, addSchedule, updateSchedule, removeSchedule, restoreSchedule, hardDeleteSchedule, assignDriver, estimateStopTime, retimeRoutePoints, scheduleLabel } from "@/lib/live-route";
+import { useLiveRoute, getSchedules, addSchedule, updateSchedule, removeSchedule, assignDriver, estimateStopTime, retimeRoutePoints, scheduleLabel } from "@/lib/live-route";
 import { useRoutePath } from "@/lib/use-route-path";
 import { useFleet, addTruck, updateTruck, removeTruck } from "@/lib/fleet";
 import { useStaffRoster } from "@/lib/staff";
@@ -60,7 +60,6 @@ export default function DispatchPage() {
   const [scheduleToDelete, setScheduleToDelete] = useState(null);
   const [truckToRemove, setTruckToRemove] = useState(null);
   const [driverRoster] = useStaffRoster();
-  const [viewMode, setViewMode] = useState("active");
 
   const live = useLiveRoute();
   const fleet = useFleet();
@@ -227,20 +226,12 @@ export default function DispatchPage() {
       return;
     }
 
-    if (viewMode === "trash") {
-      await hardDeleteSchedule(id);
-    } else {
-      await removeSchedule(id);
-    }
+    await removeSchedule(id);
 
     if (selectedSchedule?.id === id) {
       setSelectedSchedule(null);
     }
     setScheduleToDelete(null);
-  };
-
-  const handleRestoreSchedule = async (id) => {
-    await restoreSchedule(id);
   };
 
   const openTruckSheet = (mode, truck) => {
@@ -573,22 +564,7 @@ export default function DispatchPage() {
           }
         />
 
-        <div className="flex bg-muted/50 p-1 rounded-lg w-fit border border-border/50">
-          <button 
-            className={cn("flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all cursor-pointer", viewMode === "active" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5")}
-            onClick={() => setViewMode("active")}
-          >
-            <ListTodo className="w-4 h-4" />
-            Active Assignments
-          </button>
-          <button 
-            className={cn("flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all cursor-pointer", viewMode === "trash" ? "bg-card text-rose-600 dark:text-rose-400 shadow-sm" : "text-muted-foreground hover:text-rose-600 dark:hover:text-rose-400 hover:bg-black/5 dark:hover:bg-white/5")}
-            onClick={() => setViewMode("trash")}
-          >
-            <Trash2 className="w-4 h-4" />
-            Trash Bin
-          </button>
-        </div>
+
 
         <div className="grid shrink-0 grid-cols-2 gap-3.5 max-w-sm sm:max-w-md">
           <PanelStat label="Schedules" value={totalSchedules} hint="Total collection schedules" />
@@ -601,7 +577,7 @@ export default function DispatchPage() {
               <h2 className="text-sm font-semibold text-foreground">Fleet</h2>
               <span className="text-xs text-muted-foreground">{fleet.length} trucks</span>
             </div>
-            <Button variant="secondary" onClick={() => openTruckSheet("add")}>
+            <Button variant="primary" onClick={() => openTruckSheet("add")}>
               <Plus className="h-4 w-4" />
               <span>Add Truck</span>
             </Button>
@@ -673,13 +649,11 @@ export default function DispatchPage() {
                 <Calendar className="h-8 w-8" />
               </div>
               <h3 className="font-semibold text-foreground text-sm">
-                {searchQuery ? "No Schedules Found" : viewMode === "trash" ? "Trash is Empty" : "No Schedules Yet"}
+                {searchQuery ? "No Schedules Found" : "No Schedules Yet"}
               </h3>
               <p className="mt-1 text-xs text-muted-foreground max-w-[240px]">
                 {searchQuery ? (
                   <>We couldn&apos;t find any schedules matching &quot;{searchQuery}&quot;.</>
-                ) : viewMode === "trash" ? (
-                  <>Deleted assignments will appear here.</>
                 ) : (
                   <>Click &quot;Create Assignment&quot; to set up your first collection route.</>
                 )}
@@ -725,47 +699,34 @@ export default function DispatchPage() {
                       </div>
                     </div>
 
-                    <div className="mt-2 flex shrink-0 items-center justify-end gap-2">
-                      {viewMode === "trash" ? (
-                        <>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRestoreSchedule(sch.id);
-                            }}
-                            className="rounded-md border border-emerald-200 bg-card px-2.5 py-1 text-xs font-medium text-emerald-600 transition-colors hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer"
-                            title="Restore Assignment"
-                          >
-                            Restore
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setScheduleToDelete(sch);
-                            }}
-                            className="flex items-center gap-1.5 rounded-md border border-rose-200 bg-card px-2.5 py-1 text-xs font-medium text-rose-600 transition-colors hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 cursor-pointer"
-                            title="Permanently Delete"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            Permanently Delete
-                          </button>
-                        </>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setScheduleToDelete(sch);
-                          }}
-                          className="flex items-center gap-1.5 rounded-md border border-rose-200 bg-card px-2.5 py-1 text-xs font-medium text-rose-600 transition-colors hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 cursor-pointer"
-                          title="Delete Assignment"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          Delete Assignment
-                        </button>
-                      )}
+                    <div className="mt-4 flex gap-2 border-t border-border-subtle pt-3">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedSchedule(sch);
+                          setIsAdding(false);
+                          setTruckId(sch.truckId);
+                          setType(sch.collectionType);
+                          setDays(sch.collectionDays.join(", "));
+                          setTime(sch.time);
+                          setStatus(sch.status);
+                          setStopOrder(sch.routePoints || []);
+                        }}
+                        className="flex-1 rounded-lg border border-border bg-white px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-zinc-50"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setScheduleToDelete(sch.id);
+                        }}
+                        className="flex-1 rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-600 transition-colors hover:bg-rose-100"
+                      >
+                        Delete
+                      </button>
                     </div>
                   </div>
                 );
@@ -978,15 +939,14 @@ export default function DispatchPage() {
       </AnimatePresence>
 
       <ConfirmModal
-        open={!!scheduleToDelete}
-        title={viewMode === "trash" ? "Permanently Delete Assignment" : "Delete Assignment"}
-        description={
-          viewMode === "trash"
-            ? `This will permanently remove schedule ${scheduleToDelete?.id}. This action cannot be undone.`
-            : `This will move schedule ${scheduleToDelete?.id} to the trash bin.`
-        }
-        onConfirm={() => handleDeleteSchedule(scheduleToDelete?.id)}
-        onCancel={() => setScheduleToDelete(null)}
+        isOpen={!!scheduleToDelete}
+        onClose={() => setScheduleToDelete(null)}
+        onConfirm={() => handleDeleteSchedule(scheduleToDelete)}
+        title="Move to Bin"
+        description="Are you sure you want to move this schedule to the bin? It will be archived and can be restored later."
+        confirmText="Yes, delete"
+        cancelText="Cancel"
+        danger
       />
 
       <ConfirmModal

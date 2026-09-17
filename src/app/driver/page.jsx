@@ -354,6 +354,7 @@ export default function DriverPage() {
   const [showProfile, setShowProfile] = useState(false);
   const [showSignOutModal, setShowSignOutModal] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [showTripLog, setShowTripLog] = useState(false);
 
   // Change Password (settings sheet)
   const [currentPassword, setCurrentPassword] = useState("");
@@ -1106,20 +1107,34 @@ export default function DriverPage() {
             )}
           </div>
 
-          {/* Right: Top-Right Circular Profile Button */}
-          <button
-            type="button"
-            onClick={() => {
-              setIsMapSheetExpanded(false);
-              setShowProfile(true);
-              haptic();
-            }}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-sm font-semibold leading-none text-white shadow-xs hover:bg-emerald-700 active:scale-95 transition-all cursor-pointer border border-emerald-500/30"
-            title="Driver Terminal & Settings"
-            aria-label="Driver Terminal & Settings"
-          >
-            {driverSession?.name?.charAt(0)?.toUpperCase() || "D"}
-          </button>
+          {/* Right: Top-Right Buttons */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setIsMapSheetExpanded(false);
+                setShowTripLog(true);
+                haptic();
+              }}
+              className="flex h-9 px-3 shrink-0 items-center justify-center rounded-full bg-white text-sm font-semibold text-slate-700 shadow-xs hover:bg-slate-50 active:scale-95 transition-all cursor-pointer border border-slate-200"
+              title="Trip Log"
+            >
+              Trip Log
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsMapSheetExpanded(false);
+                setShowProfile(true);
+                haptic();
+              }}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-sm font-semibold leading-none text-white shadow-xs hover:bg-emerald-700 active:scale-95 transition-all cursor-pointer border border-emerald-500/30"
+              title="Driver Terminal & Settings"
+              aria-label="Driver Terminal & Settings"
+            >
+              {driverSession?.name?.charAt(0)?.toUpperCase() || "D"}
+            </button>
+          </div>
         </div>
 
         {/* Floating Circular 3D Map Action Buttons (Option B: Symmetrical Left & Right Split) */}
@@ -1613,6 +1628,49 @@ export default function DriverPage() {
               <span>Sign Out</span>
             </button>
           </div>
+        </div>
+      </BottomSheet>
+
+      {/* Driver Trip Log Sheet */}
+      <BottomSheet
+        open={showTripLog}
+        onClose={() => setShowTripLog(false)}
+        title="Trip Log"
+        description="History of your completed routes."
+        height="85vh"
+        snapPoints={["85vh", "50vh"]}
+      >
+        <div className="flex flex-col gap-4 py-4 px-4 h-full overflow-y-auto">
+          {getSchedules()
+            .filter((s) => s.truckId === selectedTruckId && live.scheduleStatus[s.id] === "Completed")
+            .sort((a, b) => b.id.localeCompare(a.id))
+            .map((route) => (
+              <div key={route.id} className="flex flex-col gap-2 rounded-xl border border-border bg-card p-4 shadow-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-foreground">
+                    {mockPilotData.zones.find((z) => z.id === route.zoneId)?.name || `Zone ${route.zoneId}`}
+                  </span>
+                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                    Completed
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground line-clamp-2">
+                  {route.routePoints.length} Sitios covered
+                </p>
+                <div className="mt-1 flex items-center justify-between border-t border-border pt-2 text-[11px] font-medium text-muted-foreground">
+                  <span>{route.collectionType} Waste</span>
+                  <span>{route.collectionDays}</span>
+                </div>
+              </div>
+            ))}
+            
+          {getSchedules().filter((s) => s.truckId === selectedTruckId && live.scheduleStatus[s.id] === "Completed").length === 0 && (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <CheckCircle2 className="h-12 w-12 text-muted-foreground/30 mb-3" />
+              <h3 className="text-sm font-medium text-foreground">No Completed Trips</h3>
+              <p className="mt-1 text-xs text-muted-foreground">Routes you complete will appear here as proof of your work.</p>
+            </div>
+          )}
         </div>
       </BottomSheet>
 

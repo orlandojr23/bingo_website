@@ -154,14 +154,14 @@ export default function NotificationsPage() {
 
         <div>
           {filteredNotifications.length === 0 ? (
-            <div className="flex items-center justify-center rounded-xl border border-border bg-card p-8 text-center">
-              <div className="flex max-w-xs flex-col items-center">
-                <Bell className="mb-2.5 h-8 w-8 text-zinc-300" />
-                <h3 className="text-sm font-semibold text-foreground">No Alerts Found</h3>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  You&apos;re all caught up. No new notifications.
-                </p>
+            <div className="flex flex-col items-center justify-center py-10 px-4 text-center bg-card rounded-xl border border-dashed border-border">
+              <div className="text-emerald-600 flex items-center justify-center mb-3">
+                <Bell className="h-8 w-8" />
               </div>
+              <h3 className="font-semibold text-foreground text-sm">No Alerts Found</h3>
+              <p className="mt-1 text-xs text-muted-foreground max-w-[240px]">
+                You&apos;re all caught up. No new notifications.
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
