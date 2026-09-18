@@ -83,6 +83,7 @@ export default function SignupPage() {
   
   useEffect(() => {
     if (user) {
+      try { window.localStorage.setItem("resident-active-tab", "map"); } catch {}
       window.location.href = '/report';
     }
   }, [user]);
@@ -123,6 +124,7 @@ export default function SignupPage() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
+        try { window.localStorage.setItem("resident-active-tab", "map"); } catch {}
         router.replace('/report');
       }
     });
@@ -290,12 +292,13 @@ export default function SignupPage() {
       return;
     }
 
+    try { window.localStorage.setItem("resident-active-tab", "map"); } catch {}
     window.location.href = "/report";
   };
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <div className="mx-auto w-full max-w-sm px-2 pt-[env(safe-area-inset-top)]">
+      <div className="mx-auto w-full max-w-sm px-2 pt-[calc(env(safe-area-inset-top)+12px)]">
         <div className="flex h-[52px] items-center">
           <Link
             href="/login"

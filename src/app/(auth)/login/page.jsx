@@ -38,6 +38,11 @@ const nameFromEmail = (email) => {
   return token.charAt(0).toUpperCase() + token.slice(1);
 };
 
+// Fresh sign-ins always land on the map tab, never on a stale persisted tab.
+const resetLandingTab = () => {
+  try { window.localStorage.setItem("resident-active-tab", "map"); } catch {}
+};
+
 const fieldClass = (hasError) =>
   `w-full rounded-2xl border bg-card pl-10 pr-4 py-3.5 text-[16px] text-foreground placeholder:text-muted-foreground/50 outline-none transition-colors ${
     hasError
@@ -65,6 +70,7 @@ export default function ResidentLoginPage() {
 
   useEffect(() => {
     if (user) {
+      resetLandingTab();
       router.replace('/report');
     }
   }, [user]);
@@ -174,6 +180,7 @@ export default function ResidentLoginPage() {
         setIsLoading(false);
         return;
       }
+      resetLandingTab();
       router.replace("/report");
     } catch (err) {
       console.error("Login exception:", err);
@@ -203,6 +210,7 @@ export default function ResidentLoginPage() {
       return;
     }
 
+    resetLandingTab();
     router.replace("/report");
   };
 
@@ -217,7 +225,7 @@ export default function ResidentLoginPage() {
             alt="Bin'Go Logo"
             fetchPriority="high"
             loading="eager"
-            className="h-20 w-20 object-contain"
+            className="h-28 w-28 object-contain"
           />
           {needsOtp ? (
             <>

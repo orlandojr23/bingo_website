@@ -58,6 +58,7 @@ export default function DriverLoginPage() {
       if (session) {
         supabase.from('profiles').select('role').eq('id', session.user.id).single().then(({ data }) => {
           if (data?.role === 'driver' || session.user?.user_metadata?.role === 'driver') {
+            try { window.localStorage.setItem("driver-active-tab", "map"); } catch {}
             router.replace('/driver');
           }
         });
@@ -133,6 +134,7 @@ export default function DriverLoginPage() {
       return;
     }
 
+    try { window.localStorage.setItem("driver-active-tab", "map"); } catch {}
     router.replace("/driver");
   };
 
@@ -147,7 +149,7 @@ export default function DriverLoginPage() {
             alt="Bin'Go Logo"
             fetchPriority="high"
             loading="eager"
-            className="h-20 w-20 object-contain"
+            className="h-28 w-28 object-contain"
           />
           <h1 className="mt-4 text-[22px] font-semibold tracking-tight text-foreground">
             Driver Sign In

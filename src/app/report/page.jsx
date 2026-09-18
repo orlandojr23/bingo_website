@@ -24,6 +24,7 @@ import {
   X,
   Search,
   Plus,
+  User,
   Loader2,
 } from "lucide-react";
 import { TEJERO_SITOS } from "@/lib/mock-data";
@@ -40,7 +41,7 @@ import { cn, haptic } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapSkeleton } from "@/components/ui/skeletons";
+import { MapSkeleton, ResidentShellSkeleton } from "@/components/ui/skeletons";
 import { InfoRow } from "@/components/ui/info-row";
 import { useToast } from "@/components/pwa/Toast";
 import OnboardingModal from "@/components/pwa/OnboardingModal";
@@ -53,144 +54,9 @@ const MapCanvas = dynamic(() => import("@/components/map/map-canvas"), {
 
 const TAB_IDS = ["schedule", "map", "report", "tickets"];
 
+// Map banner is text-only (native style); status glyphs use Lucide icons.
 
-
-function Waze3DTruckIcon({ className = "h-5 w-5" }) {
-  return (
-    <svg
-      viewBox="0 0 32 32"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-    >
-      <defs>
-        <linearGradient id="truckCabinGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#34d399" />
-          <stop offset="100%" stopColor="#047857" />
-        </linearGradient>
-        <linearGradient id="truckBodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#10b981" />
-          <stop offset="100%" stopColor="#065f46" />
-        </linearGradient>
-        <filter id="truckShadow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="1" stdDeviation="0.8" floodColor="#000000" floodOpacity="0.25" />
-        </filter>
-      </defs>
-      <g filter="url(#truckShadow)">
-        <rect x="3" y="9" width="16" height="13" rx="2" fill="url(#truckBodyGrad)" />
-        <path d="M 19 12 H 26 C 27.5 12 28.5 13.5 28.5 15 L 28.5 22 H 19 V 12 Z" fill="url(#truckCabinGrad)" />
-        <path d="M 21 14 H 25.5 L 26.5 17 H 21 V 14 Z" fill="#ffffff" opacity="0.85" />
-        <line x1="6" y1="11" x2="6" y2="20" stroke="#047857" strokeWidth="1.5" />
-        <line x1="10" y1="11" x2="10" y2="20" stroke="#047857" strokeWidth="1.5" />
-        <line x1="14" y1="11" x2="14" y2="20" stroke="#047857" strokeWidth="1.5" />
-        <circle cx="8" cy="23" r="3" fill="#18181b" />
-        <circle cx="8" cy="23" r="1.2" fill="#a1a1aa" />
-        <circle cx="23" cy="23" r="3" fill="#18181b" />
-        <circle cx="23" cy="23" r="1.2" fill="#a1a1aa" />
-      </g>
-    </svg>
-  );
-}
-
-function Waze3DCalendarIcon({ className = "h-4 w-4" }) {
-  return (
-    <svg
-      viewBox="0 0 32 32"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-    >
-      <defs>
-        <linearGradient id="calTopGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#10b981" />
-          <stop offset="100%" stopColor="#047857" />
-        </linearGradient>
-        <filter id="calShadow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="1" stdDeviation="0.8" floodColor="#000000" floodOpacity="0.25" />
-        </filter>
-      </defs>
-      <g filter="url(#calShadow)">
-        <rect x="4" y="6" width="24" height="22" rx="3" fill="#ffffff" stroke="#e4e4e7" strokeWidth="1" />
-        <path d="M 4 9 C 4 7.34 5.34 6 7 6 H 25 C 26.66 6 28 7.34 28 9 V 12 H 4 V 9 Z" fill="url(#calTopGrad)" />
-        <rect x="9" y="3.5" width="2.5" height="5" rx="1.2" fill="#71717a" />
-        <rect x="20.5" y="3.5" width="2.5" height="5" rx="1.2" fill="#71717a" />
-        <circle cx="10" cy="17" r="1.5" fill="#10b981" />
-        <circle cx="16" cy="17" r="1.5" fill="#a1a1aa" />
-        <circle cx="22" cy="17" r="1.5" fill="#a1a1aa" />
-        <circle cx="10" cy="23" r="1.5" fill="#a1a1aa" />
-        <circle cx="16" cy="23" r="1.5" fill="#10b981" />
-        <circle cx="22" cy="23" r="1.5" fill="#a1a1aa" />
-      </g>
-    </svg>
-  );
-}
-
-function Waze3DCameraIcon({ className = "h-4 w-4" }) {
-  return (
-    <svg
-      viewBox="0 0 32 32"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-    >
-      <defs>
-        <linearGradient id="camBodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#3f3f46" />
-          <stop offset="100%" stopColor="#18181b" />
-        </linearGradient>
-        <linearGradient id="camLensGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#34d399" />
-          <stop offset="100%" stopColor="#059669" />
-        </linearGradient>
-        <filter id="camShadow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="1" stdDeviation="0.8" floodColor="#000000" floodOpacity="0.25" />
-        </filter>
-      </defs>
-      <g filter="url(#camShadow)">
-        <path d="M 10 9 L 12 6 H 20 L 22 9 Z" fill="#27272a" />
-        <rect x="3" y="9" width="26" height="18" rx="3.5" fill="url(#camBodyGrad)" />
-        <rect x="3" y="9" width="26" height="3" fill="#10b981" />
-        <circle cx="16" cy="18" r="6" fill="#a1a1aa" />
-        <circle cx="16" cy="18" r="4.5" fill="url(#camLensGrad)" />
-        <circle cx="14.5" cy="16.5" r="1.3" fill="#ffffff" opacity="0.8" />
-        <circle cx="7" cy="12" r="1" fill="#ef4444" />
-      </g>
-    </svg>
-  );
-}
-
-function Waze3DTicketIcon({ className = "h-4 w-4" }) {
-  return (
-    <svg
-      viewBox="0 0 32 32"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-    >
-      <defs>
-        <linearGradient id="tktGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#fbbf24" />
-          <stop offset="50%" stopColor="#d97706" />
-          <stop offset="100%" stopColor="#b45309" />
-        </linearGradient>
-        <filter id="tktShadow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="1" stdDeviation="0.8" floodColor="#000000" floodOpacity="0.25" />
-        </filter>
-      </defs>
-      <g filter="url(#tktShadow)">
-        <path
-          d="M 4 8 C 4 6.89 4.89 6 6 6 H 26 C 27.11 6 28 6.89 28 8 V 13 C 26.34 13 25 14.34 25 16 C 25 17.66 26.34 19 28 19 V 24 C 28 25.11 27.11 26 26 26 H 6 C 4.89 26 4 25.11 4 24 V 19 C 5.66 19 7 17.66 7 16 C 7 14.34 5.66 13 4 13 V 8 Z"
-          fill="url(#tktGrad)"
-        />
-        <line x1="12" y1="7" x2="12" y2="25" stroke="#ffffff" strokeWidth="1.2" strokeDasharray="2 2" opacity="0.8" />
-        <line x1="16" y1="11" x2="16" y2="21" stroke="#ffffff" strokeWidth="1.2" opacity="0.9" />
-        <line x1="19" y1="11" x2="19" y2="21" stroke="#ffffff" strokeWidth="1.8" opacity="0.9" />
-        <line x1="22" y1="11" x2="22" y2="21" stroke="#ffffff" strokeWidth="1" opacity="0.9" />
-        <line x1="24" y1="11" x2="24" y2="21" stroke="#ffffff" strokeWidth="1.5" opacity="0.9" />
-      </g>
-    </svg>
-  );
-}
+// Map banner is text-only (native style); status glyphs use Lucide icons.
 
 // A report is only actionable if the resident names a specific area/landmark.
 // GPS gives coordinates but not a usable "where", so the typed location must
@@ -211,78 +77,6 @@ function isSpecificLocation(raw) {
 }
 
 const LOCATION_FORMAT_HINT = "Be specific: e.g. “Behind Tejero Chapel, Purok 3”";
-
-function Waze3DTargetIcon({ className = "h-9 w-9" }) {
-  return (
-    <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <defs>
-        <linearGradient id="userTargetGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#34d399" />
-          <stop offset="100%" stopColor="#059669" />
-        </linearGradient>
-        <filter id="userTargetShadow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="1.5" stdDeviation="1" floodColor="#000000" floodOpacity="0.25" />
-        </filter>
-      </defs>
-      <g filter="url(#userTargetShadow)">
-        <circle cx="18" cy="18" r="13" fill="none" stroke="url(#userTargetGrad)" strokeWidth="3" />
-        <circle cx="18" cy="18" r="6" fill="#10b981" />
-        <circle cx="18" cy="18" r="2.5" fill="#ffffff" />
-        <line x1="18" y1="2" x2="18" y2="7" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" />
-        <line x1="18" y1="29" x2="18" y2="34" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" />
-        <line x1="2" y1="18" x2="7" y2="18" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" />
-        <line x1="29" y1="18" x2="34" y2="18" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" />
-      </g>
-    </svg>
-  );
-}
-
-function Waze3DFocusTruckIcon({ className = "h-9 w-9" }) {
-  return (
-    <svg viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <defs>
-        <filter id="userFocusTruckShadow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="1.5" stdDeviation="1" floodColor="#000000" floodOpacity="0.3" />
-        </filter>
-      </defs>
-      <g filter="url(#userFocusTruckShadow)">
-        {/* 4 Side Tires */}
-        <rect x="7" y="9" width="3.5" height="7" rx="1.5" fill="#18181b" />
-        <rect x="33.5" y="9" width="3.5" height="7" rx="1.5" fill="#18181b" />
-        <rect x="6.5" y="27" width="4" height="8" rx="1.5" fill="#18181b" />
-        <rect x="33.5" y="27" width="4" height="8" rx="1.5" fill="#18181b" />
-
-        {/* Compactor Main Container Box */}
-        <rect x="10" y="16" width="24" height="20" rx="3" fill="#10b981" stroke="#059669" strokeWidth="1" />
-        {/* Container Top 3D Roof Highlight */}
-        <rect x="13" y="18" width="18" height="14" rx="2" fill="#34d399" opacity="0.9" />
-        <line x1="10" y1="21" x2="34" y2="21" stroke="#047857" strokeWidth="1.2" />
-        <line x1="10" y1="26" x2="34" y2="26" stroke="#047857" strokeWidth="1.2" />
-        <line x1="10" y1="31" x2="34" y2="31" stroke="#047857" strokeWidth="1.2" />
-
-        {/* Rear Hopper Loader */}
-        <rect x="12" y="35" width="20" height="3" rx="1" fill="#064e3b" />
-        <rect x="15" y="35.5" width="4" height="2" fill="#facc15" />
-        <rect x="25" y="35.5" width="4" height="2" fill="#facc15" />
-
-        {/* 3D Cab Front Hood */}
-        <path d="M 12 16 H 32 V 9 C 32 6.5 29.5 5 27 5 H 17 C 14.5 5 12 6.5 12 9 V 16 Z" fill="#059669" stroke="#047857" strokeWidth="1" />
-
-        {/* Side Mirrors */}
-        <rect x="7.5" y="11" width="3" height="2" rx="0.5" fill="#047857" />
-        <rect x="33.5" y="11" width="3" height="2" rx="0.5" fill="#047857" />
-
-        {/* Glossy Sky Blue Curved Windshield */}
-        <path d="M 14 11 H 30 L 28 14.5 H 16 L 14 11 Z" fill="#38bdf8" stroke="#e0f2fe" strokeWidth="0.8" />
-        <line x1="20" y1="11.5" x2="22" y2="14" stroke="#ffffff" strokeWidth="1" opacity="0.8" />
-
-        {/* LED Headlights */}
-        <rect x="13.5" y="5" width="3.5" height="1.8" rx="0.5" fill="#facc15" />
-        <rect x="27" y="5" width="3.5" height="1.8" rx="0.5" fill="#facc15" />
-      </g>
-    </svg>
-  );
-}
 
 function getTimeBasedGreeting(fullName = "Resident") {
   const name = fullName.split(" ")[0];
@@ -513,7 +307,7 @@ export default function ResidentMobilePWA() {
     if (activeTs.phase === "completed") {
       return {
         id: "truck-live-completed",
-        mascot: "/mascot/arms-open-pose-clean.png",
+        live: true,
         title: "Collection complete",
         subtitle: "All pickups complete",
       };
@@ -522,14 +316,14 @@ export default function ResidentMobilePWA() {
     if (activeTs.onsite) {
       return {
         id: "truck-live-arrived",
-        mascot: "/mascot/arms-open-pose.png",
+        live: true,
         title: "Truck arrived",
         subtitle: `Collecting at ${point?.name ?? "your stop"}`,
       };
     }
     return {
       id: "truck-live-enroute",
-      Icon: Waze3DTruckIcon,
+      live: true,
       title:
         liveEta === "Arriving now"
           ? "Truck arriving now"
@@ -577,8 +371,6 @@ export default function ResidentMobilePWA() {
       const start = String(today.time || "").split("-")[0].trim();
       return {
         id: "pickup-status-today",
-        Icon: Waze3DCalendarIcon,
-        mascot: "/mascot/arms-open-pose.png",
         title: "Pickup today",
         subtitle: `${today.type}${start ? ` • ${start}` : ""}`,
       };
@@ -593,8 +385,6 @@ export default function ResidentMobilePWA() {
         const start = String(hit.time || "").split("-")[0].trim();
         return {
           id: "pickup-status-next",
-          Icon: Waze3DCalendarIcon,
-          mascot: "/mascot/coffee-pose.png",
           title: "No pickup today",
           subtitle: `Next: ${label}${start ? ` at ${start}` : ""}`,
         };
@@ -602,8 +392,6 @@ export default function ResidentMobilePWA() {
     }
     return {
       id: "pickup-status-none",
-      Icon: Waze3DCalendarIcon,
-      mascot: "/mascot/coffee-pose.png",
       title: "No pickup today",
       subtitle: "No schedule posted",
     };
@@ -633,7 +421,6 @@ export default function ResidentMobilePWA() {
     const list = [
       {
         id: "greeting",
-        mascot: "/mascot/arms-open-pose-clean.png",
         title: greetingTitle,
         subtitle: new Date().toLocaleDateString("en-US", {
           weekday: "long",
@@ -643,7 +430,6 @@ export default function ResidentMobilePWA() {
       },
       {
         id: "report-action",
-        mascot: "/mascot/pointing-pose.png",
         title: "Spotted Waste?",
         subtitle: "Tap Report below",
       },
@@ -793,8 +579,11 @@ export default function ResidentMobilePWA() {
     }
   };
 
-  const handleGetLocation = (onSuccess) => {
-    if (!("geolocation" in navigator)) return;
+  const handleGetLocation = (onSuccess, onError) => {
+    if (!("geolocation" in navigator)) {
+      if (typeof onError === "function") onError(new Error("Geolocation unsupported"));
+      return;
+    }
     setIsLocating(true);
     navigator.geolocation.getCurrentPosition(
       async (position) => {
@@ -818,9 +607,13 @@ export default function ResidentMobilePWA() {
       (error) => {
         console.warn("GPS location error:", error);
         setIsLocating(false);
-        toast("Unable to fetch GPS location. Please enter the street name.", {
-          variant: "error",
-        });
+        if (typeof onError === "function") {
+          onError(error);
+        } else {
+          toast("Unable to fetch GPS location. Please enter the street name.", {
+            variant: "error",
+          });
+        }
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
@@ -912,11 +705,7 @@ export default function ResidentMobilePWA() {
   });
 
   if (!sessionReady) {
-    return (
-      <div className="flex h-dvh w-full items-center justify-center bg-background">
-        <div className="h-7 w-7 animate-spin rounded-full border-2 border-emerald-500/30 border-t-emerald-500" />
-      </div>
-    );
+    return <ResidentShellSkeleton />;
   }
 
   if (showOnboarding) {
@@ -986,17 +775,13 @@ export default function ResidentMobilePWA() {
           )}
         </AnimatePresence>
 
-        {/* Waze-Style Flush Top Navigation Banner (Light Glass Theme - Dynamic Slide-from-Top Readout) */}
-        <div className="pointer-events-auto absolute top-0 inset-x-0 z-20 w-full border-b border-border bg-card/98 px-5 py-4 text-foreground backdrop-blur-md flex items-center justify-between gap-3.5 select-none overflow-hidden h-20 shadow-sm">
-          {/* Left: Dynamic 3D Vector SVG Icon & Dynamic Slide-from-Top Readout */}
-          <div data-tour="live-banner" onClick={handleHeaderClick} className="min-w-0 flex-1 overflow-hidden relative h-14 flex items-center cursor-pointer">
+        {/* Native status banner */}
+        <div className="pointer-events-auto absolute top-0 inset-x-0 z-20 w-full border-b border-border/60 bg-background/80 backdrop-blur-md flex items-center select-none overflow-hidden px-4 pt-[calc(env(safe-area-inset-top)+12px)] pb-3">
+          {/* Left: Live status readout */}
+          <div data-tour="live-banner" onClick={handleHeaderClick} className="min-w-0 flex-1 overflow-hidden relative flex items-center cursor-pointer">
             {!mapReady ? (
-              <div className="flex items-center gap-3.5 w-full">
-                <div className="h-10 w-10 shrink-0 rounded-xl bg-foreground/10 animate-pulse" />
-                <div className="flex-1 flex flex-col gap-1.5">
-                  <div className="h-3.5 w-2/5 rounded-full bg-foreground/10 animate-pulse" />
-                  <div className="h-2.5 w-3/5 rounded-full bg-foreground/10 animate-pulse" />
-                </div>
+              <div className="flex items-center gap-3 w-full">
+                <div className="h-2.5 w-2/5 rounded-full bg-foreground/10 animate-pulse" />
               </div>
             ) : (
               <AnimatePresence mode="wait">
@@ -1005,31 +790,19 @@ export default function ResidentMobilePWA() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  transition={{ duration: 0.35, ease: "easeOut" }}
-                  className="flex items-center gap-3.5 min-w-0 w-full"
+                  transition={{ duration: 0.25, ease: "easeOut" }}
+                  className="flex items-center gap-2.5 min-w-0 w-full"
                 >
-                  {currentBanner.mascot ? (
-                    <div className="flex h-16 w-16 items-center justify-center shrink-0">
-                      <img
-                        src={currentBanner.mascot}
-                        alt="Binny Mascot"
-                        fetchPriority="high"
-                        loading="eager"
-                        className="h-16 w-16 shrink-0 object-contain drop-shadow-xs"
-                      />
-                    </div>
-                  ) : currentBanner.Icon ? (
-                    <div className="flex h-11 w-11 items-center justify-center shrink-0">
-                      <currentBanner.Icon className="h-9 w-9 shrink-0" />
-                    </div>
-                  ) : null}
+                  {currentBanner.live && (
+                    <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-600" />
+                  )}
 
                   <div className="min-w-0 flex-1">
-                    <h3 className="text-lg font-semibold tracking-tight text-foreground leading-tight">
+                    <h3 className="text-[17px] font-semibold tracking-tight text-foreground leading-tight truncate">
                       {currentBanner.title}
                     </h3>
                     {currentBanner.subtitle && (
-                      <p className="text-sm font-semibold text-emerald-800 leading-tight mt-1">
+                      <p className="text-[13px] text-muted-foreground leading-tight mt-0.5 truncate">
                         {currentBanner.subtitle}
                       </p>
                     )}
@@ -1098,7 +871,17 @@ export default function ResidentMobilePWA() {
                   if (gpsCoords) {
                     centerOn(gpsCoords);
                   } else {
-                    handleGetLocation((coords) => centerOn(coords));
+                    handleGetLocation(
+                      (coords) => centerOn(coords),
+                      () => {
+                        // GPS denied/unavailable: fall back to the pilot area
+                        // (Brgy. Tejero Hall) instead of leaving the map put.
+                        setMapCenter([10.3025, 123.9095]);
+                        setMapZoom(16);
+                        setFlySignal((s) => s + 1);
+                        toast("GPS unavailable — showing Brgy. Tejero Hall.");
+                      }
+                    );
                   }
                   haptic();
                 }}
@@ -1141,11 +924,10 @@ export default function ResidentMobilePWA() {
             {/* 3. Report (elevated center action) */}
             <button
               type="button"
-              data-tour="nav-tab-report"
               onClick={() => { setActiveTab("report"); setTimeout(() => fileInputRef.current?.click(), 150); haptic(); }}
               className="relative flex flex-col items-center justify-end pb-3 cursor-pointer"
             >
-              <span className="absolute -top-7 left-1/2 flex h-14 w-14 -translate-x-1/2 items-center justify-center rounded-full bg-emerald-600 text-white shadow-lg shadow-emerald-600/30 ring-4 ring-background transition-transform active:scale-95">
+              <span data-tour="nav-tab-report" className="absolute -top-7 left-1/2 flex h-14 w-14 -translate-x-1/2 items-center justify-center rounded-full bg-emerald-600 text-white shadow-[0_8px_20px_rgba(5,150,105,0.35)] transition-transform active:scale-95">
                 <Camera className="h-6 w-6" strokeWidth={2} />
               </span>
               <span className="text-[10px] font-semibold leading-none text-emerald-600">Report</span>
@@ -1169,9 +951,7 @@ export default function ResidentMobilePWA() {
               onClick={() => { setActiveTab("profile"); haptic(); }}
               className={`flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer ${activeTab === "profile" ? "text-emerald-600" : "text-zinc-400"}`}
             >
-              <span className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-semibold leading-none transition-colors ${activeTab === "profile" ? "bg-emerald-600 text-white" : "bg-zinc-300/60 text-zinc-600"}`}>
-                {residentSession?.name?.charAt(0)?.toUpperCase() || "R"}
-              </span>
+              <User className="h-6 w-6" strokeWidth={activeTab === "profile" ? 2.25 : 1.75} />
               <span className={`text-[10px] leading-none ${activeTab === "profile" ? "font-semibold" : "font-medium"}`}>Profile</span>
             </button>
           </div>
@@ -1189,7 +969,7 @@ export default function ResidentMobilePWA() {
               transition={{ duration: 0.18, ease: "easeOut" }}
               className="fixed inset-0 z-[90] flex flex-col bg-background"
             >
-              <div className="shrink-0 border-b border-border/60 bg-background/80 backdrop-blur-md pt-[env(safe-area-inset-top)]">
+              <div className="shrink-0 border-b border-border/60 bg-background/80 backdrop-blur-md pt-[calc(env(safe-area-inset-top)+12px)] pb-3">
                 <div className="relative flex h-[52px] items-center justify-center px-2">
                   <button
                     type="button"
@@ -1282,7 +1062,7 @@ export default function ResidentMobilePWA() {
       transition={{ duration: 0.18, ease: "easeOut" }}
       className="fixed inset-0 z-[90] flex flex-col bg-background"
     >
-      <div className="shrink-0 border-b border-border/60 bg-background/80 backdrop-blur-md pt-[env(safe-area-inset-top)]">
+      <div className="shrink-0 border-b border-border/60 bg-background/80 backdrop-blur-md pt-[calc(env(safe-area-inset-top)+12px)] pb-3">
         <div className="relative flex h-[52px] items-center justify-center px-2">
           <button
             type="button"
@@ -1522,7 +1302,7 @@ export default function ResidentMobilePWA() {
       transition={{ duration: 0.18, ease: "easeOut" }}
       className="fixed inset-0 z-[90] flex flex-col bg-background"
     >
-      <div className="shrink-0 border-b border-border/60 bg-background/80 backdrop-blur-md pt-[env(safe-area-inset-top)]">
+      <div className="shrink-0 border-b border-border/60 bg-background/80 backdrop-blur-md pt-[calc(env(safe-area-inset-top)+12px)] pb-3">
         <div className="relative flex h-[52px] items-center justify-center px-2">
           <button
             type="button"
@@ -1588,7 +1368,7 @@ export default function ResidentMobilePWA() {
       transition={{ duration: 0.18, ease: "easeOut" }}
       className="fixed inset-0 z-[90] flex flex-col bg-background"
     >
-      <div className="shrink-0 border-b border-border/60 bg-background/80 backdrop-blur-md pt-[env(safe-area-inset-top)]">
+      <div className="shrink-0 border-b border-border/60 bg-background/80 backdrop-blur-md pt-[calc(env(safe-area-inset-top)+12px)] pb-3">
         <div className="relative flex h-[52px] items-center justify-center px-2">
           <button
             type="button"
@@ -1674,7 +1454,7 @@ export default function ResidentMobilePWA() {
       transition={{ duration: 0.18, ease: "easeOut" }}
       className="fixed inset-0 z-[95] flex flex-col bg-background"
     >
-      <div className="shrink-0 border-b border-border/60 bg-background/80 backdrop-blur-md pt-[env(safe-area-inset-top)]">
+      <div className="shrink-0 border-b border-border/60 bg-background/80 backdrop-blur-md pt-[calc(env(safe-area-inset-top)+12px)] pb-3">
         <div className="relative flex h-[52px] items-center justify-center px-2">
           <button
             type="button"

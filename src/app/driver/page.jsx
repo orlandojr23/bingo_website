@@ -17,6 +17,7 @@ import {
   ChevronRight,
   LocateFixed,
   Truck,
+  User,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { mockPilotData } from "@/lib/mock-data";
@@ -41,7 +42,7 @@ import { useRoutePath } from "@/lib/use-route-path";
 import { useFleet } from "@/lib/fleet";
 import { getDriverSession, clearDriverSession } from "@/lib/driver-session";
 import { changeDriverPassword } from "@/lib/driver-accounts";
-import { MapSkeleton } from "@/components/ui/skeletons";
+import { MapSkeleton, DriverShellSkeleton } from "@/components/ui/skeletons";
 import PasswordStrengthHint from "@/components/ui/password-strength-hint";
 import { useToast } from "@/components/pwa/Toast";
 import { supabase } from "@/lib/supabase";
@@ -53,163 +54,6 @@ const MapCanvas = dynamic(() => import("@/components/map/map-canvas"), {
 });
 
 const TAB_IDS = ["map", "route", "assignment", "history", "profile"];
-
-// 3D Vector SVG Icons for Banner Readouts (only the ones still rendered below)
-
-function Waze3DHeaderTruckIcon({ className = "h-8 w-8" }) {
-  return (
-    <svg viewBox="0 0 44 36" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <defs>
-        <filter id="driverSideTruckShadow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="1.5" stdDeviation="1" floodColor="#0f172a" floodOpacity="0.3" />
-        </filter>
-        <linearGradient id="driverSideBodyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#34d399" />
-          <stop offset="40%" stopColor="#10b981" />
-          <stop offset="100%" stopColor="#059669" />
-        </linearGradient>
-        <linearGradient id="driverSideCabGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#10b981" />
-          <stop offset="100%" stopColor="#047857" />
-        </linearGradient>
-        <linearGradient id="driverSideWindowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#e0f2fe" />
-          <stop offset="100%" stopColor="#38bdf8" />
-        </linearGradient>
-      </defs>
-
-      <g filter="url(#driverSideTruckShadow)">
-        {/* Chassis Under-Frame */}
-        <rect x="5" y="24" width="34" height="3" rx="1" fill="#0f172a" />
-
-        {/* --- REAR COMPACTOR CONTAINER --- */}
-        {/* Main Compactor Body Box */}
-        <path d="M 5 9 C 5 7.5 6.2 6.5 7.5 6.5 H 25 V 24 H 5 V 9 Z" fill="url(#driverSideBodyGrad)" stroke="#047857" strokeWidth="0.8" />
-        
-        {/* Top 3D Roof Highlight Plate */}
-        <path d="M 7 7.5 H 25 V 10.5 H 6.5 C 6.5 9.5 7 7.5 7 7.5 Z" fill="#6ee7b7" opacity="0.65" />
-
-        {/* Compactor Rib Grooves */}
-        <line x1="10" y1="7" x2="10" y2="23" stroke="#047857" strokeWidth="1.2" />
-        <line x1="15" y1="7" x2="15" y2="23" stroke="#047857" strokeWidth="1.2" />
-        <line x1="20" y1="7" x2="20" y2="23" stroke="#047857" strokeWidth="1.2" />
-
-        {/* Yellow Hazard Accents on Body */}
-        <rect x="5.5" y="14" width="3" height="1.8" rx="0.4" fill="#facc15" />
-        <rect x="5.5" y="18" width="3" height="1.8" rx="0.4" fill="#facc15" />
-
-        {/* Rear Hopper Loader Unit */}
-        <path d="M 2.5 13 L 5 11 V 24 H 3 C 2.5 24 2 23.5 2 23 V 14 C 2 13.5 2.2 13 2.5 13 Z" fill="#064e3b" stroke="#047857" strokeWidth="0.6" />
-        <rect x="1.5" y="21" width="2" height="2" rx="0.5" fill="#facc15" />
-
-        {/* --- FRONT DRIVER CAB --- */}
-        {/* Cab Hood Structure */}
-        <path d="M 25 11 H 35 C 37.5 11 39 12.8 39 15 V 24 H 25 V 11 Z" fill="url(#driverSideCabGrad)" stroke="#047857" strokeWidth="0.8" />
-
-        {/* Glossy Sky Blue Side Window */}
-        <path d="M 27 13 H 34 C 35.2 13 36 13.8 36 15 V 18 H 27 V 13 Z" fill="url(#driverSideWindowGrad)" stroke="#e0f2fe" strokeWidth="0.6" />
-        <line x1="31" y1="13.5" x2="34" y2="17.5" stroke="#ffffff" strokeWidth="1" opacity="0.85" />
-
-        {/* Door Handle & Side Mirror Bracket */}
-        <rect x="28" y="19.5" width="2.5" height="1" rx="0.3" fill="#cbd5e1" />
-        <rect x="36.5" y="14" width="1.5" height="3" rx="0.4" fill="#047857" />
-
-        {/* Front Bumper & LED Headlight */}
-        <path d="M 38.5 20 H 40.5 C 41 20 41.5 20.5 41.5 21 V 24 H 38.5 V 20 Z" fill="#1e293b" />
-        <rect x="38" y="21" width="2.5" height="2" rx="0.5" fill="#facc15" />
-
-        {/* --- 3D WHEELS --- */}
-        {/* Rear Dual Wheels */}
-        <g>
-          <circle cx="10" cy="25" r="4.2" fill="#18181b" stroke="#09090b" strokeWidth="0.6" />
-          <circle cx="10" cy="25" r="2.2" fill="#e4e4e7" />
-          <circle cx="10" cy="25" r="1.1" fill="#18181b" />
-        </g>
-        <g>
-          <circle cx="18.5" cy="25" r="4.2" fill="#18181b" stroke="#09090b" strokeWidth="0.6" />
-          <circle cx="18.5" cy="25" r="2.2" fill="#e4e4e7" />
-          <circle cx="18.5" cy="25" r="1.1" fill="#18181b" />
-        </g>
-        {/* Front Steering Wheel */}
-        <g>
-          <circle cx="33" cy="25" r="4.2" fill="#18181b" stroke="#09090b" strokeWidth="0.6" />
-          <circle cx="33" cy="25" r="2.2" fill="#e4e4e7" />
-          <circle cx="33" cy="25" r="1.1" fill="#18181b" />
-        </g>
-      </g>
-    </svg>
-  );
-}
-
-function Waze3DRouteIcon({ className = "h-4 w-4" }) {
-  return (
-    <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <defs>
-        <filter id="assignment3dShadow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="1.5" stdDeviation="1.2" floodColor="#0f172a" floodOpacity="0.25" />
-        </filter>
-        <linearGradient id="assignBoardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#3b82f6" />
-          <stop offset="100%" stopColor="#1d4ed8" />
-        </linearGradient>
-        <linearGradient id="assignPaperGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#ffffff" />
-          <stop offset="100%" stopColor="#f1f5f9" />
-        </linearGradient>
-        <linearGradient id="assignClipGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#94a3b8" />
-          <stop offset="50%" stopColor="#cbd5e1" />
-          <stop offset="100%" stopColor="#64748b" />
-        </linearGradient>
-        <linearGradient id="assignPinGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#ef4444" />
-          <stop offset="100%" stopColor="#b91c1c" />
-        </linearGradient>
-      </defs>
-
-      <g filter="url(#assignment3dShadow)">
-        {/* 3D Board Base Side Depth */}
-        <rect x="5.5" y="6.5" width="20" height="25" rx="3.5" fill="#1e3a8a" />
-        
-        {/* Main Board Face */}
-        <rect x="5.5" y="4.5" width="20" height="25" rx="3.5" fill="url(#assignBoardGrad)" />
-
-        {/* Paper Sheet */}
-        <rect x="8" y="8.5" width="15" height="19" rx="2" fill="url(#assignPaperGrad)" />
-
-        {/* Paper Checklist / Route lines */}
-        <rect x="10.5" y="11.5" width="6.5" height="2" rx="1" fill="#3b82f6" />
-        <rect x="10.5" y="15.5" width="10" height="1.5" rx="0.75" fill="#94a3b8" />
-        <rect x="10.5" y="19" width="8" height="1.5" rx="0.75" fill="#94a3b8" />
-        <rect x="10.5" y="22.5" width="6" height="1.5" rx="0.75" fill="#94a3b8" />
-
-        {/* Green Checkmark Badge */}
-        <circle cx="20" cy="12.5" r="2.5" fill="#10b981" />
-        <path d="M 18.8 12.5 L 19.6 13.3 L 21.2 11.7" stroke="#ffffff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-
-        {/* Metallic Top Clip */}
-        <rect x="11.5" y="3" width="8" height="3" rx="1" fill="url(#assignClipGrad)" />
-        <rect x="13.5" y="2" width="4" height="2" rx="0.75" fill="#475569" />
-
-        {/* 3D Floating Location Pin Overlay */}
-        <g transform="translate(4, 3)">
-          <path d="M 22 17 C 22 21 18 24.5 18 24.5 C 18 24.5 14 21 14 17 C 14 14.8 15.8 13 18 13 C 20.2 13 22 14.8 22 17 Z" fill="url(#assignPinGrad)" />
-          <circle cx="18" cy="17" r="1.8" fill="#ffffff" />
-        </g>
-      </g>
-    </svg>
-  );
-}
-
-function Waze3DCleanIcon({ className = "h-4 w-4" }) {
-  return (
-    <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <rect x="8" y="12" width="16" height="14" rx="2" fill="#10b981" />
-      <path d="M 12 8 H 20 V 12 H 12 Z" fill="#047857" />
-      <path d="M 12 18 L 15 21 L 21 15" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-    </svg>
-  );
-}
 
 function assignedAreaTagline(schedule, zone) {
   if (!schedule) return null;
@@ -519,7 +363,7 @@ export default function DriverPage() {
     if (truckState?.phase === "completed") {
       return {
         id: "status",
-        Icon: Waze3DCleanIcon,
+        live: true,
         title: "Route completed",
         subtitle: zoneName ? `Next up: ${zoneName}` : "No more routes today",
       };
@@ -527,7 +371,7 @@ export default function DriverPage() {
     if (isOnDuty && truckState?.phase === "onsite") {
       return {
         id: "status",
-        Icon: Waze3DHeaderTruckIcon,
+        live: true,
         title: `Collecting at ${currentPoint?.name ?? "stop"}`,
         subtitle: `Stop ${(truckState?.stopIndex ?? 0) + 1} of ${routePoints.length}`,
       };
@@ -535,7 +379,7 @@ export default function DriverPage() {
     if (isOnDuty) {
       return {
         id: "status",
-        Icon: Waze3DHeaderTruckIcon,
+        live: true,
         title: `En route to ${currentPoint?.name ?? "next stop"}`,
         subtitle: `Stop ${(truckState?.stopIndex ?? 0) + 1} of ${routePoints.length}${startTime ? ` • ${startTime}` : ""}`,
       };
@@ -543,7 +387,6 @@ export default function DriverPage() {
     if (isPaused) {
       return {
         id: "status",
-        Icon: Waze3DHeaderTruckIcon,
         title: "Route paused",
         subtitle: "Start Route to resume",
       };
@@ -551,7 +394,6 @@ export default function DriverPage() {
     if (assignedSchedule) {
       return {
         id: "status",
-        Icon: Waze3DRouteIcon,
         title: `${pendingAssignments} new assignment${pendingAssignments === 1 ? "" : "s"}`,
         subtitle: `${zoneName ?? "New route"}${startTime ? ` • ${startTime}` : ""}`,
       };
@@ -559,7 +401,6 @@ export default function DriverPage() {
 
     return {
       id: "greeting",
-      mascot: "/mascot/arms-open-pose-clean.png",
       title: greetingTitle,
       subtitle: `${new Date().toLocaleDateString("en-US", {
         weekday: "long",
@@ -875,11 +716,7 @@ export default function DriverPage() {
   }, [trackLat, trackLng]);
 
   if (!sessionReady) {
-    return (
-      <div className="flex h-dvh w-full items-center justify-center bg-background">
-        <div className="h-7 w-7 animate-spin rounded-full border-2 border-emerald-500/30 border-t-emerald-500" />
-      </div>
-    );
+    return <DriverShellSkeleton />;
   }
 
   return (
@@ -915,50 +752,34 @@ export default function DriverPage() {
           />
         </div>
 
-        {/* Waze-Style Flush Top Navigation Banner */}
-        <div className="pointer-events-auto absolute top-0 inset-x-0 z-20 w-full border-b border-border bg-card/98 px-5 py-4 text-foreground backdrop-blur-md flex items-center justify-between gap-3.5 select-none overflow-hidden h-20 shadow-sm">
-          {/* Left: Dynamic 3D Icon & Slide-from-Top Readout */}
-          <div className="min-w-0 flex-1 overflow-hidden relative h-14 flex items-center">
+        {/* Native status banner */}
+        <div className="pointer-events-auto absolute top-0 inset-x-0 z-20 w-full border-b border-border/60 bg-background/80 backdrop-blur-md flex items-center select-none overflow-hidden px-4 pt-[calc(env(safe-area-inset-top)+12px)] pb-3">
+          {/* Left: Live status readout */}
+          <div className="min-w-0 flex-1 overflow-hidden relative flex items-center">
             {!mapReady ? (
-              <div className="flex items-center gap-3.5 w-full">
-                <div className="h-10 w-10 shrink-0 rounded-xl bg-foreground/10 animate-pulse" />
-                <div className="flex-1 flex flex-col gap-1.5">
-                  <div className="h-3.5 w-2/5 rounded-full bg-foreground/10 animate-pulse" />
-                  <div className="h-2.5 w-3/5 rounded-full bg-foreground/10 animate-pulse" />
-                </div>
+              <div className="flex items-center gap-3 w-full">
+                <div className="h-2.5 w-2/5 rounded-full bg-foreground/10 animate-pulse" />
               </div>
             ) : (
             <AnimatePresence mode="wait">
               <motion.div
                 key={`${currentBanner.id}-${currentBanner.title}`}
-                initial={{ y: -20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: 20, opacity: 0 }}
-                transition={{ duration: 0.35, ease: "easeOut" }}
-                className="flex items-center gap-3.5 min-w-0 w-full"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.25, ease: "easeOut" }}
+                className="flex items-center gap-2.5 min-w-0 w-full"
               >
-                {currentBanner.mascot ? (
-                  <div className="flex h-16 w-16 items-center justify-center shrink-0">
-                    <img
-                      src={currentBanner.mascot}
-                      alt="Binny Mascot"
-                      fetchPriority="high"
-                      loading="eager"
-                      className="h-16 w-16 shrink-0 object-contain drop-shadow-xs"
-                    />
-                  </div>
-                ) : currentBanner.Icon ? (
-                  <div className="flex h-11 w-11 items-center justify-center shrink-0">
-                    <currentBanner.Icon className="h-9 w-9 shrink-0" />
-                  </div>
-                ) : null}
+                {currentBanner.live && (
+                  <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-600" />
+                )}
 
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-lg font-semibold tracking-tight text-foreground leading-tight">
+                  <h3 className="text-[17px] font-semibold tracking-tight text-foreground leading-tight truncate">
                     {currentBanner.title}
                   </h3>
                   {currentBanner.subtitle && (
-                    <p className="text-sm font-semibold text-emerald-800 leading-tight mt-1">
+                    <p className="text-[13px] text-muted-foreground leading-tight mt-0.5 truncate">
                       {currentBanner.subtitle}
                     </p>
                   )}
@@ -1025,7 +846,9 @@ export default function DriverPage() {
                   if (coords?.lat != null && coords?.lng != null) {
                     setMapCenter([coords.lat, coords.lng]);
                   } else {
+                    // No GPS fix: fall back to the pilot area (Brgy. Tejero Hall).
                     setMapCenter([10.3025, 123.9095]);
+                    toast("GPS unavailable — showing Brgy. Tejero Hall.");
                   }
                   setMapZoom(17);
                   setFlySignal((s) => s + 1);
@@ -1091,9 +914,7 @@ export default function DriverPage() {
               onClick={() => { setProfileView("main"); switchTab("profile"); }}
               className={`flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer ${activeTab === "profile" ? "text-emerald-600" : "text-zinc-400"}`}
             >
-              <span className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-semibold leading-none transition-colors ${activeTab === "profile" ? "bg-emerald-600 text-white" : "bg-zinc-300/60 text-zinc-600"}`}>
-                {driverSession?.name?.charAt(0)?.toUpperCase() || "D"}
-              </span>
+              <User className="h-6 w-6" strokeWidth={activeTab === "profile" ? 2.25 : 1.75} />
               <span className={`text-[10px] leading-none ${activeTab === "profile" ? "font-semibold" : "font-medium"}`}>Profile</span>
             </button>
           </div>
@@ -1111,7 +932,7 @@ export default function DriverPage() {
               transition={{ duration: 0.18, ease: "easeOut" }}
               className="fixed inset-0 z-[90] flex flex-col bg-background"
             >
-              <div className="shrink-0 border-b border-border/60 bg-background/80 backdrop-blur-md pt-[env(safe-area-inset-top)]">
+              <div className="shrink-0 border-b border-border/60 bg-background/80 backdrop-blur-md pt-[calc(env(safe-area-inset-top)+12px)] pb-3">
                 <div className="relative flex h-[52px] items-center justify-center px-2">
                   <button
                     type="button"
@@ -1232,7 +1053,7 @@ export default function DriverPage() {
               transition={{ duration: 0.18, ease: "easeOut" }}
               className="fixed inset-0 z-[90] flex flex-col bg-background"
             >
-              <div className="shrink-0 border-b border-border/60 bg-background/80 backdrop-blur-md pt-[env(safe-area-inset-top)]">
+              <div className="shrink-0 border-b border-border/60 bg-background/80 backdrop-blur-md pt-[calc(env(safe-area-inset-top)+12px)] pb-3">
                 <div className="relative flex h-[52px] items-center justify-center px-2">
                   <button
                     type="button"
@@ -1320,7 +1141,7 @@ export default function DriverPage() {
               transition={{ duration: 0.18, ease: "easeOut" }}
               className="fixed inset-0 z-[90] flex flex-col bg-background"
             >
-              <div className="shrink-0 border-b border-border/60 bg-background/80 backdrop-blur-md pt-[env(safe-area-inset-top)]">
+              <div className="shrink-0 border-b border-border/60 bg-background/80 backdrop-blur-md pt-[calc(env(safe-area-inset-top)+12px)] pb-3">
                 <div className="relative flex h-[52px] items-center justify-center px-2">
                   <button
                     type="button"
@@ -1392,7 +1213,7 @@ export default function DriverPage() {
               transition={{ duration: 0.18, ease: "easeOut" }}
               className="fixed inset-0 z-[90] flex flex-col bg-background"
             >
-              <div className="shrink-0 border-b border-border/60 bg-background/80 backdrop-blur-md pt-[env(safe-area-inset-top)]">
+              <div className="shrink-0 border-b border-border/60 bg-background/80 backdrop-blur-md pt-[calc(env(safe-area-inset-top)+12px)] pb-3">
                 <div className="relative flex h-[52px] items-center justify-center px-2">
                   <button
                     type="button"
