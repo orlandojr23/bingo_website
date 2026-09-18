@@ -306,10 +306,6 @@ export default function SignupPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      {/* Warm the onboarding mascots while the user signs up */}
-      <link rel="preload" as="image" href="/mascot/arms-open-pose-clean.webp" />
-      <link rel="preload" as="image" href="/mascot/pointing-pose.webp" />
-      <link rel="preload" as="image" href="/mascot/coffee-pose.webp" />
       <div className="mx-auto w-full max-w-sm px-2 pt-[calc(env(safe-area-inset-top)+12px)]">
         <div className="flex h-[52px] items-center">
           <Link

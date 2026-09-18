@@ -101,8 +101,6 @@ export default function LandingPage() {
 
   return (
     <div className="flex flex-col w-full overflow-hidden">
-      {/* Preload the home phone mascot so it's decoded before first paint */}
-      <link rel="preload" as="image" href="/mascot/arms-open-pose.webp" fetchPriority="high" />
       
       {/* Hero Section */}
       <section className="relative min-w-0 w-full pt-20 sm:pt-24 pb-10 sm:pb-16 lg:py-0 lg:h-screen lg:min-h-[640px] flex items-center overflow-hidden bg-[url('/hero-bg.svg')] bg-cover bg-center bg-no-repeat">
@@ -279,6 +277,18 @@ function FaqContent() {
 // ---------------- UI Mockups ----------------
 
 function MockupMinimalist({ pose, title, icon: Icon, bgClass, imgClass, delay = 0 }) {
+  const [imgLoaded, setImgLoaded] = useState(false);
+
+  // Use a ref-callback so we can check img.complete immediately after the DOM
+  // node is assigned. This handles already-cached images where onLoad never
+  // fires, which was causing the mascot to stay invisible on revisits.
+  const imgRef = (node) => {
+    if (!node) return;
+    if (node.complete) {
+      setImgLoaded(true);
+    }
+  };
+
   return (
     <div className={`flex h-full w-full flex-col items-center justify-center relative overflow-hidden select-none ${bgClass}`}>
       
@@ -288,21 +298,23 @@ function MockupMinimalist({ pose, title, icon: Icon, bgClass, imgClass, delay = 
       {/* Very Soft Static Glow Behind Mascot for Depth */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[280px] h-[280px] rounded-full bg-white/60 filter blur-3xl pointer-events-none"></div>
 
-      {/* Floating Center Mascot */}
-      <motion.div 
+      {/* Floating Center Mascot - animates in once the image is ready */}
+      <motion.div
         initial={{ scale: 0.9, opacity: 0, y: 15 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
+        animate={imgLoaded ? { scale: 1, opacity: 1, y: 0 } : {}}
         transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1], delay }}
         className="relative z-10 flex flex-col items-center justify-center pt-2"
       >
         <div className="relative">
-          <img 
-            src={`/mascot/${pose}.webp`} 
-            alt="Binny" 
-            className={`object-contain relative z-10 drop-shadow-[0_15px_25px_rgba(0,0,0,0.1)] transition-opacity duration-500 ease-in-out opacity-0 ${imgClass || "w-56 h-56"}`} 
-            loading="eager" 
+          <img
+            key={pose}
+            ref={imgRef}
+            src={`/mascot/${pose}.webp`}
+            alt="Binny"
+            onLoad={() => setImgLoaded(true)}
+            className={`object-contain relative z-10 drop-shadow-[0_15px_25px_rgba(0,0,0,0.1)] ${imgClass || "w-56 h-56"}`}
+            loading="eager"
             fetchPriority="high"
-            onLoad={(e) => e.target.classList.remove("opacity-0")}
           />
         </div>
       </motion.div>

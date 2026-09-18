@@ -216,10 +216,6 @@ export default function ResidentLoginPage() {
 
   return (
     <div className="relative flex min-h-screen flex-col bg-background">
-      {/* Warm the onboarding mascots while the user signs in */}
-      <link rel="preload" as="image" href="/mascot/arms-open-pose-clean.webp" />
-      <link rel="preload" as="image" href="/mascot/pointing-pose.webp" />
-      <link rel="preload" as="image" href="/mascot/coffee-pose.webp" />
       <InstallAppButton className="absolute right-4 top-4 z-20" />
       <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-6 py-8">
         <div className="mb-8 flex flex-col items-center text-center">
