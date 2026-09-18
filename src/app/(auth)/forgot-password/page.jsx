@@ -117,12 +117,7 @@ export default function ForgotPasswordPage() {
     <div className="flex min-h-screen flex-col bg-background">
       <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-6 py-12">
         <div className="mb-8 flex flex-col items-center text-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/logo-green-v2.png"
-            alt="Bin'Go Logo"
-            className="h-28 w-28 object-contain"
-          />
+
           <h1 className="mt-5 text-2xl font-black tracking-tight text-foreground">
             {step === "done" ? "Check your email" : "Forgot your password?"}
           </h1>

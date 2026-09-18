@@ -136,11 +136,11 @@ export default function AdminLoginPage() {
             loading="eager"
             className="h-32 w-32 object-contain"
           />
-          <h1 className="mt-4 text-lg font-semibold tracking-tight text-foreground">
-            Admin Portal
+          <h1 className="mt-5 text-2xl sm:text-3xl font-black tracking-tight text-foreground">
+            Log in to your account
           </h1>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Sign in to manage the {process.env.NEXT_PUBLIC_BARANGAY_NAME || "Barangay"} dashboard
+          <p className="mt-2 text-sm font-medium text-muted-foreground">
+            Enter your credentials to access the Admin Portal
           </p>
         </div>
 

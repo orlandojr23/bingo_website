@@ -1665,10 +1665,14 @@ export default function DriverPage() {
             ))}
             
           {getSchedules().filter((s) => s.truckId === selectedTruckId && live.scheduleStatus[s.id] === "Completed").length === 0 && (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <CheckCircle2 className="h-12 w-12 text-muted-foreground/30 mb-3" />
-              <h3 className="text-sm font-medium text-foreground">No Completed Trips</h3>
-              <p className="mt-1 text-xs text-muted-foreground">Routes you complete will appear here as proof of your work.</p>
+            <div className="flex flex-col items-center justify-center py-10 px-4 text-center bg-card rounded-xl border border-dashed border-border mt-2">
+              <div className="text-emerald-600 flex items-center justify-center mb-3">
+                <CheckCircle2 className="h-8 w-8" />
+              </div>
+              <h3 className="font-semibold text-foreground text-sm">No Completed Trips</h3>
+              <p className="text-xs text-muted-foreground mt-1 max-w-[220px]">
+                Routes you complete will appear here as proof of your work.
+              </p>
             </div>
           )}
         </div>

@@ -48,10 +48,9 @@ export default function BottomSheet({ open, onClose, title, children }) {
           >
             <button
               type="button"
-              aria-label="Dismiss"
-              onClick={onClose}
+              aria-label="Drag to dismiss"
               onPointerDown={(e) => dragControls.start(e)}
-              className="flex cursor-pointer touch-none select-none flex-col items-center pb-1 pt-2.5 group"
+              className="flex cursor-pointer touch-none select-none flex-col items-center pb-1 pt-2.5 group w-full"
             >
               <span className="h-1.5 w-10 rounded-full bg-muted-foreground/30 group-hover:bg-muted-foreground/60 transition-colors" />
             </button>

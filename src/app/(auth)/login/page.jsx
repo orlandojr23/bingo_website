@@ -229,11 +229,11 @@ export default function ResidentLoginPage() {
             </>
           ) : (
             <>
-              <h1 className="mt-5 text-2xl font-black tracking-tight text-foreground">
-                Welcome back!
+              <h1 className="mt-5 text-2xl sm:text-3xl font-black tracking-tight text-foreground">
+                Log in to your account
               </h1>
-              <p className="mt-1.5 text-sm font-medium text-muted-foreground">
-                Sign in to continue to Bin&apos;Go
+              <p className="mt-2 text-sm font-medium text-muted-foreground">
+                Enter your credentials to access Bin&apos;Go
               </p>
             </>
           )}

@@ -149,11 +149,11 @@ export default function DriverLoginPage() {
             loading="eager"
             className="h-32 w-32 object-contain"
           />
-          <h1 className="mt-5 text-2xl font-black tracking-tight text-foreground">
-            Welcome back!
+          <h1 className="mt-5 text-2xl sm:text-3xl font-black tracking-tight text-foreground">
+            Log in to your account
           </h1>
-          <p className="mt-1.5 text-sm font-medium text-muted-foreground">
-            Sign in to continue to the Driver Terminal
+          <p className="mt-2 text-sm font-medium text-muted-foreground">
+            Enter your credentials to access the Driver Terminal
           </p>
         </div>
 

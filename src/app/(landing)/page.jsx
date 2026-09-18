@@ -297,9 +297,9 @@ function MockupMinimalist({ pose, title, icon: Icon, bgClass, imgClass, delay = 
           <img 
             src={`/mascot/${pose}.png`} 
             alt="Binny" 
-            className={`object-contain relative z-10 drop-shadow-[0_15px_25px_rgba(0,0,0,0.1)] ${imgClass || "w-56 h-56"}`} 
-            fetchPriority="high" 
-            loading="eager" 
+            className={`object-contain relative z-10 drop-shadow-[0_15px_25px_rgba(0,0,0,0.1)] transition-opacity duration-500 ease-in-out opacity-0 ${imgClass || "w-56 h-56"}`} 
+            loading="lazy" 
+            onLoad={(e) => e.target.classList.remove("opacity-0")}
           />
         </div>
       </motion.div>

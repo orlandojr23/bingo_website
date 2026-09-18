@@ -138,3 +138,23 @@ export function DriverShellSkeleton() {
     </div>
   );
 }
+
+export function ListSkeleton() {
+  return (
+    <div className="flex flex-col gap-3 w-full animate-in fade-in duration-300">
+      {[1, 2, 3, 4, 5].map(i => (
+        <div key={i} className="h-[90px] w-full rounded-2xl bg-muted/40 animate-pulse border border-border/50" />
+      ))}
+    </div>
+  );
+}
+
+export function ProfileSkeleton() {
+  return (
+    <div className="flex flex-col gap-4 w-full animate-in fade-in duration-300 pt-2">
+      <div className="h-[88px] w-full rounded-2xl bg-muted/40 animate-pulse border border-border/50" />
+      <div className="h-[180px] w-full rounded-xl bg-muted/40 animate-pulse border border-border/50" />
+      <div className="h-[120px] w-full rounded-xl bg-muted/40 animate-pulse border border-border/50" />
+    </div>
+  );
+}

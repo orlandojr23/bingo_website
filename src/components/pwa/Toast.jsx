@@ -2,20 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { CheckCircle2, AlertTriangle, AlertCircle, X } from "lucide-react";
-import { cn } from "@/lib/utils";
-
-const ICONS = {
-  success: CheckCircle2,
-  warning: AlertTriangle,
-  error: AlertCircle,
-};
-
-const ICON_COLORS = {
-  success: "text-emerald-400",
-  warning: "text-amber-400",
-  error: "text-rose-400",
-};
 
 export function useToast() {
   const [toasts, setToasts] = useState([]);
@@ -56,25 +42,22 @@ export function useToast() {
     <div
       role="status"
       aria-live="polite"
-      className="pointer-events-none fixed top-[84px] inset-x-0 z-[70] flex flex-col items-center gap-1.5 px-4"
+      className="pointer-events-none fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] inset-x-0 z-[110] flex flex-col items-center gap-1.5 px-6"
     >
       <AnimatePresence mode="wait">
         {toasts.map((t) => {
-          const Icon = ICONS[t.variant] || CheckCircle2;
           return (
             <motion.div
               key={t.id}
-              initial={{ y: -12, opacity: 0, scale: 0.96 }}
-              animate={{ y: 0, opacity: 1, scale: 1 }}
-              exit={{ y: -10, opacity: 0, scale: 0.96 }}
-              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              initial={{ y: 16, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 8, opacity: 0 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
               onClick={() => dismissToast(t.id)}
-              className="pointer-events-auto flex max-w-sm items-center gap-2 rounded-full border border-zinc-700/60 bg-zinc-950/90 px-3.5 py-1.5 text-xs font-semibold text-zinc-100 shadow-md backdrop-blur-md transition-all hover:bg-zinc-900 active:scale-95 cursor-pointer select-none"
+              className="pointer-events-auto max-w-sm rounded-[10px] bg-zinc-900 px-4 py-3 text-center text-[13px] leading-snug text-white shadow-lg cursor-pointer select-none"
               title="Tap to dismiss"
             >
-              <Icon className={cn("h-3.5 w-3.5 shrink-0", ICON_COLORS[t.variant])} />
-              <span className="truncate max-w-[260px] leading-tight">{t.message}</span>
-              <X className="h-3 w-3 shrink-0 text-zinc-400 hover:text-zinc-200 ml-0.5" />
+              {t.message}
             </motion.div>
           );
         })}
