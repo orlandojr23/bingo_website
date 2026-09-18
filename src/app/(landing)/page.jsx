@@ -101,6 +101,8 @@ export default function LandingPage() {
 
   return (
     <div className="flex flex-col w-full overflow-hidden">
+      {/* Preload the home phone mascot so it's decoded before first paint */}
+      <link rel="preload" as="image" href="/mascot/arms-open-pose.webp" fetchPriority="high" />
       
       {/* Hero Section */}
       <section className="relative min-w-0 w-full pt-20 sm:pt-24 pb-10 sm:pb-16 lg:py-0 lg:h-screen lg:min-h-[640px] flex items-center overflow-hidden bg-[url('/hero-bg.svg')] bg-cover bg-center bg-no-repeat">
@@ -295,10 +297,11 @@ function MockupMinimalist({ pose, title, icon: Icon, bgClass, imgClass, delay = 
       >
         <div className="relative">
           <img 
-            src={`/mascot/${pose}.png`} 
+            src={`/mascot/${pose}.webp`} 
             alt="Binny" 
             className={`object-contain relative z-10 drop-shadow-[0_15px_25px_rgba(0,0,0,0.1)] transition-opacity duration-500 ease-in-out opacity-0 ${imgClass || "w-56 h-56"}`} 
-            loading="lazy" 
+            loading="eager" 
+            fetchPriority="high"
             onLoad={(e) => e.target.classList.remove("opacity-0")}
           />
         </div>

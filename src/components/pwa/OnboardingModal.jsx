@@ -7,25 +7,25 @@ import Image from "next/image";
 const ONBOARDING_STEPS = [
   {
     id: "welcome",
-    mascot: "/mascot/arms-open-pose-clean.png",
+    mascot: "/mascot/arms-open-pose-clean.webp",
     title: "Welcome to Bin'Go",
     subtitle: "Track collection trucks live, report uncollected waste, and keep your community clean.",
   },
   {
     id: "tracking",
-    mascot: "/mascot/pointing-pose.png",
+    mascot: "/mascot/pointing-pose.webp",
     title: "Track Trucks Live",
     subtitle: "Watch garbage trucks navigate routes on the live map and know exactly when they reach your sitio.",
   },
   {
     id: "alerts",
-    mascot: "/mascot/coffee-pose.png",
+    mascot: "/mascot/coffee-pose.webp",
     title: "Never Miss a Pickup",
     subtitle: "Relax with your morning coffee! Get real-time updates when waste collection is approaching your area.",
   },
   {
     id: "get-started",
-    mascot: "/mascot/arms-open-pose-clean.png",
+    mascot: "/mascot/arms-open-pose-clean.webp",
     title: "Report & Stay Informed",
     subtitle: "Submit collection tickets, view schedules, and keep your neighborhood clean.",
   },
