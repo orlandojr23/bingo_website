@@ -3,12 +3,13 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { User, Mail, Lock, Eye, EyeOff, Loader2, MapPin, ChevronDown, CheckCircle2, Check, Phone } from "lucide-react";
+import { User, Mail, Lock, Eye, EyeOff, Loader2, MapPin, ChevronDown, ChevronLeft, CheckCircle2, Check, Phone } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { TEJERO_SITOS, PILOT_AREA } from "@/lib/mock-data";
 import { Button } from "@/components/ui/button";
+import OtpInput from "@/components/ui/otp-input";
 import PasswordStrengthHint from "@/components/ui/password-strength-hint";
 
 // Pilot launch covers Barangay Tejero only, so new accounts pick their home
@@ -52,10 +53,10 @@ const getEmailSuggestionSuffix = (emailVal, domains = PUBLIC_DOMAINS) => {
 };
 
 const fieldClass = (hasError, noIcon = false) =>
-  `w-full rounded-xl border bg-card ${noIcon ? "px-4" : "pl-10 pr-4"} py-3 text-sm font-medium text-foreground placeholder:text-muted-foreground/50 outline-none transition-colors ${
+  `w-full rounded-2xl border bg-card ${noIcon ? "px-4" : "pl-10 pr-4"} py-3.5 text-[16px] text-foreground placeholder:text-muted-foreground/50 outline-none transition-colors ${
     hasError
       ? "border-rose-300 focus:border-rose-400"
-      : "border-border hover:border-zinc-300 focus:border-zinc-400"
+      : "border-border/60 focus:border-zinc-400"
   }`;
 
 function ErrorLine({ message }) {
@@ -294,24 +295,36 @@ export default function SignupPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-6 py-12">
+      <div className="mx-auto w-full max-w-sm px-2 pt-[env(safe-area-inset-top)]">
+        <div className="flex h-[52px] items-center">
+          <Link
+            href="/login"
+            aria-label="Back to Sign In"
+            className="flex h-10 w-10 items-center justify-center rounded-full text-foreground transition-all hover:bg-muted active:scale-95 active:bg-muted"
+          >
+            <ChevronLeft className="h-6 w-6" strokeWidth={2} />
+          </Link>
+        </div>
+      </div>
+      <div className="mx-auto flex w-full max-w-sm flex-1 flex-col px-6 py-8">
         <div className="mb-8 flex flex-col items-center text-center">
 
           {needsOtp ? (
             <>
-              <h1 className="mt-5 text-2xl font-black tracking-tight text-foreground">
+              <CheckCircle2 className="h-12 w-12 text-emerald-600" strokeWidth={1.5} />
+              <h1 className="mt-4 text-[22px] font-semibold tracking-tight text-foreground">
                 Check your email
               </h1>
-              <p className="mt-1.5 text-sm font-medium text-muted-foreground">
+              <p className="mt-1.5 text-[14px] leading-normal text-muted-foreground">
                 We sent a 6-digit code to <span className="font-semibold text-foreground">{email}</span>
               </p>
             </>
           ) : (
             <>
-              <h1 className="mt-5 text-2xl font-black tracking-tight text-foreground">
+              <h1 className="text-[22px] font-semibold tracking-tight text-foreground">
                 Create your account
               </h1>
-              <p className="mt-1.5 text-sm font-medium text-muted-foreground">
+              <p className="mt-1.5 text-[14px] leading-normal text-muted-foreground">
                 Join Bin&apos;Go to track collections in your barangay
               </p>
             </>
@@ -336,15 +349,7 @@ export default function SignupPage() {
             </AnimatePresence>
 
             <div className="flex flex-col gap-1.5">
-              <input
-                type="text"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                maxLength={6}
-                autoComplete="one-time-code"
-                className="w-full rounded-xl border border-border bg-card px-3 py-4 text-center text-3xl font-bold tracking-[0.2em] text-foreground outline-none transition-colors focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                placeholder="000000"
-              />
+              <OtpInput value={otp} onChange={setOtp} hasError={!!otpError} />
               <ErrorLine message={otpError} />
             </div>
 
@@ -353,11 +358,11 @@ export default function SignupPage() {
               size="lg"
               type="submit"
               disabled={isLoading || otp.length < 6}
-              className="mt-2 w-full py-3.5"
+              className="mt-1 h-[50px] w-full rounded-2xl text-[17px] font-semibold"
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-5 w-5 animate-spin" />
                   <span>Verifying...</span>
                 </>
               ) : (
@@ -468,7 +473,7 @@ export default function SignupPage() {
               </div>
               {emailSuggestionSuffix && (
                 <div
-                  className="pointer-events-none absolute inset-0 z-10 flex items-center overflow-hidden whitespace-pre pl-10 pr-4 text-sm font-medium"
+                  className="pointer-events-none absolute inset-0 z-10 flex items-center overflow-hidden whitespace-pre pl-10 pr-4 text-[16px]"
                   aria-hidden="true"
                 >
                   <span className="opacity-0">{email}</span>
@@ -507,7 +512,7 @@ export default function SignupPage() {
                   <span className="pl-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
                     {field.label}
                   </span>
-                  <div className="flex min-h-[42px] w-full items-center rounded-xl border border-border/70 bg-card px-3.5 py-2.5 text-xs font-semibold text-foreground/80 leading-normal">
+                  <div className="flex min-h-[50px] w-full items-center rounded-2xl border border-border/60 bg-card px-3.5 py-3 text-[15px] text-foreground/80 leading-normal">
                     <span>{field.value}</span>
                   </div>
                 </div>
@@ -631,11 +636,11 @@ export default function SignupPage() {
             size="lg"
             type="submit"
             disabled={isLoading}
-            className="mt-2 w-full py-3.5"
+            className="mt-1 h-[50px] w-full rounded-2xl text-[17px] font-semibold"
           >
             {isLoading ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-5 w-5 animate-spin" />
                 <span>Creating account...</span>
               </>
             ) : (
@@ -645,7 +650,7 @@ export default function SignupPage() {
           </form>
         )}
 
-        <p className="mt-6 text-center text-xs font-medium text-muted-foreground">
+        <p className="mt-6 text-center text-[14px] text-muted-foreground">
           Already have an account?{" "}
           <Link
             href="/login"

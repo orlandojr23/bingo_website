@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Mail, Loader2, ArrowLeft } from "lucide-react";
+import { Mail, Loader2, ChevronLeft, CheckCircle2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
@@ -29,10 +29,10 @@ const getEmailSuggestionSuffix = (emailVal, domains = PUBLIC_DOMAINS) => {
 };
 
 const fieldClass = (hasError) =>
-  `w-full rounded-xl border bg-card pl-10 pr-4 py-3 text-sm font-medium text-foreground placeholder:text-muted-foreground/50 outline-none transition-colors ${
+  `w-full rounded-2xl border bg-card pl-10 pr-4 py-3.5 text-[16px] text-foreground placeholder:text-muted-foreground/50 outline-none transition-colors ${
     hasError
       ? "border-rose-300 focus:border-rose-400"
-      : "border-border hover:border-zinc-300 focus:border-zinc-400"
+      : "border-border/60 focus:border-zinc-400"
   }`;
 
 function ErrorLine({ message }) {
@@ -115,13 +115,28 @@ export default function ForgotPasswordPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-6 py-12">
+      <div className="mx-auto w-full max-w-sm px-2 pt-[env(safe-area-inset-top)]">
+        <div className="flex h-[52px] items-center">
+          <Link
+            href="/login"
+            aria-label="Back to Sign In"
+            className="flex h-10 w-10 items-center justify-center rounded-full text-foreground transition-all hover:bg-muted active:scale-95 active:bg-muted"
+          >
+            <ChevronLeft className="h-6 w-6" strokeWidth={2} />
+          </Link>
+        </div>
+      </div>
+      <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-6 py-8">
         <div className="mb-8 flex flex-col items-center text-center">
-
-          <h1 className="mt-5 text-2xl font-black tracking-tight text-foreground">
+          {step === "done" ? (
+            <CheckCircle2 className="h-12 w-12 text-emerald-600" strokeWidth={1.5} />
+          ) : (
+            <Mail className="h-12 w-12 text-muted-foreground/40" strokeWidth={1.5} />
+          )}
+          <h1 className="mt-4 text-[22px] font-semibold tracking-tight text-foreground">
             {step === "done" ? "Check your email" : "Forgot your password?"}
           </h1>
-          <p className="mt-1.5 text-sm font-medium text-muted-foreground">
+          <p className="mt-1.5 max-w-[280px] text-[14px] leading-normal text-muted-foreground">
             {step === "email" && "Enter your account email and we'll send a reset link."}
             {step === "done" && `We sent a password reset link to ${email.trim()}. Click the link in the email to choose a new password.`}
           </p>
@@ -136,7 +151,7 @@ export default function ForgotPasswordPage() {
                 </div>
                 {emailSuggestionSuffix && (
                   <div
-                    className="pointer-events-none absolute inset-0 z-10 flex items-center overflow-hidden whitespace-pre pl-10 pr-4 text-sm font-medium"
+                    className="pointer-events-none absolute inset-0 z-10 flex items-center overflow-hidden whitespace-pre pl-10 pr-4 text-[16px]"
                     aria-hidden="true"
                   >
                     <span className="opacity-0">{email}</span>
@@ -165,11 +180,11 @@ export default function ForgotPasswordPage() {
               size="lg"
               type="submit"
               disabled={isLoading || !email.trim()}
-              className="mt-2 w-full py-3.5"
+              className="mt-1 h-[50px] w-full rounded-2xl text-[17px] font-semibold"
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-5 w-5 animate-spin" />
                   <span>Sending Link...</span>
                 </>
               ) : (
@@ -179,15 +194,14 @@ export default function ForgotPasswordPage() {
           </form>
         )}
 
-        <div className="mt-6 flex justify-center">
+        {step === "done" && (
           <Link
             href="/login"
-            className="flex items-center text-xs font-semibold text-emerald-600 transition-colors hover:text-emerald-700"
+            className="flex h-[50px] w-full items-center justify-center rounded-2xl bg-emerald-600 text-[17px] font-semibold text-white transition-all hover:bg-emerald-700 active:scale-[0.99]"
           >
-            <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
             Back to Sign In
           </Link>
-        </div>
+        )}
       </div>
       <p className="pb-6 text-center text-xs font-medium text-muted-foreground/60">
         Bin&apos;Go &middot; Smart Waste Collection, Simplified

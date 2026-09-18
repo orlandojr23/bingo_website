@@ -9,10 +9,10 @@ import { Button } from "@/components/ui/button";
 import PasswordStrengthHint from "@/components/ui/password-strength-hint";
 
 const fieldClass = (hasError) =>
-  `w-full rounded-xl border bg-card pl-10 pr-11 py-3 text-sm font-medium text-foreground placeholder:text-muted-foreground/50 outline-none transition-colors ${
+  `w-full rounded-2xl border bg-card pl-10 pr-11 py-3.5 text-[16px] text-foreground placeholder:text-muted-foreground/50 outline-none transition-colors ${
     hasError
       ? "border-rose-300 focus:border-rose-400"
-      : "border-border hover:border-zinc-300 focus:border-zinc-400"
+      : "border-border/60 focus:border-zinc-400"
   }`;
 
 function ErrorLine({ message }) {
@@ -112,25 +112,25 @@ export default function UpdatePasswordPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-6 py-12">
+      <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-6 py-8">
         <div className="mb-8 flex flex-col items-center text-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/logo-green-v2.png"
             alt="Bin'Go Logo"
-            className="h-28 w-28 object-contain"
+            className="h-20 w-20 object-contain"
           />
-          <h1 className="mt-5 text-2xl font-black tracking-tight text-foreground">
+          <h1 className="mt-4 text-[22px] font-semibold tracking-tight text-foreground">
             Update your password
           </h1>
-          <p className="mt-1.5 text-sm font-medium text-muted-foreground">
+          <p className="mt-1.5 text-[14px] leading-normal text-muted-foreground">
             Please enter your new password below.
           </p>
         </div>
 
         <form className="flex flex-col gap-4" onSubmit={handleUpdatePassword} noValidate>
           {errors.form && (
-            <div className="rounded-md bg-rose-50 p-3 text-sm text-rose-500">
+            <div className="rounded-2xl bg-rose-50 p-3.5 text-[13px] leading-normal text-rose-600">
               {errors.form}
             </div>
           )}
@@ -185,11 +185,11 @@ export default function UpdatePasswordPage() {
             size="lg"
             type="submit"
             disabled={isLoading || !password || !confirm}
-            className="mt-2 w-full py-3.5"
+            className="mt-1 h-[50px] w-full rounded-2xl text-[17px] font-semibold"
           >
             {isLoading ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-5 w-5 animate-spin" />
                 <span>Updating Password...</span>
               </>
             ) : (

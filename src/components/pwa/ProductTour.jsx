@@ -46,7 +46,6 @@ export default function ProductTour({
           side: "top",
           align: "center",
         },
-        tab: "schedule",
       },
       {
         element: '[data-tour="nav-tab-report"]',
@@ -57,7 +56,6 @@ export default function ProductTour({
           side: "top",
           align: "center",
         },
-        tab: "report",
       },
       {
         element: '[data-tour="nav-tab-tickets"]',
@@ -68,7 +66,6 @@ export default function ProductTour({
           side: "top",
           align: "center",
         },
-        tab: "tickets",
       },
     ];
 

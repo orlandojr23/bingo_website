@@ -2,20 +2,24 @@
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import dynamic from "next/dynamic";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Play,
   CheckCircle2,
-  LogOut,
   Eye,
   EyeOff,
   Loader2,
   X,
+  Map as MapIcon,
+  ClipboardList,
+  History,
+  ChevronLeft,
+  ChevronRight,
+  LocateFixed,
+  Truck,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { mockPilotData } from "@/lib/mock-data";
-import { useTickets, updateTicket } from "@/lib/tickets";
 import {
   useLiveRoute,
   startRoute,
@@ -37,11 +41,9 @@ import { useRoutePath } from "@/lib/use-route-path";
 import { useFleet } from "@/lib/fleet";
 import { getDriverSession, clearDriverSession } from "@/lib/driver-session";
 import { changeDriverPassword } from "@/lib/driver-accounts";
-import { useSwipeToggle } from "@/lib/use-swipe-toggle";
 import { MapSkeleton } from "@/components/ui/skeletons";
 import PasswordStrengthHint from "@/components/ui/password-strength-hint";
 import { useToast } from "@/components/pwa/Toast";
-import BottomSheet from "@/components/pwa/BottomSheet";
 import { supabase } from "@/lib/supabase";
 
 // Minimalist High-DPI Leaflet MapCanvas
@@ -50,55 +52,9 @@ const MapCanvas = dynamic(() => import("@/components/map/map-canvas"), {
   loading: () => <MapSkeleton />,
 });
 
-const TAB_IDS = ["route", "assignment", "history"];
+const TAB_IDS = ["map", "route", "assignment", "history", "profile"];
 
-// 3D Vector SVG Icons for Action Buttons & Banners
-function Waze3DFocusTruckIcon({ className = "h-9 w-9" }) {
-  return (
-    <svg viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <defs>
-        <filter id="driverFocusTruckShadow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="1.5" stdDeviation="1" floodColor="#000000" floodOpacity="0.3" />
-        </filter>
-      </defs>
-      <g filter="url(#driverFocusTruckShadow)">
-        {/* 4 Side Tires */}
-        <rect x="7" y="9" width="3.5" height="7" rx="1.5" fill="#18181b" />
-        <rect x="33.5" y="9" width="3.5" height="7" rx="1.5" fill="#18181b" />
-        <rect x="6.5" y="27" width="4" height="8" rx="1.5" fill="#18181b" />
-        <rect x="33.5" y="27" width="4" height="8" rx="1.5" fill="#18181b" />
-
-        {/* Compactor Main Container Box */}
-        <rect x="10" y="16" width="24" height="20" rx="3" fill="#10b981" stroke="#059669" strokeWidth="1" />
-        {/* Container Top 3D Roof Highlight */}
-        <rect x="13" y="18" width="18" height="14" rx="2" fill="#34d399" opacity="0.9" />
-        <line x1="10" y1="21" x2="34" y2="21" stroke="#047857" strokeWidth="1.2" />
-        <line x1="10" y1="26" x2="34" y2="26" stroke="#047857" strokeWidth="1.2" />
-        <line x1="10" y1="31" x2="34" y2="31" stroke="#047857" strokeWidth="1.2" />
-
-        {/* Rear Hopper Loader */}
-        <rect x="12" y="35" width="20" height="3" rx="1" fill="#064e3b" />
-        <rect x="15" y="35.5" width="4" height="2" fill="#facc15" />
-        <rect x="25" y="35.5" width="4" height="2" fill="#facc15" />
-
-        {/* 3D Cab Front Hood */}
-        <path d="M 12 16 H 32 V 9 C 32 6.5 29.5 5 27 5 H 17 C 14.5 5 12 6.5 12 9 V 16 Z" fill="#059669" stroke="#047857" strokeWidth="1" />
-
-        {/* Side Mirrors */}
-        <rect x="7.5" y="11" width="3" height="2" rx="0.5" fill="#047857" />
-        <rect x="33.5" y="11" width="3" height="2" rx="0.5" fill="#047857" />
-
-        {/* Glossy Sky Blue Curved Windshield */}
-        <path d="M 14 11 H 30 L 28 14.5 H 16 L 14 11 Z" fill="#38bdf8" stroke="#e0f2fe" strokeWidth="0.8" />
-        <line x1="20" y1="11.5" x2="22" y2="14" stroke="#ffffff" strokeWidth="1" opacity="0.8" />
-
-        {/* LED Headlights */}
-        <rect x="13.5" y="5" width="3.5" height="1.8" rx="0.5" fill="#facc15" />
-        <rect x="27" y="5" width="3.5" height="1.8" rx="0.5" fill="#facc15" />
-      </g>
-    </svg>
-  );
-}
+// 3D Vector SVG Icons for Banner Readouts (only the ones still rendered below)
 
 function Waze3DHeaderTruckIcon({ className = "h-8 w-8" }) {
   return (
@@ -185,54 +141,6 @@ function Waze3DHeaderTruckIcon({ className = "h-8 w-8" }) {
   );
 }
 
-function Waze3DWavingHandIcon({ className = "h-8 w-8" }) {
-  return (
-    <span className="text-[26px] select-none leading-none inline-block filter drop-shadow-[0_2px_4px_rgba(217,119,6,0.35)] shrink-0">
-      👋
-    </span>
-  );
-}
-
-function Waze3DTargetIcon({ className = "h-9 w-9" }) {
-  return (
-    <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <defs>
-        <linearGradient id="driverTargetGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#34d399" />
-          <stop offset="100%" stopColor="#059669" />
-        </linearGradient>
-        <filter id="driverTargetShadow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="1.5" stdDeviation="1" floodColor="#000000" floodOpacity="0.25" />
-        </filter>
-      </defs>
-      <g filter="url(#driverTargetShadow)">
-        <circle cx="18" cy="18" r="13" fill="none" stroke="url(#driverTargetGrad)" strokeWidth="3" />
-        <circle cx="18" cy="18" r="6" fill="#10b981" />
-        <circle cx="18" cy="18" r="2.5" fill="#ffffff" />
-        <line x1="18" y1="2" x2="18" y2="7" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" />
-        <line x1="18" y1="29" x2="18" y2="34" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" />
-        <line x1="2" y1="18" x2="7" y2="18" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" />
-        <line x1="29" y1="18" x2="34" y2="18" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" />
-      </g>
-    </svg>
-  );
-}
-
-function Waze3DPlayIcon({ className = "h-4 w-4" }) {
-  return (
-    <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <defs>
-        <linearGradient id="playGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#34d399" />
-          <stop offset="100%" stopColor="#059669" />
-        </linearGradient>
-      </defs>
-      <circle cx="16" cy="16" r="12" fill="url(#playGrad)" />
-      <polygon points="13,10 22,16 13,22" fill="#ffffff" />
-    </svg>
-  );
-}
-
 function Waze3DRouteIcon({ className = "h-4 w-4" }) {
   return (
     <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
@@ -303,15 +211,6 @@ function Waze3DCleanIcon({ className = "h-4 w-4" }) {
   );
 }
 
-function InfoRow({ label, value }) {
-  return (
-    <div className="flex items-center justify-between text-xs py-1">
-      <span className="text-muted-foreground font-medium">{label}</span>
-      <span className="font-semibold text-foreground tracking-tight font-sans">{value}</span>
-    </div>
-  );
-}
-
 function assignedAreaTagline(schedule, zone) {
   if (!schedule) return null;
   const names = (schedule.routePoints || []).map((p) => p.name).filter(Boolean);
@@ -329,8 +228,13 @@ export default function DriverPage() {
   const [isOnline, setIsOnline] = useState(true);
   const [batteryLevel, setBatteryLevel] = useState(null);
   const [isCharging, setIsCharging] = useState(false);
-  const [activeTab, setActiveTab] = useState("route"); // "route" | "assignment"
-  const [isMapSheetExpanded, setIsMapSheetExpanded] = useState(false);
+  const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window === "undefined") return "map";
+    const param = new URLSearchParams(window.location.search).get("tab");
+    if (TAB_IDS.includes(param)) return param;
+    const saved = window.localStorage.getItem("driver-active-tab");
+    return TAB_IDS.includes(saved) ? saved : "map";
+  }); // "map" | "route" | "assignment" | "history" | "profile"
   const [mapCenter, setMapCenter] = useState([10.3025, 123.9095]);
   const [mapZoom, setMapZoom] = useState(16);
   const [truckFocused, setTruckFocused] = useState(false);
@@ -350,13 +254,12 @@ export default function DriverPage() {
     [mapBounds]
   );
 
-  // Profile & Logout Modals
-  const [showProfile, setShowProfile] = useState(false);
+  // Sign Out Modal
   const [showSignOutModal, setShowSignOutModal] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
-  const [showTripLog, setShowTripLog] = useState(false);
 
-  // Change Password (settings sheet)
+  // Change Password (profile sub-screen)
+  const [profileView, setProfileView] = useState("main"); // "main" | "password"
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
@@ -399,9 +302,6 @@ export default function DriverPage() {
       });
     });
   }, [router]);
-
-  // Live Driver Tickets State — sourced from Supabase via tickets.js (Bug 9 fix)
-  const driverTickets = useTickets();
 
   // Live Telemetry State
   const [coords, setCoords] = useState({
@@ -486,6 +386,7 @@ export default function DriverPage() {
       setShowConfirm(false);
       toast("Password changed successfully.");
       haptic();
+      setProfileView("main");
     } catch (err) {
       setPwErrors({ current: "Something went wrong. Please try again." });
     } finally {
@@ -668,33 +569,22 @@ export default function DriverPage() {
     };
   }, [greetingTitle, assignedAreaName, assignedSchedule, truckState, isOnDuty, currentPoint, routePoints.length, pendingAssignments]);
 
-  const pendingCount = driverTickets.filter((t) => t.status !== "Resolved").length;
-
   useEffect(() => {
     const t = new URLSearchParams(window.location.search).get("tab");
     if (TAB_IDS.includes(t)) setActiveTab(t);
   }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("driver-active-tab", activeTab);
+    } catch {}
+  }, [activeTab]);
 
   const switchTab = (id) => {
     haptic();
     setActiveTab(id);
     window.history.replaceState(null, "", `?tab=${id}`);
   };
-
-  const sheetSwipe = useSwipeToggle(
-    () => {
-      if (!isMapSheetExpanded) {
-        setIsMapSheetExpanded(true);
-        haptic();
-      }
-    },
-    () => {
-      if (isMapSheetExpanded) {
-        setIsMapSheetExpanded(false);
-        haptic();
-      }
-    }
-  );
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -873,9 +763,8 @@ export default function DriverPage() {
       await requestWakeLock();
       startGpsWatch();
 
-      // Waze Navigation Camera Mode: Focus truck, collapse bottom sheet, set zoom 18 & fly camera
+      // Waze Navigation Camera Mode: Focus truck, set zoom 18 & fly camera
       setTruckFocused(true);
-      setIsMapSheetExpanded(false);
       const tracking = live.trucks[selectedTruckId]?.tracking;
       if (tracking?.lat != null && tracking?.lng != null) {
         setMapCenter([tracking.lat, tracking.lng]);
@@ -903,7 +792,6 @@ export default function DriverPage() {
 
       // Maintain Waze Navigation Camera Focus on next leg
       setTruckFocused(true);
-      setIsMapSheetExpanded(false);
       const tracking = truckState?.tracking;
       if (tracking?.lat != null && tracking?.lng != null) {
         setMapCenter([tracking.lat, tracking.lng]);
@@ -934,13 +822,6 @@ export default function DriverPage() {
     endRoute(selectedTruckId);
     await stopGpsWatch();
     toast("Route ended.");
-  };
-
-  // Bug 9 fix: persist ticket resolution to Supabase so admin sees "Resolved" status
-  const handleResolveTicket = async (ticketId) => {
-    haptic(15);
-    await updateTicket(ticketId, { status: "Resolved" });
-    toast(`Ticket marked as Cleaned Up.`);
   };
 
   const trucksForMap = useMemo(() => {
@@ -1022,9 +903,6 @@ export default function DriverPage() {
             zoom={mapZoom}
             onMapReady={handleMapReady}
             onMapDrag={() => {
-              if (isMapSheetExpanded) {
-                setIsMapSheetExpanded(false);
-              }
               if (truckFocused) {
                 setTruckFocused(false);
               }
@@ -1036,23 +914,6 @@ export default function DriverPage() {
             perspective3D={isOnDuty && truckFocused}
           />
         </div>
-
-        {/* Translucent Backdrop Scrim when Main Bottom Sheet is Expanded */}
-        <AnimatePresence>
-          {isMapSheetExpanded && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              onClick={() => {
-                setIsMapSheetExpanded(false);
-                haptic();
-              }}
-              className="absolute inset-0 z-15 bg-black/25 cursor-pointer"
-            />
-          )}
-        </AnimatePresence>
 
         {/* Waze-Style Flush Top Navigation Banner */}
         <div className="pointer-events-auto absolute top-0 inset-x-0 z-20 w-full border-b border-border bg-card/98 px-5 py-4 text-foreground backdrop-blur-md flex items-center justify-between gap-3.5 select-none overflow-hidden h-20 shadow-sm">
@@ -1106,40 +967,11 @@ export default function DriverPage() {
             </AnimatePresence>
             )}
           </div>
-
-          {/* Right: Top-Right Buttons */}
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setIsMapSheetExpanded(false);
-                setShowTripLog(true);
-                haptic();
-              }}
-              className="flex h-9 px-3 shrink-0 items-center justify-center rounded-full bg-white text-sm font-semibold text-slate-700 shadow-xs hover:bg-slate-50 active:scale-95 transition-all cursor-pointer border border-slate-200"
-              title="Trip Log"
-            >
-              Trip Log
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setIsMapSheetExpanded(false);
-                setShowProfile(true);
-                haptic();
-              }}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-sm font-semibold leading-none text-white shadow-xs hover:bg-emerald-700 active:scale-95 transition-all cursor-pointer border border-emerald-500/30"
-              title="Driver Terminal & Settings"
-              aria-label="Driver Terminal & Settings"
-            >
-              {driverSession?.name?.charAt(0)?.toUpperCase() || "D"}
-            </button>
-          </div>
         </div>
 
-        {/* Floating Circular 3D Map Action Buttons (Option B: Symmetrical Left & Right Split) */}
-        {/* 1. Bottom-Left: Focus Active Truck (slides in when the truck is out of view, out when centered) */}
-        <div className="pointer-events-none absolute bottom-32 left-4 z-20">
+        {/* Floating native map action buttons, just above bottom nav */}
+        {/* 1. Bottom-Left: Focus Compactor Unit (native style, just above bottom nav) */}
+        <div className="pointer-events-none absolute bottom-[calc(5.5rem+env(safe-area-inset-bottom))] left-3 z-20">
           <AnimatePresence>
             {(() => {
               const tracking = truckState?.tracking;
@@ -1149,12 +981,11 @@ export default function DriverPage() {
                 <motion.button
                   key="focus-compactor-unit"
                   type="button"
-                  initial={{ x: -72, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  exit={{ x: -72, opacity: 0 }}
-                  transition={{ duration: 0.3, ease: "easeInOut" }}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ duration: 0.15, ease: "easeOut" }}
                   onClick={() => {
-                    setIsMapSheetExpanded(false);
                     setTruckFocused(true);
                     if (tracking?.lat != null && tracking?.lng != null) {
                       setMapCenter([tracking.lat, tracking.lng]);
@@ -1167,30 +998,29 @@ export default function DriverPage() {
                     setFlySignal((s) => s + 1);
                     haptic();
                   }}
-                  className="pointer-events-auto flex h-[54px] w-[54px] flex-col items-center justify-center gap-0.5 rounded-full border border-border bg-card/95 shadow-lg backdrop-blur-md transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                  className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full border border-black/10 bg-white text-zinc-800 shadow-md active:scale-95 transition-transform cursor-pointer"
                   title="Focus Compactor Unit"
                   aria-label="Focus Compactor Unit"
                 >
-                  <Waze3DFocusTruckIcon className="h-7 w-7 shrink-0" />
+                  <Truck className="h-[22px] w-[22px]" strokeWidth={2} />
                 </motion.button>
               );
             })()}
           </AnimatePresence>
         </div>
 
-        {/* 2. Bottom-Right: Center GPS Location (slides in when driver is out of view, out when centered) */}
-        <div className="pointer-events-none absolute bottom-32 right-4 z-20">
+        {/* 2. Bottom-Right: Center GPS Location (native style, just above bottom nav) */}
+        <div className="pointer-events-none absolute bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-3 z-20">
           <AnimatePresence>
             {coords?.lat != null && !isPointInView(coords.lat, coords.lng) && (
               <motion.button
                 key="center-driver-location"
                 type="button"
-                initial={{ x: 72, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                exit={{ x: 72, opacity: 0 }}
-                transition={{ duration: 0.3, ease: "easeInOut" }}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ duration: 0.15, ease: "easeOut" }}
                 onClick={() => {
-                  setIsMapSheetExpanded(false);
                   setTruckFocused(false);
                   if (coords?.lat != null && coords?.lng != null) {
                     setMapCenter([coords.lat, coords.lng]);
@@ -1201,126 +1031,119 @@ export default function DriverPage() {
                   setFlySignal((s) => s + 1);
                   haptic();
                 }}
-                className="pointer-events-auto flex h-[54px] w-[54px] flex-col items-center justify-center gap-0.5 rounded-full border border-border bg-card/95 shadow-lg backdrop-blur-md cursor-pointer"
+                className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full border border-black/10 bg-white text-zinc-800 shadow-md active:scale-95 transition-transform cursor-pointer"
                 title="Center Driver Location"
                 aria-label="Center Driver Location"
               >
-                <Waze3DTargetIcon className="h-7 w-7 shrink-0" />
+                <LocateFixed className="h-[22px] w-[22px]" strokeWidth={2} />
               </motion.button>
             )}
           </AnimatePresence>
         </div>
 
-        {/* Waze-Style Single-Screen Bottom Sheet Drawer */}
-        <div className="pointer-events-none absolute bottom-0 inset-x-0 z-30 flex justify-center">
-          <motion.div
-            className="pointer-events-auto flex w-full max-w-md flex-col rounded-t-3xl border-t border-border bg-card shadow-2xl"
-          >
-            {/* Top Drag Handle & Peeking Search Control */}
-            <div className="flex flex-col items-center px-4 pt-2.5 pb-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsMapSheetExpanded(!isMapSheetExpanded);
-                  haptic();
-                }}
-                {...sheetSwipe}
-                aria-label="Toggle drawer expansion"
-                className="w-full flex touch-none flex-col items-center py-1 cursor-pointer group"
-              >
-                <div className="h-1.5 w-10 rounded-full bg-muted-foreground/30 group-hover:bg-muted-foreground/60 transition-colors" />
-              </button>
+        {/* Bottom Navigation Bar - native tab bar, only visible on map */}
+        {activeTab === "map" && (
+        <div className="fixed bottom-0 inset-x-0 z-[100] border-t border-black/10 bg-background/85 backdrop-blur-xl shadow-[0_-4px_16px_rgba(0,0,0,0.06)] pb-[env(safe-area-inset-bottom)]">
+          <div className="grid grid-cols-5 h-[64px] max-w-md mx-auto px-2">
+            {/* 1. Map */}
+            <button
+              type="button"
+              onClick={() => { switchTab("map"); }}
+              className={`flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer ${activeTab === "map" ? "text-emerald-600" : "text-zinc-400"}`}
+            >
+              <MapIcon className="h-6 w-6" strokeWidth={activeTab === "map" ? 2.25 : 1.75} />
+              <span className={`text-[10px] leading-none ${activeTab === "map" ? "font-semibold" : "font-medium"}`}>Map</span>
+            </button>
 
-              {/* 3D Action Pill Tab Navigation */}
-              <div
-                {...sheetSwipe}
-                className="mt-2.5 flex w-full touch-none items-center justify-between gap-2"
-              >
-                {/* 1. Route Tab */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    switchTab("route");
-                    setIsMapSheetExpanded(true);
-                  }}
-                  className={cn(
-                    "flex h-12 flex-1 items-center justify-center gap-1.5 rounded-2xl border px-2 text-xs font-extrabold transition-all cursor-pointer shadow-sm active:scale-95",
-                    isMapSheetExpanded && activeTab === "route"
-                      ? "border-emerald-600 bg-emerald-50/50 text-emerald-800 ring-1 ring-emerald-600/20"
-                      : "border-border bg-card text-zinc-800 hover:bg-muted"
-                  )}
-                >
-                  <Waze3DPlayIcon className="h-5 w-5 shrink-0" />
-                  <span className="whitespace-nowrap">Route</span>
-                </button>
+            {/* 2. Route */}
+            <button
+              type="button"
+              onClick={() => { switchTab("route"); }}
+              className={`flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer ${activeTab === "route" ? "text-emerald-600" : "text-zinc-400"}`}
+            >
+              <Play className="h-6 w-6" strokeWidth={activeTab === "route" ? 2.25 : 1.75} />
+              <span className={`text-[10px] leading-none ${activeTab === "route" ? "font-semibold" : "font-medium"}`}>Route</span>
+            </button>
 
-                {/* 2. Assignment Tab */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    switchTab("assignment");
-                    setIsMapSheetExpanded(true);
-                  }}
-                  className={cn(
-                    "flex h-12 flex-1 items-center justify-center gap-1.5 rounded-2xl border px-2 text-xs font-extrabold transition-all cursor-pointer shadow-sm active:scale-95",
-                    isMapSheetExpanded && activeTab === "assignment"
-                      ? "border-emerald-600 bg-emerald-50/50 text-emerald-800 ring-1 ring-emerald-600/20"
-                      : "border-border bg-card text-zinc-800 hover:bg-muted"
-                  )}
-                >
-                  <Waze3DRouteIcon className="h-5 w-5 shrink-0" />
-                  <span className="whitespace-nowrap">Assignment</span>
-                </button>
+            {/* 3. Assignment */}
+            <button
+              type="button"
+              onClick={() => { switchTab("assignment"); }}
+              className={`flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer ${activeTab === "assignment" ? "text-emerald-600" : "text-zinc-400"}`}
+            >
+              <ClipboardList className="h-6 w-6" strokeWidth={activeTab === "assignment" ? 2.25 : 1.75} />
+              <span className={`text-[10px] leading-none ${activeTab === "assignment" ? "font-semibold" : "font-medium"}`}>Tasks</span>
+            </button>
 
-                {/* 3. History Tab */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    switchTab("history");
-                    setIsMapSheetExpanded(true);
-                  }}
-                  className={cn(
-                    "flex h-12 flex-1 items-center justify-center gap-1.5 rounded-2xl border px-2 text-xs font-extrabold transition-all cursor-pointer shadow-sm active:scale-95",
-                    isMapSheetExpanded && activeTab === "history"
-                      ? "border-emerald-600 bg-emerald-50/50 text-emerald-800 ring-1 ring-emerald-600/20"
-                      : "border-border bg-card text-zinc-800 hover:bg-muted"
-                  )}
-                >
-                  <CheckCircle2 className="h-5 w-5 shrink-0 text-zinc-800" />
-                  <span className="whitespace-nowrap">History</span>
-                </button>
+            {/* 4. History */}
+            <button
+              type="button"
+              onClick={() => { switchTab("history"); }}
+              className={`flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer ${activeTab === "history" ? "text-emerald-600" : "text-zinc-400"}`}
+            >
+              <History className="h-6 w-6" strokeWidth={activeTab === "history" ? 2.25 : 1.75} />
+              <span className={`text-[10px] leading-none ${activeTab === "history" ? "font-semibold" : "font-medium"}`}>History</span>
+            </button>
+
+            {/* 5. Profile */}
+            <button
+              type="button"
+              onClick={() => { setProfileView("main"); switchTab("profile"); }}
+              className={`flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer ${activeTab === "profile" ? "text-emerald-600" : "text-zinc-400"}`}
+            >
+              <span className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-semibold leading-none transition-colors ${activeTab === "profile" ? "bg-emerald-600 text-white" : "bg-zinc-300/60 text-zinc-600"}`}>
+                {driverSession?.name?.charAt(0)?.toUpperCase() || "D"}
+              </span>
+              <span className={`text-[10px] leading-none ${activeTab === "profile" ? "font-semibold" : "font-medium"}`}>Profile</span>
+            </button>
+          </div>
+        </div>
+        )}
+
+        {/* FULL SCREEN VIEWS - native app style fade transition */}
+        <AnimatePresence mode="wait" initial={false}>
+          {activeTab === "route" && (
+            <motion.div
+              key="fs-route"
+              initial={{ opacity: 0, scale: 0.98, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.98, y: 8 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+              className="fixed inset-0 z-[90] flex flex-col bg-background"
+            >
+              <div className="shrink-0 border-b border-border/60 bg-background/80 backdrop-blur-md pt-[env(safe-area-inset-top)]">
+                <div className="relative flex h-[52px] items-center justify-center px-2">
+                  <button
+                    type="button"
+                    onClick={() => { switchTab("map"); }}
+                    className="absolute left-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-all hover:bg-muted active:scale-95 active:bg-muted cursor-pointer"
+                    aria-label="Back to map"
+                  >
+                    <ChevronLeft className="h-6 w-6" strokeWidth={2} />
+                  </button>
+                  <h1 className="text-[17px] font-semibold tracking-tight text-foreground">Route</h1>
+                </div>
               </div>
-            </div>
-
-            {/* Expanded Tab Drawer Content Wrapper */}
-            <AnimatePresence>
-              {isMapSheetExpanded && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.25, ease: "easeInOut" }}
-                  className="overflow-hidden"
-                >
-                  <div className="h-[340px] overflow-y-auto space-y-4 pt-1 px-4 pb-4 scrollbar-hide">
+              <div className="flex flex-1 flex-col overflow-y-auto bg-muted/40 pb-10">
+                <div className="flex flex-1 flex-col space-y-2.5 p-4">
 
                     {/* Tab 1: Route & Telemetry Controls */}
                     {activeTab === "route" && (
-                      <div className="space-y-4">
+                      <div className="space-y-2.5">
                         {/* Main Route Workflow Control */}
-                        <div className="relative rounded-2xl border border-emerald-500/25 bg-emerald-50/30 p-4 space-y-3 shadow-md overflow-hidden">
-                          <div className="relative z-10 space-y-3">
+                        <div className="rounded-2xl border border-border/60 bg-card p-4 space-y-2.5">
+                          <div className="space-y-2.5">
                               <button
                                 type="button"
                                 onClick={handlePrimaryAction}
                                 disabled={!isOnDuty && !hasAvailableAssignment}
                                 className={cn(
-                                  "flex h-12 w-full items-center justify-center gap-2 rounded-xl text-xs font-bold transition-all active:scale-[0.98] shadow-xs",
+                                  "flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-[15px] font-semibold transition-all active:scale-[0.99]",
                                   !isOnDuty && !hasAvailableAssignment
-                                    ? "bg-zinc-200 text-zinc-400 cursor-not-allowed border border-zinc-300 dark:bg-zinc-800 dark:text-zinc-500 dark:border-zinc-700 opacity-80"
+                                    ? "bg-zinc-200 text-zinc-400 cursor-not-allowed dark:bg-zinc-800 dark:text-zinc-500 opacity-80"
                                     : isOnDuty && truckState?.phase === "enroute"
-                                      ? "bg-amber-600 text-white hover:bg-amber-700 cursor-pointer"
-                                      : "bg-emerald-600 text-white hover:bg-emerald-700 cursor-pointer"
+                                      ? "bg-amber-600 text-white active:bg-amber-700 cursor-pointer"
+                                      : "bg-emerald-600 text-white active:bg-emerald-700 cursor-pointer"
                                 )}
                               >
                                 {!isOnDuty ? (
@@ -1352,34 +1175,34 @@ export default function DriverPage() {
                               <button
                                 type="button"
                                 onClick={handleEndRoute}
-                                className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-rose-600 text-xs font-bold text-white transition-all hover:bg-rose-700 active:scale-[0.98] cursor-pointer shadow-xs"
+                                className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-rose-600 text-[15px] font-semibold text-white transition-all active:bg-rose-700 active:scale-[0.99] cursor-pointer"
                               >
-                                <X className="h-4 w-4 stroke-[2.5]" />
+                                <X className="h-5 w-5" strokeWidth={2} />
                                 End Route
                               </button>
                             )}
 
-                            <div className="space-y-1.5 pt-1 px-1">
-                              <InfoRow
-                                label="Active Route"
-                                value={activeSchedule ? scheduleLabel(activeSchedule) : "No Active Route"}
-                              />
-                              <InfoRow
-                                label="Next Stop"
-                                value={
-                                  truckState?.phase === "completed"
+                            <div className="divide-y divide-border/60 overflow-hidden rounded-2xl border border-border/60 bg-card">
+                              <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
+                                <span className="shrink-0 text-[15px] text-muted-foreground">Active Route</span>
+                                <span className="truncate text-right text-[15px] text-foreground">{activeSchedule ? scheduleLabel(activeSchedule) : "No Active Route"}</span>
+                              </div>
+                              <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
+                                <span className="shrink-0 text-[15px] text-muted-foreground">Next Stop</span>
+                                <span className="truncate text-right text-[15px] text-foreground">
+                                  {truckState?.phase === "completed"
                                     ? "Route Completed"
                                     : truckState?.onsite
                                       ? `At ${currentPoint?.name ?? "stop"}`
                                       : currentPoint
                                         ? `${currentPoint.name} • ${currentPoint.time}`
-                                        : "Standby"
-                                }
-                              />
-                              <InfoRow
-                                label="Stops Served"
-                                value={
-                                  routePoints.length
+                                        : "Standby"}
+                                </span>
+                              </div>
+                              <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
+                                <span className="shrink-0 text-[15px] text-muted-foreground">Stops Served</span>
+                                <span className="text-right text-[15px] tabular-nums text-foreground">
+                                  {routePoints.length
                                     ? `${
                                         truckState?.phase === "completed"
                                           ? routePoints.length
@@ -1387,41 +1210,84 @@ export default function DriverPage() {
                                             ? truckState.stopIndex + 1
                                             : truckState?.stopIndex ?? 0
                                       } of ${routePoints.length}`
-                                    : "—"
-                                }
-                              />
+                                    : "—"}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
                     )}
+                </div>
+              </div>
+            </motion.div>
+          )}
 
+          {activeTab === "assignment" && (
+            <motion.div
+              key="fs-assignment"
+              initial={{ opacity: 0, scale: 0.98, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.98, y: 8 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+              className="fixed inset-0 z-[90] flex flex-col bg-background"
+            >
+              <div className="shrink-0 border-b border-border/60 bg-background/80 backdrop-blur-md pt-[env(safe-area-inset-top)]">
+                <div className="relative flex h-[52px] items-center justify-center px-2">
+                  <button
+                    type="button"
+                    onClick={() => { switchTab("map"); }}
+                    className="absolute left-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-all hover:bg-muted active:scale-95 active:bg-muted cursor-pointer"
+                    aria-label="Back to map"
+                  >
+                    <ChevronLeft className="h-6 w-6" strokeWidth={2} />
+                  </button>
+                  <h1 className="text-[17px] font-semibold tracking-tight text-foreground">Assignment</h1>
+                </div>
+              </div>
+              <div className="flex flex-1 flex-col overflow-y-auto bg-muted/40 pb-10">
+                <div className="flex flex-1 flex-col space-y-2.5 p-4">
                     {/* Tab 2: Assignment & Compactor Info */}
                     {activeTab === "assignment" && (
-                      <div className="space-y-4">
-                        <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
+                      <div className="space-y-2.5">
+                        <div className="rounded-2xl border border-border/60 bg-card p-4 space-y-3">
                           <div className="border-b border-border/60 pb-2.5">
-                            <h3 className="text-sm font-extrabold text-foreground tracking-tight">
+                            <h3 className="text-[16px] font-semibold tracking-tight text-foreground">
                               {assignedSchedule
                                 ? `${scheduleLabel(assignedSchedule)} Route`
                                 : "No Route Assigned"}
                             </h3>
                           </div>
 
-                          <div className="rounded-xl border border-border bg-muted/40 p-3 space-y-2">
-                            <InfoRow label="Assigned Unit" value={`${currentTruck.id} (${currentTruck.plate})`} />
-                            <InfoRow label="Driver Operator" value={liveDriver || "—"} />
-                            <InfoRow label="Payload Capacity" value={currentTruck.capacity} />
-                            <InfoRow label="Waste Collection" value={assignedSchedule?.collectionType ?? "—"} />
-                            <InfoRow
-                              label="Scheduled Days"
-                              value={
-                                Array.isArray(assignedSchedule?.collectionDays)
+                          <div className="divide-y divide-border/60 overflow-hidden rounded-2xl border border-border/60 bg-card">
+                            <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
+                              <span className="shrink-0 text-[15px] text-muted-foreground">Assigned Unit</span>
+                              <span className="truncate text-right text-[15px] text-foreground">{`${currentTruck.id} (${currentTruck.plate})`}</span>
+                            </div>
+                            <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
+                              <span className="shrink-0 text-[15px] text-muted-foreground">Driver Operator</span>
+                              <span className="truncate text-right text-[15px] text-foreground">{liveDriver || "—"}</span>
+                            </div>
+                            <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
+                              <span className="shrink-0 text-[15px] text-muted-foreground">Payload Capacity</span>
+                              <span className="truncate text-right text-[15px] text-foreground">{currentTruck.capacity}</span>
+                            </div>
+                            <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
+                              <span className="shrink-0 text-[15px] text-muted-foreground">Waste Collection</span>
+                              <span className="truncate text-right text-[15px] text-foreground">{assignedSchedule?.collectionType ?? "—"}</span>
+                            </div>
+                            <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
+                              <span className="shrink-0 text-[15px] text-muted-foreground">Scheduled Days</span>
+                              <span className="truncate text-right text-[15px] text-foreground">
+                                {Array.isArray(assignedSchedule?.collectionDays)
                                   ? assignedSchedule.collectionDays.join(", ")
-                                  : (assignedSchedule?.collectionDays ?? "—")
-                              }
-                            />
-                            <InfoRow label="Scheduled Hours" value={assignedSchedule?.time ?? "—"} />
+                                  : (assignedSchedule?.collectionDays ?? "—")}
+                              </span>
+                            </div>
+                            <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
+                              <span className="shrink-0 text-[15px] text-muted-foreground">Scheduled Hours</span>
+                              <span className="truncate text-right text-[15px] tabular-nums text-foreground">{assignedSchedule?.time ?? "—"}</span>
+                            </div>
                           </div>
                           
                           {(!isOnDuty && assignedSchedule && (live.scheduleStatus[assignedSchedule.id] === "Scheduled" || live.scheduleStatus[assignedSchedule.id] === "Assigned")) && (
@@ -1432,7 +1298,7 @@ export default function DriverPage() {
                                 acceptAssignment(assignedSchedule.id);
                                 toast("Assignment accepted.");
                               }}
-                              className="mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-xl text-xs font-bold transition-all active:scale-[0.98] cursor-pointer shadow-xs bg-indigo-600 text-white hover:bg-indigo-700"
+                              className="mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-[15px] font-semibold transition-all active:scale-[0.99] cursor-pointer bg-emerald-600 text-white active:bg-emerald-700"
                             >
                               Accept Assignment
                             </button>
@@ -1440,10 +1306,38 @@ export default function DriverPage() {
                         </div>
                       </div>
                     )}
+                </div>
+              </div>
+            </motion.div>
+          )}
 
+          {activeTab === "history" && (
+            <motion.div
+              key="fs-history"
+              initial={{ opacity: 0, scale: 0.98, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.98, y: 8 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+              className="fixed inset-0 z-[90] flex flex-col bg-background"
+            >
+              <div className="shrink-0 border-b border-border/60 bg-background/80 backdrop-blur-md pt-[env(safe-area-inset-top)]">
+                <div className="relative flex h-[52px] items-center justify-center px-2">
+                  <button
+                    type="button"
+                    onClick={() => { switchTab("map"); }}
+                    className="absolute left-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-all hover:bg-muted active:scale-95 active:bg-muted cursor-pointer"
+                    aria-label="Back to map"
+                  >
+                    <ChevronLeft className="h-6 w-6" strokeWidth={2} />
+                  </button>
+                  <h1 className="text-[17px] font-semibold tracking-tight text-foreground">History</h1>
+                </div>
+              </div>
+              <div className="flex flex-1 flex-col overflow-y-auto bg-muted/40 pb-10">
+                <div className="flex flex-1 flex-col space-y-2.5 p-4">
                     {/* Tab 3: History */}
                     {activeTab === "history" && (
-                      <div className="space-y-3">
+                      <div className="space-y-2.5">
                         {(() => {
                           const history = getSchedules().filter(
                             (s) =>
@@ -1453,22 +1347,20 @@ export default function DriverPage() {
                           );
                           if (history.length === 0) {
                             return (
-                              <div className="flex flex-col items-center justify-center py-10 px-4 text-center bg-card rounded-xl border border-dashed border-border mt-2">
-                                <div className="text-emerald-600 flex items-center justify-center mb-3">
-                                  <CheckCircle2 className="h-8 w-8" />
-                                </div>
-                                <h3 className="font-semibold text-foreground text-sm">No completed routes</h3>
-                                <p className="text-xs text-muted-foreground mt-1 max-w-[220px]">
+                              <div className="flex flex-1 flex-col items-center justify-center min-h-[50vh] px-6 py-16 text-center">
+                                <CheckCircle2 className="h-12 w-12 text-muted-foreground/40" strokeWidth={1.5} />
+                                <h3 className="mt-4 text-[17px] font-semibold tracking-tight text-foreground">No completed routes</h3>
+                                <p className="mt-1 max-w-[240px] text-[13px] leading-normal text-muted-foreground">
                                   Routes you finish today will appear here.
                                 </p>
                               </div>
                             );
                           }
                           return history.map((s) => (
-                            <div key={s.id} className="rounded-2xl border border-border bg-card p-4 flex items-center justify-between">
-                              <div>
-                                <h3 className="text-sm font-extrabold text-foreground tracking-tight">{scheduleLabel(s)}</h3>
-                                <p className="text-xs text-muted-foreground">{s.time || "No time specified"}</p>
+                            <div key={s.id} className="rounded-2xl border border-border/60 bg-card p-4 flex items-center justify-between gap-3">
+                              <div className="min-w-0 flex-1">
+                                <h3 className="text-[16px] font-semibold tracking-tight text-foreground truncate">{scheduleLabel(s)}</h3>
+                                <p className="mt-0.5 text-[13px] text-muted-foreground">{s.time || "No time specified"}</p>
                               </div>
                               <button
                                 type="button"
@@ -1477,7 +1369,7 @@ export default function DriverPage() {
                                   removeSchedule(s.id);
                                   toast("Route archived from history.");
                                 }}
-                                className="rounded-lg bg-rose-50 text-rose-600 px-3 py-1.5 text-xs font-bold transition-all hover:bg-rose-100 active:scale-95 border border-rose-200 cursor-pointer"
+                                className="shrink-0 rounded-full bg-rose-600/10 px-3.5 py-1.5 text-[13px] font-semibold text-rose-600 transition-all active:scale-95 cursor-pointer"
                               >
                                 Archive
                               </button>
@@ -1486,47 +1378,46 @@ export default function DriverPage() {
                         })()}
                       </div>
                     )}
+                </div>
+              </div>
+            </motion.div>
+          )}
 
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
-        </div>
-      </div>
-
-      {/* Driver Profile & Settings Slide-Up Bottom Sheet */}
-      <BottomSheet
-        open={showProfile}
-        onClose={() => setShowProfile(false)}
-        title="Driver Terminal & Settings"
-      >
-        <div className="h-[362px] overflow-y-auto space-y-4 pt-2 scrollbar-hide">
-          {/* Driver Profile Summary Card */}
-          <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4">
-            <div className="flex h-13 w-13 items-center justify-center rounded-full bg-emerald-600 text-2xl font-semibold leading-none text-white shadow-sm shrink-0">
-              {driverSession?.name?.charAt(0)?.toUpperCase() || "D"}
-            </div>
-            <div className="min-w-0 flex-1">
-              <h3 className="text-base font-bold text-foreground truncate">{driverSession?.name || "Driver"}</h3>
-              <p className="text-xs font-semibold text-foreground mt-0.5">Compactor Operator ({selectedTruckId})</p>
-              <p className="text-[11px] text-muted-foreground">Plate: {currentTruck.plate} &bull; Brgy. Tejero, Cebu City</p>
-            </div>
-          </div>
-
-          {/* Terminal Diagnostic Details */}
-          <div className="rounded-xl border border-border bg-card p-3.5 space-y-2">
-            <InfoRow label="Compactor Unit" value={selectedTruckId} />
-            <InfoRow label="Network Status" value={isOnline ? <span className="text-emerald-600 font-bold">Online</span> : <span className="text-rose-600 font-bold">Offline</span>} />
-            <InfoRow label="Device Battery" value={`${batteryLevel ?? 100}% ${isCharging ? "(Charging)" : ""}`} />
-            <InfoRow label="GPS Telemetry Status" value={<span className="text-emerald-600 font-bold">{broadcastStatus}</span>} />
-          </div>
-
-          {/* Change Password */}
-          <div className="rounded-xl border border-border bg-card p-3.5 space-y-2.5">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Change Password
-            </h4>
+          {activeTab === "profile" && (
+            <motion.div
+              key="fs-profile"
+              initial={{ opacity: 0, scale: 0.98, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.98, y: 8 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+              className="fixed inset-0 z-[90] flex flex-col bg-background"
+            >
+              <div className="shrink-0 border-b border-border/60 bg-background/80 backdrop-blur-md pt-[env(safe-area-inset-top)]">
+                <div className="relative flex h-[52px] items-center justify-center px-2">
+                  <button
+                    type="button"
+                    onClick={() => { profileView === "password" ? setProfileView("main") : switchTab("map"); }}
+                    className="absolute left-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-all hover:bg-muted active:scale-95 active:bg-muted cursor-pointer"
+                    aria-label={profileView === "password" ? "Back to profile" : "Back to map"}
+                  >
+                    <ChevronLeft className="h-6 w-6" strokeWidth={2} />
+                  </button>
+                  <h1 className="text-[17px] font-semibold tracking-tight text-foreground">{profileView === "password" ? "Change Password" : "Profile"}</h1>
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto bg-muted/40 pb-10">
+              <AnimatePresence mode="wait" initial={false}>
+              {profileView === "password" ? (
+              <motion.div
+                key="profile-password"
+                initial={{ x: 48, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: 48, opacity: 0 }}
+                transition={{ duration: 0.18, ease: "easeOut" }}
+                className="flex flex-1 flex-col"
+              >
+          <div className="mt-5 px-4">
+            <div className="rounded-2xl border border-border/60 bg-card p-4 space-y-2.5">
 
             {[
               {
@@ -1562,10 +1453,10 @@ export default function DriverPage() {
                     onChange={(e) => handlePwFieldChange(f.field, e.target.value.replace(/\s/g, ""), f.setter)}
                     maxLength={64}
                     autoComplete={f.field === "current" ? "current-password" : "new-password"}
-                    className={`w-full rounded-lg border bg-card px-3 py-2 pr-9 text-xs font-medium text-foreground placeholder:text-muted-foreground/50 outline-none transition-colors ${
+                    className={`w-full rounded-2xl border bg-card px-3.5 py-3.5 pr-11 text-[16px] text-foreground placeholder:text-muted-foreground/50 outline-none transition-colors ${
                       pwErrors[f.field]
                         ? "border-rose-300 focus:border-rose-400"
-                        : "border-border hover:border-zinc-300 focus:border-zinc-400"
+                        : "border-border/60 focus:border-zinc-400"
                     }`}
                     placeholder={f.placeholder}
                   />
@@ -1600,130 +1491,146 @@ export default function DriverPage() {
               size="md"
               disabled={pwSaving}
               onClick={handleChangePassword}
-              className="h-11 w-full rounded-xl text-sm font-bold shadow-lg shadow-emerald-600/20"
+              className="h-12 w-full rounded-2xl text-[15px] font-semibold"
             >
               {pwSaving ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Changing...</span>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <span>Updating...</span>
                 </>
               ) : (
-                "Change Password"
+                "Update Password"
               )}
             </Button>
+            </div>
+          </div>
+              </motion.div>
+              ) : (
+              <motion.div
+                key="profile-main"
+                initial={{ x: -32, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: -32, opacity: 0 }}
+                transition={{ duration: 0.18, ease: "easeOut" }}
+                className="flex flex-1 flex-col"
+              >
+          {/* Centered driver header */}
+          <div className="flex flex-col items-center px-4 pb-2 pt-6 text-center">
+            <div className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-emerald-600 text-[28px] font-semibold leading-none text-white shadow-sm">
+              {driverSession?.name?.charAt(0)?.toUpperCase() || "D"}
+            </div>
+            <h2 className="mt-3 text-[20px] font-semibold tracking-tight text-foreground">{driverSession?.name || "Driver"}</h2>
+            <p className="mt-0.5 text-[13px] text-muted-foreground">Compactor Operator ({selectedTruckId}) · Brgy. Tejero, Cebu City</p>
+            <span className="mt-2 inline-flex items-center rounded-full bg-emerald-600/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
+              {isOnline ? "Online" : "Offline"}
+            </span>
+          </div>
+
+          {/* Terminal group */}
+          <div className="mt-5 px-4">
+            <p className="px-1 pb-1.5 text-[13px] text-muted-foreground">Terminal</p>
+            <div className="divide-y divide-border/60 overflow-hidden rounded-2xl border border-border/60 bg-card">
+              <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
+                <span className="shrink-0 text-[15px] text-foreground">Compactor Unit</span>
+                <span className="truncate text-right text-[15px] text-muted-foreground">{selectedTruckId}</span>
+              </div>
+              <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
+                <span className="shrink-0 text-[15px] text-foreground">Plate</span>
+                <span className="truncate text-right text-[15px] text-muted-foreground">{currentTruck.plate}</span>
+              </div>
+              <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
+                <span className="shrink-0 text-[15px] text-foreground">Device Battery</span>
+                <span className="text-right text-[15px] text-muted-foreground">{`${batteryLevel ?? 100}% ${isCharging ? "(Charging)" : ""}`}</span>
+              </div>
+              <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
+                <span className="shrink-0 text-[15px] text-foreground">GPS Telemetry</span>
+                <span className="text-right text-[15px] font-medium text-emerald-600">{broadcastStatus}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Security group */}
+          <div className="mt-5 px-4">
+            <p className="px-1 pb-1.5 text-[13px] text-muted-foreground">Security</p>
+            <button
+              type="button"
+              onClick={() => { setProfileView("password"); haptic(); }}
+              className="flex min-h-[48px] w-full cursor-pointer items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card px-4 py-2.5 transition-all active:bg-muted"
+            >
+              <span className="text-[15px] text-foreground">Change Password</span>
+              <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground/50" />
+            </button>
           </div>
 
           {/* Actions */}
-          <div className="space-y-2 pt-2">
+          <div className="mt-5 px-4">
             <button
               type="button"
               onClick={() => {
-                setShowProfile(false);
                 setShowSignOutModal(true);
                 haptic();
               }}
-              className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-border bg-card px-6 text-sm font-bold text-zinc-700 transition-all hover:border-rose-300 hover:text-rose-600 active:scale-[0.98]"
+              className="flex h-12 w-full cursor-pointer items-center justify-center rounded-2xl border border-border/60 bg-card text-[15px] font-semibold text-rose-600 transition-all active:scale-[0.99]"
             >
-              <LogOut className="h-4 w-4 text-muted-foreground" strokeWidth={1.75} />
-              <span>Sign Out</span>
+              Sign Out
             </button>
           </div>
-        </div>
-      </BottomSheet>
+              </motion.div>
+              )}
+              </AnimatePresence>
+      </div>
+    </motion.div>
+  )}
+      </AnimatePresence>
+    </div>
 
-      {/* Driver Trip Log Sheet */}
-      <BottomSheet
-        open={showTripLog}
-        onClose={() => setShowTripLog(false)}
-        title="Trip Log"
-        description="History of your completed routes."
-        height="85vh"
-        snapPoints={["85vh", "50vh"]}
-      >
-        <div className="flex flex-col gap-4 py-4 px-4 h-full overflow-y-auto">
-          {getSchedules()
-            .filter((s) => s.truckId === selectedTruckId && live.scheduleStatus[s.id] === "Completed")
-            .sort((a, b) => b.id.localeCompare(a.id))
-            .map((route) => (
-              <div key={route.id} className="flex flex-col gap-2 rounded-xl border border-border bg-card p-4 shadow-xs">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-foreground">
-                    {mockPilotData.zones.find((z) => z.id === route.zoneId)?.name || `Zone ${route.zoneId}`}
-                  </span>
-                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">
-                    Completed
-                  </span>
-                </div>
-                <p className="text-xs text-muted-foreground line-clamp-2">
-                  {route.routePoints.length} Sitios covered
-                </p>
-                <div className="mt-1 flex items-center justify-between border-t border-border pt-2 text-[11px] font-medium text-muted-foreground">
-                  <span>{route.collectionType} Waste</span>
-                  <span>{route.collectionDays}</span>
-                </div>
-              </div>
-            ))}
-            
-          {getSchedules().filter((s) => s.truckId === selectedTruckId && live.scheduleStatus[s.id] === "Completed").length === 0 && (
-            <div className="flex flex-col items-center justify-center py-10 px-4 text-center bg-card rounded-xl border border-dashed border-border mt-2">
-              <div className="text-emerald-600 flex items-center justify-center mb-3">
-                <CheckCircle2 className="h-8 w-8" />
-              </div>
-              <h3 className="font-semibold text-foreground text-sm">No Completed Trips</h3>
-              <p className="text-xs text-muted-foreground mt-1 max-w-[220px]">
-                Routes you complete will appear here as proof of your work.
-              </p>
-            </div>
-          )}
-        </div>
-      </BottomSheet>
-
-      {/* Admin Dashboard Style Sign Out Confirmation Modal */}
+      {/* Native iOS-style Sign Out Confirmation Alert */}
       {showSignOutModal && (
         <div
-          className="fixed inset-0 z-[1000] flex items-center justify-center bg-zinc-950/40 p-4 backdrop-blur-sm"
-          onClick={() => setShowSignOutModal(false)}
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 p-4"
+          onClick={() => { if (!isSigningOut) setShowSignOutModal(false); }}
         >
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
+            initial={{ opacity: 0, scale: 1.1 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.15 }}
-            className="flex w-full max-w-xs flex-col gap-4 rounded-xl border border-border bg-card p-5 shadow-sm"
+            exit={{ opacity: 0, scale: 1.1 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+            className="w-full max-w-[270px] overflow-hidden rounded-[14px] bg-white text-center shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div>
-              <h3 className="text-sm font-semibold text-foreground">Sign Out</h3>
-              <p className="mt-1 text-xs font-medium text-muted-foreground">
+            <div className="px-4 pb-4 pt-5">
+              <h3 className="text-[17px] font-semibold tracking-tight text-zinc-900">Sign Out?</h3>
+              <p className="mt-1 text-[13px] leading-normal text-zinc-600">
                 You will need to log back in to access the driver terminal.
               </p>
             </div>
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
+            <div className="flex divide-x divide-black/10 border-t border-black/10">
+              <button
+                type="button"
                 onClick={() => setShowSignOutModal(false)}
-                className="rounded-xl font-bold"
+                disabled={isSigningOut}
+                className="h-11 flex-1 text-[17px] text-zinc-800 transition-colors active:bg-black/5 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
               >
                 Cancel
-              </Button>
+              </button>
               <button
                 type="button"
                 onClick={async () => {
                   setIsSigningOut(true);
-                  clearDriverSession();
-                  await supabase.auth.signOut();
-                  setShowSignOutModal(false);
-                  router.replace("/driver-login");
+                  try {
+                    clearDriverSession();
+                    await supabase.auth.signOut();
+                    setShowSignOutModal(false);
+                    router.replace("/driver-login");
+                  } finally {
+                    setIsSigningOut(false);
+                  }
                 }}
                 disabled={isSigningOut}
-                className="inline-flex select-none items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-bold text-rose-600 shadow-xs transition-all duration-150 hover:border-rose-600 hover:bg-rose-600 hover:text-white active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+                className="flex h-11 flex-1 items-center justify-center text-[17px] font-semibold text-rose-600 transition-colors active:bg-black/5 cursor-pointer disabled:pointer-events-none"
               >
                 {isSigningOut ? (
-                  <>
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    Signing out...
-                  </>
+                  <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
                   "Sign Out"
                 )}

@@ -42,7 +42,6 @@ import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MapSkeleton } from "@/components/ui/skeletons";
 import { InfoRow } from "@/components/ui/info-row";
-import BottomSheet from "@/components/pwa/BottomSheet";
 import { useToast } from "@/components/pwa/Toast";
 import OnboardingModal from "@/components/pwa/OnboardingModal";
 import ProductTour from "@/components/pwa/ProductTour";
@@ -698,7 +697,6 @@ export default function ResidentMobilePWA() {
   const [mapZoom, setMapZoom] = useState(16);
 
   // Form State for Report
-  const [showMyReports, setShowMyReports] = useState(false);
   const [editingTicketId, setEditingTicketId] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
   const [category, setCategory] = useState("Overflowing Bin");
@@ -1132,6 +1130,7 @@ export default function ResidentMobilePWA() {
             {/* 2. Schedule */}
             <button
               type="button"
+              data-tour="nav-tab-schedule"
               onClick={() => { setActiveTab("schedule"); haptic(); }}
               className={`flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer ${activeTab === "schedule" ? "text-emerald-600" : "text-zinc-400"}`}
             >
@@ -1142,6 +1141,7 @@ export default function ResidentMobilePWA() {
             {/* 3. Report (elevated center action) */}
             <button
               type="button"
+              data-tour="nav-tab-report"
               onClick={() => { setActiveTab("report"); setTimeout(() => fileInputRef.current?.click(), 150); haptic(); }}
               className="relative flex flex-col items-center justify-end pb-3 cursor-pointer"
             >
@@ -1154,6 +1154,7 @@ export default function ResidentMobilePWA() {
             {/* 4. Tickets */}
             <button
               type="button"
+              data-tour="nav-tab-tickets"
               onClick={() => { setActiveTab("tickets"); haptic(); }}
               className={`flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer ${activeTab === "tickets" ? "text-emerald-600" : "text-zinc-400"}`}
             >
@@ -1193,7 +1194,7 @@ export default function ResidentMobilePWA() {
                   <button
                     type="button"
                     onClick={() => { setActiveTab("map"); haptic(); }}
-                    className="absolute left-1 flex h-10 w-10 items-center justify-center rounded-full text-foreground transition-all hover:bg-muted active:scale-95 active:bg-muted cursor-pointer"
+                    className="absolute left-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-all hover:bg-muted active:scale-95 active:bg-muted cursor-pointer"
                     aria-label="Back to map"
                   >
                     <ChevronLeft className="h-6 w-6" strokeWidth={2} />
@@ -1286,7 +1287,7 @@ export default function ResidentMobilePWA() {
           <button
             type="button"
             onClick={() => { setActiveTab("map"); haptic(); }}
-            className="absolute left-1 flex h-10 w-10 items-center justify-center rounded-full text-foreground transition-all hover:bg-muted active:scale-95 active:bg-muted cursor-pointer"
+            className="absolute left-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-all hover:bg-muted active:scale-95 active:bg-muted cursor-pointer"
             aria-label="Back to map"
           >
             <ChevronLeft className="h-6 w-6" strokeWidth={2} />
@@ -1294,20 +1295,16 @@ export default function ResidentMobilePWA() {
           <h1 className="text-[17px] font-semibold tracking-tight text-foreground">New Report</h1>
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-20">
+      <div className="flex-1 overflow-y-auto p-4 pb-10">
         {submittedTicket ? (
-        <div className="rounded-2xl border border-border bg-card p-5 text-center space-y-3">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center text-emerald-600">
-            <CheckCircle2 className="h-9 w-9" strokeWidth={1.75} />
-          </div>
-          <div>
-            <h2 className="text-base font-bold tracking-tight text-foreground">
-              Report Dispatched
-            </h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Ticket <span className="font-sans font-bold text-emerald-700">{submittedTicket.id}</span> submitted successfully & dispatched.
-            </p>
-          </div>
+        <div className="flex min-h-[50vh] flex-col items-center justify-center px-6 py-12 text-center">
+          <CheckCircle2 className="h-12 w-12 text-emerald-600" strokeWidth={1.5} />
+          <h2 className="mt-4 text-[17px] font-semibold tracking-tight text-foreground">
+            Report Dispatched
+          </h2>
+          <p className="mt-1 max-w-[260px] text-[13px] leading-normal text-muted-foreground">
+            Ticket <span className="font-semibold text-emerald-700">{submittedTicket.id}</span> submitted successfully & dispatched.
+          </p>
 
           <button
             type="button"
@@ -1316,7 +1313,7 @@ export default function ResidentMobilePWA() {
               setPhotoPreview(null);
               setLocationName("");
             }}
-            className="flex h-11 w-full items-center justify-center rounded-xl border border-border bg-card px-6 text-sm font-bold text-foreground transition-all hover:bg-muted active:scale-[0.98] cursor-pointer"
+            className="mt-6 flex h-12 w-full items-center justify-center rounded-2xl bg-emerald-600 px-6 text-[15px] font-semibold text-white transition-all hover:bg-emerald-700 active:scale-[0.99] cursor-pointer"
           >
             Submit Another Report
           </button>
@@ -1327,7 +1324,7 @@ export default function ResidentMobilePWA() {
           className={cn(
             "transition-all",
             photoPreview
-              ? "space-y-4 rounded-2xl border border-border bg-card p-4 shadow-xs"
+              ? "space-y-4 rounded-2xl border border-border/60 bg-card p-4"
               : "flex flex-1 flex-col"
           )}
         >
@@ -1345,20 +1342,19 @@ export default function ResidentMobilePWA() {
             />
 
             {photoPreview ? (
-              <div className="space-y-4">
-                <div className="mb-1.5">
-                  <label className="block text-xs font-bold text-foreground">
-                    Captured Photo
-                  </label>
-                </div>
-                <div className="relative overflow-hidden rounded-xl border border-border bg-muted">
-                  <img src={photoPreview} alt="Captured waste" className="h-44 w-full object-cover" />
+              <div className="space-y-2.5">
+                <p className="text-[13px] text-muted-foreground">
+                  Captured Photo
+                </p>
+                <div className="relative overflow-hidden rounded-2xl border border-border/60 bg-muted">
+                  <img src={photoPreview} alt="Captured waste" className="h-52 w-full object-cover" />
                   <button
                     type="button"
                     onClick={() => setPhotoPreview(null)}
-                    className="absolute top-2 right-2 rounded-full bg-black/70 p-1.5 text-white cursor-pointer hover:bg-black/90 transition-colors"
+                    aria-label="Remove photo"
+                    className="absolute top-2.5 right-2.5 flex h-10 w-10 items-center justify-center rounded-full bg-black/60 text-white cursor-pointer active:scale-95 transition-transform"
                   >
-                    <Trash2 className="h-4 w-4" strokeWidth={1.75} />
+                    <Trash2 className="h-5 w-5" strokeWidth={2} />
                   </button>
                 </div>
               </div>
@@ -1389,13 +1385,13 @@ export default function ResidentMobilePWA() {
             >
               {/* Issue Category Select */}
               <div>
-                <label className="mb-1.5 block text-xs font-bold text-foreground">
+                <label className="mb-1.5 block text-[13px] text-muted-foreground">
                   Issue Category
                 </label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-xs font-semibold text-foreground focus:border-zinc-400 focus:outline-none transition-colors"
+                  className="h-[50px] w-full rounded-2xl border border-border/60 bg-card px-3.5 text-[16px] text-foreground focus:border-zinc-400 focus:outline-none transition-colors"
                 >
                   <option value="Overflowing Bin">Overflowing Bin</option>
                   <option value="Illegal Dumping">Illegal Dumping</option>
@@ -1407,7 +1403,7 @@ export default function ResidentMobilePWA() {
 
               {/* Priority Level Buttons */}
               <div>
-                <label className="mb-1.5 block text-xs font-bold text-foreground">
+                <label className="mb-1.5 block text-[13px] text-muted-foreground">
                   Priority Level
                 </label>
                 <div className="grid grid-cols-4 gap-1.5">
@@ -1420,10 +1416,10 @@ export default function ResidentMobilePWA() {
                         haptic();
                       }}
                       className={cn(
-                        "rounded-xl py-2 text-xs font-bold transition-colors cursor-pointer",
+                        "h-12 rounded-2xl text-[15px] font-semibold transition-colors cursor-pointer",
                         urgency === lvl
-                          ? "bg-emerald-600 text-white shadow-xs"
-                          : "border border-border bg-card text-muted-foreground hover:bg-muted"
+                          ? "bg-emerald-600 text-white"
+                          : "border border-border/60 bg-card text-muted-foreground active:bg-muted"
                       )}
                     >
                       {lvl}
@@ -1435,16 +1431,16 @@ export default function ResidentMobilePWA() {
               {/* Location Input & GPS */}
               <div>
                 <div className="mb-1.5 flex items-center justify-between">
-                  <label className="block text-xs font-bold text-foreground">
+                  <label className="block text-[13px] text-muted-foreground">
                     Location / Sitio
                   </label>
                   <button
                     type="button"
                     onClick={handleGetLocation}
                     disabled={isLocating}
-                    className="flex items-center gap-1 text-xs font-bold text-emerald-600 hover:text-emerald-700 cursor-pointer disabled:opacity-60"
+                    className="flex items-center gap-1 text-[13px] font-semibold text-emerald-600 active:text-emerald-700 cursor-pointer disabled:opacity-60"
                   >
-                    <MapPin className="h-3.5 w-3.5" strokeWidth={2} />
+                    <MapPin className="h-4 w-4" strokeWidth={2} />
                     {isLocating ? "Locating..." : "Use My GPS"}
                   </button>
                 </div>
@@ -1460,10 +1456,10 @@ export default function ResidentMobilePWA() {
                     const formatted = locationName.split(/(\s+)/).map(p => p.trim().length > 0 ? p.charAt(0).toUpperCase() + p.slice(1) : p).join("");
                     setLocationName(formatted);
                   }}
-                  className="w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-xs font-semibold text-foreground focus:border-zinc-400 focus:outline-none transition-colors"
+                  className="h-[50px] w-full rounded-2xl border border-border/60 bg-card px-3.5 text-[16px] text-foreground focus:border-zinc-400 focus:outline-none transition-colors"
                   required
                 />
-                <p className="mt-1 text-[10px] font-semibold text-muted-foreground">
+                <p className="mt-1 text-[12px] text-muted-foreground">
                   {gpsCoords
                     ? gpsAddress
                       ? `GPS ≈ ${gpsAddress} — still add a landmark.`
@@ -1475,32 +1471,32 @@ export default function ResidentMobilePWA() {
               {/* Minimalist Confirm Button */}
               <div className="flex gap-3">
                 {editingTicketId && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingTicketId(null);
-                      setLocationName("");
-                      setDescription("");
-                      setPhotoPreview(null);
-                      switchTab("tickets");
-                    }}
-                    disabled={isSubmitting}
-                    className="flex h-11 w-1/3 items-center justify-center rounded-xl bg-muted px-4 text-sm font-bold text-foreground hover:bg-muted/80 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-60"
-                  >
-                    Cancel
-                  </button>
-                )}
                 <button
                   type="button"
-                  onClick={handleSubmitReport}
+                  onClick={() => {
+                    setEditingTicketId(null);
+                    setLocationName("");
+                    setDescription("");
+                    setPhotoPreview(null);
+                    switchTab("tickets");
+                  }}
                   disabled={isSubmitting}
-                  className={cn(
-                    "flex h-11 items-center justify-center rounded-xl bg-emerald-600 px-6 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-60",
-                    editingTicketId ? "w-2/3" : "w-full"
-                  )}
+                  className="flex h-12 w-1/3 items-center justify-center rounded-2xl bg-muted px-4 text-[15px] font-semibold text-foreground active:bg-muted/80 active:scale-[0.99] transition-all cursor-pointer disabled:opacity-60"
                 >
-                  {isSubmitting ? (
-                    <RefreshCw className="h-4 w-4 animate-spin" strokeWidth={2} />
+                  Cancel
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={handleSubmitReport}
+                disabled={isSubmitting}
+                className={cn(
+                  "flex h-12 items-center justify-center rounded-2xl bg-emerald-600 px-6 text-[15px] font-semibold text-white transition-all hover:bg-emerald-700 active:scale-[0.99] cursor-pointer disabled:opacity-60",
+                  editingTicketId ? "w-2/3" : "w-full"
+                )}
+              >
+                {isSubmitting ? (
+                  <RefreshCw className="h-5 w-5 animate-spin" strokeWidth={2} />
                   ) : editingTicketId ? (
                     "Update Report"
                   ) : (
@@ -1531,7 +1527,7 @@ export default function ResidentMobilePWA() {
           <button
             type="button"
             onClick={() => { setActiveTab("map"); haptic(); }}
-            className="absolute left-1 flex h-10 w-10 items-center justify-center rounded-full text-foreground transition-all hover:bg-muted active:scale-95 active:bg-muted cursor-pointer"
+            className="absolute left-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-all hover:bg-muted active:scale-95 active:bg-muted cursor-pointer"
             aria-label="Back to map"
           >
             <ChevronLeft className="h-6 w-6" strokeWidth={2} />
@@ -1597,7 +1593,7 @@ export default function ResidentMobilePWA() {
           <button
             type="button"
             onClick={() => { setActiveTab("map"); haptic(); }}
-            className="absolute left-1 flex h-10 w-10 items-center justify-center rounded-full text-foreground transition-all hover:bg-muted active:scale-95 active:bg-muted cursor-pointer"
+            className="absolute left-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-all hover:bg-muted active:scale-95 active:bg-muted cursor-pointer"
             aria-label="Back to map"
           >
             <ChevronLeft className="h-6 w-6" strokeWidth={2} />
@@ -1667,133 +1663,108 @@ export default function ResidentMobilePWA() {
     </div>
 
 
-  {/* Ticket Detail Bottom Sheet */ }
-  < BottomSheet
-open = {!!selectedTicket}
-onClose = {() => {
-  setSelectedTicket(null);
-  setMapFocusTicket(null);
-}}
-title = "Report Details"
-  >
+  {/* Ticket Detail Full Screen View */}
+  <AnimatePresence mode="wait" initial={false}>
   { selectedTicket && (
-    <div className="h-[423px] overflow-y-auto space-y-4 scrollbar-hide select-text">
-      {selectedTicket.photo ? (
-        <img
-          src={selectedTicket.photo}
-          alt={`Waste report ${selectedTicket.id}`}
-          className="h-44 w-full rounded-lg border border-border object-cover"
-        />
-      ) : (
-        <div className="flex h-24 w-full items-center justify-center rounded-lg bg-muted">
-          <Camera className="h-5 w-5 text-muted-foreground/60" strokeWidth={1.75} />
+    <motion.div
+      key="fs-ticket-detail"
+      initial={{ opacity: 0, scale: 0.98, y: 8 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.98, y: 8 }}
+      transition={{ duration: 0.18, ease: "easeOut" }}
+      className="fixed inset-0 z-[95] flex flex-col bg-background"
+    >
+      <div className="shrink-0 border-b border-border/60 bg-background/80 backdrop-blur-md pt-[env(safe-area-inset-top)]">
+        <div className="relative flex h-[52px] items-center justify-center px-2">
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedTicket(null);
+              setMapFocusTicket(null);
+              haptic();
+            }}
+            className="absolute left-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-all hover:bg-muted active:scale-95 active:bg-muted cursor-pointer"
+            aria-label="Back"
+          >
+            <ChevronLeft className="h-6 w-6" strokeWidth={2} />
+          </button>
+          <h1 className="text-[17px] font-semibold tracking-tight text-foreground">Details</h1>
         </div>
-      )}
-
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-sm font-semibold text-emerald-700 tracking-tight font-sans">
-          {selectedTicket.id}
-        </span>
-        <div className="flex items-center gap-1.5">
-          <UrgencyBadge urgency={selectedTicket.urgency} />
-          <StatusBadge status={selectedTicket.status} />
-        </div>
       </div>
-
-      <div>
-        <h3 className="text-sm font-semibold text-foreground">{selectedTicket.location}</h3>
-        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-          {selectedTicket.description}
-        </p>
-      </div>
-
-      <div className="rounded-lg border border-border bg-muted/40 p-3.5">
-        <InfoRow label="Category" value={selectedTicket.category} />
-        <InfoRow
-          label="Barangay"
-          value={`${selectedTicket.barangay}, ${selectedTicket.city}`}
-        />
-        <InfoRow
-          label="Date"
-          value={<span className="font-medium text-foreground tracking-tight font-sans">{selectedTicket.date}</span>}
-        />
-        <InfoRow
-          label="Time"
-          value={<span className="font-medium text-foreground tracking-tight font-sans">{selectedTicket.time}</span>}
-        />
-        <InfoRow
-          label="Address"
-          value={<span className="text-xs">{ticketAddress || "—"}</span>}
-        />
-      </div>
-
-      <button
-        type="button"
-        onClick={() => {
-          setMapFocusTicket(selectedTicket);
-          setSelectedTicket(null);
-          setMapZoom(17);
-          switchTab("map");
-        }}
-        className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition-all hover:bg-emerald-700 active:scale-[0.98] cursor-pointer"
-      >
-        View on Map
-      </button>
-    </div>
-  )}
-      </BottomSheet >
-
-
-
-  {/* Resident My Reports Sheet */ }
-  < BottomSheet
-open = { showMyReports }
-onClose = {() => setShowMyReports(false)}
-title = "My Reports"
-description = "History of all waste reports you have submitted."
-height = "85vh"
-snapPoints = { ["85vh", "50vh"]}
-  >
-  <div className="flex flex-col gap-4 py-4 px-4 h-full overflow-y-auto">
-    {tickets
-      .filter((t) => t.reporter === residentSession?.name)
-      .sort((a, b) => b.id.localeCompare(a.id))
-      .map((ticket) => (
-        <div key={ticket.id} className="flex flex-col gap-2 rounded-xl border border-border bg-card p-4 shadow-xs relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-foreground line-clamp-1 max-w-[65%]">
-              {ticket.location}
-            </span>
-            <StatusBadge status={ticket.status} />
-          </div>
-
-          {ticket.description && (
-            <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
-              {ticket.description}
-            </p>
+      <div className="flex-1 overflow-y-auto bg-muted/40 pb-10 select-text">
+        <div className="p-4 space-y-2.5">
+          {selectedTicket.photo ? (
+            <img
+              src={selectedTicket.photo}
+              alt={`Waste report ${selectedTicket.id}`}
+              className="h-52 w-full rounded-2xl border border-border/60 object-cover"
+            />
+          ) : (
+            <div className="flex h-28 w-full items-center justify-center rounded-2xl border border-border/60 bg-card">
+              <Camera className="h-8 w-8 text-muted-foreground/40" strokeWidth={1.5} />
+            </div>
           )}
 
-          <div className="mt-2 flex items-center justify-between border-t border-border pt-2 text-[11px] font-medium text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <Calendar className="h-3 w-3" />
-              {new Date(ticket.createdAt).toLocaleDateString()}
-            </span>
-            <span className="flex items-center gap-1 capitalize">
-              {ticket.urgency} Priority
-            </span>
+          <div className="rounded-2xl border border-border/60 bg-card p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <h2 className="text-[16px] font-semibold tracking-tight text-foreground">{selectedTicket.location}</h2>
+                <p className="mt-0.5 text-[13px] text-muted-foreground">{selectedTicket.id}</p>
+              </div>
+              <div className="flex shrink-0 items-center gap-1.5">
+                <UrgencyBadge urgency={selectedTicket.urgency} />
+                <StatusBadge status={selectedTicket.status} />
+              </div>
+            </div>
+            {selectedTicket.description ? (
+              <p className="mt-2 text-[13px] leading-normal text-muted-foreground">
+                {selectedTicket.description}
+              </p>
+            ) : null}
           </div>
-        </div>
-      ))}
 
-    {tickets.filter((t) => t.reporter === residentSession?.name).length === 0 && (
-      <div className="flex flex-1 flex-col items-center justify-center min-h-[40vh] px-4 py-16 text-center">
-        <Ticket className="h-12 w-12 text-muted-foreground/30 mb-3" strokeWidth={1.5} />
-        <h3 className="text-sm font-semibold text-foreground">No Reports Yet</h3>
-        <p className="mt-1 text-xs text-muted-foreground max-w-[220px]">When you submit a report, you can track its progress here.</p>
+          <div className="divide-y divide-border/60 overflow-hidden rounded-2xl border border-border/60 bg-card px-4 py-1">
+            <div className="flex min-h-[48px] items-center justify-between gap-3 py-2.5">
+              <span className="shrink-0 text-[15px] text-muted-foreground">Category</span>
+              <span className="truncate text-right text-[15px] text-foreground">{selectedTicket.category}</span>
+            </div>
+            <div className="flex min-h-[48px] items-center justify-between gap-3 py-2.5">
+              <span className="shrink-0 text-[15px] text-muted-foreground">Barangay</span>
+              <span className="truncate text-right text-[15px] text-foreground">{`${selectedTicket.barangay}, ${selectedTicket.city}`}</span>
+            </div>
+            <div className="flex min-h-[48px] items-center justify-between gap-3 py-2.5">
+              <span className="shrink-0 text-[15px] text-muted-foreground">Date</span>
+              <span className="text-right text-[15px] tabular-nums text-foreground">{selectedTicket.date}</span>
+            </div>
+            <div className="flex min-h-[48px] items-center justify-between gap-3 py-2.5">
+              <span className="shrink-0 text-[15px] text-muted-foreground">Time</span>
+              <span className="text-right text-[15px] tabular-nums text-foreground">{selectedTicket.time}</span>
+            </div>
+            <div className="flex min-h-[48px] items-center justify-between gap-3 py-2.5">
+              <span className="shrink-0 text-[15px] text-muted-foreground">Address</span>
+              <span className="text-right text-[15px] text-foreground">{ticketAddress || "—"}</span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setMapFocusTicket(selectedTicket);
+              setSelectedTicket(null);
+              setMapZoom(17);
+              switchTab("map");
+            }}
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-6 text-[15px] font-semibold text-white transition-all hover:bg-emerald-700 active:scale-[0.99] cursor-pointer"
+          >
+            View on Map
+          </button>
+        </div>
       </div>
-    )}
-  </div>
-      </BottomSheet >
+    </motion.div>
+  )}
+  </AnimatePresence>
+
+
 
   {/* Native iOS-style Sign Out Confirmation Alert */ }
 {

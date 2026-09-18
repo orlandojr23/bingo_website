@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
+import OtpInput from "@/components/ui/otp-input";
 import InstallAppButton from "@/components/pwa/InstallAppButton";
 
 const PUBLIC_DOMAINS = ["gmail.com", "yahoo.com", "outlook.com", "hotmail.com", "icloud.com"];
@@ -38,10 +39,10 @@ const nameFromEmail = (email) => {
 };
 
 const fieldClass = (hasError) =>
-  `w-full rounded-xl border bg-card pl-10 pr-4 py-3 text-sm font-medium text-foreground placeholder:text-muted-foreground/50 outline-none transition-colors ${
+  `w-full rounded-2xl border bg-card pl-10 pr-4 py-3.5 text-[16px] text-foreground placeholder:text-muted-foreground/50 outline-none transition-colors ${
     hasError
       ? "border-rose-300 focus:border-rose-400"
-      : "border-border hover:border-zinc-300 focus:border-zinc-400"
+      : "border-border/60 focus:border-zinc-400"
   }`;
 
 export default function ResidentLoginPage() {
@@ -208,31 +209,31 @@ export default function ResidentLoginPage() {
   return (
     <div className="relative flex min-h-screen flex-col bg-background">
       <InstallAppButton className="absolute right-4 top-4 z-20" />
-      <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-6 py-12">
-        <div className="mb-10 flex flex-col items-center text-center">
+      <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-6 py-8">
+        <div className="mb-8 flex flex-col items-center text-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/logo-green-v2.png"
             alt="Bin'Go Logo"
             fetchPriority="high"
             loading="eager"
-            className="h-32 w-32 object-contain"
+            className="h-20 w-20 object-contain"
           />
           {needsOtp ? (
             <>
-              <h1 className="mt-5 text-2xl font-black tracking-tight text-foreground">
+              <h1 className="mt-4 text-[22px] font-semibold tracking-tight text-foreground">
                 Verify your email
               </h1>
-              <p className="mt-1.5 text-sm font-medium text-muted-foreground">
+              <p className="mt-1.5 text-[14px] leading-normal text-muted-foreground">
                 Enter the 6-digit code sent to <span className="font-semibold text-foreground">{email}</span>
               </p>
             </>
           ) : (
             <>
-              <h1 className="mt-5 text-2xl sm:text-3xl font-black tracking-tight text-foreground">
+              <h1 className="mt-4 text-[22px] font-semibold tracking-tight text-foreground">
                 Log in to your account
               </h1>
-              <p className="mt-2 text-sm font-medium text-muted-foreground">
+              <p className="mt-1.5 text-[14px] leading-normal text-muted-foreground">
                 Enter your credentials to access Bin&apos;Go
               </p>
             </>
@@ -257,15 +258,7 @@ export default function ResidentLoginPage() {
             </AnimatePresence>
 
             <div className="flex flex-col gap-1.5">
-              <input
-                type="text"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                maxLength={6}
-                autoComplete="one-time-code"
-                className="w-full rounded-xl border border-border bg-card px-3 py-4 text-center text-3xl font-bold tracking-[0.2em] text-foreground outline-none transition-colors focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                placeholder="000000"
-              />
+              <OtpInput value={otp} onChange={setOtp} hasError={!!otpError} />
               <AnimatePresence initial={false}>
                 {otpError && (
                   <motion.p
@@ -286,11 +279,11 @@ export default function ResidentLoginPage() {
               size="lg"
               type="submit"
               disabled={isLoading || otp.length < 6}
-              className="mt-2 w-full py-3.5"
+              className="mt-1 h-[50px] w-full rounded-2xl text-[17px] font-semibold"
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-5 w-5 animate-spin" />
                   <span>Verifying...</span>
                 </>
               ) : (
@@ -329,7 +322,7 @@ export default function ResidentLoginPage() {
                 </div>
                 {emailSuggestionSuffix && (
                   <div
-                    className="pointer-events-none absolute inset-0 z-10 flex items-center overflow-hidden whitespace-pre pl-10 pr-4 text-sm font-medium"
+                    className="pointer-events-none absolute inset-0 z-10 flex items-center overflow-hidden whitespace-pre pl-10 pr-4 text-[16px]"
                     aria-hidden="true"
                   >
                     <span className="opacity-0">{email}</span>
@@ -406,7 +399,7 @@ export default function ResidentLoginPage() {
             <div className="flex justify-end">
               <Link
                 href="/forgot-password"
-                className="text-xs font-semibold text-emerald-600 transition-colors hover:text-emerald-700"
+                className="text-[14px] font-semibold text-emerald-600 transition-colors hover:text-emerald-700"
               >
                 Forgot Password?
               </Link>
@@ -417,11 +410,11 @@ export default function ResidentLoginPage() {
               size="lg"
               type="submit"
               disabled={isLoading}
-              className="mt-2 w-full py-3.5"
+              className="mt-1 h-[50px] w-full rounded-2xl text-[17px] font-semibold"
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-5 w-5 animate-spin" />
                   <span>Signing in...</span>
                 </>
               ) : (
@@ -431,7 +424,7 @@ export default function ResidentLoginPage() {
           </form>
         )}
 
-        <p className="mt-6 text-center text-xs font-medium text-muted-foreground">
+        <p className="mt-6 text-center text-[14px] text-muted-foreground">
           Don&apos;t have an account?{" "}
           <Link
             href="/signup"
@@ -441,7 +434,7 @@ export default function ResidentLoginPage() {
           </Link>
         </p>
 
-        <p className="mt-3 text-center text-xs font-medium text-muted-foreground">
+        <p className="mt-3 text-center text-[14px] text-muted-foreground">
           Are you a barangay driver?{" "}
           <Link
             href="/driver-login"

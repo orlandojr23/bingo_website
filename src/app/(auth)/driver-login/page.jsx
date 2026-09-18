@@ -37,10 +37,10 @@ const nameFromEmail = (email) => {
 };
 
 const fieldClass = (hasError) =>
-  `w-full rounded-xl border bg-card pl-10 pr-4 py-3 text-sm font-medium text-foreground placeholder:text-muted-foreground/50 outline-none transition-colors ${
+  `w-full rounded-2xl border bg-card pl-10 pr-4 py-3.5 text-[16px] text-foreground placeholder:text-muted-foreground/50 outline-none transition-colors ${
     hasError
       ? "border-rose-300 focus:border-rose-400"
-      : "border-border hover:border-zinc-300 focus:border-zinc-400"
+      : "border-border/60 focus:border-zinc-400"
   }`;
 
 export default function DriverLoginPage() {
@@ -139,20 +139,20 @@ export default function DriverLoginPage() {
   return (
     <div className="relative flex min-h-screen flex-col bg-background">
       <InstallAppButton className="absolute right-4 top-4 z-20" />
-      <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-6 py-12">
-        <div className="mb-10 flex flex-col items-center text-center">
+      <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-6 py-8">
+        <div className="mb-8 flex flex-col items-center text-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/logo-green-v2.png"
             alt="Bin'Go Logo"
             fetchPriority="high"
             loading="eager"
-            className="h-32 w-32 object-contain"
+            className="h-20 w-20 object-contain"
           />
-          <h1 className="mt-5 text-2xl sm:text-3xl font-black tracking-tight text-foreground">
-            Log in to your account
+          <h1 className="mt-4 text-[22px] font-semibold tracking-tight text-foreground">
+            Driver Sign In
           </h1>
-          <p className="mt-2 text-sm font-medium text-muted-foreground">
+          <p className="mt-1.5 text-[14px] leading-normal text-muted-foreground">
             Enter your credentials to access the Driver Terminal
           </p>
         </div>
@@ -165,7 +165,7 @@ export default function DriverLoginPage() {
               </div>
               {emailSuggestionSuffix && (
                 <div
-                  className="pointer-events-none absolute inset-0 z-10 flex items-center overflow-hidden whitespace-pre pl-10 pr-4 text-sm font-medium"
+                  className="pointer-events-none absolute inset-0 z-10 flex items-center overflow-hidden whitespace-pre pl-10 pr-4 text-[16px]"
                   aria-hidden="true"
                 >
                   <span className="opacity-0">{email}</span>
@@ -244,11 +244,11 @@ export default function DriverLoginPage() {
             size="lg"
             type="submit"
             disabled={isLoading}
-            className="mt-2 w-full py-3.5"
+            className="mt-1 h-[50px] w-full rounded-2xl text-[17px] font-semibold"
           >
             {isLoading ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-5 w-5 animate-spin" />
                 <span>Signing in...</span>
               </>
             ) : (
@@ -257,12 +257,12 @@ export default function DriverLoginPage() {
           </Button>
         </form>
 
-        <p className="mt-8 text-center text-xs text-muted-foreground/80">
+        <p className="mt-8 text-center text-[13px] leading-normal text-muted-foreground/80">
           Driver accounts are created by the barangay admin. You can change
           your password anytime in the Driver Terminal settings.
         </p>
 
-        <p className="mt-3 text-center text-xs font-medium text-muted-foreground">
+        <p className="mt-3 text-center text-[14px] text-muted-foreground">
           Are you a resident?{" "}
           <Link
             href="/login"
