@@ -60,8 +60,7 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="relative flex min-h-full w-full min-w-0 overflow-x-hidden bg-background bg-[url('/hero-bg.svg')] bg-[length:100%_auto] sm:bg-cover bg-top sm:bg-center bg-no-repeat">
-      <div className="absolute inset-0 bg-background/42 pointer-events-none" />
+    <div className="relative flex min-h-full w-full min-w-0 overflow-x-hidden bg-background">
       <div className="relative z-10 flex flex-1 min-w-0 flex-col gap-5 p-4 [scrollbar-gutter:stable] sm:gap-6 sm:p-6 lg:p-8 pb-6 sm:pb-8 lg:pb-10">
         <PageHeader
           title="Data & Insights"

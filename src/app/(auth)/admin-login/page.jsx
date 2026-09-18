@@ -6,8 +6,16 @@ import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
-import { inputClass, labelClass } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+
+// Native auth tokens (local override; the shared admin inputClass stays untouched)
+const fieldClass = (hasError) =>
+  `w-full rounded-2xl border bg-card px-3.5 py-3.5 text-[16px] text-foreground placeholder:text-muted-foreground/50 outline-none transition-colors ${
+    hasError
+      ? "border-rose-300 focus:border-rose-400"
+      : "border-border/60 focus:border-zinc-400"
+  }`;
+const fieldLabelClass = "text-[13px] text-muted-foreground";
 
 const ADMIN_DOMAINS = ["bingo.com", "gmail.com", "yahoo.com", "outlook.com"];
 
@@ -125,35 +133,34 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-12">
-      <div className="w-full max-w-sm">
-        <div className="mb-6 flex flex-col items-center text-center">
+    <div className="flex min-h-screen flex-col bg-background">
+      <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-6 py-8">
+        <div className="mb-8 flex flex-col items-center text-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/logo-green-v2.png"
             alt="Bin-Go Logo"
             fetchPriority="high"
             loading="eager"
-            className="h-32 w-32 object-contain"
+            className="h-28 w-28 object-contain"
           />
-          <h1 className="mt-5 text-2xl sm:text-3xl font-black tracking-tight text-foreground">
+          <h1 className="mt-4 text-[22px] font-semibold tracking-tight text-foreground">
             Log in to your account
           </h1>
-          <p className="mt-2 text-sm font-medium text-muted-foreground">
+          <p className="mt-1.5 text-[14px] leading-normal text-muted-foreground">
             Enter your credentials to access the Admin Portal
           </p>
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-6 shadow-xs">
-          <form className="space-y-4" onSubmit={handleLogin} noValidate>
+          <form className="flex flex-col gap-4" onSubmit={handleLogin} noValidate>
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="email" className={labelClass}>
+              <label htmlFor="email" className={fieldLabelClass}>
                 Email Address
               </label>
               <div className="relative">
                 {emailSuggestionSuffix && (
                   <div
-                    className="absolute inset-0 px-3 py-2 flex items-center pointer-events-none text-sm text-foreground whitespace-pre overflow-hidden z-10"
+                    className="absolute inset-0 px-3.5 flex items-center pointer-events-none text-[16px] text-foreground whitespace-pre overflow-hidden z-10"
                     aria-hidden="true"
                   >
                     <span className="opacity-0">{email}</span>
@@ -168,7 +175,7 @@ export default function AdminLoginPage() {
                   onKeyDown={handleEmailKeyDown}
                   autoCapitalize="none"
                   autoCorrect="off"
-                  className={cn(inputClass, errors.email && "border-rose-300")}
+                  className={cn(fieldClass(!!errors.email))}
                   placeholder="admin@bingo.com"
                 />
               </div>
@@ -189,7 +196,7 @@ export default function AdminLoginPage() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="password" className={labelClass}>
+              <label htmlFor="password" className={fieldLabelClass}>
                 Password
               </label>
               <div className="relative">
@@ -198,15 +205,15 @@ export default function AdminLoginPage() {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => handleFieldChange("password", e.target.value, setPassword)}
-                  className={cn(inputClass, "pr-9", errors.password && "border-rose-300")}
+                  className={cn(fieldClass(!!errors.password), "pr-11")}
                   placeholder="••••••••"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
                 >
-                  {showPassword ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                  {showPassword ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                 </button>
               </div>
               <AnimatePresence initial={false}>
@@ -239,16 +246,16 @@ export default function AdminLoginPage() {
               </AnimatePresence>
             </div>
 
-            <div className="border-t border-border-subtle pt-4">
+            <div className="pt-1">
               <Button
                 variant="primary"
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-2.5"
+                className="h-[50px] w-full rounded-2xl text-[17px] font-semibold"
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-5 w-5 animate-spin" />
                     <span>Signing in...</span>
                   </>
                 ) : (
@@ -257,8 +264,10 @@ export default function AdminLoginPage() {
               </Button>
             </div>
           </form>
-        </div>
       </div>
+      <p className="pb-6 text-center text-xs font-medium text-muted-foreground/60">
+        Bin&apos;Go &middot; Smart Waste Collection, Simplified
+      </p>
     </div>
   );
 }

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { inputClass, labelClass } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import PasswordStrengthHint from "@/components/ui/password-strength-hint";
+import OtpInput from "@/components/ui/otp-input";
 import { useFleet } from "@/lib/fleet";
 import { useLiveRoute, assignDriver } from "@/lib/live-route";
 import {
@@ -388,14 +389,13 @@ export default function StaffPage() {
   const formOpen = isAdding || selectedDriver !== null;
 
   return (
-    <div className="relative flex min-h-full w-full min-w-0 overflow-x-hidden bg-background bg-[url('/hero-bg.svg')] bg-[length:100%_auto] sm:bg-cover bg-top sm:bg-center bg-no-repeat">
-      <div className="absolute inset-0 bg-background/42 pointer-events-none" />
+    <div className="relative flex min-h-full w-full min-w-0 overflow-x-hidden bg-background">
       <div className="relative z-10 flex flex-1 min-w-0 flex-col gap-5 p-4 [scrollbar-gutter:stable] sm:gap-6 sm:p-6 lg:p-8 pb-6 sm:pb-8 lg:pb-10">
         <PageHeader
           title="Drivers"
           description="Manage driver accounts and assign them to trucks"
           actions={
-            <Button variant="primary" onClick={() => setIsAdding(true)}>
+            <Button variant="primary" className="h-10 rounded-xl px-4 text-[14px] font-semibold" onClick={() => setIsAdding(true)}>
               <Plus className="h-4 w-4" />
               <span>Add New Driver</span>
             </Button>
@@ -409,13 +409,13 @@ export default function StaffPage() {
 
         <div className="flex shrink-0 items-center">
           <div className="relative w-full max-w-xs">
-            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input
               type="text"
               placeholder="Filter by driver or truck..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-xl border border-border bg-card/80 pl-9 pr-4 py-2 text-xs font-medium text-foreground placeholder:text-muted-foreground/60 outline-none transition-colors hover:border-zinc-300 focus:border-emerald-500 focus:bg-card"
+              className="h-[50px] w-full rounded-2xl border border-border/60 bg-card pl-10 pr-4 text-[16px] text-foreground placeholder:text-muted-foreground/60 outline-none transition-colors focus:border-zinc-400"
             />
           </div>
         </div>
@@ -437,12 +437,10 @@ export default function StaffPage() {
                 {filteredStaff.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="p-4">
-                      <div className="flex flex-col items-center justify-center py-10 px-4 text-center bg-card rounded-xl border border-dashed border-border">
-                        <div className="text-emerald-600 flex items-center justify-center mb-3">
-                          <Users className="h-8 w-8" />
-                        </div>
-                        <h3 className="font-semibold text-foreground text-sm">No Staff Found</h3>
-                        <p className="mt-1 text-xs text-muted-foreground max-w-[240px]">
+                      <div className="flex flex-col items-center justify-center px-4 py-14 text-center">
+                        <Users className="h-12 w-12 text-muted-foreground/40" strokeWidth={1.5} />
+                        <h3 className="mt-4 text-[17px] font-semibold tracking-tight text-foreground">No Staff Found</h3>
+                        <p className="mt-1 max-w-[240px] text-[13px] leading-normal text-muted-foreground">
                           No drivers match your search filter.
                         </p>
                       </div>
@@ -528,9 +526,9 @@ export default function StaffPage() {
                 onSubmit={isVerifyingOtp ? handleVerifyOtp : (isAdding ? handleAddDriver : handleUpdateDriver)}
                 className="flex h-full flex-col justify-between overflow-hidden"
               >
-                <div className="flex shrink-0 items-start justify-between border-b border-border pb-3">
+                <div className="flex shrink-0 items-start justify-between border-b border-border/60 pb-3">
                   {isAdding ? (
-                    <h2 className="text-sm font-semibold text-foreground">Add New Driver</h2>
+                    <h2 className="text-[17px] font-semibold tracking-tight text-foreground">Add New Driver</h2>
                   ) : (
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-semibold text-foreground tracking-tight tabular-nums">
@@ -562,14 +560,11 @@ export default function StaffPage() {
                           Ask the driver for the code to activate their account.
                         </p>
                       </div>
-                      <div className="w-full max-w-[240px]">
-                        <input
-                          required
-                          type="text"
+                      <div className="w-full max-w-[280px]">
+                        <OtpInput
                           value={otpCode}
-                          onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                          placeholder="000000"
-                          className={cn(inputClass, "font-mono text-center text-2xl tracking-[0.5em] p-4 h-14 bg-emerald-50/50 border-emerald-200 focus:border-emerald-500 focus:ring-emerald-500/20")}
+                          onChange={(v) => setOtpCode(v.replace(/\D/g, "").slice(0, 6))}
+                          autoFocus={false}
                         />
                       </div>
 
@@ -593,7 +588,7 @@ export default function StaffPage() {
                               setResendTimer(60);
                             }
                           }}
-                          className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 disabled:text-muted-foreground/50 disabled:cursor-not-allowed transition-colors"
+                          className="text-[13px] font-semibold text-emerald-600 hover:text-emerald-700 disabled:text-muted-foreground/50 disabled:cursor-not-allowed transition-colors"
                         >
                           {isResending
                             ? "Sending..."
@@ -700,17 +695,17 @@ export default function StaffPage() {
                         ) : (
                           <div className="flex shrink-0 flex-col gap-2">
                             <span className={labelClass}>Account Status</span>
-                            <div className="grid grid-cols-2 gap-0.5 rounded-lg bg-muted p-0.5">
+                            <div className="grid grid-cols-2 gap-0.5 rounded-xl bg-muted p-1">
                               {["Active", "Suspended"].map((option) => (
                                 <button
                                   key={option}
                                   type="button"
                                   onClick={() => setStatus(option)}
-                                  className={`rounded-md py-1.5 text-xs font-medium transition-colors cursor-pointer ${
+                                  className={`rounded-lg py-1.5 text-[13px] font-medium transition-colors cursor-pointer ${
                                     status === option
                                       ? option === "Active"
-                                        ? "bg-emerald-600 text-white shadow-xs"
-                                        : "bg-rose-600 text-white shadow-xs"
+                                        ? "bg-emerald-600 text-white font-semibold"
+                                        : "bg-rose-600 text-white font-semibold"
                                       : "text-muted-foreground hover:text-foreground"
                                   }`}
                                 >
@@ -727,7 +722,7 @@ export default function StaffPage() {
 
                 <div className="mt-auto shrink-0 flex flex-col gap-3 border-t border-border-subtle pt-4">
                   {formError && (
-                    <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-600">
+                    <p className="rounded-2xl border border-rose-200 bg-rose-50 px-3.5 py-3 text-[13px] font-medium text-rose-600">
                       {formError}
                     </p>
                   )}
@@ -736,6 +731,7 @@ export default function StaffPage() {
                       variant="secondary"
                       size="sm"
                       type="button"
+                      className="h-10 rounded-xl px-4 text-[14px] font-semibold"
                       disabled={isSubmitting}
                       onClick={() => (isAdding ? setIsAdding(false) : setSelectedDriver(null))}
                     >
@@ -745,7 +741,7 @@ export default function StaffPage() {
                       variant="primary"
                       type="submit"
                       disabled={isSubmitting || (isVerifyingOtp && otpCode.length !== 6)}
-                      className="w-full shrink-0 h-11"
+                      className="h-10 rounded-xl px-4 text-[14px] font-semibold"
                     >
                       {isSubmitting ? (
                         <>

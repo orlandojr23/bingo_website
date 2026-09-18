@@ -153,13 +153,13 @@ function LiveMapContent() {
     <div className="flex flex-1 h-full min-h-0 w-full flex-col lg:flex-row overflow-hidden bg-background">
       {/* Mobile Tab Switcher */}
       <div className="flex shrink-0 items-center border-b border-border bg-card p-2 lg:hidden">
-        <div className="flex flex-1 gap-1 rounded-lg bg-muted p-0.5">
+        <div className="flex flex-1 gap-1 rounded-xl bg-muted p-1">
           <button
             type="button"
             onClick={() => setMobileTab("map")}
-            className={`flex flex-1 items-center justify-center rounded-md py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+            className={`flex flex-1 items-center justify-center rounded-lg py-1.5 text-[13px] font-semibold transition-colors cursor-pointer ${
               mobileTab === "map"
-                ? "bg-card text-foreground shadow-xs"
+                ? "bg-card text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -168,9 +168,9 @@ function LiveMapContent() {
           <button
             type="button"
             onClick={() => setMobileTab("panel")}
-            className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+            className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-[13px] font-semibold transition-colors cursor-pointer ${
               mobileTab === "panel"
-                ? "bg-card text-foreground shadow-xs"
+                ? "bg-card text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -199,9 +199,9 @@ function LiveMapContent() {
       </div>
 
       <div className={cn("flex h-full w-full shrink-0 flex-col overflow-hidden border-l border-border bg-card lg:w-[340px]", mobileTab !== "panel" && "hidden lg:flex")}>
-        <div className="shrink-0 border-b border-border px-5 pb-4 pt-5">
-          <h2 className="text-sm font-semibold text-foreground">Map Control</h2>
-          <p className="mt-1 text-xs text-muted-foreground">Monitor real-time truck locations and active waste reports</p>
+        <div className="shrink-0 border-b border-border/60 px-5 pb-4 pt-5">
+          <h2 className="text-[17px] font-semibold tracking-tight text-foreground">Map Control</h2>
+          <p className="mt-0.5 text-[13px] text-muted-foreground">Monitor real-time truck locations and active waste reports</p>
         </div>
 
         <div className="flex shrink-0 items-center gap-2 border-b border-border-subtle px-4 py-3">
@@ -209,9 +209,9 @@ function LiveMapContent() {
             <button
               type="button"
               onClick={() => handleSwitchView("reports")}
-              className={`flex flex-1 items-center justify-center rounded-md py-1.5 text-xs font-medium transition-colors cursor-pointer ${
+              className={`flex flex-1 items-center justify-center rounded-lg py-1.5 text-[13px] font-medium transition-colors cursor-pointer ${
                 mapView === "reports"
-                  ? "bg-card text-foreground shadow-xs"
+                  ? "bg-card text-foreground shadow-sm font-semibold"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -220,9 +220,9 @@ function LiveMapContent() {
             <button
               type="button"
               onClick={() => handleSwitchView("trucks")}
-              className={`flex flex-1 items-center justify-center rounded-md py-1.5 text-xs font-medium transition-colors cursor-pointer ${
+              className={`flex flex-1 items-center justify-center rounded-lg py-1.5 text-[13px] font-medium transition-colors cursor-pointer ${
                 mapView === "trucks"
-                  ? "bg-card text-foreground shadow-xs"
+                  ? "bg-card text-foreground shadow-sm font-semibold"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -306,12 +306,10 @@ function LiveMapContent() {
 
               <div className="flex flex-1 flex-col gap-2 overflow-y-auto px-4 pb-3">
                 {filteredTickets.length === 0 ? (
-                  <div className="flex flex-1 flex-col items-center justify-center gap-1 py-10 px-4 text-center bg-card rounded-xl border border-dashed border-border m-2">
-                    <div className="text-emerald-600 flex items-center justify-center mb-2">
-                      <MapPin className="h-7 w-7" />
-                    </div>
-                    <h3 className="font-semibold text-foreground text-sm">No Reports Match</h3>
-                    <span className="text-xs text-muted-foreground">Try adjusting your filters or keywords.</span>
+                  <div className="flex flex-1 flex-col items-center justify-center px-4 py-14 text-center m-2">
+                    <MapPin className="h-12 w-12 text-muted-foreground/40" strokeWidth={1.5} />
+                    <h3 className="mt-4 text-[17px] font-semibold tracking-tight text-foreground">No Reports Match</h3>
+                    <span className="mt-1 text-[13px] text-muted-foreground">Try adjusting your filters or keywords.</span>
                   </div>
                 ) : (
                   filteredTickets.map((t) => (
@@ -331,8 +329,8 @@ function LiveMapContent() {
                         </span>
                         <UrgencyBadge urgency={t.urgency} />
                       </div>
-                      <div className="truncate text-sm font-semibold text-foreground">{t.location}</div>
-                      <div className="mb-2 truncate text-xs text-muted-foreground">
+                      <div className="truncate text-[16px] font-semibold tracking-tight text-foreground">{t.location}</div>
+                      <div className="mb-2 truncate text-[13px] text-muted-foreground">
                         {t.barangay}, {t.city || "Cebu City"}
                       </div>
                       <div className="flex items-center justify-between">
@@ -383,10 +381,10 @@ function LiveMapContent() {
 
             <div className="flex flex-1 flex-col gap-2 overflow-y-auto px-4 pb-3">
               {trucksData.length === 0 ? (
-                <div className="flex flex-1 flex-col items-center justify-center py-12 text-center">
-                  <TruckIcon className="h-6 w-6 text-zinc-300" />
-                  <span className="mt-2 text-xs font-semibold text-foreground">No Trucks in Fleet</span>
-                  <span className="mt-0.5 max-w-[200px] text-xs text-muted-foreground">
+                <div className="flex flex-1 flex-col items-center justify-center px-4 py-14 text-center">
+                  <TruckIcon className="h-12 w-12 text-muted-foreground/40" strokeWidth={1.5} />
+                  <span className="mt-4 text-[17px] font-semibold tracking-tight text-foreground">No Trucks in Fleet</span>
+                  <span className="mt-1 max-w-[220px] text-[13px] leading-normal text-muted-foreground">
                     Add trucks in Fleet Dispatch to start tracking them on the map.
                   </span>
                 </div>

@@ -19,7 +19,6 @@ import {
   Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { useUnreadCount } from "@/lib/notifications";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -49,7 +48,11 @@ export default function Sidebar({ isOpen, onClose }) {
     try {
       await supabase.auth.signOut();
     } catch {}
-    router.replace("/admin-login");
+    try {
+      router.replace("/admin-login");
+    } finally {
+      setIsSigningOut(false);
+    }
   };
 
   const sidebarContent = (
@@ -61,7 +64,7 @@ export default function Sidebar({ isOpen, onClose }) {
             alt="Bin-Go Logo"
             fetchPriority="high"
             loading="eager"
-            className="h-12 w-auto shrink-0 object-contain origin-left scale-[2.05]"
+            className="h-14 w-auto shrink-0 object-contain origin-left scale-[2.05]"
           />
         </Link>
 
@@ -137,20 +140,20 @@ export default function Sidebar({ isOpen, onClose }) {
             href="/settings"
             onClick={() => onClose && onClose()}
             className={cn(
-              "flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-xs font-medium transition-colors",
+              "flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border border-border/60 bg-card px-3 text-[13px] font-semibold transition-all active:scale-[0.99]",
               pathname === "/settings"
-                ? "bg-muted text-foreground"
-                : "bg-card text-zinc-700 hover:border-zinc-300 hover:bg-muted/60"
+                ? "text-foreground"
+                : "text-zinc-700"
             )}
           >
             <Settings
               className={cn(
-                "h-3.5 w-3.5",
+                "h-4 w-4",
                 pathname === "/settings"
-                  ? "text-accent-emerald"
+                  ? "text-emerald-600"
                   : "text-muted-foreground"
               )}
-              strokeWidth={1.75}
+              strokeWidth={2}
             />
             <span>Settings</span>
           </Link>
@@ -158,9 +161,9 @@ export default function Sidebar({ isOpen, onClose }) {
           <button
             type="button"
             onClick={() => setShowSignOutModal(true)}
-            className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-zinc-700 transition-colors hover:border-rose-300 hover:text-rose-600"
+            className="flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border border-border/60 bg-card px-3 text-[13px] font-semibold text-zinc-700 transition-all active:scale-[0.99]"
           >
-            <LogOut className="h-3.5 w-3.5 text-muted-foreground" strokeWidth={1.75} />
+            <LogOut className="h-4 w-4 text-muted-foreground" strokeWidth={2} />
             <span>Sign Out</span>
           </button>
         </div>
@@ -168,43 +171,40 @@ export default function Sidebar({ isOpen, onClose }) {
 
       {showSignOutModal && (
         <div
-          className="fixed inset-0 z-[1000] flex items-center justify-center bg-zinc-950/40 p-4 backdrop-blur-sm animate-in-fade"
-          onClick={() => setShowSignOutModal(false)}
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 p-4"
+          onClick={() => { if (!isSigningOut) setShowSignOutModal(false); }}
         >
           <div
-            className="flex w-full max-w-xs flex-col gap-4 rounded-xl border border-border bg-card p-5 shadow-sm"
+            className="w-full max-w-[270px] overflow-hidden rounded-[14px] bg-white text-center shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div>
-              <h3 className="text-sm font-semibold text-foreground">Sign Out</h3>
-              <p className="mt-1 text-xs font-medium text-muted-foreground">
+            <div className="px-4 pb-4 pt-5">
+              <h3 className="text-[17px] font-semibold tracking-tight text-zinc-900">Sign Out?</h3>
+              <p className="mt-1 text-[13px] leading-normal text-zinc-600">
                 You will need to log back in to access the dashboard.
               </p>
             </div>
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
+            <div className="flex divide-x divide-black/10 border-t border-black/10">
+              <button
+                type="button"
                 onClick={() => setShowSignOutModal(false)}
+                disabled={isSigningOut}
+                className="h-11 flex-1 text-[17px] text-zinc-800 transition-colors active:bg-black/5 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
               >
                 Cancel
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
+              </button>
+              <button
+                type="button"
                 onClick={handleSignOut}
                 disabled={isSigningOut}
-                className="border-rose-200 text-rose-600 hover:border-rose-600 hover:bg-rose-600 hover:text-white"
+                className="flex h-11 flex-1 items-center justify-center text-[17px] font-semibold text-rose-600 transition-colors active:bg-black/5 cursor-pointer disabled:pointer-events-none"
               >
                 {isSigningOut ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin inline-block" />
-                    Signing out...
-                  </>
+                  <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
                   "Sign Out"
                 )}
-              </Button>
+              </button>
             </div>
           </div>
         </div>

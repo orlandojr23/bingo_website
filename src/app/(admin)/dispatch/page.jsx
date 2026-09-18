@@ -289,9 +289,8 @@ export default function DispatchPage() {
   };
 
   const filteredSchedules = schedules.filter((sch) => {
-    const isArchived = sch.isArchived === true;
-    if (viewMode === "active" && isArchived) return false;
-    if (viewMode === "trash" && !isArchived) return false;
+    // Dispatch shows active schedules only; archived ones live in Bin.
+    if (sch.isArchived === true) return false;
 
     const truck = fleet.find((t) => t.id === sch.truckId);
     const query = searchQuery.toLowerCase();
@@ -413,10 +412,10 @@ export default function DispatchPage() {
                     <button
                       type="button"
                       onClick={() => removeStop(i)}
-                      className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-rose-50 hover:text-rose-600 cursor-pointer"
+                      className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-rose-600/10 hover:text-rose-600 active:scale-95 cursor-pointer"
                       aria-label={`Remove ${stop.name} from route`}
                     >
-                      <X className="h-3.5 w-3.5" />
+                      <X className="h-4 w-4" />
                     </button>
                   </div>
                 </li>
@@ -431,9 +430,9 @@ export default function DispatchPage() {
               <button
                 type="button"
                 onClick={shuffleStops}
-                className="flex shrink-0 items-center gap-1 rounded-md border border-border bg-card px-2 py-1 text-[10px] font-semibold text-foreground transition-colors hover:bg-muted cursor-pointer"
+                className="flex h-9 shrink-0 items-center gap-1.5 rounded-xl border border-border/60 bg-card px-3 text-[13px] font-semibold text-foreground transition-all hover:bg-muted active:scale-[0.98] cursor-pointer"
               >
-                <Shuffle className="h-3 w-3" />
+                <Shuffle className="h-3.5 w-3.5" />
                 Shuffle Order
               </button>
             </div>
@@ -550,14 +549,13 @@ export default function DispatchPage() {
   const isSheetOpen = isAdding || selectedSchedule !== null;
 
   return (
-    <div className="relative flex min-h-full w-full min-w-0 overflow-x-hidden bg-background bg-[url('/hero-bg.svg')] bg-[length:100%_auto] sm:bg-cover bg-top sm:bg-center bg-no-repeat">
-      <div className="absolute inset-0 bg-background/42 pointer-events-none" />
+    <div className="relative flex min-h-full w-full min-w-0 overflow-x-hidden bg-background">
       <div className="relative z-10 flex flex-1 min-w-0 flex-col gap-5 p-4 [scrollbar-gutter:stable] sm:gap-6 sm:p-6 lg:p-8 pb-6 sm:pb-8 lg:pb-10">
         <PageHeader
           title="Fleet Dispatch"
           description="Manage truck assignments and weekly collection schedules"
           actions={
-            <Button variant="primary" onClick={() => setIsAdding(true)}>
+            <Button variant="primary" className="h-10 rounded-xl px-4 text-[14px] font-semibold" onClick={() => setIsAdding(true)}>
               <Plus className="h-4 w-4" />
               <span>Create Assignment</span>
             </Button>
@@ -571,7 +569,7 @@ export default function DispatchPage() {
           <PanelStat label="Trucks Out" value={activeDispatches} hint="Currently collecting" tone="emerald" />
         </div>
 
-        <div className="shrink-0 rounded-xl border border-border bg-card p-4">
+        <div className="shrink-0 rounded-2xl border border-border/60 bg-card p-4">
           <div className="mb-3 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <h2 className="text-sm font-semibold text-foreground">Fleet</h2>
@@ -584,12 +582,10 @@ export default function DispatchPage() {
           </div>
           <div className="w-full">
             {fleet.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-10 px-4 text-center bg-card rounded-xl border border-dashed border-border">
-                <div className="text-emerald-600 flex items-center justify-center mb-3">
-                  <Truck className="h-8 w-8" />
-                </div>
-                <h3 className="font-semibold text-foreground text-sm">No Trucks in Fleet</h3>
-                <p className="mt-1 text-xs text-muted-foreground max-w-[240px]">
+              <div className="flex flex-col items-center justify-center px-4 py-14 text-center">
+                <Truck className="h-12 w-12 text-muted-foreground/40" strokeWidth={1.5} />
+                <h3 className="mt-4 text-[17px] font-semibold tracking-tight text-foreground">No Trucks in Fleet</h3>
+                <p className="mt-1 max-w-[240px] text-[13px] leading-normal text-muted-foreground">
                   Click &quot;Add Truck&quot; to register your first collection truck.
                 </p>
               </div>
@@ -602,7 +598,7 @@ export default function DispatchPage() {
                       key={t.id}
                       type="button"
                       onClick={() => openTruckSheet("edit", t)}
-                      className="group relative flex cursor-pointer flex-col justify-between rounded-xl border border-border bg-card p-3.5 text-left transition-all hover:border-zinc-300 hover:shadow-xs"
+                      className="group relative flex cursor-pointer flex-col justify-between rounded-2xl border border-border/60 bg-card p-3.5 text-left transition-all hover:border-zinc-300"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-2.5 min-w-0">
@@ -644,14 +640,12 @@ export default function DispatchPage() {
 
         <div>
           {filteredSchedules.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 px-4 text-center bg-card rounded-xl border border-dashed border-border">
-              <div className="text-emerald-600 flex items-center justify-center mb-3">
-                <Calendar className="h-8 w-8" />
-              </div>
-              <h3 className="font-semibold text-foreground text-sm">
+            <div className="flex flex-col items-center justify-center px-4 py-14 text-center">
+              <Calendar className="h-12 w-12 text-muted-foreground/40" strokeWidth={1.5} />
+              <h3 className="mt-4 text-[17px] font-semibold tracking-tight text-foreground">
                 {searchQuery ? "No Schedules Found" : "No Schedules Yet"}
               </h3>
-              <p className="mt-1 text-xs text-muted-foreground max-w-[240px]">
+              <p className="mt-1 max-w-[240px] text-[13px] leading-normal text-muted-foreground">
                 {searchQuery ? (
                   <>We couldn&apos;t find any schedules matching &quot;{searchQuery}&quot;.</>
                 ) : (
@@ -669,10 +663,10 @@ export default function DispatchPage() {
                   <div
                     key={sch.id}
                     onClick={() => setSelectedSchedule(sch)}
-                    className={`group flex cursor-pointer select-none flex-col justify-between rounded-xl border bg-card p-4 transition-all ${
+                    className={`group flex cursor-pointer select-none flex-col justify-between rounded-2xl border border-border/60 bg-card p-4 transition-all ${
                       isSelected
                         ? "border-emerald-400 ring-1 ring-emerald-400/20"
-                        : "border-border hover:border-zinc-300 hover:bg-muted/40"
+                        : "hover:border-zinc-300 hover:bg-muted/40"
                     }`}
                   >
                     <div>
@@ -713,7 +707,7 @@ export default function DispatchPage() {
                           setStatus(sch.status);
                           setStopOrder(sch.routePoints || []);
                         }}
-                        className="flex-1 rounded-lg border border-border bg-white px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-zinc-50"
+                        className="flex-1 rounded-full bg-muted px-3 py-1.5 text-[13px] font-semibold text-foreground transition-all active:scale-95"
                       >
                         Edit
                       </button>
@@ -723,7 +717,7 @@ export default function DispatchPage() {
                           e.stopPropagation();
                           setScheduleToDelete(sch.id);
                         }}
-                        className="flex-1 rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-600 transition-colors hover:bg-rose-100"
+                        className="flex-1 rounded-full bg-rose-600/10 px-3 py-1.5 text-[13px] font-semibold text-rose-600 transition-all active:scale-95"
                       >
                         Delete
                       </button>
@@ -760,9 +754,9 @@ export default function DispatchPage() {
                 onSubmit={isAdding ? handleAddSchedule : handleUpdateSchedule}
                 className="flex h-full flex-col justify-between overflow-hidden"
               >
-                <div className="flex shrink-0 items-start justify-between border-b border-border pb-3">
+                <div className="flex shrink-0 items-start justify-between border-b border-border/60 pb-3">
                   {isAdding ? (
-                    <h2 className="text-sm font-semibold text-foreground">Create Assignment</h2>
+                    <h2 className="text-[17px] font-semibold tracking-tight text-foreground">Create Assignment</h2>
                   ) : (
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-semibold text-foreground tracking-tight tabular-nums">
@@ -789,6 +783,7 @@ export default function DispatchPage() {
                   <Button
                     variant="secondary"
                     type="button"
+                    className="h-10 rounded-xl px-4 text-[14px] font-semibold"
                     onClick={() => (isAdding ? setIsAdding(false) : setSelectedSchedule(null))}
                   >
                     Cancel
@@ -796,6 +791,7 @@ export default function DispatchPage() {
                   <Button
                     variant="primary"
                     type="submit"
+                    className="h-10 rounded-xl px-4 text-[14px] font-semibold"
                     disabled={stopOrder.length === 0 || isSubmittingSchedule}
                     title={stopOrder.length === 0 ? "Add at least one sitio stop first" : undefined}
                   >
@@ -900,7 +896,7 @@ export default function DispatchPage() {
                       />
                     </Field>
                     {truckError && (
-                      <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-600">
+                      <p className="rounded-2xl border border-rose-200 bg-rose-50 px-3.5 py-3 text-[13px] font-medium text-rose-600">
                         {truckError}
                       </p>
                     )}
@@ -910,17 +906,17 @@ export default function DispatchPage() {
                 <div className="mt-auto shrink-0 flex items-center justify-between gap-2 border-t border-border-subtle pt-4">
                   <div>
                     {truckSheet.mode === "edit" && (
-                      <Button variant="secondary" type="button" onClick={handleTruckDeleteRequest} className="gap-1.5 text-rose-600">
+                      <Button variant="secondary" type="button" onClick={handleTruckDeleteRequest} className="h-10 gap-1.5 rounded-xl px-4 text-[14px] text-rose-600">
                         <Trash2 className="w-4 h-4" />
                         Remove Truck
                       </Button>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button variant="secondary" type="button" onClick={() => setTruckSheet(null)}>
+                    <Button variant="secondary" type="button" className="h-10 rounded-xl px-4 text-[14px] font-semibold" onClick={() => setTruckSheet(null)}>
                       Cancel
                     </Button>
-                    <Button variant="primary" type="submit" disabled={isSubmittingTruck}>
+                    <Button variant="primary" type="submit" className="h-10 rounded-xl px-4 text-[14px] font-semibold" disabled={isSubmittingTruck}>
                       {isSubmittingTruck ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin inline-block" />
@@ -939,14 +935,12 @@ export default function DispatchPage() {
       </AnimatePresence>
 
       <ConfirmModal
-        isOpen={!!scheduleToDelete}
-        onClose={() => setScheduleToDelete(null)}
+        open={!!scheduleToDelete}
+        onCancel={() => setScheduleToDelete(null)}
         onConfirm={() => handleDeleteSchedule(scheduleToDelete)}
         title="Move to Bin"
         description="Are you sure you want to move this schedule to the bin? It will be archived and can be restored later."
-        confirmText="Yes, delete"
-        cancelText="Cancel"
-        danger
+        confirmLabel="Yes, delete"
       />
 
       <ConfirmModal

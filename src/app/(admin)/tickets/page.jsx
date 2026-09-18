@@ -78,8 +78,7 @@ export default function TicketsPage() {
   const isSheetOpen = selectedTicket !== null;
 
   return (
-    <div className="relative flex min-h-full w-full min-w-0 overflow-x-hidden bg-background bg-[url('/hero-bg.svg')] bg-[length:100%_auto] sm:bg-cover bg-top sm:bg-center bg-no-repeat">
-      <div className="absolute inset-0 bg-background/42 pointer-events-none" />
+    <div className="relative flex min-h-full w-full min-w-0 overflow-x-hidden bg-background">
       <div className="relative z-10 flex flex-1 min-w-0 flex-col gap-5 p-4 [scrollbar-gutter:stable] sm:gap-6 sm:p-6 lg:p-8 pb-6 sm:pb-8 lg:pb-10">
         <PageHeader
           title="Reports"
@@ -143,12 +142,10 @@ export default function TicketsPage() {
 
         <div>
           {filteredTickets.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 px-4 text-center bg-card rounded-xl border border-dashed border-border">
-              <div className="text-emerald-600 flex items-center justify-center mb-3">
-                <Inbox className="h-8 w-8" />
-              </div>
-              <h3 className="font-semibold text-foreground text-sm">No Reports Found</h3>
-              <p className="mt-1 text-xs text-muted-foreground max-w-[240px]">
+            <div className="flex flex-col items-center justify-center px-4 py-14 text-center">
+              <Inbox className="h-12 w-12 text-muted-foreground/40" strokeWidth={1.5} />
+              <h3 className="mt-4 text-[17px] font-semibold tracking-tight text-foreground">No Reports Found</h3>
+              <p className="mt-1 max-w-[240px] text-[13px] leading-normal text-muted-foreground">
                 {search || statusFilter !== "All" || urgencyFilter !== "All"
                   ? "Try different search keywords or filters."
                   : "No waste reports have been submitted yet. Resident reports will appear here."}
@@ -163,10 +160,10 @@ export default function TicketsPage() {
                   <div
                     key={t.id}
                     onClick={() => setSelectedTicket(t)}
-                    className={`group flex cursor-pointer select-none flex-col justify-between rounded-xl border bg-card p-4 transition-all ${
+                    className={`group flex cursor-pointer select-none flex-col justify-between rounded-2xl border border-border/60 bg-card p-4 transition-all ${
                       isSelected
                         ? "border-emerald-400 ring-1 ring-emerald-400/20"
-                        : "border-border hover:border-zinc-300 hover:bg-muted/40"
+                        : "hover:border-zinc-300 hover:bg-muted/40"
                     }`}
                   >
                     <div className="flex shrink-0 flex-nowrap items-center justify-between gap-2">
@@ -201,30 +198,17 @@ export default function TicketsPage() {
                     </div>
 
                     <div className="mt-2 flex shrink-0 items-center justify-end gap-2">
-                      {viewMode === "trash" && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRestoreTicket(t.id);
-                          }}
-                          className="rounded-md border border-emerald-200 bg-card px-2.5 py-1 text-xs font-medium text-emerald-600 transition-colors hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer"
-                          title="Restore Report"
-                        >
-                          Restore
-                        </button>
-                      )}
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           setTicketToDelete(t);
                         }}
-                        className="flex items-center gap-1.5 rounded-md border border-rose-200 bg-card px-2.5 py-1 text-xs font-medium text-rose-600 transition-colors hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 cursor-pointer"
-                        title={viewMode === "trash" ? "Permanently Delete" : "Move to Trash"}
+                        className="flex items-center gap-1.5 rounded-full bg-rose-600/10 px-3 py-1 text-[13px] font-semibold text-rose-600 transition-all active:scale-95 cursor-pointer"
+                        title="Move to Trash"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
-                        {viewMode === "trash" ? "Purge" : "Move to Trash"}
+                        Move to Trash
                       </button>
                     </div>
                   </div>
@@ -253,14 +237,12 @@ export default function TicketsPage() {
       />
 
       <ConfirmModal
-        isOpen={!!ticketToDelete}
-        onClose={() => setTicketToDelete(null)}
+        open={!!ticketToDelete}
+        onCancel={() => setTicketToDelete(null)}
         onConfirm={() => handleDeleteTicket(ticketToDelete)}
         title="Delete Report"
         description="Are you sure you want to move this report to the bin?"
-        confirmText="Yes, delete"
-        cancelText="Cancel"
-        danger
+        confirmLabel="Yes, delete"
       />
     </div>
   );

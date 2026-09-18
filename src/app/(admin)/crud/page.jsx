@@ -127,11 +127,9 @@ export default function CrudPage() {
   const pendingCount = records.filter((r) => r.status === "Pending").length;
 
   return (
-    <div className="relative flex min-h-full w-full min-w-0 overflow-x-hidden bg-background bg-[url('/hero-bg.svg')] bg-[length:100%_auto] sm:bg-cover bg-top sm:bg-center bg-no-repeat">
-      <div className="absolute inset-0 bg-background/42 pointer-events-none" />
+    <div className="relative flex min-h-full w-full min-w-0 overflow-x-hidden bg-background">
       {toastMessage && (
-        <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-6 z-50 flex animate-in-fade items-center gap-2.5 rounded-lg border border-zinc-800 bg-zinc-900 px-4 py-2.5 text-xs text-white shadow-lg">
-          <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+        <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-6 z-50 flex animate-in-fade items-center justify-center gap-2 rounded-[10px] bg-zinc-900 px-4 py-3 text-[13px] text-white shadow-lg">
           <span>{toastMessage}</span>
         </div>
       )}
@@ -148,16 +146,16 @@ export default function CrudPage() {
           }
         />
 
-        <div className="flex bg-muted/50 p-1 rounded-lg w-fit border border-border/50">
+        <div className="flex bg-muted p-1 rounded-xl w-fit">
           <button 
-            className={cn("flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all cursor-pointer", viewMode === "active" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5")}
+            className={cn("flex items-center justify-center gap-2 px-4 py-2 text-[13px] font-medium rounded-lg transition-all cursor-pointer", viewMode === "active" ? "bg-card text-foreground shadow-sm font-semibold" : "text-muted-foreground hover:text-foreground")}
             onClick={() => setViewMode("active")}
           >
             <ListTodo className="w-4 h-4" />
             Active Reports
           </button>
           <button 
-            className={cn("flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all cursor-pointer", viewMode === "trash" ? "bg-card text-rose-600 dark:text-rose-400 shadow-sm" : "text-muted-foreground hover:text-rose-600 dark:hover:text-rose-400 hover:bg-black/5 dark:hover:bg-white/5")}
+            className={cn("flex items-center justify-center gap-2 px-4 py-2 text-[13px] font-medium rounded-lg transition-all cursor-pointer", viewMode === "trash" ? "bg-card text-rose-600 dark:text-rose-400 shadow-sm font-semibold" : "text-muted-foreground hover:text-rose-600 dark:hover:text-rose-400")}
             onClick={() => setViewMode("trash")}
           >
             <Trash2 className="w-4 h-4" />
@@ -218,23 +216,22 @@ export default function CrudPage() {
                       <InfoRow label="Reported By" value={r.reporter} />
                       <InfoRow label="Urgency" value={<UrgencyBadge urgency={r.urgency} />} />
                     </div>
-                    <div className="flex items-center justify-end gap-3 pt-1" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-end gap-2 pt-1" onClick={(e) => e.stopPropagation()}>
                       {viewMode === "trash" ? (
                         <>
                           <button
                             type="button"
                             onClick={() => handleRestore(r.id)}
-                            className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 cursor-pointer"
+                            className="rounded-full bg-emerald-600/10 px-3 py-1 text-[13px] font-semibold text-emerald-700 transition-all active:scale-95 cursor-pointer"
                           >
                             Restore
                           </button>
-                          <span className="text-border">|</span>
                           <button
                             type="button"
                             onClick={() => setRecordToDelete(r)}
-                            className="text-xs font-semibold text-rose-600 hover:text-rose-700 cursor-pointer"
+                            className="rounded-full bg-rose-600/10 px-3 py-1 text-[13px] font-semibold text-rose-600 transition-all active:scale-95 cursor-pointer"
                           >
-                            Permanently Delete
+                            Delete
                           </button>
                         </>
                       ) : (
@@ -242,17 +239,16 @@ export default function CrudPage() {
                           <button
                             type="button"
                             onClick={() => handleEdit(r)}
-                            className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 cursor-pointer"
+                            className="rounded-full bg-muted px-3 py-1 text-[13px] font-semibold text-foreground transition-all active:scale-95 cursor-pointer"
                           >
-                            Edit Record
+                            Edit
                           </button>
-                          <span className="text-border">|</span>
                           <button
                             type="button"
                             onClick={() => setRecordToDelete(r)}
-                            className="text-xs font-semibold text-rose-600 hover:text-rose-700 cursor-pointer"
+                            className="rounded-full bg-rose-600/10 px-3 py-1 text-[13px] font-semibold text-rose-600 transition-all active:scale-95 cursor-pointer"
                           >
-                            Delete Record
+                            Delete
                           </button>
                         </>
                       )}
@@ -319,18 +315,17 @@ export default function CrudPage() {
                                 <button
                                   type="button"
                                   onClick={() => handleRestore(r.id)}
-                                  className="font-medium text-emerald-600 transition-colors hover:text-emerald-700 cursor-pointer"
+                                  className="rounded-full bg-emerald-600/10 px-3 py-1 text-[13px] font-semibold text-emerald-700 transition-all active:scale-95 cursor-pointer"
                                 >
                                   Restore
                                 </button>
-                                <span className="text-border">|</span>
                                 <button
                                   type="button"
                                   onClick={() => setRecordToDelete(r)}
-                                  className="flex items-center gap-1 font-medium text-rose-600 transition-colors hover:text-rose-700 cursor-pointer"
+                                  className="flex items-center gap-1 rounded-full bg-rose-600/10 px-3 py-1 text-[13px] font-semibold text-rose-600 transition-all active:scale-95 cursor-pointer"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
-                                  Permanently Delete
+                                  Delete
                                 </button>
                               </>
                             ) : (
@@ -338,18 +333,17 @@ export default function CrudPage() {
                                 <button
                                   type="button"
                                   onClick={() => handleEdit(r)}
-                                  className="font-medium text-emerald-600 transition-colors hover:text-emerald-700 cursor-pointer"
+                                  className="rounded-full bg-muted px-3 py-1 text-[13px] font-semibold text-foreground transition-all active:scale-95 cursor-pointer"
                                 >
-                                  Edit Record
+                                  Edit
                                 </button>
-                                <span className="text-border">|</span>
                                 <button
                                   type="button"
                                   onClick={() => setRecordToDelete(r)}
-                                  className="flex items-center gap-1 font-medium text-rose-600 transition-colors hover:text-rose-700 cursor-pointer"
+                                  className="flex items-center gap-1 rounded-full bg-rose-600/10 px-3 py-1 text-[13px] font-semibold text-rose-600 transition-all active:scale-95 cursor-pointer"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
-                                  Delete Record
+                                  Delete
                                 </button>
                               </>
                             )}
@@ -505,10 +499,10 @@ export default function CrudPage() {
                 </div>
 
                 <div className="mt-auto shrink-0 flex items-center justify-end gap-2 border-t border-border-subtle pt-4">
-                  <Button variant="secondary" size="sm" type="button" onClick={resetForm}>
+                  <Button variant="secondary" size="sm" type="button" className="h-10 rounded-xl px-4 text-[14px] font-semibold" onClick={resetForm}>
                     Cancel
                   </Button>
-                  <Button variant="primary" size="sm" type="submit">
+                  <Button variant="primary" size="sm" type="submit" className="h-10 rounded-xl px-4 text-[14px] font-semibold">
                     {editingId ? "Save Changes" : "Create Report"}
                   </Button>
                 </div>

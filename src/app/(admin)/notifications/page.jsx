@@ -104,8 +104,7 @@ export default function NotificationsPage() {
   const isSheetOpen = selectedNotif !== null;
 
   return (
-    <div className="relative flex min-h-full w-full min-w-0 overflow-x-hidden bg-background bg-[url('/hero-bg.svg')] bg-[length:100%_auto] sm:bg-cover bg-top sm:bg-center bg-no-repeat">
-      <div className="absolute inset-0 bg-background/42 pointer-events-none" />
+    <div className="relative flex min-h-full w-full min-w-0 overflow-x-hidden bg-background">
       <div className="relative z-10 flex flex-1 min-w-0 flex-col gap-5 p-4 [scrollbar-gutter:stable] sm:gap-6 sm:p-6 lg:p-8 pb-6 sm:pb-8 lg:pb-10">
         <PageHeader
           title="Notifications"
@@ -126,7 +125,7 @@ export default function NotificationsPage() {
         </div>
 
         <div className="flex shrink-0 items-center">
-          <div className="inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-lg border border-border bg-muted/70 p-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+          <div className="inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-xl bg-muted p-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
             {["All", "Emergency", "System", "Ticket"].map((tab) => {
               const isActive = activeTab === tab;
               let displayLabel = "All Alerts";
@@ -139,9 +138,9 @@ export default function NotificationsPage() {
                   key={tab}
                   type="button"
                   onClick={() => setActiveTab(tab)}
-                  className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
+                  className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-[13px] font-medium transition-colors cursor-pointer ${
                     isActive
-                      ? "bg-card text-foreground shadow-xs"
+                      ? "bg-card text-foreground shadow-sm font-semibold"
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
@@ -154,12 +153,10 @@ export default function NotificationsPage() {
 
         <div>
           {filteredNotifications.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 px-4 text-center bg-card rounded-xl border border-dashed border-border">
-              <div className="text-emerald-600 flex items-center justify-center mb-3">
-                <Bell className="h-8 w-8" />
-              </div>
-              <h3 className="font-semibold text-foreground text-sm">No Alerts Found</h3>
-              <p className="mt-1 text-xs text-muted-foreground max-w-[240px]">
+            <div className="flex flex-col items-center justify-center px-4 py-14 text-center">
+              <Bell className="h-12 w-12 text-muted-foreground/40" strokeWidth={1.5} />
+              <h3 className="mt-4 text-[17px] font-semibold tracking-tight text-foreground">No Alerts Found</h3>
+              <p className="mt-1 max-w-[240px] text-[13px] leading-normal text-muted-foreground">
                 You&apos;re all caught up. No new notifications.
               </p>
             </div>
@@ -176,7 +173,7 @@ export default function NotificationsPage() {
                       setSelectedNotifId(n.id);
                       markRead(n.id);
                     }}
-                    className={`flex cursor-pointer select-none flex-col justify-between rounded-xl border bg-card p-4 transition-all ${
+                    className={`flex cursor-pointer select-none flex-col justify-between rounded-2xl border border-border/60 bg-card p-4 transition-all ${
                       isSelected
                         ? "border-emerald-400 ring-1 ring-emerald-400/20"
                         : "border-border hover:border-zinc-300 hover:bg-muted/40"
@@ -224,7 +221,7 @@ export default function NotificationsPage() {
                       <button
                         type="button"
                         onClick={(e) => deleteNotification(n.id, e)}
-                        className="rounded-md border border-rose-200 bg-card px-2.5 py-1 text-xs font-medium text-rose-600 transition-colors hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 cursor-pointer"
+                        className="rounded-full bg-rose-600/10 px-3 py-1 text-[13px] font-semibold text-rose-600 transition-all active:scale-95 cursor-pointer"
                         title="Delete Alert"
                       >
                         Delete Alert
@@ -292,31 +289,31 @@ export default function NotificationsPage() {
                     </button>
                   </div>
 
-                  <div className="flex flex-col gap-2.5">
-                    <div className="flex flex-col gap-1.5 rounded-xl border border-border bg-muted/40 p-3.5">
-                      <span className="text-xs font-medium text-muted-foreground">Details</span>
+                  <div className="divide-y divide-border/60 overflow-hidden rounded-2xl border border-border/60 bg-card">
+                    <div className="flex flex-col gap-1 px-4 py-3">
+                      <span className="text-[13px] text-muted-foreground">Details</span>
                       <div className="flex min-w-0 flex-col">
-                        <span className="break-words text-sm font-semibold text-foreground">
+                        <span className="break-words text-[15px] font-semibold text-foreground">
                           {selectedNotif.title}
                         </span>
-                        <span className="mt-1 text-xs text-muted-foreground">{selectedNotif.timestamp}</span>
+                        <span className="mt-0.5 text-[13px] text-muted-foreground">{selectedNotif.timestamp}</span>
                       </div>
                     </div>
 
-                    <div className="flex flex-col gap-1.5 rounded-xl border border-border bg-muted/40 p-3.5">
-                      <span className="text-xs font-medium text-muted-foreground">Location</span>
+                    <div className="flex flex-col gap-1 px-4 py-3">
+                      <span className="text-[13px] text-muted-foreground">Location</span>
                       <div className="flex flex-col">
-                        <span className="text-sm font-semibold text-foreground">{selectedNotif.location}</span>
-                        <span className="mt-0.5 text-xs text-muted-foreground">
+                        <span className="text-[15px] font-semibold text-foreground">{selectedNotif.location}</span>
+                        <span className="mt-0.5 text-[13px] text-muted-foreground">
                           Barangay {selectedNotif.barangay}
                         </span>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="flex flex-col gap-1.5 rounded-xl border border-border bg-muted/40 p-3.5">
-                    <span className="text-xs font-medium text-muted-foreground">Message</span>
-                    <p className="text-xs leading-relaxed text-zinc-700">{selectedNotif.message}</p>
+                    <div className="flex flex-col gap-1 px-4 py-3">
+                      <span className="text-[13px] text-muted-foreground">Message</span>
+                      <p className="text-[13px] leading-normal text-foreground">{selectedNotif.message}</p>
+                    </div>
                   </div>
 
                   {selectedNotif.actionUrl && (

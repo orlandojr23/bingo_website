@@ -2,10 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 
-export default function CrudDeleteModal({ isOpen, onClose, onConfirm, record, mode = "soft" }) {
+export default function CrudDeleteModal({ isOpen, onClose, onConfirm, record, mode = "soft", isBusy = false }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -17,44 +16,45 @@ export default function CrudDeleteModal({ isOpen, onClose, onConfirm, record, mo
 
   const modalContent = (
     <div
-      className="fixed inset-0 bg-zinc-950/40 backdrop-blur-xs z-[100] flex items-center justify-center p-4 animate-in-fade"
-      onClick={onClose}
+      className="fixed inset-0 bg-black/40 z-[100] flex items-center justify-center p-4"
+      onClick={() => { if (!isBusy) onClose?.(); }}
     >
       <div
-        className="bg-card rounded-xl max-w-sm w-full p-5 border border-border relative shadow-none"
+        className="w-full max-w-[270px] overflow-hidden rounded-[14px] bg-white text-center shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-muted-foreground hover:text-foreground p-1.5 transition-colors cursor-pointer"
-          aria-label="Close dialog"
-        >
-          <X className="w-4 h-4" />
-        </button>
-
-        <div className="flex flex-col gap-1 mb-3">
-          <h3 className="text-sm font-semibold text-foreground">
+        <div className="px-4 pb-4 pt-5">
+          <h3 className="text-[17px] font-semibold tracking-tight text-zinc-900">
             {mode === "hard" ? "Permanently Delete Record" : "Delete Record"}
           </h3>
-          <span className="text-xs font-mono font-medium text-muted-foreground">
-            {record.id}
-          </span>
+          <p className="mt-1 text-[13px] leading-normal text-zinc-600">
+            {mode === "hard"
+              ? <>Permanently delete the report for <strong className="font-semibold">{record.location}</strong>? This cannot be undone.</>
+              : <>Move the report for <strong className="font-semibold">{record.location}</strong> to the trash bin?</>
+            }
+          </p>
         </div>
-
-        <p className="text-sm text-muted-foreground mb-5 leading-relaxed">
-          {mode === "hard" 
-            ? <>Are you sure you want to permanently delete the report for <strong className="text-foreground font-semibold">{record.location}</strong> ({record.barangay})? This action cannot be undone.</>
-            : <>Are you sure you want to move the report for <strong className="text-foreground font-semibold">{record.location}</strong> ({record.barangay}) to the trash bin?</>
-          }
-        </p>
-
-        <div className="flex items-center justify-end gap-2 pt-3.5 border-t border-border-subtle mt-2">
-          <Button variant="ghost" size="sm" onClick={onClose}>
+        <div className="flex divide-x divide-black/10 border-t border-black/10">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isBusy}
+            className="h-11 flex-1 text-[17px] text-zinc-800 transition-colors active:bg-black/5 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+          >
             Cancel
-          </Button>
-          <Button variant="danger-solid" size="sm" onClick={onConfirm}>
-            Confirm Delete
-          </Button>
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={isBusy}
+            className="flex h-11 flex-1 items-center justify-center text-[17px] font-semibold text-rose-600 transition-colors active:bg-black/5 cursor-pointer disabled:pointer-events-none"
+          >
+            {isBusy ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              "Delete"
+            )}
+          </button>
         </div>
       </div>
     </div>
