@@ -12,6 +12,7 @@ import { inputClass } from "@/components/ui/input";
 import { cn, formatTicketDateTime } from "@/lib/utils";
 import TicketDetailsModal from "@/components/modals/ticket-details-modal";
 import ConfirmModal from "@/components/ui/confirm-modal";
+import { useToast } from "@/components/pwa/Toast";
 
 /** Short human-readable ticket ID, e.g. #A3F298 */
 const shortId = (id) => (id ? "#" + id.replace(/-/g, "").slice(0, 6).toUpperCase() : "—");
@@ -26,9 +27,21 @@ export default function TicketsPage() {
   const [dateFilter, setDateFilter] = useState("All");
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [ticketToDelete, setTicketToDelete] = useState(null);
+  const { toast, ToastViewport } = useToast();
 
-  const handleUpdateStatus = (ticketId, newStatus) => {
-    updateTicket(ticketId, { status: newStatus });
+  const handleUpdateStatus = async (ticketId, newStatus) => {
+    try {
+      const result = await updateTicket(ticketId, { status: newStatus });
+      if (newStatus === "Resolved") {
+        if (result?.remote) {
+          toast("Marked Cleaned Up — resident notified.");
+        } else {
+          toast("Marked Cleaned Up, but the resident could not be notified. Check connection/RLS.", { variant: "error" });
+        }
+      }
+    } catch {
+      toast("Failed to update status. Please try again.", { variant: "error" });
+    }
     if (selectedTicket && selectedTicket.id === ticketId) {
       setSelectedTicket((prev) => ({ ...prev, status: newStatus }));
     }
@@ -243,6 +256,8 @@ export default function TicketsPage() {
         description="Are you sure you want to move this report to the bin?"
         confirmLabel="Yes, delete"
       />
+
+      {ToastViewport}
     </div>
   );
 }

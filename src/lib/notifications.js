@@ -168,7 +168,10 @@ export async function pushNotification(entry) {
 
   if (error) {
     console.warn("Could not push notification to Supabase:", error.message || JSON.stringify(error));
-    // Fallback to a local-only notification to keep the UI functioning
+    // Fallback to a local-only notification to keep the UI functioning.
+    // NOTE: `remote: false` tells the caller this never left the browser —
+    // the other side will NOT receive it (usually an RLS policy blocking
+    // the insert, or no connection).
     const localItem = {
       id: "local-" + Date.now(),
       audience: entry.audience || "admin",
@@ -183,30 +186,32 @@ export async function pushNotification(entry) {
       location: entry.location,
       truckId: entry.truckId
     };
-    return write((next) => {
+    const item = write((next) => {
       if (!next.items.find(n => n.id === localItem.id)) {
           next.items = [localItem, ...(next.items || [])].slice(0, MAX_ENTRIES);
       }
       return localItem;
     });
+    return { item, remote: false, error };
   }
-  
+
   // Realtime channel will pick it up and update the local store,
   // but we can eagerly update it here for immediate UI response.
-  return write((next) => {
-    const item = dbToClient(data);
+  const item = write((next) => {
+    const mapped = dbToClient(data);
     // Attach frontend-only fields since they aren't always stored in DB
-    item.actionUrl = entry.actionUrl ?? item.actionUrl;
-    item.actionLabel = entry.actionLabel ?? item.actionLabel;
-    item.location = entry.location ?? item.location;
-    item.ticketId = entry.ticketId ?? item.ticketId;
-    item.truckId = entry.truckId;
+    mapped.actionUrl = entry.actionUrl ?? mapped.actionUrl;
+    mapped.actionLabel = entry.actionLabel ?? mapped.actionLabel;
+    mapped.location = entry.location ?? mapped.location;
+    mapped.ticketId = entry.ticketId ?? mapped.ticketId;
+    mapped.truckId = entry.truckId;
 
-    if (!next.items.find(n => n.id === item.id)) {
-        next.items = [item, ...(next.items || [])].slice(0, MAX_ENTRIES);
+    if (!next.items.find(n => n.id === mapped.id)) {
+        next.items = [mapped, ...(next.items || [])].slice(0, MAX_ENTRIES);
     }
-    return item;
+    return mapped;
   });
+  return { item, remote: true };
 }
 
 export function getNotifications(audience) {

@@ -12,6 +12,7 @@ import { DashboardSkeleton } from "@/components/ui/skeletons";
 import { PanelStat } from "@/components/ui/panel-stat";
 import { useTickets, updateTicket, removeTicket } from "@/lib/tickets";
 import { formatTicketDateTime } from "@/lib/utils";
+import { useToast } from "@/components/pwa/Toast";
 import TicketDetailsModal from "@/components/modals/ticket-details-modal";
 import ConfirmModal from "@/components/ui/confirm-modal";
 import { useAuth } from "@/context/AuthContext";
@@ -45,8 +46,21 @@ export default function DashboardPage() {
     .filter((t) => (statusFilter === "All" ? true : t.status === statusFilter))
     .slice(0, 8);
 
-  const handleUpdateStatus = (ticketId, newStatus) => {
-    updateTicket(ticketId, { status: newStatus });
+  const { toast, ToastViewport } = useToast();
+
+  const handleUpdateStatus = async (ticketId, newStatus) => {
+    try {
+      const result = await updateTicket(ticketId, { status: newStatus });
+      if (newStatus === "Resolved") {
+        if (result?.remote) {
+          toast("Marked Cleaned Up — resident notified.");
+        } else {
+          toast("Marked Cleaned Up, but the resident could not be notified. Check connection/RLS.", { variant: "error" });
+        }
+      }
+    } catch {
+      toast("Failed to update status. Please try again.", { variant: "error" });
+    }
     if (selectedTicket && selectedTicket.id === ticketId) {
       setSelectedTicket((prev) => ({ ...prev, status: newStatus }));
     }
@@ -246,6 +260,8 @@ export default function DashboardPage() {
         onConfirm={() => handleDeleteTicket(ticketToDelete?.id)}
         onCancel={() => setTicketToDelete(null)}
       />
+
+      {ToastViewport}
     </div>
   );
 }

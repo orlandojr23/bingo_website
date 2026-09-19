@@ -49,7 +49,7 @@ function Field({ label, children }) {
 }
 
 export default function DispatchPage() {
-  const toast = useToast();
+  const { toast, ToastViewport } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSchedule, setSelectedSchedule] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -952,6 +952,8 @@ export default function DispatchPage() {
         onConfirm={handleTruckDelete}
         onCancel={() => setTruckToRemove(null)}
       />
+
+      {ToastViewport}
     </div>
   );
 }

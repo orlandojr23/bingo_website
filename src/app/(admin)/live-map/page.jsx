@@ -12,6 +12,7 @@ import TicketDetailsModal from "@/components/modals/ticket-details-modal";
 import { inputClass } from "@/components/ui/input";
 import { MapSkeleton } from "@/components/ui/skeletons";
 import { cn, formatTicketDateTime } from "@/lib/utils";
+import { useToast } from "@/components/pwa/Toast";
 import { Search, MapPin, Truck as TruckIcon } from "lucide-react";
 
 const MapCanvas = dynamic(() => import("@/components/map/map-canvas"), {
@@ -157,8 +158,21 @@ function LiveMapContent() {
     setMobileTab("map");
   };
 
-  const handleUpdateStatus = (ticketId, newStatus) => {
-    updateTicket(ticketId, { status: newStatus });
+  const { toast, ToastViewport } = useToast();
+
+  const handleUpdateStatus = async (ticketId, newStatus) => {
+    try {
+      const result = await updateTicket(ticketId, { status: newStatus });
+      if (newStatus === "Resolved") {
+        if (result?.remote) {
+          toast("Marked Cleaned Up — resident notified.");
+        } else {
+          toast("Marked Cleaned Up, but the resident could not be notified. Check connection/RLS.", { variant: "error" });
+        }
+      }
+    } catch {
+      toast("Failed to update status. Please try again.", { variant: "error" });
+    }
     if (selectedTicket?.id === ticketId) {
       setSelectedTicket((prev) => ({ ...prev, status: newStatus }));
     }
@@ -456,6 +470,8 @@ function LiveMapContent() {
           </div>
         )}
       </div>
+
+      {ToastViewport}
     </div>
   );
 }

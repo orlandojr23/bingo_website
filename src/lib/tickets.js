@@ -219,7 +219,8 @@ export async function updateTicket(id, patch) {
   fetchTickets();
 
   // Tell the resident their report was cleaned up. Fire-and-forget: a
-  // notification failure must never fail the status update itself.
+  // notification failure must never fail the status update itself. The
+  // outcome is returned so the UI can confirm (or warn) visibly.
   if (patch.status === "Resolved") {
     try {
       let reporterId = knownTicket?.reporterId || null;
@@ -238,22 +239,32 @@ export async function updateTicket(id, patch) {
         category = row?.category || category;
       }
       const audience = reporterId || (reporter ? `resident:${reporter}` : null);
-      if (audience) {
-        await pushNotification({
-          audience,
-          type: "Resolved",
-          title: "Your report was cleaned up",
-          message: `Your report (${category}) at ${location} has been marked Cleaned Up. Thank you for keeping Tejero clean!`,
-          location,
-          ticketId: id,
-          at: new Date().toISOString(),
-          dedupeKey: `ticket:${id}:resolved`,
-        });
+      if (!audience) {
+        console.warn(`Status saved, but ticket ${id} has no reporter to notify.`);
+        return { notified: false, remote: false, reason: "no-reporter" };
       }
+      const { remote, error: notifError } = await pushNotification({
+        audience,
+        type: "Resolved",
+        title: "Your report was cleaned up",
+        message: `Your report (${category}) at ${location} has been marked Cleaned Up. Thank you for keeping Tejero clean!`,
+        location,
+        ticketId: id,
+        at: new Date().toISOString(),
+        dedupeKey: `ticket:${id}:resolved`,
+      });
+      if (remote) {
+        console.info(`Resident notification delivered (audience: ${audience}).`);
+      } else {
+        console.warn("Status saved, but resident notification stayed local-only:", notifError?.message || notifError);
+      }
+      return { notified: true, remote, audience };
     } catch (notifErr) {
       console.warn("Status saved, but resident notification failed:", notifErr?.message || notifErr);
+      return { notified: false, remote: false, reason: "exception" };
     }
   }
+  return { notified: false, remote: true };
 }
 
 
