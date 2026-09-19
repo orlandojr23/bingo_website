@@ -103,7 +103,7 @@ export default function TicketsPage() {
           description="All waste reports submitted by residents and their current status"
         />
 
-        <div className="grid shrink-0 grid-cols-1 gap-3.5 sm:grid-cols-2 w-full">
+        <div className="grid shrink-0 grid-cols-2 gap-3 sm:gap-3.5 max-w-sm sm:max-w-md">
           <PanelStat label="Total Reports" value={totalReports} hint="All submitted reports" />
           <PanelStat label="Waiting" value={pendingReports} hint="Needs attention" tone="rose" />
         </div>
