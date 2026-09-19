@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Inbox, Trash2, ListTodo } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { Search, Inbox, Trash2 } from "lucide-react";
 import { useTickets, updateTicket, removeTicket } from "@/lib/tickets";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
@@ -13,6 +12,9 @@ import { inputClass } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import TicketDetailsModal from "@/components/modals/ticket-details-modal";
 import ConfirmModal from "@/components/ui/confirm-modal";
+
+/** Short human-readable ticket ID, e.g. #A3F298 */
+const shortId = (id) => (id ? "#" + id.replace(/-/g, "").slice(0, 6).toUpperCase() : "—");
 
 export default function TicketsPage() {
   const router = useRouter();
@@ -52,7 +54,7 @@ export default function TicketsPage() {
       (t.barangay || "").toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "All" || t.status === statusFilter;
     const matchUrgency = urgencyFilter === "All" || t.urgency === urgencyFilter;
-    
+
     let matchDate = true;
     if (dateFilter !== "All" && t.timestamp) {
       const ticketDate = new Date(t.timestamp);
@@ -69,13 +71,12 @@ export default function TicketsPage() {
         matchDate = ticketDate.getFullYear() === now.getFullYear();
       }
     }
-    
+
     return matchSearch && matchStatus && matchUrgency && matchDate;
   });
 
   const totalReports = tickets.length;
   const pendingReports = tickets.filter((t) => t.status === "Pending").length;
-  const isSheetOpen = selectedTicket !== null;
 
   return (
     <div className="relative flex min-h-full w-full min-w-0 overflow-x-hidden bg-background">
@@ -110,7 +111,6 @@ export default function TicketsPage() {
             >
               <option value="All">All Statuses</option>
               <option value="Pending">Waiting</option>
-              <option value="In Progress">On the Way</option>
               <option value="Resolved">Cleaned Up</option>
             </select>
 
@@ -167,8 +167,8 @@ export default function TicketsPage() {
                     }`}
                   >
                     <div className="flex shrink-0 flex-nowrap items-center justify-between gap-2">
-                      <span className="shrink-0 whitespace-nowrap text-xs font-semibold tracking-tight text-foreground tabular-nums">
-                        {t.id}
+                      <span className="shrink-0 whitespace-nowrap text-xs font-semibold tracking-tight text-muted-foreground tabular-nums">
+                        {shortId(t.id)}
                       </span>
                       <UrgencyBadge urgency={t.urgency} />
                     </div>
@@ -178,7 +178,7 @@ export default function TicketsPage() {
                         {t.location}
                       </div>
                       <div className="mt-0.5 text-xs text-muted-foreground">
-                        {t.category || "Solid Waste"}
+                        {t.category || "Waste Report"}
                       </div>
                     </div>
 
@@ -193,7 +193,7 @@ export default function TicketsPage() {
                           </span>
                         }
                       />
-                      <InfoRow label="Barangay Area" value={t.barangay} />
+                      <InfoRow label="Barangay" value={t.barangay} />
                       <InfoRow label="Reported By" value={t.reporter} />
                     </div>
 

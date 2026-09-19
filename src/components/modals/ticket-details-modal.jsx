@@ -3,22 +3,16 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, MapPin } from "lucide-react";
+import { X, MapPin, ImageOff } from "lucide-react";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { getTicketPhoto } from "@/lib/mock-data";
 
 const statusOptions = [
   {
     label: "Waiting",
     value: "Pending",
     active: "border-amber-600 bg-amber-600 text-white shadow-xs",
-  },
-  {
-    label: "On the Way",
-    value: "In Progress",
-    active: "border-blue-600 bg-blue-600 text-white shadow-xs",
   },
   {
     label: "Cleaned Up",
@@ -29,7 +23,7 @@ const statusOptions = [
 
 function StatusSelector({ selectedStatus, onSelect, size = "sm" }) {
   return (
-    <div className={`grid grid-cols-3 ${size === "sm" ? "gap-1.5" : "gap-2"}`}>
+    <div className={`grid grid-cols-2 ${size === "sm" ? "gap-1.5" : "gap-2"}`}>
       {statusOptions.map((opt) => (
         <button
           key={opt.value}
@@ -59,6 +53,32 @@ function DetailBlock({ label, children, className = "" }) {
   );
 }
 
+/** Returns a short human-readable ticket number like #A3F298 from a UUID */
+function shortId(id) {
+  if (!id) return "—";
+  return "#" + id.replace(/-/g, "").slice(0, 6).toUpperCase();
+}
+
+/** Photo block — uses the actual resident upload (base64 or URL), falls back gracefully */
+function TicketPhoto({ photo, ticketId }) {
+  if (!photo) {
+    return (
+      <div className="flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-lg border border-border bg-muted text-muted-foreground">
+        <ImageOff className="h-8 w-8 opacity-40" strokeWidth={1.5} />
+        <span className="text-xs">No photo attached</span>
+      </div>
+    );
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={photo}
+      alt={`Photo for report ${shortId(ticketId)}`}
+      className="h-full w-full rounded-lg object-cover transition-transform duration-300 hover:scale-105"
+    />
+  );
+}
+
 export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateStatus, onLocateOnMap, inline = false }) {
   const [selectedStatus, setSelectedStatus] = useState(ticket?.status || "Pending");
   const [mounted, setMounted] = useState(false);
@@ -84,9 +104,6 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
     onClose();
   };
 
-  const assignedUnit =
-    ticket?.status === "Resolved" ? "Team 02" : ticket?.status === "In Progress" ? "Truck 04" : "Unassigned";
-
   /* ─────────────────────────── Inline Sidebar Mode ─────────────────────────── */
   if (inline) {
     if (!isOpen || !ticket) return null;
@@ -95,7 +112,7 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
         <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
           <div className="flex shrink-0 items-start justify-between border-b border-border pb-3">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-semibold text-foreground tracking-tight tabular-nums">{ticket.id}</span>
+              <span className="text-xs font-semibold text-foreground tracking-tight tabular-nums">{shortId(ticket.id)}</span>
               <UrgencyBadge urgency={ticket.urgency} />
               <StatusBadge status={ticket.status} />
             </div>
@@ -123,13 +140,13 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
             </DetailBlock>
 
             <DetailBlock label="Date & Time">
-              <span className="text-xs font-semibold text-foreground">{ticket.date || "2023-10-24"}</span>
-              <span className="text-xs text-muted-foreground">{ticket.time || "08:42 AM"}</span>
+              <span className="text-xs font-semibold text-foreground">{ticket.date || "—"}</span>
+              <span className="text-xs text-muted-foreground">{ticket.time || ""}</span>
             </DetailBlock>
 
-            <DetailBlock label="Assigned Team">
-              <span className="text-xs font-semibold text-foreground">{assignedUnit}</span>
-              <span className="text-xs text-muted-foreground">Brgy. Tejero</span>
+            <DetailBlock label="Barangay">
+              <span className="text-xs font-semibold text-foreground">{ticket.barangay || "Tejero"}</span>
+              <span className="text-xs text-muted-foreground">Cebu City</span>
             </DetailBlock>
           </div>
 
@@ -141,15 +158,7 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
 
           <DetailBlock label="Photo from Resident" className="shrink-0">
             <div className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-lg border border-border bg-muted">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={getTicketPhoto(ticket.category)}
-                alt={`Photo for report ${ticket.id}`}
-                className="h-full w-full object-cover"
-                onError={(e) => {
-                  e.target.src = "https://images.unsplash.com/photo-1611284446314-60a58ac0deb9?w=600&auto=format&fit=crop&q=80";
-                }}
-              />
+              <TicketPhoto photo={ticket.photo} ticketId={ticket.id} />
             </div>
           </DetailBlock>
 
@@ -164,7 +173,7 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
             Cancel
           </Button>
           <Button variant="primary" size="sm" onClick={handleSave}>
-            Save
+            {selectedStatus === "Resolved" && ticket.status !== "Resolved" ? "Mark as Cleaned Up" : "Save"}
           </Button>
         </div>
       </div>
@@ -196,7 +205,7 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
               <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-5 sm:p-6">
                 <div className="flex shrink-0 items-start justify-between border-b border-border pb-4">
                   <div className="flex flex-wrap items-center gap-2.5">
-                    <span className="text-base font-semibold text-foreground tracking-tight tabular-nums">{ticket.id}</span>
+                    <span className="text-base font-semibold text-foreground tracking-tight tabular-nums">{shortId(ticket.id)}</span>
                     <UrgencyBadge urgency={ticket.urgency} />
                     <StatusBadge status={ticket.status} />
                   </div>
@@ -224,15 +233,15 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
                   </DetailBlock>
 
                   <DetailBlock label="Date & Time">
-                    <span className="text-sm font-semibold text-foreground tracking-tight tabular-nums">{ticket.date || "2023-10-24"}</span>
+                    <span className="text-sm font-semibold text-foreground tracking-tight tabular-nums">{ticket.date || "—"}</span>
                     <span className="mt-0.5 text-xs font-medium text-muted-foreground tracking-tight tabular-nums">
-                      {ticket.time || "08:42 AM"}
+                      {ticket.time || ""}
                     </span>
                   </DetailBlock>
 
-                  <DetailBlock label="Assigned Team">
-                    <span className="text-sm font-semibold text-foreground">{assignedUnit}</span>
-                    <span className="text-xs text-muted-foreground">Brgy. Tejero</span>
+                  <DetailBlock label="Barangay">
+                    <span className="text-sm font-semibold text-foreground">{ticket.barangay || "Tejero"}</span>
+                    <span className="text-xs text-muted-foreground">Cebu City — notified of this report</span>
                   </DetailBlock>
                 </div>
 
@@ -244,21 +253,18 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
 
                 <DetailBlock label="Photo from Resident" className="shrink-0">
                   <div className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-lg border border-border bg-muted">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={getTicketPhoto(ticket.category)}
-                      alt={`Photo for report ${ticket.id}`}
-                      className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
-                      onError={(e) => {
-                        e.target.src = "https://images.unsplash.com/photo-1611284446314-60a58ac0deb9?w=600&auto=format&fit=crop&q=80";
-                      }}
-                    />
+                    <TicketPhoto photo={ticket.photo} ticketId={ticket.id} />
                   </div>
                 </DetailBlock>
 
                 <div className="mt-2 flex shrink-0 flex-col gap-3 border-t border-border-subtle pb-4 pt-4">
                   <span className="text-xs font-medium text-muted-foreground">Update Status</span>
                   <StatusSelector selectedStatus={selectedStatus} onSelect={setSelectedStatus} size="md" />
+                  {selectedStatus === "Resolved" && ticket.status !== "Resolved" && (
+                    <p className="text-xs text-emerald-700 bg-emerald-50 rounded-lg px-3 py-2">
+                      Marking as <strong>Cleaned Up</strong> will notify the resident who submitted this report.
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -292,7 +298,9 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
                     Cancel
                   </Button>
                   <Button variant="primary" size="sm" onClick={handleSave}>
-                    Save Changes
+                    {selectedStatus === "Resolved" && ticket.status !== "Resolved"
+                      ? "Mark as Cleaned Up"
+                      : "Save Changes"}
                   </Button>
                 </div>
               </div>
