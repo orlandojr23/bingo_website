@@ -83,6 +83,13 @@ function isSpecificLocation(raw) {
 
 const LOCATION_FORMAT_HINT = "Be specific: e.g. “Behind Tejero Chapel, Purok 3”";
 
+// Generous bounding box around Brgy. Tejero. A pin outside it is still
+// accepted (the typed landmark is what crews navigate by) but gets a warning
+// since it usually means GPS drift or a wrong-area report.
+const TEJERO_GPS_BOUNDS = { south: 10.29, north: 10.32, west: 123.89, east: 123.92 };
+// Fixes worse than this are flagged so the user can step outdoors and retake.
+const POOR_GPS_ACCURACY_M = 100;
+
 function getTimeBasedGreeting(fullName = "Resident") {
   const name = fullName.split(" ")[0];
   return `Hi, ${name}!`;
@@ -512,6 +519,7 @@ export default function ResidentMobilePWA() {
 
   const [gpsCoords, setGpsCoords] = useState(null);
   const [gpsAddress, setGpsAddress] = useState("");
+  const [gpsAccuracy, setGpsAccuracy] = useState(null);
   const [isLocating, setIsLocating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedTicket, setSubmittedTicket] = useState(null);
@@ -636,8 +644,25 @@ export default function ResidentMobilePWA() {
     setIsLocating(true);
     navigator.geolocation.getCurrentPosition(
       async (position) => {
-        const { latitude, longitude } = position.coords;
+        const { latitude, longitude, accuracy } = position.coords;
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+          console.warn("GPS returned an invalid fix:", position.coords);
+          setIsLocating(false);
+          const err = new Error("Invalid GPS fix");
+          if (typeof onError === "function") {
+            onError(err);
+          } else {
+            toast("GPS returned an invalid fix. Step outdoors and try again.", {
+              variant: "error",
+            });
+          }
+          return;
+        }
+        // maximumAge: 0 (below) forces a fresh satellite/Wi-Fi fix — without
+        // it the browser may hand back a stale cached position.
+        const fixAccuracy = Number.isFinite(accuracy) ? Math.round(accuracy) : null;
         setGpsCoords({ lat: latitude, lng: longitude });
+        setGpsAccuracy(fixAccuracy);
         haptic();
         if (typeof onSuccess === "function") onSuccess({ lat: latitude, lng: longitude });
 
@@ -646,11 +671,30 @@ export default function ResidentMobilePWA() {
           address = await reverseGeocode(latitude, longitude) || "";
         } catch { }
         setGpsAddress(address);
-        toast(
-          address
-            ? `GPS pinned near ${address}. Add a specific landmark so crews can find it.`
-            : "GPS pinned. Add a specific area or landmark so crews can find it."
-        );
+
+        const accNote = fixAccuracy != null ? ` (±${fixAccuracy}m)` : "";
+        const inTejero =
+          latitude >= TEJERO_GPS_BOUNDS.south &&
+          latitude <= TEJERO_GPS_BOUNDS.north &&
+          longitude >= TEJERO_GPS_BOUNDS.west &&
+          longitude <= TEJERO_GPS_BOUNDS.east;
+        if (!inTejero) {
+          toast(
+            `GPS pinned${accNote} outside Brgy. Tejero — double-check your landmark so crews can find it.`,
+            { variant: "error" }
+          );
+        } else if (fixAccuracy != null && fixAccuracy > POOR_GPS_ACCURACY_M) {
+          toast(
+            `GPS pinned${accNote} — accuracy is low. Step outdoors and tap Retake GPS, and add a specific landmark.`,
+            { variant: "error" }
+          );
+        } else {
+          toast(
+            address
+              ? `GPS pinned${accNote} near ${address}. Add a specific landmark so crews can find it.`
+              : `GPS pinned${accNote}. Add a specific area or landmark so crews can find it.`
+          );
+        }
         setIsLocating(false);
       },
       (error) => {
@@ -664,7 +708,7 @@ export default function ResidentMobilePWA() {
           });
         }
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
   };
 
@@ -674,13 +718,15 @@ export default function ResidentMobilePWA() {
     setUrgency(ticket.urgency || "High");
     setLocationName(ticket.location || "");
     setBarangay(ticket.barangay || "Tejero");
-    setDescription(ticket.description || "");
+    setDescription(ticket.description || ticket.notes || "");
     setPhotoPreview(ticket.photo || null);
     if (ticket.lat && ticket.lng) {
       setGpsCoords({ lat: ticket.lat, lng: ticket.lng });
     } else {
       setGpsCoords(null);
     }
+    setGpsAccuracy(null);
+    setGpsAddress("");
     closeAllSheets();
     switchTab("report");
   }, []);
@@ -709,7 +755,7 @@ export default function ResidentMobilePWA() {
             lat: gpsCoords?.lat || 10.3016,
             lng: gpsCoords?.lng || 123.9086,
             category: category,
-            description: description,
+            description: description.trim(),
             photo: photoPreview,
           };
           await updateTicket(editingTicketId, patch);
@@ -731,7 +777,7 @@ export default function ResidentMobilePWA() {
             lat: gpsCoords?.lat || 10.3016,
             lng: gpsCoords?.lng || 123.9086,
             category: category,
-            description: description || `Reported ${category} at ${locationName}.`,
+            description: description.trim() || `Reported ${category} at ${locationName}.`,
             photo: photoPreview,
           };
 
@@ -1296,7 +1342,7 @@ export default function ResidentMobilePWA() {
                     className="flex items-center gap-1 text-[13px] font-semibold text-emerald-600 active:text-emerald-700 cursor-pointer disabled:opacity-60"
                   >
                     <MapPin className="h-4 w-4" strokeWidth={2} />
-                    {isLocating ? "Locating..." : "Use My GPS"}
+                    {isLocating ? "Locating..." : gpsCoords ? "Retake GPS" : "Use My GPS"}
                   </button>
                 </div>
 
@@ -1316,10 +1362,31 @@ export default function ResidentMobilePWA() {
                 />
                 <p className="mt-1 text-[12px] text-muted-foreground">
                   {gpsCoords
-                    ? gpsAddress
-                      ? `GPS ≈ ${gpsAddress} — still add a landmark.`
-                      : "GPS attached — still add a specific landmark."
+                    ? `${gpsAccuracy != null ? `GPS ±${gpsAccuracy}m` : "GPS"}${gpsAddress ? ` ≈ ${gpsAddress}` : " attached"} — still add a landmark.`
                     : LOCATION_FORMAT_HINT}
+                </p>
+              </div>
+
+              {/* Additional Details */}
+              <div>
+                <div className="mb-1.5 flex items-center justify-between">
+                  <label className="block text-[13px] text-muted-foreground">
+                    Additional Details <span className="text-muted-foreground/70">(optional)</span>
+                  </label>
+                  <span className="text-[12px] tabular-nums text-muted-foreground">
+                    {description.length}/500
+                  </span>
+                </div>
+                <textarea
+                  rows={3}
+                  maxLength={500}
+                  placeholder="e.g. Two black bags beside the canal, blocking the sidewalk since yesterday…"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="min-h-[96px] w-full resize-none rounded-2xl border border-border/60 bg-card px-3.5 py-3 text-[16px] leading-relaxed text-foreground placeholder:text-muted-foreground/60 focus:border-zinc-400 focus:outline-none transition-colors"
+                />
+                <p className="mt-1 text-[12px] text-muted-foreground">
+                  Crews and admins will see this note on your report.
                 </p>
               </div>
 
