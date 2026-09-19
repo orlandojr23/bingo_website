@@ -93,11 +93,16 @@ export function useArchivedTickets() {
 
 export async function addTicket(ticket) {
   // Insert directly to Supabase. PostGIS requires ST_Point(lng, lat).
-  // We use Supabase RPC or just let it insert using WKT representation 'POINT(lng lat)'
   const wktPoint = `POINT(${ticket.lng} ${ticket.lat})`;
 
   const { data: sessionData } = await supabase.auth.getSession();
-  
+
+  // Guard against oversized base64 images which can cause the Supabase
+  // request to hang or exceed the row size limit (~1 MB safety cap).
+  const MAX_IMAGE_BYTES = 1_000_000; // 1 MB
+  const imageUrl =
+    ticket.photo && ticket.photo.length > MAX_IMAGE_BYTES ? null : ticket.photo;
+
   const { error } = await supabase.from('tickets').insert({
     reporter_id: sessionData?.session?.user?.id || null,
     reporter_name: ticket.reporter,
@@ -106,30 +111,47 @@ export async function addTicket(ticket) {
     category: ticket.category,
     urgency: ticket.urgency,
     notes: ticket.notes,
-    image_url: ticket.photo, // If it's a huge base64 string, this will bloat the DB, but it works for now!
+    image_url: imageUrl,
     status: ticket.status || 'Pending',
     location_geo: wktPoint
   });
 
   if (error) {
     console.error("Error adding ticket:", error);
-  } else {
-    fetchTickets();
+    throw new Error(error.message || "Failed to add ticket");
   }
+
+  fetchTickets();
 }
+
 
 export async function updateTicket(id, patch) {
   const dbPatch = {};
   if (patch.status !== undefined) dbPatch.status = patch.status;
   if (patch.isArchived !== undefined) dbPatch.is_archived = patch.isArchived;
+  // Allow updating report fields from the edit form
+  if (patch.location !== undefined) dbPatch.location_name = patch.location;
+  if (patch.barangay !== undefined) dbPatch.barangay = patch.barangay;
+  if (patch.urgency !== undefined) dbPatch.urgency = patch.urgency;
+  if (patch.category !== undefined) dbPatch.category = patch.category;
+  if (patch.description !== undefined) dbPatch.notes = patch.description;
+  if (patch.photo !== undefined) {
+    const MAX_IMAGE_BYTES = 1_000_000;
+    dbPatch.image_url = patch.photo && patch.photo.length > MAX_IMAGE_BYTES ? null : patch.photo;
+  }
+  if (patch.lat !== undefined && patch.lng !== undefined) {
+    dbPatch.location_geo = `POINT(${patch.lng} ${patch.lat})`;
+  }
 
   const { error } = await supabase.from('tickets').update(dbPatch).eq('id', id);
   if (error) {
     console.error("Error updating ticket:", error);
-  } else {
-    fetchTickets();
+    throw new Error(error.message || "Failed to update ticket");
   }
+
+  fetchTickets();
 }
+
 
 export async function removeTicket(id) {
   const { error } = await supabase.from('tickets').update({ is_archived: true }).eq('id', id);

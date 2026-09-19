@@ -651,43 +651,50 @@ export default function ResidentMobilePWA() {
     setIsSubmitting(true);
 
     submitTimeoutRef.current = setTimeout(async () => {
-      if (editingTicketId) {
-        const patch = {
-          location: locationName.trim(),
-          barangay: barangay,
-          urgency: urgency,
-          lat: gpsCoords?.lat || 10.3016,
-          lng: gpsCoords?.lng || 123.9086,
-          category: category,
-          description: description,
-          photo: photoPreview,
-        };
-        await updateTicket(editingTicketId, patch);
-        setSubmittedTicket({ id: editingTicketId, ...patch });
-        setIsSubmitting(false);
-        setEditingTicketId(null);
-        haptic(20);
-      } else {
-        const created = {
-          location: locationName.trim(),
-          barangay: barangay,
-          city: "Cebu City",
-          reporter: reporterName || "Resident",
-          urgency: urgency,
-          status: "Pending",
-          date: new Date().toLocaleDateString("en-CA"),
-          time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          lat: gpsCoords?.lat || 10.3016,
-          lng: gpsCoords?.lng || 123.9086,
-          category: category,
-          description: description || `Reported ${category} at ${locationName}.`,
-          photo: photoPreview,
-        };
+      try {
+        if (editingTicketId) {
+          const patch = {
+            location: locationName.trim(),
+            barangay: barangay,
+            urgency: urgency,
+            lat: gpsCoords?.lat || 10.3016,
+            lng: gpsCoords?.lng || 123.9086,
+            category: category,
+            description: description,
+            photo: photoPreview,
+          };
+          await updateTicket(editingTicketId, patch);
+          setSubmittedTicket({ id: editingTicketId, ...patch });
+          setEditingTicketId(null);
+          haptic(20);
+        } else {
+          const created = {
+            location: locationName.trim(),
+            barangay: barangay,
+            city: "Cebu City",
+            reporter: reporterName || "Resident",
+            urgency: urgency,
+            status: "Pending",
+            date: new Date().toLocaleDateString("en-CA"),
+            time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            lat: gpsCoords?.lat || 10.3016,
+            lng: gpsCoords?.lng || 123.9086,
+            category: category,
+            description: description || `Reported ${category} at ${locationName}.`,
+            photo: photoPreview,
+          };
 
-        await addTicket(created);
-        setSubmittedTicket(created);
+          await addTicket(created);
+          setSubmittedTicket(created);
+          haptic(20);
+        }
+      } catch (err) {
+        console.error("[Report] Submit failed:", err);
+        toast("Failed to submit report. Please check your connection and try again.", {
+          variant: "error",
+        });
+      } finally {
         setIsSubmitting(false);
-        haptic(20);
       }
     }, 600);
   };
