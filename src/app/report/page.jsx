@@ -485,7 +485,7 @@ export default function ResidentMobilePWA() {
   // Form State for Report
   const [editingTicketId, setEditingTicketId] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
-  const [category, setCategory] = useState("Overflowing Bin");
+  const [category, setCategory] = useState("Uncollected Garbage");
   const [urgency, setUrgency] = useState("High");
   const [locationName, setLocationName] = useState("");
   const [barangay, setBarangay] = useState("Tejero");
@@ -621,7 +621,7 @@ export default function ResidentMobilePWA() {
 
   const handleEditTicket = useCallback((ticket) => {
     setEditingTicketId(ticket.id);
-    setCategory(ticket.category || "Overflowing Bin");
+    setCategory(ticket.category || "Uncollected Garbage");
     setUrgency(ticket.urgency || "High");
     setLocationName(ticket.location || "");
     setBarangay(ticket.barangay || "Tejero");
@@ -1180,11 +1180,9 @@ export default function ResidentMobilePWA() {
                   onChange={(e) => setCategory(e.target.value)}
                   className="h-[50px] w-full rounded-2xl border border-border/60 bg-card px-3.5 text-[16px] text-foreground focus:border-zinc-400 focus:outline-none transition-colors"
                 >
-                  <option value="Overflowing Bin">Overflowing Bin</option>
+                  <option value="Uncollected Garbage">Uncollected Garbage</option>
                   <option value="Illegal Dumping">Illegal Dumping</option>
-                  <option value="Uncollected Waste">Uncollected Waste</option>
-                  <option value="Drainage Clog">Drainage Clog</option>
-                  <option value="Litter">Street Litter</option>
+                  <option value="Missed Collection">Missed Collection</option>
                 </select>
               </div>
 
