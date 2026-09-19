@@ -672,7 +672,7 @@ export default function ResidentMobilePWA() {
             location: locationName.trim(),
             barangay: barangay,
             city: "Cebu City",
-            reporter: reporterName || "Resident",
+            reporter: residentSession?.name || "Resident",
             urgency: urgency,
             status: "Pending",
             date: new Date().toLocaleDateString("en-CA"),
