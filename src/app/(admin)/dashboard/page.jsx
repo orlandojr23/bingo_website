@@ -112,7 +112,7 @@ export default function DashboardPage() {
           <DashboardSkeleton />
         ) : (
           <>
-        <div className="grid shrink-0 grid-cols-3 gap-3 sm:gap-3.5 max-w-sm sm:max-w-md">
+        <div className="grid shrink-0 grid-cols-3 gap-3 sm:gap-3.5 max-w-xl sm:max-w-2xl">
           {kpis.map((kpi) => (
             <PanelStat
               key={kpi.label}
