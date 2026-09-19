@@ -481,9 +481,8 @@ export default function CrudPage() {
                         onChange={(e) => setForm({ ...form, status: e.target.value })}
                         className={cn(inputClass, "cursor-pointer")}
                       >
-                        <option value="Pending">Pending</option>
-                        <option value="In Progress">In Progress</option>
-                        <option value="Resolved">Resolved</option>
+                        <option value="Pending">Waiting</option>
+                        <option value="Resolved">Cleaned Up</option>
                       </select>
                     </div>
 

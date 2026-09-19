@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, MapPin, ImageOff } from "lucide-react";
+import { X, ImageOff } from "lucide-react";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatTicketDateLong, formatTicketTime } from "@/lib/utils";
@@ -285,21 +285,18 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
                 <div className="flex items-center">
                   {onLocateOnMap ? (
                     <Button
-                      variant="secondary"
+                      variant="primary"
                       size="sm"
                       onClick={() => {
                         onLocateOnMap(ticket);
                         onClose();
                       }}
-                      className="text-emerald-700"
                     >
-                      <MapPin className="h-3.5 w-3.5 text-emerald-600" />
                       <span>Locate on Map</span>
                     </Button>
                   ) : (
                     <Link href={`/live-map?ticketId=${ticket.id}`} onClick={onClose}>
-                      <Button variant="secondary" size="sm" className="text-emerald-700">
-                        <MapPin className="h-3.5 w-3.5 text-emerald-600" />
+                      <Button variant="primary" size="sm">
                         <span>Locate on Map</span>
                       </Button>
                     </Link>

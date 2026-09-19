@@ -8,12 +8,16 @@ import { AdminShellSkeleton } from "@/components/ui/skeletons";
 import { supabase } from "@/lib/supabase";
 import { useNotifications } from "@/lib/notifications";
 import { playDing } from "@/lib/sounds";
+import { useToast } from "@/components/pwa/Toast";
 import { reinitSupabaseSync } from "@/lib/live-route";
 
-// Dings whenever a new admin notification lands (route started, truck arrived
-// at a stop, ...). "Seen" is remembered in localStorage, so a reload — or a
-// slow first sync that starts empty — never replays the ding for old entries.
-function useAdminNotificationSound() {
+// Announces every new admin notification (route started, truck arrived at a
+// stop, new resident report, ...): ding + toast. Sound alone is unreliable —
+// browsers keep audio suspended until the next click, so an idle tab would
+// stay silent; the toast guarantees a visible signal regardless. "Seen" is
+// remembered in localStorage, so a reload — or a slow first sync that starts
+// empty — never replays for old entries.
+function useAdminNotificationSound(notify) {
   const items = useNotifications("admin");
   const seenRef = useRef(undefined);
   useEffect(() => {
@@ -41,8 +45,9 @@ function useAdminNotificationSound() {
         localStorage.setItem(KEY, latest.id);
       } catch {}
       playDing();
+      notify?.(latest.title || "New notification.");
     }
-  }, [items]);
+  }, [items, notify]);
 }
 
 export default function AdminLayout({ children }) {
@@ -50,7 +55,8 @@ export default function AdminLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [checking, setChecking] = useState(true);
   const [authorized, setAuthorized] = useState(false);
-  useAdminNotificationSound();
+  const { toast, ToastViewport } = useToast();
+  useAdminNotificationSound(toast);
 
   useEffect(() => {
     let active = true;
@@ -136,6 +142,8 @@ export default function AdminLayout({ children }) {
           {children}
         </main>
       </div>
+
+      {ToastViewport}
     </div>
   );
 }

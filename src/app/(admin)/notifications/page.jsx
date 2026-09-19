@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import {
   Bell,
@@ -9,7 +9,6 @@ import {
   Ticket as TicketIcon,
   Info,
   CheckCheck,
-  MapPin,
   Trash2,
   X,
 } from "lucide-react";
@@ -25,6 +24,7 @@ import {
   markAllNotificationsRead,
   removeNotification,
 } from "@/lib/notifications";
+import { useTickets, useArchivedTickets } from "@/lib/tickets";
 
 function timeAgoLabel(iso) {
   const t = new Date(iso).getTime();
@@ -83,18 +83,34 @@ export default function NotificationsPage() {
   const [activeTab, setActiveTab] = useState("All");
   const [selectedNotifId, setSelectedNotifId] = useState(null);
 
+  // Report tickets (live + archived) so a notification's location/barangay can
+  // be resolved from its linked ticket when the row itself carries none.
+  const tickets = useTickets();
+  const archivedTickets = useArchivedTickets();
+  const allTickets = useMemo(
+    () => tickets.concat(archivedTickets),
+    [tickets, archivedTickets]
+  );
+
   // Adapt store entries to the card/sheet view shape.
-  // `actionUrl` is only present when the optional notification columns exist
-  // (or the push happened in this session) — otherwise derive the View action
-  // from the ticket reference carried by the dedupe key.
-  const notifications = storeNotifications.map((n) => ({
-    ...n,
-    barangay: n.barangay ?? "Tejero",
-    timestamp: timeAgoLabel(n.at),
-    receivedAt: absoluteDateTimeLabel(n.at),
-    actionUrl: n.actionUrl || (n.ticketId ? `/live-map?ticketId=${n.ticketId}` : null),
-    actionLabel: n.actionLabel || (n.ticketId ? "View Report" : null),
-  }));
+  // `location`/`actionUrl` are only stored when the optional notification
+  // columns exist (or the push happened in this session) — otherwise derive
+  // them from the ticket reference carried by the dedupe key, so the card
+  // never degrades to "System" for a report that still exists.
+  const notifications = storeNotifications.map((n) => {
+    const linkedTicket = n.ticketId
+      ? allTickets.find((t) => String(t.id) === String(n.ticketId))
+      : null;
+    return {
+      ...n,
+      barangay: linkedTicket?.barangay || "Tejero",
+      location: n.location || linkedTicket?.location || null,
+      timestamp: timeAgoLabel(n.at),
+      receivedAt: absoluteDateTimeLabel(n.at),
+      actionUrl: n.actionUrl || (n.ticketId ? `/live-map?ticketId=${n.ticketId}` : null),
+      actionLabel: n.actionLabel || (n.ticketId ? "View Report" : null),
+    };
+  });
 
   const selectedNotif = notifications.find((n) => n.id === selectedNotifId) ?? null;
 
@@ -202,12 +218,11 @@ export default function NotificationsPage() {
                     }`}
                   >
                     <div className="flex shrink-0 flex-nowrap items-center justify-between gap-2">
-                      <div className="flex min-w-0 flex-nowrap items-center gap-1.5">
-                        <span className="whitespace-nowrap text-xs font-semibold tracking-tight text-foreground">
-                          {getTypeStyle(n.type).label}
-                        </span>
-                        {!n.isRead && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />}
-                      </div>
+                      {!n.isRead ? (
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
+                      ) : (
+                        <span />
+                      )}
                       <span
                         className={cn(
                           "flex shrink-0 items-center gap-1 whitespace-nowrap text-xs font-semibold",
@@ -283,37 +298,37 @@ export default function NotificationsPage() {
               onClick={() => setSelectedNotifId(null)}
             />
             <motion.div
-              initial={{ y: "100%", x: 0 }}
-              animate={{ y: 0, x: 0 }}
-              exit={{ y: "100%", x: 0 }}
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="relative z-10 flex h-auto max-h-[85dvh] sm:h-full w-full max-w-md flex-col overflow-y-auto rounded-t-2xl sm:rounded-none border-t sm:border-t-0 sm:border-l border-border bg-card p-4 sm:p-6 shadow-2xl pointer-events-auto self-end sm:self-auto"
+              className="relative z-10 flex h-auto max-h-[85dvh] sm:h-full sm:max-h-full w-full max-w-md flex-col overflow-hidden rounded-t-2xl sm:rounded-none border-t sm:border-t-0 sm:border-l border-border bg-card p-4 sm:p-6 shadow-2xl pointer-events-auto self-end sm:self-auto"
             >
-              <div className="flex flex-col h-full justify-between overflow-y-auto">
-                <div className="flex flex-1 flex-col gap-4 overflow-y-auto">
-                  <div className="flex shrink-0 items-start justify-between border-b border-border pb-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span
-                        className={cn(
-                          "flex shrink-0 items-center gap-1 whitespace-nowrap text-xs font-semibold",
-                          getTypeStyle(selectedNotif.type).pill
-                        )}
-                      >
-                        {getTypeStyle(selectedNotif.type).icon}
-                        {getTypeStyle(selectedNotif.type).label}
-                      </span>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => setSelectedNotifId(null)}
-                      className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
-                      aria-label="Back to list"
+              <div className="flex h-full flex-col justify-between overflow-hidden">
+                <div className="flex shrink-0 items-start justify-between border-b border-border/60 pb-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span
+                      className={cn(
+                        "flex shrink-0 items-center gap-1 whitespace-nowrap text-xs font-semibold",
+                        getTypeStyle(selectedNotif.type).pill
+                      )}
                     >
-                      <X className="h-4 w-4" />
-                    </button>
+                      {getTypeStyle(selectedNotif.type).icon}
+                      {getTypeStyle(selectedNotif.type).label}
+                    </span>
                   </div>
 
+                  <button
+                    type="button"
+                    onClick={() => setSelectedNotifId(null)}
+                    className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
+                    aria-label="Back to list"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto py-3">
                   <div className="divide-y divide-border/60 overflow-hidden rounded-2xl border border-border/60 bg-card">
                     <div className="flex flex-col gap-1 px-4 py-3">
                       <span className="text-[13px] text-muted-foreground">Details</span>
@@ -331,7 +346,7 @@ export default function NotificationsPage() {
                     <div className="flex flex-col gap-1 px-4 py-3">
                       <span className="text-[13px] text-muted-foreground">Location</span>
                       <div className="flex flex-col">
-                        <span className="text-[15px] font-semibold text-foreground">{selectedNotif.location}</span>
+                        <span className="text-[15px] font-semibold text-foreground">{selectedNotif.location || "System"}</span>
                         <span className="mt-0.5 text-[13px] text-muted-foreground">
                           Barangay {selectedNotif.barangay}
                         </span>
@@ -346,19 +361,14 @@ export default function NotificationsPage() {
 
                   {selectedNotif.actionUrl && (
                     <Link href={selectedNotif.actionUrl} onClick={() => setSelectedNotifId(null)}>
-                      <Button variant="secondary" className="w-full">
-                        {/Map|Track/.test(selectedNotif.actionLabel || "") ? (
-                          <MapPin className="h-3.5 w-3.5" />
-                        ) : (
-                          <TicketIcon className="h-3.5 w-3.5" />
-                        )}
+                      <Button variant="primary" className="h-11 w-full rounded-xl text-[15px] font-semibold">
                         {selectedNotif.actionLabel || "View"}
                       </Button>
                     </Link>
                   )}
                 </div>
 
-                <div className="mt-6 flex shrink-0 items-center justify-end border-t border-border-subtle pt-4">
+                <div className="mt-auto flex shrink-0 items-center justify-end gap-2 border-t border-border-subtle pt-4">
                   <Button variant="secondary" onClick={() => setSelectedNotifId(null)}>
                     Close
                   </Button>
