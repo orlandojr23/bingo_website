@@ -299,7 +299,6 @@ function LiveMapContent() {
                 >
                   <option value="All">All Status</option>
                   <option value="Pending">Waiting</option>
-                  <option value="In Progress">On the Way</option>
                   <option value="Resolved">Cleaned Up</option>
                 </select>
                 <select

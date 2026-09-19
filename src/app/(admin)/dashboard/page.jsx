@@ -31,14 +31,13 @@ export default function DashboardPage() {
   }, []);
 
   const pendingCount = tickets.filter((t) => t.status === "Pending").length;
-  const inProgressCount = tickets.filter((t) => t.status === "In Progress").length;
   const resolvedCount = tickets.filter((t) => t.status === "Resolved").length;
   const totalCount = tickets.length;
 
+  // Report workflow is Waiting → Cleaned Up ("On the Way" retired).
   const kpis = [
     { label: "Total Reports", value: totalCount, hint: "vs. last 30 days", tone: "zinc" },
     { label: "Waiting", value: pendingCount, hint: "Ready for collection", tone: "rose" },
-    { label: "On the Way", value: inProgressCount, hint: "Truck dispatched", tone: "blue" },
     { label: "Cleaned Up", value: resolvedCount, hint: "Average: 4 hours", tone: "emerald" },
   ];
 
@@ -113,7 +112,7 @@ export default function DashboardPage() {
           <DashboardSkeleton />
         ) : (
           <>
-        <div className="grid shrink-0 grid-cols-2 gap-3 sm:gap-3.5 lg:grid-cols-4">
+        <div className="grid shrink-0 grid-cols-1 gap-3.5 sm:grid-cols-3 w-full">
           {kpis.map((kpi) => (
             <PanelStat
               key={kpi.label}
@@ -129,11 +128,10 @@ export default function DashboardPage() {
           <h3 className="text-sm font-semibold text-foreground shrink-0 whitespace-nowrap">Recent Reports</h3>
 
           <div className="inline-flex max-w-full shrink-0 items-center gap-1 overflow-x-auto rounded-xl bg-muted p-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-            {["All", "Pending", "In Progress", "Resolved"].map((status) => {
+            {["All", "Pending", "Resolved"].map((status) => {
               const isActive = statusFilter === status;
               let displayLabel = "All";
               if (status === "Pending") displayLabel = "Waiting";
-              if (status === "In Progress") displayLabel = "On the Way";
               if (status === "Resolved") displayLabel = "Cleaned Up";
 
               return (

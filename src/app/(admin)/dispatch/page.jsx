@@ -564,7 +564,7 @@ export default function DispatchPage() {
 
 
 
-        <div className="grid shrink-0 grid-cols-2 gap-3.5 max-w-sm sm:max-w-md">
+        <div className="grid shrink-0 grid-cols-1 gap-3.5 sm:grid-cols-2 w-full">
           <PanelStat label="Schedules" value={totalSchedules} hint="Total collection schedules" />
           <PanelStat label="Trucks Out" value={activeDispatches} hint="Currently collecting" tone="emerald" />
         </div>
