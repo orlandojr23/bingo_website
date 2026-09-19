@@ -25,11 +25,20 @@ import ConfirmModal from "@/components/ui/confirm-modal";
 import { supabase } from "@/lib/supabase";
 import { createClient } from "@supabase/supabase-js";
 
-// Helper client to prevent auth operations from altering the current admin's session
+// Helper client to prevent auth operations from altering the current admin's session.
+// A unique storageKey keeps it from colliding with the main client's session
+// (which triggers the "Multiple GoTrueClient instances" warning and risks
+// undefined session behavior sharing one key).
 const authClient = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  { auth: { persistSession: false, autoRefreshToken: false } }
+  {
+    auth: {
+      storageKey: "sb-staff-invite-auth-token",
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  }
 );
 
 const formatNameInput = (str) =>

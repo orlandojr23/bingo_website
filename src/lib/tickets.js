@@ -258,7 +258,7 @@ export async function updateTicket(id, patch) {
         console.warn(`Status saved, but ticket ${id} has no reporter to notify.`);
         return { notified: false, remote: false, reason: "no-reporter" };
       }
-      const { remote, error: notifError } = await pushNotification({
+      const { remote, deduped, error: notifError } = await pushNotification({
         audience,
         type: "Resolved",
         title: "Your report was cleaned up",
@@ -269,7 +269,11 @@ export async function updateTicket(id, patch) {
         dedupeKey: `ticket:${id}:resolved`,
       });
       if (remote) {
-        console.info(`Resident notification delivered (audience: ${audience}).`);
+        console.info(
+          deduped
+            ? `Resident notification already exists (audience: ${audience}) — not duplicated.`
+            : `Resident notification delivered (audience: ${audience}).`
+        );
       } else {
         console.warn("Status saved, but resident notification stayed local-only:", notifError?.message || notifError);
       }

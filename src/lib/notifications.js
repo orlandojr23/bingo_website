@@ -121,13 +121,18 @@ function write(mutator) {
 }
 
 export async function pushNotification(entry) {
-  // If we have a dedupe key, we could check our local cache first to avoid a network round trip
+  // If we have a dedupe key, we could check our local cache first to avoid a network round trip.
+  // Must keep the `{ item, remote }` contract: callers destructure it, so a
+  // bare item here would read as a failed delivery.
   if (entry.dedupeKey) {
     const snap = getSnapshot();
     const dupe = (snap.items || []).find(
       (n) => n.dedupeKey === entry.dedupeKey && n.audience === entry.audience
     );
-    if (dupe) return dupe;
+    if (dupe) {
+      const remote = !String(dupe.id || "").startsWith("local-");
+      return { item: dupe, remote, deduped: true };
+    }
   }
 
   const basePayload = {
