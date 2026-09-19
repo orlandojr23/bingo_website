@@ -167,8 +167,8 @@ export default function TicketsPage() {
                     }`}
                   >
                     <div className="flex shrink-0 flex-nowrap items-center justify-between gap-2">
-                      <span className="shrink-0 whitespace-nowrap text-xs font-semibold tracking-tight text-muted-foreground tabular-nums">
-                        {shortId(t.id)}
+                      <span className="truncate text-xs font-semibold tracking-tight text-muted-foreground">
+                        {t.category || "Waste Report"}
                       </span>
                       <UrgencyBadge urgency={t.urgency} />
                     </div>

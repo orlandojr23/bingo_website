@@ -162,8 +162,8 @@ export default function DashboardPage() {
                     }`}
                   >
                     <div className="flex shrink-0 flex-nowrap items-center justify-between gap-2">
-                      <span className="shrink-0 whitespace-nowrap text-xs font-semibold tracking-tight text-foreground tabular-nums">
-                        {t.id}
+                      <span className="truncate text-xs font-semibold tracking-tight text-muted-foreground">
+                        {t.category || "Waste Report"}
                       </span>
                       <UrgencyBadge urgency={t.urgency} />
                     </div>
@@ -241,7 +241,7 @@ export default function DashboardPage() {
       <ConfirmModal
         open={!!ticketToDelete}
         title="Delete Report"
-        description={`Are you sure you want to remove report ${ticketToDelete?.id} (${ticketToDelete?.location})? This cannot be undone.`}
+        description={`Are you sure you want to remove the report at "${ticketToDelete?.location}"? This cannot be undone.`}
         onConfirm={() => handleDeleteTicket(ticketToDelete?.id)}
         onCancel={() => setTicketToDelete(null)}
       />
