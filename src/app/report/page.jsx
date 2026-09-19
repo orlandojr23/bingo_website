@@ -580,22 +580,52 @@ export default function ResidentMobilePWA() {
   const fileInputRef = useRef(null);
   const { toast, ToastViewport } = useToast();
 
-  // Ding + toast when a new report update lands. The snapshot present on
-  // mount is only recorded, so opening the page never replays sounds for
-  // old entries.
+  // Ding + toast when a new report update lands. "Seen" is remembered in
+  // localStorage per resident, so a reload (or a slow first sync, where the
+  // list starts empty and fills in a beat later) never replays old news —
+  // only a genuinely newer item fires.
   const notifSeenRef = useRef(undefined);
+  const notifSeenKeyRef = useRef(null);
   useEffect(() => {
+    const storageKey = residentSession?.id ? `bingo_seen_notif_${residentSession.id}` : null;
+    if (notifSeenKeyRef.current !== storageKey) {
+      notifSeenKeyRef.current = storageKey;
+      notifSeenRef.current = undefined;
+    }
     const latest = residentNotifs[0];
+    const readStored = () => {
+      try {
+        return storageKey ? localStorage.getItem(storageKey) : null;
+      } catch {
+        return null;
+      }
+    };
+    const writeStored = (id) => {
+      try {
+        if (storageKey && id) localStorage.setItem(storageKey, id);
+      } catch {}
+    };
     if (notifSeenRef.current === undefined) {
+      const stored = readStored();
+      if (stored) {
+        notifSeenRef.current = stored;
+        return;
+      }
+      // No record yet: an empty list usually means the sync hasn't returned,
+      // not that there is nothing — stay uninitialized rather than replaying
+      // the first arrivals as new.
+      if (residentNotifs.length === 0) return;
       notifSeenRef.current = latest?.id ?? null;
+      writeStored(latest?.id);
       return;
     }
     if (latest && latest.id !== notifSeenRef.current) {
       notifSeenRef.current = latest.id;
+      writeStored(latest.id);
       if (soundEnabled) playDing();
       toast(latest.title || "New update on your report.");
     }
-  }, [residentNotifs, soundEnabled, toast]);
+  }, [residentNotifs, soundEnabled, toast, residentSession?.id]);
 
   const openUpdate = (notif) => {
     markNotificationRead(notif.id);
@@ -1814,13 +1844,9 @@ export default function ResidentMobilePWA() {
               >
                 <div className="flex items-start gap-3">
                   {notif.type === "Resolved" ? (
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-600/10">
-                      <CheckCircle2 className="h-5 w-5 text-emerald-600" strokeWidth={2} />
-                    </span>
+                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" strokeWidth={2} />
                   ) : (
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-600/10">
-                      <Ticket className="h-5 w-5 text-amber-600" strokeWidth={2} />
-                    </span>
+                    <Ticket className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" strokeWidth={2} />
                   )}
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2">

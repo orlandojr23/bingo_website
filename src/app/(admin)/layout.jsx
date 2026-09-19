@@ -11,19 +11,35 @@ import { playDing } from "@/lib/sounds";
 import { reinitSupabaseSync } from "@/lib/live-route";
 
 // Dings whenever a new admin notification lands (route started, truck arrived
-// at a stop, ...). The snapshot present on mount is only recorded, so opening
-// an admin page never replays sounds for old entries.
+// at a stop, ...). "Seen" is remembered in localStorage, so a reload — or a
+// slow first sync that starts empty — never replays the ding for old entries.
 function useAdminNotificationSound() {
   const items = useNotifications("admin");
   const seenRef = useRef(undefined);
   useEffect(() => {
+    const KEY = "bingo_seen_notif_admin";
     const latest = items[0];
     if (seenRef.current === undefined) {
+      let stored = null;
+      try {
+        stored = localStorage.getItem(KEY);
+      } catch {}
+      if (stored) {
+        seenRef.current = stored;
+        return;
+      }
+      if (items.length === 0) return;
       seenRef.current = latest?.id ?? null;
+      try {
+        if (latest) localStorage.setItem(KEY, latest.id);
+      } catch {}
       return;
     }
     if (latest && latest.id !== seenRef.current) {
       seenRef.current = latest.id;
+      try {
+        localStorage.setItem(KEY, latest.id);
+      } catch {}
       playDing();
     }
   }, [items]);

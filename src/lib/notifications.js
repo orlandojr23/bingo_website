@@ -52,7 +52,12 @@ async function initSupabaseSync() {
         write((next) => {
           if (payload.eventType === "INSERT") {
             const newItem = dbToClient(payload.new);
-            next.items = [newItem, ...next.items].slice(0, MAX_ENTRIES);
+            // The sender also writes eagerly, so the realtime echo of our
+            // own push would otherwise appear as a duplicate row (and a
+            // double unread count). Merge by id instead.
+            next.items = (next.items || []).some((n) => n.id === newItem.id)
+              ? next.items.map((n) => (n.id === newItem.id ? newItem : n))
+              : [newItem, ...next.items].slice(0, MAX_ENTRIES);
           } else if (payload.eventType === "UPDATE") {
             const updatedItem = dbToClient(payload.new);
             next.items = next.items.map((n) =>
