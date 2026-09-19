@@ -1051,8 +1051,10 @@ export default function ResidentMobilePWA() {
         </div>
 
 
-        {/* Bottom Navigation Bar - native tab bar with center action, only visible on map */}
-        {activeTab === "map" && (
+        {/* Bottom Navigation Bar - native tab bar with center action, only visible
+            on map and hidden beneath full-screen overlays (Updates, Details),
+            which sit below its z-index */}
+        {activeTab === "map" && !showUpdates && !selectedTicket && (
         <div className="fixed bottom-0 inset-x-0 z-[100] border-t border-black/10 bg-background/85 backdrop-blur-xl shadow-[0_-4px_16px_rgba(0,0,0,0.06)] pb-[env(safe-area-inset-bottom)]">
           <div className="grid grid-cols-5 h-[64px] max-w-md mx-auto px-2">
             {/* 1. Map */}
