@@ -101,7 +101,7 @@ export default function RootLayout({ children }) {
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();if(!window.__bingoInstallPrompt){window.__bingoInstallPrompt=e;}});",
+              "window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__bingoInstallPrompt=e;});",
           }}
         />
         <AuthProvider>

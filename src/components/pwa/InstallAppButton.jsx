@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Download, X, Share2, PlusSquare, Smartphone } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -10,46 +10,79 @@ export default function InstallAppButton({ className = "" }) {
   const [isIOS, setIsIOS] = useState(false);
   const [hidden, setHidden] = useState(true);
   const [showIOSModal, setShowIOSModal] = useState(false);
+  const pollRef = useRef(null);
 
   useEffect(() => {
+    // Don't show if already running as an installed PWA
     const standalone =
       window.matchMedia("(display-mode: standalone)").matches ||
       window.navigator.standalone === true ||
       document.referrer.includes("android-app://");
     if (standalone) return;
 
+    // Check if the user already installed in a previous session
+    if (localStorage.getItem("pwa-installed") === "1") return;
+
     const ua = window.navigator.userAgent.toLowerCase();
     const ios =
-      /iphone|ipad|ipod/.test(ua) && !ua.includes("crios") && !ua.includes("fxios");
-    
+      /iphone|ipad|ipod/.test(ua) &&
+      !ua.includes("crios") &&
+      !ua.includes("fxios");
+
     if (ios) {
-      setIsIOS(ios);
+      setIsIOS(true);
       setHidden(false);
       return;
     }
 
-    // The event often fires before React hydrates; the inline script in the
-    // root layout caches it on window.__bingoInstallPrompt for us.
-    const cached = window.__bingoInstallPrompt;
-    if (cached) {
-      setDeferredPrompt(cached);
-      setHidden(false);
-    }
+    // Try to pick up the event that may have already fired (cached by the
+    // inline script in layout.jsx) or listen for it arriving later.
+    const tryPickUp = () => {
+      if (window.__bingoInstallPrompt) {
+        setDeferredPrompt(window.__bingoInstallPrompt);
+        setHidden(false);
+        // Stop polling once we have it
+        if (pollRef.current) {
+          clearInterval(pollRef.current);
+          pollRef.current = null;
+        }
+      }
+    };
 
+    // Immediate check + interval poll for up to ~5 seconds in case the event
+    // fires slightly after component mount.
+    tryPickUp();
+    pollRef.current = setInterval(tryPickUp, 300);
+    const clearPoll = setTimeout(() => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+    }, 5000);
+
+    // Also listen for the event directly (handles later fires or re-fires)
     const onBeforeInstall = (e) => {
       e.preventDefault();
+      window.__bingoInstallPrompt = e;
       setDeferredPrompt(e);
       setHidden(false);
     };
+
     const onInstalled = () => {
       setHidden(true);
       setDeferredPrompt(null);
+      window.__bingoInstallPrompt = null;
+      localStorage.setItem("pwa-installed", "1");
     };
+
     window.addEventListener("beforeinstallprompt", onBeforeInstall);
     window.addEventListener("appinstalled", onInstalled);
+
     return () => {
       window.removeEventListener("beforeinstallprompt", onBeforeInstall);
       window.removeEventListener("appinstalled", onInstalled);
+      if (pollRef.current) clearInterval(pollRef.current);
+      clearTimeout(clearPoll);
     };
   }, []);
 
@@ -58,12 +91,27 @@ export default function InstallAppButton({ className = "" }) {
       setShowIOSModal(true);
       return;
     }
-    if (!deferredPrompt || typeof deferredPrompt.prompt !== "function") return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === "accepted") {
-      setHidden(true);
+
+    // Prefer the React state value; fall back to the global cache
+    const prompt = deferredPrompt ?? window.__bingoInstallPrompt;
+
+    if (!prompt || typeof prompt.prompt !== "function") return;
+
+    try {
+      await prompt.prompt();
+      const { outcome } = await prompt.userChoice;
+      if (outcome === "accepted") {
+        setHidden(true);
+        localStorage.setItem("pwa-installed", "1");
+      }
+    } catch (err) {
+      // prompt() throws if the event has already been consumed; clear it so
+      // the component picks up the next fresh beforeinstallprompt event.
+      console.warn("[PWA] prompt() failed:", err);
+    } finally {
+      // Always clear: the prompt object is invalid after calling .prompt()
       setDeferredPrompt(null);
+      window.__bingoInstallPrompt = null;
     }
   };
 
