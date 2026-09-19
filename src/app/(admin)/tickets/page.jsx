@@ -33,10 +33,12 @@ export default function TicketsPage() {
     try {
       const result = await updateTicket(ticketId, { status: newStatus });
       // Only reflect the change locally after the database write succeeds —
-      // otherwise the UI would show a status that was never saved.
-      if (selectedTicket && selectedTicket.id === ticketId) {
-        setSelectedTicket((prev) => ({ ...prev, status: newStatus }));
-      }
+      // otherwise the UI would show a status that was never saved. Guarded
+      // merge: the panel closes on Save, so `prev` is usually null by now —
+      // merging onto null would resurrect a status-only zombie object.
+      setSelectedTicket((prev) =>
+        prev && prev.id === ticketId ? { ...prev, status: newStatus } : prev
+      );
       if (newStatus === "Resolved") {
         if (result?.remote) {
           toast("Marked Cleaned Up — resident notified.");

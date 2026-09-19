@@ -169,7 +169,7 @@ function LiveMapContent() {
         setSelectedTicket((prev) => ({ ...prev, status: newStatus }));
       }
       if (newStatus === "Resolved") {
-        if (result?.remote) {
+      if (result?.remote) {
           toast("Marked Cleaned Up — resident notified.");
         } else {
           toast("Marked Cleaned Up, but the resident could not be notified. Check connection/RLS.", { variant: "error" });
@@ -178,6 +178,13 @@ function LiveMapContent() {
     } catch {
       toast("Failed to update status. Please try again.", { variant: "error" });
     }
+    // Guarded merge: the details panel closes the moment Save is pressed,
+    // so by the time the async write finishes `prev` is usually null. Merging
+    // status onto null would resurrect a zombie `{ status }` object with
+    // every other field blank — exactly the empty shell in the screenshot.
+    setSelectedTicket((prev) =>
+      prev && prev.id === ticketId ? { ...prev, status: newStatus } : prev
+    );
   };
 
   const handleSwitchView = (view) => {

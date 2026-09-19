@@ -813,8 +813,15 @@ export default function ResidentMobilePWA() {
             photo: photoPreview,
           };
 
-          await addTicket(created);
+          const result = await addTicket(created);
           setSubmittedTicket(created);
+          // The report itself is saved at this point; only warn if the admin
+          // alert didn't go out so it can be retried/reported.
+          if (result && result.notified === false) {
+            toast("Report saved, but the admin alert failed to send.", { variant: "error" });
+          } else if (result && result.notified && !result.remote) {
+            toast("Report saved, but the admin alert stayed on this device. Check connection/RLS.", { variant: "error" });
+          }
           haptic(20);
         }
       } catch (err) {

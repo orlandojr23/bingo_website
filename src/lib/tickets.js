@@ -177,11 +177,12 @@ export async function addTicket(ticket) {
 
   // Notify the admin side (Notifications page, sidebar badge, arrival ding)
   // about the new resident report. Fire-and-forget: a notification failure
-  // must never fail the report submission itself.
+  // must never fail the report submission itself. The outcome is returned so
+  // the UI can warn visibly when the admin was not reached.
+  const newId = data?.id || null;
   try {
-    const newId = data?.id;
     const isEmergency = ticket.urgency === "Critical";
-    await pushNotification({
+    const { remote, deduped, error: notifError } = await pushNotification({
       audience: "admin",
       type: isEmergency ? "Emergency" : "Ticket",
       title: isEmergency
@@ -191,12 +192,23 @@ export async function addTicket(ticket) {
       location: `${ticket.location}, Brgy. ${ticket.barangay || "Tejero"}`,
       actionUrl: newId ? `/live-map?ticketId=${newId}` : "/tickets",
       actionLabel: "View Report",
-      ticketId: newId || null,
+      ticketId: newId,
       at: new Date().toISOString(),
       dedupeKey: newId ? `ticket:${newId}` : undefined,
     });
+    if (remote) {
+      console.info(
+        deduped
+          ? `Admin notification already exists for ticket ${newId} — not duplicated.`
+          : `Admin notification delivered for ticket ${newId}.`
+      );
+    } else {
+      console.warn("Report saved, but admin notification stayed local-only:", notifError?.message || notifError);
+    }
+    return { ticketId: newId, notified: true, remote };
   } catch (notifErr) {
     console.warn("Report saved, but admin notification failed:", notifErr?.message || notifErr);
+    return { ticketId: newId, notified: false, remote: false };
   }
 }
 
@@ -241,17 +253,15 @@ export async function updateTicket(id, patch) {
       let reporterId = knownTicket?.reporterId || null;
       let reporter = knownTicket?.reporter || "";
       let location = knownTicket?.location || "your reported area";
-      let category = knownTicket?.category || "waste report";
       if (!reporterId && !reporter) {
         const { data: row } = await supabase
           .from('tickets')
-          .select('reporter_id, reporter_name, location_name, category')
+          .select('reporter_id, reporter_name, location_name')
           .eq('id', id)
           .single();
         reporterId = row?.reporter_id || null;
         reporter = row?.reporter_name || "";
         location = row?.location_name || location;
-        category = row?.category || category;
       }
       const audience = reporterId || (reporter ? `resident:${reporter}` : null);
       if (!audience) {
@@ -262,7 +272,7 @@ export async function updateTicket(id, patch) {
         audience,
         type: "Resolved",
         title: "Your report was cleaned up",
-        message: `Your report (${category}) at ${location} has been marked Cleaned Up. Thank you for keeping Tejero clean!`,
+          message: `Your report at ${location} was cleaned up. Thank you!`,
         location,
         ticketId: id,
         at: new Date().toISOString(),
