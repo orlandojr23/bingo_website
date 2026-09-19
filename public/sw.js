@@ -1,5 +1,5 @@
 // Bin'Go Smart Waste Collection - Progressive Web App Service Worker
-const CACHE_NAME = "bingo-pwa-v2";
+const CACHE_NAME = "bingo-pwa-v3";
 const OFFLINE_URL = "/offline.html";
 
 const PRECACHE_ASSETS = [
@@ -69,9 +69,14 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          if (response.status === 200) {
+          if (response && response.status === 200) {
             const responseClone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, responseClone));
+            // Background cache refresh must never break the navigation if
+            // the response turns out uncacheable.
+            caches
+              .open(CACHE_NAME)
+              .then((cache) => cache.put(request, responseClone))
+              .catch(() => {});
           }
           return response;
         })
@@ -119,9 +124,14 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Default network with cache fallback
+  // Default network with cache fallback. Must ALWAYS resolve a Response:
+  // if the fetch fails (e.g. an aborted prefetch) and nothing is cached,
+  // resolving `undefined` throws "Failed to convert value to 'Response'"
+  // and the page/navigation fails.
   event.respondWith(
-    fetch(request).catch(() => caches.match(request))
+    fetch(request)
+      .then((response) => response || new Response("Offline", { status: 503 }))
+      .catch(async () => (await caches.match(request)) || new Response("Offline", { status: 503 }))
   );
 });
 

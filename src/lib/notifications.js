@@ -96,8 +96,11 @@ function dbToClient(row) {
 }
 
 function matchesAudience(rowAudience, audience) {
-  if (!audience || (Array.isArray(audience) && audience.length === 0)) return true;
-  if (Array.isArray(audience)) return audience.includes(rowAudience);
+  // No filter (undefined/null) matches everything; an explicit EMPTY list
+  // matches nothing — important pre-login, when the resident's audience keys
+  // aren't known yet and must not briefly match everyone else's rows.
+  if (!audience) return true;
+  if (Array.isArray(audience)) return audience.length > 0 && audience.includes(rowAudience);
   return rowAudience === audience;
 }
 
@@ -246,10 +249,13 @@ export async function markNotificationRead(id) {
 }
 
 export async function markAllNotificationsRead(audience) {
+  // An empty audience list must be a no-op — without this guard it would
+  // mark EVERYONE's notifications read.
+  if (Array.isArray(audience) && audience.length === 0) return;
   // Eager local update
   write((next) => {
     next.items = (next.items || []).map((n) =>
-      !audience || n.audience === audience ? { ...n, isRead: true } : n
+      matchesAudience(n.audience, audience) ? { ...n, isRead: true } : n
     );
   });
   
