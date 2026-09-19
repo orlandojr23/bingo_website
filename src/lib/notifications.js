@@ -167,7 +167,13 @@ export async function pushNotification(entry) {
   }
 
   if (error) {
-    console.warn("Could not push notification to Supabase:", error.message || JSON.stringify(error));
+    const detail = [
+      error.message,
+      error.code ? `code=${error.code}` : null,
+      error.details,
+      error.hint,
+    ].filter(Boolean).join(" | ") || JSON.stringify(error);
+    console.warn("Could not push notification to Supabase:", detail);
     // Fallback to a local-only notification to keep the UI functioning.
     // NOTE: `remote: false` tells the caller this never left the browser —
     // the other side will NOT receive it (usually an RLS policy blocking

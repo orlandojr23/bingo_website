@@ -32,6 +32,11 @@ export default function TicketsPage() {
   const handleUpdateStatus = async (ticketId, newStatus) => {
     try {
       const result = await updateTicket(ticketId, { status: newStatus });
+      // Only reflect the change locally after the database write succeeds —
+      // otherwise the UI would show a status that was never saved.
+      if (selectedTicket && selectedTicket.id === ticketId) {
+        setSelectedTicket((prev) => ({ ...prev, status: newStatus }));
+      }
       if (newStatus === "Resolved") {
         if (result?.remote) {
           toast("Marked Cleaned Up — resident notified.");
@@ -41,9 +46,6 @@ export default function TicketsPage() {
       }
     } catch {
       toast("Failed to update status. Please try again.", { variant: "error" });
-    }
-    if (selectedTicket && selectedTicket.id === ticketId) {
-      setSelectedTicket((prev) => ({ ...prev, status: newStatus }));
     }
   };
 

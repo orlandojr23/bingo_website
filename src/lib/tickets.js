@@ -11,6 +11,21 @@ function notify() {
   for (const listener of listeners) listener();
 }
 
+// PostgREST/network errors often log as `{}` in the dev overlay, hiding the
+// real cause. Serialize the useful fields explicitly instead.
+export function describeDbError(error) {
+  if (!error) return "unknown error";
+  if (typeof error === "string") return error;
+  const parts = [
+    error.message,
+    error.code ? `code=${error.code}` : null,
+    error.status ? `status=${error.status}` : null,
+    error.details,
+    error.hint,
+  ].filter(Boolean);
+  return parts.length > 0 ? parts.join(" | ") : JSON.stringify(error);
+}
+
 // Translate Supabase Row -> Frontend Object
 // `created_at` is the single source of truth for when a report was filed.
 // We derive `date` / `time` / `description` / `city` here so every consumer
@@ -154,7 +169,7 @@ export async function addTicket(ticket) {
   }).select('id').single();
 
   if (error) {
-    console.error("Error adding ticket:", error);
+    console.error("Error adding ticket:", describeDbError(error));
     throw new Error(error.message || "Failed to add ticket");
   }
 
@@ -212,7 +227,7 @@ export async function updateTicket(id, patch) {
 
   const { error } = await supabase.from('tickets').update(dbPatch).eq('id', id);
   if (error) {
-    console.error("Error updating ticket:", error);
+    console.error("Error updating ticket:", describeDbError(error));
     throw new Error(error.message || "Failed to update ticket");
   }
 
@@ -271,7 +286,7 @@ export async function updateTicket(id, patch) {
 export async function removeTicket(id) {
   const { error } = await supabase.from('tickets').update({ is_archived: true }).eq('id', id);
   if (error) {
-    console.error("Error archiving ticket:", error);
+    console.error("Error archiving ticket:", describeDbError(error));
   } else {
     fetchTickets();
   }
@@ -280,7 +295,7 @@ export async function removeTicket(id) {
 export async function restoreTicket(id) {
   const { error } = await supabase.from('tickets').update({ is_archived: false }).eq('id', id);
   if (error) {
-    console.error("Error restoring ticket:", error);
+    console.error("Error restoring ticket:", describeDbError(error));
   } else {
     fetchTickets();
   }
@@ -289,9 +304,10 @@ export async function restoreTicket(id) {
 export async function hardDeleteTicket(id) {
   const { error } = await supabase.from('tickets').delete().eq('id', id);
   if (error) {
-    console.error("Error deleting ticket:", error);
+    console.error("Error deleting ticket:", describeDbError(error));
   } else {
     fetchTickets();
   }
 }
+
 
