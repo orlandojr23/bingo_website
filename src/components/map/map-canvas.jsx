@@ -599,14 +599,35 @@ function MapCameraController({ center, zoom, onMapDrag, onBoundsChange, flySigna
     if (tuple) map.flyTo(tuple, zoomRef.current, { animate: true, duration: 0.8 });
   }, [flySignal, map]);
 
+  // Drag dismissal is gated on a real pan distance: `dragstart` fires on
+  // even a 1px accidental touch, which used to wipe focused pins/sheets.
+  // Micro-pans below the threshold keep focus; an intentional pan dismisses.
   useEffect(() => {
     if (!onMapDrag) return;
+    const INTENTIONAL_PAN_PX = 20;
+    let startCenter = null;
     const handleDragStart = () => {
-      onMapDrag();
+      startCenter = map.getCenter();
+    };
+    const handleDragEnd = () => {
+      if (!startCenter) {
+        onMapDrag();
+        return;
+      }
+      try {
+        const z = map.getZoom();
+        const moved = map.project(startCenter, z).distanceTo(map.project(map.getCenter(), z));
+        if (moved >= INTENTIONAL_PAN_PX) onMapDrag();
+      } catch {
+        onMapDrag();
+      }
+      startCenter = null;
     };
     map.on("dragstart", handleDragStart);
+    map.on("dragend", handleDragEnd);
     return () => {
       map.off("dragstart", handleDragStart);
+      map.off("dragend", handleDragEnd);
     };
   }, [map, onMapDrag]);
 

@@ -89,6 +89,9 @@ const LOCATION_FORMAT_HINT = "Be specific: e.g. “Behind Tejero Chapel, Purok 3
 const TEJERO_GPS_BOUNDS = { south: 10.29, north: 10.32, west: 123.89, east: 123.92 };
 // Fixes worse than this are flagged so the user can step outdoors and retake.
 const POOR_GPS_ACCURACY_M = 100;
+// A focused report pin auto-dismisses this long after the last focus event
+// (View on Map / marker tap), so it never lingers on the map.
+const FOCUS_AUTO_DISMISS_MS = 8000;
 
 function getTimeBasedGreeting(fullName = "Resident") {
   const name = fullName.split(" ")[0];
@@ -127,6 +130,8 @@ export default function ResidentMobilePWA() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [mapFocusTicket, setMapFocusTicket] = useState(null);
+  // Bumped on every focus event so the auto-dismiss timer re-arms.
+  const [focusSignal, setFocusSignal] = useState(0);
   const [ticketAddress, setTicketAddress] = useState("");
 
   useEffect(() => {
@@ -534,7 +539,34 @@ export default function ResidentMobilePWA() {
     };
   }, []);
 
-  const handleMapBoundsChange = useCallback((b) => setMapBounds(b), []);
+  // Ref mirror of the live view bounds so dismissal helpers always read the
+  // current view without re-creating callbacks on every pan/zoom.
+  const mapBoundsRef = useRef(null);
+  const handleMapBoundsChange = useCallback((b) => {
+    mapBoundsRef.current = b;
+    setMapBounds(b);
+  }, []);
+
+  // Clearing focus also drops the camera `center` binding back to mapCenter,
+  // which would yank the camera. Pin mapCenter to the current view first so
+  // dismissal (timer, drag, back) never moves the camera.
+  const clearMapFocus = useCallback(() => {
+    const b = mapBoundsRef.current;
+    if (b) {
+      setMapCenter([(b.north + b.south) / 2, (b.east + b.west) / 2]);
+    }
+    setMapFocusTicket(null);
+  }, []);
+
+  // Focused pin auto-dismiss: re-arms on every focus event, cleared on
+  // unmount or when a newer focus supersedes it.
+  useEffect(() => {
+    if (!mapFocusTicket) return;
+    const timer = setTimeout(() => {
+      clearMapFocus();
+    }, FOCUS_AUTO_DISMISS_MS);
+    return () => clearTimeout(timer);
+  }, [mapFocusTicket, focusSignal, clearMapFocus]);
   const isPointInView = useCallback(
     (lat, lng) =>
       !!mapBounds &&
@@ -836,10 +868,15 @@ export default function ResidentMobilePWA() {
             zoom={mapZoom}
             highlightedTicketId={mapFocusTicket?.id}
             onMapReady={handleMapReady}
+            // Popups off so a marker tap re-opens the ticket Details screen
+            // instead of a Leaflet popup (round trip: Tickets → Details →
+            // View on Map → tap marker → Details).
+            showTicketPopup={false}
             onSelectTicket={(t) => {
               closeAllSheets();
               setSelectedTicket(t);
               setMapFocusTicket(t);
+              setFocusSignal((s) => s + 1);
               setMapZoom(17);
               haptic();
             }}
@@ -848,7 +885,7 @@ export default function ResidentMobilePWA() {
                 setSelectedTicket(null);
               }
               if (mapFocusTicket) {
-                setMapFocusTicket(null);
+                clearMapFocus();
               }
               if (isMapSheetExpanded) {
                 setIsMapSheetExpanded(false);
@@ -1624,7 +1661,7 @@ export default function ResidentMobilePWA() {
             type="button"
             onClick={() => {
               setSelectedTicket(null);
-              setMapFocusTicket(null);
+              clearMapFocus();
               haptic();
             }}
             className="absolute left-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-all hover:bg-muted active:scale-95 active:bg-muted cursor-pointer"
@@ -1702,6 +1739,7 @@ export default function ResidentMobilePWA() {
             type="button"
             onClick={() => {
               setMapFocusTicket(selectedTicket);
+              setFocusSignal((s) => s + 1);
               setSelectedTicket(null);
               setMapZoom(17);
               switchTab("map");
