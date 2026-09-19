@@ -324,8 +324,8 @@ function LiveMapContent() {
                       }`}
                     >
                       <div className="mb-1 flex flex-nowrap items-center justify-between gap-2">
-                        <span className="shrink-0 whitespace-nowrap text-xs font-semibold tracking-tight text-foreground tabular-nums">
-                          {t.id}
+                        <span className="truncate text-xs font-semibold tracking-tight text-muted-foreground">
+                          {t.category || "Waste Report"}
                         </span>
                         <UrgencyBadge urgency={t.urgency} />
                       </div>
@@ -336,8 +336,9 @@ function LiveMapContent() {
                       <div className="flex items-center justify-between">
                         <StatusBadge status={t.status} />
                         <span className="text-xs font-medium text-muted-foreground tracking-tight tabular-nums">
-                          {t.date}
-                          {t.time ? ` · ${t.time}` : ""}
+                          {t.timestamp
+                            ? new Date(t.timestamp).toLocaleDateString("en-PH", { month: "short", day: "numeric" })
+                            : t.date || ""}
                         </span>
                       </div>
                     </button>
@@ -365,7 +366,7 @@ function LiveMapContent() {
                 return (
                   <div className="mx-4 mb-2 shrink-0 rounded-xl border border-border bg-muted/40 p-3 text-xs leading-relaxed text-zinc-600">
                     <p className="mb-0.5 font-semibold text-foreground">Live Tracking</p>
-                    Truck <strong className="font-semibold text-foreground">{activeTruck.id}</strong> is
+                    Truck <strong className="font-semibold text-foreground">{activeTruck.plate || activeTruck.id}</strong> is
                     currently on its collection route.{" "}
                     {ts?.onsite ? (
                       <>Currently collecting at {point?.name ?? "a stop"}.</>
@@ -404,7 +405,7 @@ function LiveMapContent() {
                       <TruckIcon
                         className={`h-4 w-4 ${trk.isActive ? "text-emerald-600" : "text-zinc-400"}`}
                       />
-                      <span className="text-xs font-semibold text-foreground">{trk.id}</span>
+                      <span className="text-xs font-semibold text-foreground">{trk.plate || trk.id}</span>
                     </div>
                     <StatusBadge status={trk.isActive ? "On Duty" : "Off Duty"} className="p-0 text-xs font-medium" />
                   </div>

@@ -181,8 +181,8 @@ export default function NotificationsPage() {
                   >
                     <div className="flex shrink-0 flex-nowrap items-center justify-between gap-2">
                       <div className="flex min-w-0 flex-nowrap items-center gap-1.5">
-                        <span className="whitespace-nowrap text-xs font-semibold tracking-tight text-foreground tabular-nums">
-                          {n.id}
+                        <span className="whitespace-nowrap text-xs font-semibold tracking-tight text-foreground">
+                          {getTypeStyle(n.type).label}
                         </span>
                         {!n.isRead && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />}
                       </div>
@@ -265,9 +265,6 @@ export default function NotificationsPage() {
                 <div className="flex flex-1 flex-col gap-4 overflow-y-auto">
                   <div className="flex shrink-0 items-start justify-between border-b border-border pb-3">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-xs font-semibold tracking-tight text-foreground tabular-nums">
-                        {selectedNotif.id}
-                      </span>
                       <span
                         className={cn(
                           "flex shrink-0 items-center gap-1 whitespace-nowrap text-xs font-semibold",
