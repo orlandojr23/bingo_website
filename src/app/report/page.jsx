@@ -1331,16 +1331,23 @@ export default function ResidentMobilePWA() {
           <div className="space-y-2.5 p-4">
             {tickets
               .filter((t) => t.reporter === residentSession?.name)
-              .sort((a, b) => b.id.localeCompare(a.id))
+              .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
               .map((ticket) => (
-                <div key={ticket.id} className="rounded-2xl border border-border/60 bg-card p-4">
+                <div
+                  key={ticket.id}
+                  onClick={() => { setSelectedTicket(ticket); haptic(); }}
+                  className="rounded-2xl border border-border/60 bg-card p-4 cursor-pointer active:scale-[0.99] transition-transform"
+                >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">
+                        {ticket.category || "Waste Report"}
+                      </p>
                       <p className="truncate text-[16px] font-semibold tracking-tight text-foreground">
                         {ticket.location}
                       </p>
                       {ticket.description ? (
-                        <p className="mt-0.5 line-clamp-2 text-[13px] leading-normal text-muted-foreground">
+                        <p className="mt-0.5 line-clamp-1 text-[13px] leading-normal text-muted-foreground">
                           {ticket.description}
                         </p>
                       ) : null}
@@ -1349,7 +1356,9 @@ export default function ResidentMobilePWA() {
                   </div>
                   <div className="mt-3 flex items-center justify-between border-t border-border/60 pt-2.5">
                     <span className="text-[12px] text-muted-foreground">
-                      {ticket.createdAt ? new Date(ticket.createdAt).toLocaleDateString() : ticket.date || "—"}
+                      {ticket.timestamp
+                        ? new Date(ticket.timestamp).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })
+                        : "—"}
                     </span>
                     <span className="text-[12px] font-medium capitalize text-muted-foreground">
                       {ticket.urgency} Priority
@@ -1494,7 +1503,7 @@ export default function ResidentMobilePWA() {
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <h2 className="text-[16px] font-semibold tracking-tight text-foreground">{selectedTicket.location}</h2>
-                <p className="mt-0.5 text-[13px] text-muted-foreground">{selectedTicket.id}</p>
+                <p className="mt-0.5 text-[13px] text-muted-foreground">{selectedTicket.category || "Waste Report"}</p>
               </div>
               <div className="flex shrink-0 items-center gap-1.5">
                 <UrgencyBadge urgency={selectedTicket.urgency} />
@@ -1519,11 +1528,19 @@ export default function ResidentMobilePWA() {
             </div>
             <div className="flex min-h-[48px] items-center justify-between gap-3 py-2.5">
               <span className="shrink-0 text-[15px] text-muted-foreground">Date</span>
-              <span className="text-right text-[15px] tabular-nums text-foreground">{selectedTicket.date}</span>
+              <span className="text-right text-[15px] tabular-nums text-foreground">
+                {selectedTicket.timestamp
+                  ? new Date(selectedTicket.timestamp).toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" })
+                  : selectedTicket.date || "—"}
+              </span>
             </div>
             <div className="flex min-h-[48px] items-center justify-between gap-3 py-2.5">
               <span className="shrink-0 text-[15px] text-muted-foreground">Time</span>
-              <span className="text-right text-[15px] tabular-nums text-foreground">{selectedTicket.time}</span>
+              <span className="text-right text-[15px] tabular-nums text-foreground">
+                {selectedTicket.timestamp
+                  ? new Date(selectedTicket.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                  : selectedTicket.time || "—"}
+              </span>
             </div>
             <div className="flex min-h-[48px] items-center justify-between gap-3 py-2.5">
               <span className="shrink-0 text-[15px] text-muted-foreground">Address</span>
