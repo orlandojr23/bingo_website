@@ -11,6 +11,7 @@ import { InfoRow } from "@/components/ui/info-row";
 import { DashboardSkeleton } from "@/components/ui/skeletons";
 import { PanelStat } from "@/components/ui/panel-stat";
 import { useTickets, updateTicket, removeTicket } from "@/lib/tickets";
+import { formatTicketDateTime } from "@/lib/utils";
 import TicketDetailsModal from "@/components/modals/ticket-details-modal";
 import ConfirmModal from "@/components/ui/confirm-modal";
 import { useAuth } from "@/context/AuthContext";
@@ -183,8 +184,7 @@ export default function DashboardPage() {
                         label="Reported"
                         value={
                           <span className="text-xs font-medium tracking-tight text-muted-foreground tabular-nums">
-                            {t.date}
-                            {t.time ? ` · ${t.time}` : ""}
+                            {t.timestamp ? formatTicketDateTime(t.timestamp) : `${t.date || "—"}${t.time ? ` · ${t.time}` : ""}`}
                           </span>
                         }
                       />
@@ -198,9 +198,10 @@ export default function DashboardPage() {
                           e.stopPropagation();
                           setTicketToDelete(t);
                         }}
-                        className="rounded-full bg-rose-600/10 px-3 py-1 text-[13px] font-semibold text-rose-600 transition-all active:scale-95 cursor-pointer"
+                        className="inline-flex items-center gap-1.5 rounded-full bg-rose-600/10 px-3 py-1 text-[13px] font-semibold text-rose-600 transition-all active:scale-95 cursor-pointer"
                         title="Delete Report"
                       >
+                        <Trash2 className="w-3.5 h-3.5" />
                         Delete Report
                       </button>
                     </div>

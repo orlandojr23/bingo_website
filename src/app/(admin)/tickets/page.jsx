@@ -9,7 +9,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { PanelStat } from "@/components/ui/panel-stat";
 import { InfoRow } from "@/components/ui/info-row";
 import { inputClass } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
+import { cn, formatTicketDateTime } from "@/lib/utils";
 import TicketDetailsModal from "@/components/modals/ticket-details-modal";
 import ConfirmModal from "@/components/ui/confirm-modal";
 
@@ -188,8 +188,7 @@ export default function TicketsPage() {
                         label="Reported"
                         value={
                           <span className="text-xs font-medium tracking-tight text-muted-foreground tabular-nums">
-                            {t.date}
-                            {t.time ? ` · ${t.time}` : ""}
+                            {t.timestamp ? formatTicketDateTime(t.timestamp) : `${t.date || "—"}${t.time ? ` · ${t.time}` : ""}`}
                           </span>
                         }
                       />

@@ -37,13 +37,18 @@ import { useFleet } from "@/lib/fleet";
 import { clearResidentSession } from "@/lib/resident-session";
 import { reverseGeocode } from "@/lib/geocode";
 import { useSwipeToggle } from "@/lib/use-swipe-toggle";
-import { cn, haptic } from "@/lib/utils";
+import { cn, haptic, formatTicketDateTime, formatTicketDateLong, formatTicketTime } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MapSkeleton, ResidentShellSkeleton } from "@/components/ui/skeletons";
 import { InfoRow } from "@/components/ui/info-row";
 import { useToast } from "@/components/pwa/Toast";
+import {
+  useNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
+} from "@/lib/notifications";
 import OnboardingModal from "@/components/pwa/OnboardingModal";
 import ProductTour from "@/components/pwa/ProductTour";
 
@@ -357,6 +362,20 @@ export default function ResidentMobilePWA() {
     }
   }, [activeTs, soundEnabled]);
 
+  // Report updates for this resident (e.g. "Your report was cleaned up").
+  // Subscribed by user id + display-name key so reports filed under either
+  // identity still reach them.
+  const [showUpdates, setShowUpdates] = useState(false);
+  // Plain array (not memoized): useNotifications derives a new list each
+  // render anyway, and the arrival effect below is ref-guarded, so identity
+  // churn here is harmless.
+  const residentAudiences = [
+    ...(residentSession?.id ? [residentSession.id] : []),
+    ...(residentSession?.name ? [`resident:${residentSession.name}`] : []),
+  ];
+  const residentNotifs = useNotifications(residentAudiences);
+  const residentUnread = residentNotifs.filter((n) => !n.isRead).length;
+
   // Single truthful status message derived from real schedules: pickup today,
   // or no pickup today with the next collection day.
   const pickupStatus = useMemo(() => {
@@ -521,6 +540,36 @@ export default function ResidentMobilePWA() {
   const fileInputRef = useRef(null);
   const { toast, ToastViewport } = useToast();
 
+  // Ding + toast when a new report update lands. The snapshot present on
+  // mount is only recorded, so opening the page never replays sounds for
+  // old entries.
+  const notifSeenRef = useRef(undefined);
+  useEffect(() => {
+    const latest = residentNotifs[0];
+    if (notifSeenRef.current === undefined) {
+      notifSeenRef.current = latest?.id ?? null;
+      return;
+    }
+    if (latest && latest.id !== notifSeenRef.current) {
+      notifSeenRef.current = latest.id;
+      if (soundEnabled) playDing();
+      toast(latest.title || "New update on your report.");
+    }
+  }, [residentNotifs, soundEnabled, toast]);
+
+  const openUpdate = (notif) => {
+    markNotificationRead(notif.id);
+    const target = notif.ticketId
+      ? tickets.find((t) => String(t.id) === String(notif.ticketId))
+      : null;
+    setShowUpdates(false);
+    if (target) {
+      setSelectedTicket(target);
+      setMapFocusTicket(null);
+      haptic();
+    }
+  };
+
   useEffect(() => {
     const t = new URLSearchParams(window.location.search).get("tab");
     if (TAB_IDS.includes(t)) setActiveTab(t);
@@ -664,10 +713,11 @@ export default function ResidentMobilePWA() {
             photo: photoPreview,
           };
           await updateTicket(editingTicketId, patch);
-          setSubmittedTicket({ id: editingTicketId, ...patch });
+          setSubmittedTicket({ id: editingTicketId, ...patch, timestamp: new Date().toISOString() });
           setEditingTicketId(null);
           haptic(20);
         } else {
+          const now = new Date();
           const created = {
             location: locationName.trim(),
             barangay: barangay,
@@ -675,8 +725,9 @@ export default function ResidentMobilePWA() {
             reporter: residentSession?.name || "Resident",
             urgency: urgency,
             status: "Pending",
-            date: new Date().toLocaleDateString("en-CA"),
-            time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            date: now.toLocaleDateString("en-CA"),
+            time: now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            timestamp: now.toISOString(),
             lat: gpsCoords?.lat || 10.3016,
             lng: gpsCoords?.lng || 123.9086,
             category: category,
@@ -818,6 +869,20 @@ export default function ResidentMobilePWA() {
               </AnimatePresence>
             )}
           </div>
+          {/* Right: Report updates bell */}
+          <button
+            type="button"
+            onClick={() => { setShowUpdates(true); haptic(); }}
+            className="relative ml-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-foreground transition-all hover:bg-muted active:scale-95 cursor-pointer"
+            aria-label="Report updates"
+          >
+            <Bell className="h-5 w-5" strokeWidth={2} />
+            {residentUnread > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-bold leading-none text-white">
+                {residentUnread > 9 ? "9+" : residentUnread}
+              </span>
+            )}
+          </button>
         </div>
 
 
@@ -1092,6 +1157,11 @@ export default function ResidentMobilePWA() {
           <p className="mt-1 max-w-[260px] text-[13px] leading-normal text-muted-foreground">
             Ticket <span className="font-semibold text-emerald-700">{submittedTicket.id}</span> submitted successfully & dispatched.
           </p>
+          <p className="mt-2 text-[12px] tabular-nums text-muted-foreground">
+            {submittedTicket.timestamp
+              ? formatTicketDateTime(submittedTicket.timestamp)
+              : `${formatTicketDateTime(new Date().toISOString())}`}
+          </p>
 
           <button
             type="button"
@@ -1318,6 +1388,19 @@ export default function ResidentMobilePWA() {
             <ChevronLeft className="h-6 w-6" strokeWidth={2} />
           </button>
           <h1 className="text-[17px] font-semibold tracking-tight text-foreground">My Tickets</h1>
+          <button
+            type="button"
+            onClick={() => { setShowUpdates(true); haptic(); }}
+            className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-all hover:bg-muted active:scale-95 active:bg-muted cursor-pointer"
+            aria-label="Report updates"
+          >
+            <Bell className="h-5 w-5" strokeWidth={2} />
+            {residentUnread > 0 && (
+              <span className="absolute top-0.5 right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-bold leading-none text-white">
+                {residentUnread > 9 ? "9+" : residentUnread}
+              </span>
+            )}
+          </button>
         </div>
       </div>
       <div className="flex flex-1 flex-col overflow-y-auto bg-muted/40 pb-10">
@@ -1346,19 +1429,19 @@ export default function ResidentMobilePWA() {
                       <p className="truncate text-[16px] font-semibold tracking-tight text-foreground">
                         {ticket.location}
                       </p>
-                      {ticket.description ? (
+                      {ticket.description || ticket.notes ? (
                         <p className="mt-0.5 line-clamp-1 text-[13px] leading-normal text-muted-foreground">
-                          {ticket.description}
+                          {ticket.description || ticket.notes}
                         </p>
                       ) : null}
                     </div>
                     <StatusBadge status={ticket.status} />
                   </div>
                   <div className="mt-3 flex items-center justify-between border-t border-border/60 pt-2.5">
-                    <span className="text-[12px] text-muted-foreground">
+                    <span className="text-[12px] tabular-nums text-muted-foreground">
                       {ticket.timestamp
-                        ? new Date(ticket.timestamp).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })
-                        : "—"}
+                        ? formatTicketDateTime(ticket.timestamp)
+                        : `${ticket.date || "—"}${ticket.time ? ` · ${ticket.time}` : ""}`}
                     </span>
                     <span className="text-[12px] font-medium capitalize text-muted-foreground">
                       {ticket.urgency} Priority
@@ -1510,9 +1593,9 @@ export default function ResidentMobilePWA() {
                 <StatusBadge status={selectedTicket.status} />
               </div>
             </div>
-            {selectedTicket.description ? (
+            {selectedTicket.description || selectedTicket.notes ? (
               <p className="mt-2 text-[13px] leading-normal text-muted-foreground">
-                {selectedTicket.description}
+                {selectedTicket.description || selectedTicket.notes}
               </p>
             ) : null}
           </div>
@@ -1524,21 +1607,21 @@ export default function ResidentMobilePWA() {
             </div>
             <div className="flex min-h-[48px] items-center justify-between gap-3 py-2.5">
               <span className="shrink-0 text-[15px] text-muted-foreground">Barangay</span>
-              <span className="truncate text-right text-[15px] text-foreground">{`${selectedTicket.barangay}, ${selectedTicket.city}`}</span>
+              <span className="truncate text-right text-[15px] text-foreground">{`${selectedTicket.barangay}, ${selectedTicket.city || "Cebu City"}`}</span>
             </div>
             <div className="flex min-h-[48px] items-center justify-between gap-3 py-2.5">
-              <span className="shrink-0 text-[15px] text-muted-foreground">Date</span>
+              <span className="shrink-0 text-[15px] text-muted-foreground">Date submitted</span>
               <span className="text-right text-[15px] tabular-nums text-foreground">
                 {selectedTicket.timestamp
-                  ? new Date(selectedTicket.timestamp).toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" })
+                  ? formatTicketDateLong(selectedTicket.timestamp)
                   : selectedTicket.date || "—"}
               </span>
             </div>
             <div className="flex min-h-[48px] items-center justify-between gap-3 py-2.5">
-              <span className="shrink-0 text-[15px] text-muted-foreground">Time</span>
+              <span className="shrink-0 text-[15px] text-muted-foreground">Time submitted</span>
               <span className="text-right text-[15px] tabular-nums text-foreground">
                 {selectedTicket.timestamp
-                  ? new Date(selectedTicket.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                  ? formatTicketTime(selectedTicket.timestamp)
                   : selectedTicket.time || "—"}
               </span>
             </div>
@@ -1561,6 +1644,89 @@ export default function ResidentMobilePWA() {
             View on Map
           </button>
         </div>
+      </div>
+    </motion.div>
+  )}
+  </AnimatePresence>
+
+  {/* Report Updates Full Screen View */}
+  <AnimatePresence mode="wait" initial={false}>
+  { showUpdates && (
+    <motion.div
+      key="fs-updates"
+      initial={{ opacity: 0, scale: 0.98, y: 8 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.98, y: 8 }}
+      transition={{ duration: 0.18, ease: "easeOut" }}
+      className="fixed inset-0 z-[94] flex flex-col bg-background"
+    >
+      <div className="shrink-0 border-b border-border/60 bg-background/80 backdrop-blur-md pt-[calc(env(safe-area-inset-top)+12px)] pb-3">
+        <div className="relative flex h-[52px] items-center justify-center px-2">
+          <button
+            type="button"
+            onClick={() => { setShowUpdates(false); haptic(); }}
+            className="absolute left-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-all hover:bg-muted active:scale-95 active:bg-muted cursor-pointer"
+            aria-label="Back"
+          >
+            <ChevronLeft className="h-6 w-6" strokeWidth={2} />
+          </button>
+          <h1 className="text-[17px] font-semibold tracking-tight text-foreground">Updates</h1>
+          {residentUnread > 0 && (
+            <button
+              type="button"
+              onClick={() => { markAllNotificationsRead(residentAudiences); haptic(); }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-[13px] font-semibold text-emerald-600 active:text-emerald-700 cursor-pointer"
+            >
+              Mark all read
+            </button>
+          )}
+        </div>
+      </div>
+      <div className="flex flex-1 flex-col overflow-y-auto bg-muted/40 pb-10">
+        {residentNotifs.length === 0 ? (
+          <div className="flex flex-1 flex-col items-center justify-center min-h-[50vh] px-6 py-16 text-center">
+            <Bell className="h-12 w-12 text-muted-foreground/40" strokeWidth={1.5} />
+            <h3 className="mt-4 text-[17px] font-semibold tracking-tight text-foreground">No Updates Yet</h3>
+            <p className="mt-1 max-w-[240px] text-[13px] leading-normal text-muted-foreground">When the crew acts on your reports, you&apos;ll see it here.</p>
+          </div>
+        ) : (
+          <div className="space-y-2.5 p-4">
+            {residentNotifs.map((notif) => (
+              <button
+                key={notif.id}
+                type="button"
+                onClick={() => openUpdate(notif)}
+                className="w-full rounded-2xl border border-border/60 bg-card p-4 text-left cursor-pointer active:scale-[0.99] transition-transform"
+              >
+                <div className="flex items-start gap-3">
+                  {notif.type === "Resolved" ? (
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-600/10">
+                      <CheckCircle2 className="h-5 w-5 text-emerald-600" strokeWidth={2} />
+                    </span>
+                  ) : (
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-600/10">
+                      <Ticket className="h-5 w-5 text-amber-600" strokeWidth={2} />
+                    </span>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className={cn("text-[15px] tracking-tight text-foreground", !notif.isRead ? "font-semibold" : "font-medium")}>
+                        {notif.title}
+                      </p>
+                      {!notif.isRead && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-emerald-500" />}
+                    </div>
+                    <p className="mt-0.5 line-clamp-3 text-[13px] leading-normal text-muted-foreground">
+                      {notif.message}
+                    </p>
+                    <p className="mt-2 text-[12px] tabular-nums text-muted-foreground">
+                      {notif.at ? formatTicketDateTime(notif.at) : "—"}
+                    </p>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </motion.div>
   )}

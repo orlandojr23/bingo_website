@@ -6,7 +6,20 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, MapPin, ImageOff } from "lucide-react";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { formatTicketDateLong, formatTicketTime } from "@/lib/utils";
 import Link from "next/link";
+
+/** Resolve the report's date/time from its DB timestamp, falling back to
+ *  legacy `date`/`time` fields so old and new tickets always show one. */
+function ticketDateLabel(ticket) {
+  if (ticket?.timestamp) return formatTicketDateLong(ticket.timestamp);
+  return ticket?.date || "—";
+}
+
+function ticketTimeLabel(ticket) {
+  if (ticket?.timestamp) return formatTicketTime(ticket.timestamp);
+  return ticket?.time || "—";
+}
 
 const statusOptions = [
   {
@@ -140,8 +153,8 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
             </DetailBlock>
 
             <DetailBlock label="Date & Time">
-              <span className="text-xs font-semibold text-foreground">{ticket.date || "—"}</span>
-              <span className="text-xs text-muted-foreground">{ticket.time || ""}</span>
+              <span className="text-xs font-semibold text-foreground tabular-nums">{ticketDateLabel(ticket)}</span>
+              <span className="text-xs text-muted-foreground tabular-nums">{ticketTimeLabel(ticket)}</span>
             </DetailBlock>
 
             <DetailBlock label="Barangay">
@@ -152,7 +165,7 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
 
           <DetailBlock label="Additional Details" className="shrink-0">
             <p className="text-xs leading-relaxed text-zinc-700">
-              {ticket.description || "No additional details provided."}
+              {ticket.description || ticket.notes || "No additional details provided."}
             </p>
           </DetailBlock>
 
@@ -233,9 +246,9 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
                   </DetailBlock>
 
                   <DetailBlock label="Date & Time">
-                    <span className="text-sm font-semibold text-foreground tracking-tight tabular-nums">{ticket.date || "—"}</span>
+                    <span className="text-sm font-semibold text-foreground tracking-tight tabular-nums">{ticketDateLabel(ticket)}</span>
                     <span className="mt-0.5 text-xs font-medium text-muted-foreground tracking-tight tabular-nums">
-                      {ticket.time || ""}
+                      {ticketTimeLabel(ticket)}
                     </span>
                   </DetailBlock>
 
@@ -247,7 +260,7 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
 
                 <DetailBlock label="Additional Details" className="shrink-0">
                   <p className="text-sm leading-relaxed text-zinc-700">
-                    {ticket.description || "No additional details provided."}
+                    {ticket.description || ticket.notes || "No additional details provided."}
                   </p>
                 </DetailBlock>
 

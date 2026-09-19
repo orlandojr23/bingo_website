@@ -67,6 +67,14 @@ async function initSupabaseSync() {
     .subscribe();
 }
 
+// Ticket reference carried by the dedupe key (`ticket:<id>` or
+// `ticket:<id>:resolved`). This survives reloads and realtime delivery even
+// when the optional detail columns below don't exist in the DB yet.
+function ticketIdFromDedupe(key) {
+  const m = /^ticket:([^:]+)(?::resolved)?$/.exec(key || "");
+  return m ? m[1] : null;
+}
+
 function dbToClient(row) {
   return {
     id: row.id,
@@ -77,8 +85,26 @@ function dbToClient(row) {
     isRead: row.is_read,
     dedupeKey: row.dedupe_key,
     at: row.created_at,
+    // Optional columns (see supabase/migrations/*_notifications_extras.sql).
+    // Null when the migration hasn't been run — callers must fall back to
+    // the message text / dedupe-derived ticketId.
+    location: row.location ?? null,
+    actionUrl: row.action_url ?? null,
+    actionLabel: row.action_label ?? null,
+    ticketId: row.ticket_id ?? ticketIdFromDedupe(row.dedupe_key),
   };
 }
+
+function matchesAudience(rowAudience, audience) {
+  if (!audience || (Array.isArray(audience) && audience.length === 0)) return true;
+  if (Array.isArray(audience)) return audience.includes(rowAudience);
+  return rowAudience === audience;
+}
+
+// Whether the optional detail columns exist. Probed once: the first insert
+// that fails with a missing-column error disables extras for the session and
+// pushNotification falls back to the base columns.
+let extrasSupported = true;
 
 function subscribe(listener) {
   listeners.add(listener);
@@ -104,18 +130,41 @@ export async function pushNotification(entry) {
     if (dupe) return dupe;
   }
 
-  const { data, error } = await supabase
+  const basePayload = {
+    audience: entry.audience || "admin",
+    type: entry.type || "Dispatch",
+    title: entry.title || "Notification",
+    message: entry.message || "",
+    is_read: false,
+    dedupe_key: entry.dedupeKey || null,
+  };
+
+  // Persist the detail fields when the optional columns exist (migration);
+  // otherwise retry with the base columns so pushes keep working.
+  const fullPayload = extrasSupported
+    ? {
+        ...basePayload,
+        location: entry.location ?? null,
+        action_url: entry.actionUrl ?? null,
+        action_label: entry.actionLabel ?? null,
+        ticket_id: entry.ticketId ?? ticketIdFromDedupe(entry.dedupeKey) ?? null,
+      }
+    : basePayload;
+
+  let { data, error } = await supabase
     .from("notifications")
-    .insert({
-      audience: entry.audience || "admin",
-      type: entry.type || "Dispatch",
-      title: entry.title || "Notification",
-      message: entry.message || "",
-      is_read: false,
-      dedupe_key: entry.dedupeKey || null,
-    })
+    .insert(fullPayload)
     .select()
     .single();
+
+  if (error && extrasSupported && /column|schema cache/i.test(error.message || "")) {
+    extrasSupported = false;
+    ({ data, error } = await supabase
+      .from("notifications")
+      .insert(basePayload)
+      .select()
+      .single());
+  }
 
   if (error) {
     console.warn("Could not push notification to Supabase:", error.message || JSON.stringify(error));
@@ -142,16 +191,17 @@ export async function pushNotification(entry) {
     });
   }
   
-  // Realtime channel will pick it up and update the local store, 
+  // Realtime channel will pick it up and update the local store,
   // but we can eagerly update it here for immediate UI response.
   return write((next) => {
     const item = dbToClient(data);
-    // Attach frontend-only fields since they aren't stored in DB
-    item.actionUrl = entry.actionUrl;
-    item.actionLabel = entry.actionLabel;
-    item.location = entry.location;
+    // Attach frontend-only fields since they aren't always stored in DB
+    item.actionUrl = entry.actionUrl ?? item.actionUrl;
+    item.actionLabel = entry.actionLabel ?? item.actionLabel;
+    item.location = entry.location ?? item.location;
+    item.ticketId = entry.ticketId ?? item.ticketId;
     item.truckId = entry.truckId;
-    
+
     if (!next.items.find(n => n.id === item.id)) {
         next.items = [item, ...(next.items || [])].slice(0, MAX_ENTRIES);
     }
@@ -161,7 +211,7 @@ export async function pushNotification(entry) {
 
 export function getNotifications(audience) {
   return (getSnapshot().items || [])
-    .filter((n) => !audience || n.audience === audience)
+    .filter((n) => matchesAudience(n.audience, audience))
     .sort((a, b) => new Date(b.at) - new Date(a.at));
 }
 
@@ -188,8 +238,10 @@ export async function markAllNotificationsRead(audience) {
   });
   
   let query = supabase.from("notifications").update({ is_read: true }).eq("is_read", false);
-  if (audience) {
-      query = query.eq("audience", audience);
+  if (audience && !(Array.isArray(audience) && audience.length === 0)) {
+      query = Array.isArray(audience)
+        ? query.in("audience", audience)
+        : query.eq("audience", audience);
   }
   await query;
 }
@@ -207,16 +259,19 @@ export function getUnreadCount(audience) {
   return getNotifications(audience).filter((n) => !n.isRead).length;
 }
 
+// `audience` accepts a single key or an array of keys. Residents subscribe
+// with `[userId, "resident:<displayName>"]` so reports filed before/after a
+// rename (or with a missing reporter_id) still reach them.
 export function useNotifications(audience) {
   const store = useSyncExternalStore(subscribe, getSnapshot, () => SEED);
   return (store.items || [])
-    .filter((n) => !audience || n.audience === audience)
+    .filter((n) => matchesAudience(n.audience, audience))
     .sort((a, b) => new Date(b.at) - new Date(a.at));
 }
 
 export function useUnreadCount(audience) {
   const store = useSyncExternalStore(subscribe, getSnapshot, () => SEED);
   return (store.items || []).filter(
-    (n) => (!audience || n.audience === audience) && !n.isRead
+    (n) => matchesAudience(n.audience, audience) && !n.isRead
   ).length;
 }

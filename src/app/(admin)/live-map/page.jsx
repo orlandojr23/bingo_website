@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useMemo, useRef, Suspense } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { useTickets, updateTicket } from "@/lib/tickets";
@@ -11,7 +11,7 @@ import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
 import TicketDetailsModal from "@/components/modals/ticket-details-modal";
 import { inputClass } from "@/components/ui/input";
 import { MapSkeleton } from "@/components/ui/skeletons";
-import { cn } from "@/lib/utils";
+import { cn, formatTicketDateTime } from "@/lib/utils";
 import { Search, MapPin, Truck as TruckIcon } from "lucide-react";
 
 const MapCanvas = dynamic(() => import("@/components/map/map-canvas"), {
@@ -35,49 +35,73 @@ function LiveMapContent() {
   const [mapCenter, setMapCenter] = useState([10.3016, 123.9086]);
   const [mapZoom, setMapZoom] = useState(null);
 
-  useEffect(() => {
-    if (urlTicketId) {
-      const ticket = tickets.find((t) => t.id === urlTicketId);
-      if (ticket) {
-        setMapView("reports");
-        setActiveTicketId(ticket.id);
-        setMapCenter([ticket.lat, ticket.lng]);
-        setMapZoom(18);
-        setSelectedTicket(ticket);
-      }
-    }
-  }, [urlTicketId, tickets]);
-
   const live = useLiveRoute();
   const fleet = useFleet();
   const truckRoutes = useTruckRoutes(live, fleet);
 
-  const trucksData = fleet.map((t) => {
-    const ts = live.trucks[t.id];
-    const route = truckRoutes.find((r) => r.id === t.id);
-    return {
-      id: t.id,
-      plate: t.plate,
-      driver: live.driverByTruck[t.id] ?? t.driver,
-      capacity: t.capacity,
-      lat: ts?.tracking.lat || 10.3016,
-      lng: ts?.tracking.lng || 123.9086,
-      heading: route?.heading ?? ts?.tracking.heading ?? 0,
-      eta: ts?.tracking.eta,
-      isActive: !!ts?.tracking.isActive,
-    };
-  });
+  // Stable identity: without this, `trucksData` is a new array every render
+  // and any effect depending on it re-fires forever.
+  const trucksData = useMemo(
+    () =>
+      fleet.map((t) => {
+        const ts = live.trucks[t.id];
+        const route = truckRoutes.find((r) => r.id === t.id);
+        return {
+          id: t.id,
+          plate: t.plate,
+          driver: live.driverByTruck[t.id] ?? t.driver,
+          capacity: t.capacity,
+          lat: ts?.tracking.lat || 10.3016,
+          lng: ts?.tracking.lng || 123.9086,
+          heading: route?.heading ?? ts?.tracking.heading ?? 0,
+          eta: ts?.tracking.eta,
+          isActive: !!ts?.tracking.isActive,
+        };
+      }),
+    [fleet, truckRoutes, live.trucks, live.driverByTruck]
+  );
+
+  // Deep-link (?ticketId= / ?truckId=) effects must be idempotent: they run
+  // again whenever their deps change identity, so each one applies once per
+  // URL param (tracked by ref) and skips setState when values already match.
+  const appliedTicketRef = useRef(null);
+  const appliedTruckRef = useRef(null);
 
   useEffect(() => {
-    if (urlTruckId) {
-      const truck = trucksData.find((t) => t.id === urlTruckId);
-      if (truck) {
-        setMapView("trucks");
-        setActiveTruckId(truck.id);
-        setMapCenter([truck.lat, truck.lng]);
-        setMapZoom(16);
-      }
+    if (!urlTicketId) {
+      appliedTicketRef.current = null;
+      return;
     }
+    if (appliedTicketRef.current === urlTicketId) return;
+    const ticket = tickets.find((t) => t.id === urlTicketId);
+    if (!ticket) return; // tickets still loading — wait for the fetch
+    appliedTicketRef.current = urlTicketId;
+    setMapView((v) => (v !== "reports" ? "reports" : v));
+    setActiveTicketId((prev) => (prev === ticket.id ? prev : ticket.id));
+    if (ticket.lat != null && ticket.lng != null) {
+      setMapCenter((prev) =>
+        prev[0] === ticket.lat && prev[1] === ticket.lng ? prev : [ticket.lat, ticket.lng]
+      );
+    }
+    setMapZoom((prev) => (prev === 18 ? prev : 18));
+    setSelectedTicket((prev) => (prev?.id === ticket.id ? prev : ticket));
+  }, [urlTicketId, tickets]);
+
+  useEffect(() => {
+    if (!urlTruckId) {
+      appliedTruckRef.current = null;
+      return;
+    }
+    if (appliedTruckRef.current === urlTruckId) return;
+    const truck = trucksData.find((t) => t.id === urlTruckId);
+    if (!truck) return;
+    appliedTruckRef.current = urlTruckId;
+    setMapView((v) => (v !== "trucks" ? "trucks" : v));
+    setActiveTruckId((prev) => (prev === truck.id ? prev : truck.id));
+    setMapCenter((prev) =>
+      prev[0] === truck.lat && prev[1] === truck.lng ? prev : [truck.lat, truck.lng]
+    );
+    setMapZoom((prev) => (prev === 16 ? prev : 16));
   }, [urlTruckId, trucksData]);
 
   useEffect(() => {
@@ -336,9 +360,7 @@ function LiveMapContent() {
                       <div className="flex items-center justify-between">
                         <StatusBadge status={t.status} />
                         <span className="text-xs font-medium text-muted-foreground tracking-tight tabular-nums">
-                          {t.timestamp
-                            ? new Date(t.timestamp).toLocaleDateString("en-PH", { month: "short", day: "numeric" })
-                            : t.date || ""}
+                          {t.timestamp ? formatTicketDateTime(t.timestamp) : `${t.date || ""}${t.time ? ` · ${t.time}` : ""}`}
                         </span>
                       </div>
                     </button>

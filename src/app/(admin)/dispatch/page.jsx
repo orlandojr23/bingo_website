@@ -717,8 +717,9 @@ export default function DispatchPage() {
                           e.stopPropagation();
                           setScheduleToDelete(sch.id);
                         }}
-                        className="flex-1 rounded-full bg-rose-600/10 px-3 py-1.5 text-[13px] font-semibold text-rose-600 transition-all active:scale-95"
+                        className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-rose-600/10 px-3 py-1.5 text-[13px] font-semibold text-rose-600 transition-all active:scale-95"
                       >
+                        <Trash2 className="w-3.5 h-3.5" />
                         Delete
                       </button>
                     </div>

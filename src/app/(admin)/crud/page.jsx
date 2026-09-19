@@ -229,8 +229,9 @@ export default function CrudPage() {
                           <button
                             type="button"
                             onClick={() => setRecordToDelete(r)}
-                            className="rounded-full bg-rose-600/10 px-3 py-1 text-[13px] font-semibold text-rose-600 transition-all active:scale-95 cursor-pointer"
+                            className="inline-flex items-center gap-1.5 rounded-full bg-rose-600/10 px-3 py-1 text-[13px] font-semibold text-rose-600 transition-all active:scale-95 cursor-pointer"
                           >
+                            <Trash2 className="w-3.5 h-3.5" />
                             Delete
                           </button>
                         </>
@@ -246,8 +247,9 @@ export default function CrudPage() {
                           <button
                             type="button"
                             onClick={() => setRecordToDelete(r)}
-                            className="rounded-full bg-rose-600/10 px-3 py-1 text-[13px] font-semibold text-rose-600 transition-all active:scale-95 cursor-pointer"
+                            className="inline-flex items-center gap-1.5 rounded-full bg-rose-600/10 px-3 py-1 text-[13px] font-semibold text-rose-600 transition-all active:scale-95 cursor-pointer"
                           >
+                            <Trash2 className="w-3.5 h-3.5" />
                             Delete
                           </button>
                         </>

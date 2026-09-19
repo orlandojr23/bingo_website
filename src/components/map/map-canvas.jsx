@@ -292,13 +292,15 @@ function TicketMarker({ ticket: t, fading, highlighted, showTicketPopup, onSelec
           </div>
 
           <p className="text-xs text-zinc-600 line-clamp-2 leading-relaxed">
-            {t.description}
+            {t.description || t.notes}
           </p>
 
           <div className="flex items-center justify-between pt-2 border-t border-zinc-100 mt-0.5">
             <StatusBadge status={t.status} />
-            <span className="text-xs text-zinc-400 font-mono">
-              {t.date}
+            <span className="text-xs text-zinc-400 font-mono tabular-nums">
+              {t.timestamp
+                ? `${new Date(t.timestamp).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })} · ${new Date(t.timestamp).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })}`
+                : `${t.date || ""}${t.time ? ` · ${t.time}` : ""}`}
             </span>
           </div>
         </div>

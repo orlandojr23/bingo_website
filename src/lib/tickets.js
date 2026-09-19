@@ -1,5 +1,6 @@
-import { useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { supabase } from "@/lib/supabase";
+import { pushNotification } from "@/lib/notifications";
 
 const listeners = new Set();
 let cache = { tickets: [] };
@@ -11,21 +12,48 @@ function notify() {
 }
 
 // Translate Supabase Row -> Frontend Object
+// `created_at` is the single source of truth for when a report was filed.
+// We derive `date` / `time` / `description` / `city` here so every consumer
+// (admin cards, modals, map popups, resident screens) can rely on them even
+// though those columns don't exist in the DB.
 function mapToFrontend(dbRow) {
+  const createdAt = dbRow.created_at || null;
+  let date = "—";
+  let time = "";
+  if (createdAt) {
+    const d = new Date(createdAt);
+    if (!Number.isNaN(d.getTime())) {
+      date = d.toLocaleDateString("en-PH", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+      time = d.toLocaleTimeString("en-PH", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    }
+  }
+  const notes = dbRow.notes || "";
   return {
     id: dbRow.id, // Now a UUID
+    reporterId: dbRow.reporter_id || null,
     reporter: dbRow.reporter_name,
     location: dbRow.location_name,
     barangay: dbRow.barangay,
+    city: "Cebu City",
     category: dbRow.category,
     urgency: dbRow.urgency,
-    notes: dbRow.notes,
+    notes,
+    description: notes,
     photo: dbRow.image_url,
     lat: dbRow.lat, // Comes from our computed column!
     lng: dbRow.lng, // Comes from our computed column!
     status: dbRow.status,
     isArchived: dbRow.is_archived,
-    timestamp: dbRow.created_at,
+    timestamp: createdAt,
+    date,
+    time,
   };
 }
 
@@ -67,8 +95,13 @@ export function useTickets() {
     () => cache,
     () => cache
   ).tickets;
-  
-  return tickets.filter(t => !t.isArchived);
+
+  // NOTE: `.filter()` creates a new array identity on every render. Without
+  // memoizing, any `useEffect(..., [tickets])` consumer (e.g. live-map deep
+  // links) re-fires every render and `setMapCenter([...])` re-renders forever
+  // → "Maximum update depth exceeded". `cache.tickets` is referentially
+  // stable between fetches, so this memo keeps the filtered array stable too.
+  return useMemo(() => tickets.filter(t => !t.isArchived), [tickets]);
 }
 
 export function useArchivedTickets() {
@@ -83,8 +116,8 @@ export function useArchivedTickets() {
     () => cache,
     () => cache
   ).tickets;
-  
-  return tickets.filter(t => t.isArchived);
+
+  return useMemo(() => tickets.filter(t => t.isArchived), [tickets]);
 }
 
 // -------------------------------------------------------------
@@ -103,18 +136,22 @@ export async function addTicket(ticket) {
   const imageUrl =
     ticket.photo && ticket.photo.length > MAX_IMAGE_BYTES ? null : ticket.photo;
 
-  const { error } = await supabase.from('tickets').insert({
+  // The report form sends `description`; older callers may send `notes`.
+  // Either one lands in the `notes` column so it is never dropped.
+  const notes = ticket.notes ?? ticket.description ?? "";
+
+  const { data, error } = await supabase.from('tickets').insert({
     reporter_id: sessionData?.session?.user?.id || null,
     reporter_name: ticket.reporter,
     location_name: ticket.location,
     barangay: ticket.barangay,
     category: ticket.category,
     urgency: ticket.urgency,
-    notes: ticket.notes,
+    notes,
     image_url: imageUrl,
     status: ticket.status || 'Pending',
     location_geo: wktPoint
-  });
+  }).select('id').single();
 
   if (error) {
     console.error("Error adding ticket:", error);
@@ -122,6 +159,30 @@ export async function addTicket(ticket) {
   }
 
   fetchTickets();
+
+  // Notify the admin side (Notifications page, sidebar badge, arrival ding)
+  // about the new resident report. Fire-and-forget: a notification failure
+  // must never fail the report submission itself.
+  try {
+    const newId = data?.id;
+    const isEmergency = ticket.urgency === "Critical";
+    await pushNotification({
+      audience: "admin",
+      type: isEmergency ? "Emergency" : "Ticket",
+      title: isEmergency
+        ? `Emergency: ${ticket.category || "Waste report"} — ${ticket.location}`
+        : `New report: ${ticket.category || "Waste report"} — ${ticket.location}`,
+      message: `${ticket.reporter || "A resident"} reported ${ticket.category || "waste"} at ${ticket.location}, Brgy. ${ticket.barangay || "Tejero"}. Priority: ${ticket.urgency || "High"}.`,
+      location: `${ticket.location}, Brgy. ${ticket.barangay || "Tejero"}`,
+      actionUrl: newId ? `/live-map?ticketId=${newId}` : "/tickets",
+      actionLabel: "View Report",
+      ticketId: newId || null,
+      at: new Date().toISOString(),
+      dedupeKey: newId ? `ticket:${newId}` : undefined,
+    });
+  } catch (notifErr) {
+    console.warn("Report saved, but admin notification failed:", notifErr?.message || notifErr);
+  }
 }
 
 
@@ -143,6 +204,12 @@ export async function updateTicket(id, patch) {
     dbPatch.location_geo = `POINT(${patch.lng} ${patch.lat})`;
   }
 
+  // Snapshot reporter details BEFORE the refresh so the Resolved
+  // notification below knows who to notify even if the cache updates.
+  const knownTicket = patch.status === "Resolved"
+    ? cache.tickets.find((t) => t.id === id) || null
+    : null;
+
   const { error } = await supabase.from('tickets').update(dbPatch).eq('id', id);
   if (error) {
     console.error("Error updating ticket:", error);
@@ -150,6 +217,43 @@ export async function updateTicket(id, patch) {
   }
 
   fetchTickets();
+
+  // Tell the resident their report was cleaned up. Fire-and-forget: a
+  // notification failure must never fail the status update itself.
+  if (patch.status === "Resolved") {
+    try {
+      let reporterId = knownTicket?.reporterId || null;
+      let reporter = knownTicket?.reporter || "";
+      let location = knownTicket?.location || "your reported area";
+      let category = knownTicket?.category || "waste report";
+      if (!reporterId && !reporter) {
+        const { data: row } = await supabase
+          .from('tickets')
+          .select('reporter_id, reporter_name, location_name, category')
+          .eq('id', id)
+          .single();
+        reporterId = row?.reporter_id || null;
+        reporter = row?.reporter_name || "";
+        location = row?.location_name || location;
+        category = row?.category || category;
+      }
+      const audience = reporterId || (reporter ? `resident:${reporter}` : null);
+      if (audience) {
+        await pushNotification({
+          audience,
+          type: "Resolved",
+          title: "Your report was cleaned up",
+          message: `Your report (${category}) at ${location} has been marked Cleaned Up. Thank you for keeping Tejero clean!`,
+          location,
+          ticketId: id,
+          at: new Date().toISOString(),
+          dedupeKey: `ticket:${id}:resolved`,
+        });
+      }
+    } catch (notifErr) {
+      console.warn("Status saved, but resident notification failed:", notifErr?.message || notifErr);
+    }
+  }
 }
 
 

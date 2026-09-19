@@ -10,6 +10,7 @@ import {
   Info,
   CheckCheck,
   MapPin,
+  Trash2,
   X,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -35,6 +36,21 @@ function timeAgoLabel(iso) {
   if (hrs < 24) return `${hrs}h ago`;
   const days = Math.floor(hrs / 24);
   return days === 1 ? "Yesterday" : `${days}d ago`;
+}
+
+function absoluteDateTimeLabel(iso) {
+  const t = new Date(iso);
+  if (!Number.isFinite(t.getTime())) return "";
+  const date = t.toLocaleDateString("en-PH", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+  const time = t.toLocaleTimeString("en-PH", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  return `${date} · ${time}`;
 }
 
 const typeStyles = {
@@ -68,10 +84,16 @@ export default function NotificationsPage() {
   const [selectedNotifId, setSelectedNotifId] = useState(null);
 
   // Adapt store entries to the card/sheet view shape.
+  // `actionUrl` is only present when the optional notification columns exist
+  // (or the push happened in this session) — otherwise derive the View action
+  // from the ticket reference carried by the dedupe key.
   const notifications = storeNotifications.map((n) => ({
     ...n,
     barangay: n.barangay ?? "Tejero",
     timestamp: timeAgoLabel(n.at),
+    receivedAt: absoluteDateTimeLabel(n.at),
+    actionUrl: n.actionUrl || (n.ticketId ? `/live-map?ticketId=${n.ticketId}` : null),
+    actionLabel: n.actionLabel || (n.ticketId ? "View Report" : null),
   }));
 
   const selectedNotif = notifications.find((n) => n.id === selectedNotifId) ?? null;
@@ -213,7 +235,12 @@ export default function NotificationsPage() {
                       <InfoRow label="Location" value={n.location || "System"} />
                       <InfoRow
                         label="Received"
-                        value={<span className="text-xs font-medium tracking-tight text-muted-foreground tabular-nums">{n.timestamp}</span>}
+                        value={
+                          <span className="text-xs font-medium tracking-tight text-muted-foreground tabular-nums">
+                            {n.receivedAt || "—"}
+                            {n.timestamp ? ` (${n.timestamp})` : ""}
+                          </span>
+                        }
                       />
                     </div>
 
@@ -221,9 +248,10 @@ export default function NotificationsPage() {
                       <button
                         type="button"
                         onClick={(e) => deleteNotification(n.id, e)}
-                        className="rounded-full bg-rose-600/10 px-3 py-1 text-[13px] font-semibold text-rose-600 transition-all active:scale-95 cursor-pointer"
+                        className="inline-flex items-center gap-1.5 rounded-full bg-rose-600/10 px-3 py-1 text-[13px] font-semibold text-rose-600 transition-all active:scale-95 cursor-pointer"
                         title="Delete Alert"
                       >
+                        <Trash2 className="w-3.5 h-3.5" />
                         Delete Alert
                       </button>
                     </div>
@@ -293,7 +321,10 @@ export default function NotificationsPage() {
                         <span className="break-words text-[15px] font-semibold text-foreground">
                           {selectedNotif.title}
                         </span>
-                        <span className="mt-0.5 text-[13px] text-muted-foreground">{selectedNotif.timestamp}</span>
+                        <span className="mt-0.5 text-[13px] tabular-nums text-muted-foreground">
+                          {selectedNotif.receivedAt || "—"}
+                          {selectedNotif.timestamp ? ` (${selectedNotif.timestamp})` : ""}
+                        </span>
                       </div>
                     </div>
 
