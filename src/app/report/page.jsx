@@ -896,7 +896,6 @@ export default function ResidentMobilePWA() {
             tickets={mapFocusTicket ? [mapFocusTicket] : []}
             trucks={activeTrucks}
             routes={[
-              activeTs && !routeCompleted && routePath.positions.length >= 2 && { id: `${displaySchedule.id}-leg`, ...routePath },
               futurePath.positions.length >= 2 && { id: `${displaySchedule.id}-future-${stopIndex}`, ...futurePath },
             ].filter(Boolean)}
             mapMode="pins"
