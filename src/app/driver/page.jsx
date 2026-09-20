@@ -712,16 +712,16 @@ export default function DriverPage() {
     toast("Route ended.");
   };
 
-  // Only the pin-to-pin trajectory is drawn (future legs between stops).
-  // The truck-anchored leg (truck position → current stop) was removed per
-  // request — its green line duplicated the pin trajectory and was visually
-  // noisy while the driver moves. driverRoute is still computed for heading/
-  // rerouting but not rendered.
+  // The truck-anchored leg (truck position → current stop) is drawn as the 
+  // active green line so the driver sees their immediate destination (Waze-style).
+  // Future legs between stops are drawn as dashed lines.
   const mapRoutes = useMemo(() => [
+    driverRoute.positions.length >= 2 && { id: `${routeScheduleId ?? "driver-route"}-current-${dStopIdx}`, ...driverRoute },
     driverFuturePath.positions.length >= 2 && { id: `${routeScheduleId ?? "driver-route"}-future-${dStopIdx}`, ...driverFuturePath },
     // eslint-disable-next-line react-hooks/exhaustive-deps
   ].filter(Boolean), [
     routeScheduleId, dStopIdx,
+    driverRoute.positions, driverRoute.heading, driverRoute.source, driverRoute.ready,
     driverFuturePath.positions, driverFuturePath.heading, driverFuturePath.source, driverFuturePath.ready,
   ]);
 
@@ -729,6 +729,20 @@ export default function DriverPage() {
   // (driverRoute.snappedOrigin) — line and marker can never separate, even
   // when the raw phone fix sits inside a house. Null = draw raw GPS.
   const snappedTruck = driverRoute.snappedOrigin;
+
+  // Waze-style heading: snap to the road direction to keep the truck perfectly 
+  // aligned with the route, BUT if the driver deviates and points more than 90° away 
+  // from the route (e.g. going the wrong way, making a U-turn), prioritize the actual 
+  // device heading so the truck icon and map camera spin around immediately.
+  const bestHeading = useMemo(() => {
+    if (!truckState) return 0;
+    const deviceHeading = truckState.tracking.heading;
+    if (snappedTruck && driverRoute.heading != null) {
+      const diff = Math.abs(((driverRoute.heading - deviceHeading + 540) % 360) - 180);
+      if (diff <= 90) return driverRoute.heading;
+    }
+    return deviceHeading;
+  }, [truckState, snappedTruck, driverRoute.heading]);
 
   const trucksForMap = useMemo(() => {
     if (!currentTruck || !truckState) return [];
@@ -741,21 +755,16 @@ export default function DriverPage() {
         capacity: currentTruck.capacity,
         lat: s ? s.lat : truckState.tracking.lat,
         lng: s ? s.lng : truckState.tracking.lng,
-        // When snapped, follow the road direction so the truck waits facing
-        // the route like Waze; otherwise fall back to device heading.
-        heading: s && driverRoute.heading != null ? driverRoute.heading : truckState.tracking.heading,
+        heading: bestHeading,
         eta: isOnDuty ? "Active On Route" : "Standby",
         isActive: truckState.tracking.isActive,
         phase: truckState.phase,
       },
     ];
-  }, [currentTruck, truckState, isOnDuty, liveDriver, snappedTruck, driverRoute.heading]);
+  }, [currentTruck, truckState, isOnDuty, liveDriver, snappedTruck, bestHeading]);
 
   // Waze-style course-up camera while driving: heading up, auto-follow truck.
-  // When snapped, use the road heading so the map stays aligned to the route.
-  const navBearing = isOnDuty
-    ? Math.round((snappedTruck && driverRoute.heading != null ? driverRoute.heading : truckState?.tracking.heading) ?? 0)
-    : null;
+  const navBearing = isOnDuty ? Math.round(bestHeading ?? 0) : null;
 
   useEffect(() => {
     if (isOnDuty) {

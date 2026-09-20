@@ -512,6 +512,7 @@ export async function startRoute(truckId, coords = null) {
         ...next.trucks[truckId],
         scheduleId: startedId,
         phase: newPhase,
+        stopIndex: next.trucks[truckId]?.stopIndex ?? 0,
         onsite: newPhase === "onsite",
         tracking: newTracking,
       },
