@@ -80,10 +80,10 @@ export default function BinPage() {
           </div>
         </div>
 
-        <div>
+        <div className="flex flex-1 flex-col">
           {viewType === "reports" ? (
             filteredTickets.length === 0 ? (
-              <div className="flex flex-col items-center justify-center px-4 py-14 text-center">
+              <div className="flex flex-1 flex-col items-center justify-center px-4 py-14 text-center">
                 <Trash2 className="h-12 w-12 text-muted-foreground/40" strokeWidth={1.5} />
                 <h3 className="mt-4 text-[17px] font-semibold tracking-tight text-foreground">Bin is Empty</h3>
                 <p className="mt-1 max-w-[240px] text-[13px] leading-normal text-muted-foreground">
@@ -137,7 +137,7 @@ export default function BinPage() {
             )
           ) : (
             filteredSchedules.length === 0 ? (
-              <div className="flex flex-col items-center justify-center px-4 py-14 text-center">
+              <div className="flex flex-1 flex-col items-center justify-center px-4 py-14 text-center">
                 <Trash2 className="h-12 w-12 text-muted-foreground/40" strokeWidth={1.5} />
                 <h3 className="mt-4 text-[17px] font-semibold tracking-tight text-foreground">Bin is Empty</h3>
                 <p className="mt-1 max-w-[240px] text-[13px] leading-normal text-muted-foreground">
