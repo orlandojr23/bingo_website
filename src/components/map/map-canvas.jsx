@@ -385,7 +385,13 @@ function TruckMarker({ trk, fading, bearing = 0 }) {
     // We should apply the rotation to the SVG to avoid conflicting with the pop-in scale animation.
     const svg = inner.querySelector('svg');
     if (svg) {
-      svg.style.transform = `rotate(${view.rot - bearing}deg)`;
+      // App heading convention is compass + 90 and the icon faces north at
+      // rotation 0, so the drawn rotation is (heading - 90) minus whatever
+      // the map itself is rotated by (course-up camera). Marker icons stay
+      // upright when the map rotates (leaflet-rotate rotateWithView is off),
+      // so on a north-up map this equals the compass bearing, and on the
+      // course-up driver map it nets to 0 = nose-up, Waze-style.
+      svg.style.transform = `rotate(${view.rot - bearing - 90}deg)`;
     }
   }, [view.rot, bearing, fading]);
 
@@ -538,6 +544,11 @@ function MapCameraController({ center, zoom, onMapDrag, onBoundsChange, flySigna
   centerRef.current = center;
   zoomRef.current = zoom;
   const selfRotate = useRef(false);
+  // While the user's finger is down (between dragstart and dragend), camera
+  // follow is suspended: GPS pushes arriving mid-drag must not yank the view
+  // back with an animated setView, which reads as the map "reacting" to —
+  // and fighting — the drag.
+  const draggingRef = useRef(false);
 
   // Any rotation we did not trigger ourselves came from a user gesture
   // (two-finger rotate / shift+wheel), which pauses the auto camera.
@@ -549,9 +560,10 @@ function MapCameraController({ center, zoom, onMapDrag, onBoundsChange, flySigna
     return () => map.off("rotate", handler);
   }, [map, onUserRotate]);
 
-  // Reactive camera follow: smoothly pan as the center prop updates
+  // Reactive camera follow: smoothly pan as the center prop updates.
+  // Suspended while the user is actively dragging (see draggingRef).
   useEffect(() => {
-    if (!center) return;
+    if (!center || draggingRef.current) return;
     const tuple = toLatLngTuple(center);
     if (!tuple) return;
     if (
@@ -600,7 +612,7 @@ function MapCameraController({ center, zoom, onMapDrag, onBoundsChange, flySigna
   // A manual drag moves the map without updating React state, so re-clicking a
   // recenter button sends identical center/zoom values; flySignal forces the fly.
   useEffect(() => {
-    if (!flySignal) return;
+    if (!flySignal || draggingRef.current) return;
     const tuple = toLatLngTuple(centerRef.current);
     if (tuple) map.flyTo(tuple, zoomRef.current, { animate: true, duration: 0.8 });
   }, [flySignal, map]);
@@ -608,6 +620,23 @@ function MapCameraController({ center, zoom, onMapDrag, onBoundsChange, flySigna
   // Drag dismissal is gated on a real pan distance: `dragstart` fires on
   // even a 1px accidental touch, which used to wipe focused pins/sheets.
   // Micro-pans below the threshold keep focus; an intentional pan dismisses.
+  // The gesture window also drives draggingRef so camera-follow effects hold
+  // still until the finger lifts — independent of onMapDrag being set.
+  useEffect(() => {
+    const handleDragStart = () => {
+      draggingRef.current = true;
+    };
+    const handleDragEnd = () => {
+      draggingRef.current = false;
+    };
+    map.on("dragstart", handleDragStart);
+    map.on("dragend", handleDragEnd);
+    return () => {
+      map.off("dragstart", handleDragStart);
+      map.off("dragend", handleDragEnd);
+    };
+  }, [map]);
+
   useEffect(() => {
     if (!onMapDrag) return;
     const INTENTIONAL_PAN_PX = 20;
@@ -688,6 +717,9 @@ function MapCameraController({ center, zoom, onMapDrag, onBoundsChange, flySigna
     const zoomChanged = zoom !== prevZoomRef.current;
     if (centerChanged) prevCenterRef.current = [lat, lng];
     if (zoomChanged) prevZoomRef.current = zoom;
+    // Never animate the camera mid-drag: refs above still advance so follow
+    // resumes cleanly from the next update instead of yanking the view back.
+    if (draggingRef.current) return;
     if (zoomChanged) {
       map.flyTo([lat, lng], zoom, { animate: true, duration: 0.8 });
     } else if (centerChanged) {
@@ -892,7 +924,7 @@ export default function MapCanvas({ tickets = [], trucks = [], routes = [], mapM
 
   return (
     <div className="w-full h-full relative overflow-hidden">
-      <div className="w-full h-full absolute transition-all duration-500">
+      <div className="w-full h-full absolute">
         <MapContainer
           center={mapCenter}
           zoom={mapZoom}

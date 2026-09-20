@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useRef, Suspense } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { useTickets, updateTicket } from "@/lib/tickets";
-import { useLiveRoute, getSchedule, dutyStatusOf } from "@/lib/live-route";
+import { useLiveRoute, getSchedule, dutyStatusOf, selectTruckHeading } from "@/lib/live-route";
 import { useTruckRoutes } from "@/lib/use-route-path";
 import { useFleet } from "@/lib/fleet";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
@@ -54,7 +54,7 @@ function LiveMapContent() {
           capacity: t.capacity,
           lat: ts?.tracking.lat || 10.3016,
           lng: ts?.tracking.lng || 123.9086,
-          heading: route?.heading ?? ts?.tracking.heading ?? 0,
+          heading: selectTruckHeading(ts, route?.heading),
           eta: ts?.tracking.eta,
           isActive: !!ts?.tracking.isActive,
           duty: dutyStatusOf(ts),

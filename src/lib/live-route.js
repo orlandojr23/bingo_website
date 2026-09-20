@@ -615,6 +615,23 @@ export async function continueRoute(truckId) {
   });
 }
 
+// Which direction should the truck marker face?
+// Fresh GPS (< GPS_FRESH_MS) means the driver is actively moving, so face the
+// actual direction of travel from the device. Otherwise fall back to the
+// planned-route direction (road ahead toward the next stop), which is also
+// what the offline movement sim follows. Without this priority the marker
+// faces the route while the driver goes another way — reading as "driving
+// backwards".
+const GPS_FRESH_MS = 15000;
+
+export function selectTruckHeading(truckState, routeHeading = null) {
+  const t = truckState?.tracking;
+  const fresh = !!t && Date.now() - (t.lastGpsAt || 0) < GPS_FRESH_MS;
+  if (fresh && t.heading != null) return t.heading;
+  if (routeHeading != null) return routeHeading;
+  return t?.heading ?? 90;
+}
+
 // Three-state duty indicator shared by driver + admin UI:
 // - "On Duty": mid-route (enroute/onsite) and broadcasting GPS.
 // - "Paused": mid-route but GPS stopped via End Route — resumable, still holds the assignment.

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getSchedule } from "@/lib/live-route";
 import { computeRoute } from "@/lib/router";
 import {
@@ -29,6 +29,38 @@ function bearingDeg(a, b) {
   const dy = b.lat - a.lat;
   return ((Math.atan2(dx, dy) * 180) / Math.PI + 360) % 360;
 }
+
+// Shortest distance (meters) from an origin to a route polyline. Segment 0 is
+// the pinned origin→first-vertex stub (see headingAlong), so it is ignored
+// when real geometry follows — otherwise the distance would always read ~0.
+function distToPathM(origin, positions) {
+  if (!origin || positions.length < 2) return 0;
+  const mLat = 111320;
+  const mLng = 111320 * Math.cos((origin.lat * Math.PI) / 180);
+  const startSeg = positions.length > 2 ? 1 : 0;
+  let best = Infinity;
+  for (let i = startSeg; i < positions.length - 1; i++) {
+    const ax = (positions[i][1] - origin.lng) * mLng;
+    const ay = (positions[i][0] - origin.lat) * mLat;
+    const bx = (positions[i + 1][1] - origin.lng) * mLng;
+    const by = (positions[i + 1][0] - origin.lat) * mLat;
+    const dx = bx - ax;
+    const dy = by - ay;
+    const len2 = dx * dx + dy * dy;
+    const t = len2 > 0 ? Math.max(0, Math.min(1, -(ax * dx + ay * dy) / len2)) : 0;
+    best = Math.min(best, Math.hypot(ax + dx * t, ay + dy * t));
+  }
+  return best === Infinity ? 0 : best;
+}
+
+// Waze-style auto-reroute tuning: past this distance off the drawn trajectory
+// the driver is treated as having left the route and a fresh path is computed
+// from their current position to the same next stop. The threshold sits well
+// above phone GPS noise (~10-20m) so normal wobble never triggers a reroute.
+const REROUTE_AFTER_M = 50;
+// Minimum gap between auto-reroutes so a long off-route stretch recomputes at
+// most this often instead of on every GPS fix.
+const REROUTE_COOLDOWN_MS = 15000;
 
 // The truck icon faces north at rotation 0 and rotates clockwise by
 // (heading - 90), so heading = compass bearing + 90. Project the origin onto
@@ -100,16 +132,25 @@ async function fetchOrs(waypoints) {
   return coords.map(([lng, lat]) => [lat, lng]);
 }
 
-export function useRoutePath({ scheduleId, stopIndex = 0, origin = null, points = [], blocks = [], enabled = true }) {
+export function useRoutePath({ scheduleId, stopIndex = 0, origin = null, points = [], blocks = [], enabled = true, autoReroute = false }) {
   const waypoints = enabled ? buildWaypoints(origin, points) : [];
   const blockSig = blocksSignature(blocks);
-  const cacheKey = cacheKeyFor(scheduleId, stopIndex, origin, waypoints.length, blockSig);
+  const baseKey = cacheKeyFor(scheduleId, stopIndex, origin, waypoints.length, blockSig);
+
+  // Waze-style auto-reroute: each deviation event gets its own cache key so
+  // the fetch effect below recomputes a fresh path from the driver's current
+  // position to the same next stop. The nonce only ever grows; every key
+  // holds finished geometry, so nothing ever snaps back to a stale path.
+  const [rerouteNonce, setRerouteNonce] = useState(0);
+  const lastRerouteAt = useRef(0);
+  const cacheKey = rerouteNonce ? `${baseKey}#r${rerouteNonce}` : baseKey;
+  const isRerouteKey = rerouteNonce > 0;
 
   const [state, setState] = useState(() => {
     const cached = routeCache.get(cacheKey);
     return {
       positions: waypoints.length >= 2 ? (cached ?? waypoints.map((p) => [p.lat, p.lng])) : [],
-      source: cached ? (blockSig ? "reroute" : "ors") : "straight",
+      source: cached ? (blockSig || isRerouteKey ? "reroute" : "ors") : "straight",
       ready: waypoints.length >= 2,
     };
   });
@@ -120,10 +161,24 @@ export function useRoutePath({ scheduleId, stopIndex = 0, origin = null, points 
     const cached = routeCache.get(cacheKey);
     setState({
       positions: waypoints.length >= 2 ? (cached ?? waypoints.map((p) => [p.lat, p.lng])) : [],
-      source: cached ? (blockSig ? "reroute" : "ors") : "straight",
+      source: cached ? (blockSig || isRerouteKey ? "reroute" : "ors") : "straight",
       ready: waypoints.length >= 2,
     });
   }
+
+  // Deviation detector: when the live origin drifts off the drawn trajectory
+  // (state.positions is the unpinned geometry — the pinned stub in segment 0
+  // is skipped inside distToPathM), request a reroute. Cooldown-gated so a
+  // long off-route stretch recomputes periodically instead of per GPS fix.
+  useEffect(() => {
+    if (!autoReroute || !enabled || !origin || state.positions.length < 2) return;
+    if (distToPathM(origin, state.positions) <= REROUTE_AFTER_M) return;
+    const now = Date.now();
+    if (now - lastRerouteAt.current < REROUTE_COOLDOWN_MS) return;
+    lastRerouteAt.current = now;
+    setRerouteNonce((n) => n + 1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoReroute, enabled, origin?.lat, origin?.lng, state.positions]);
 
   useEffect(() => {
     if (!enabled || waypoints.length < 2) return;
@@ -131,6 +186,17 @@ export function useRoutePath({ scheduleId, stopIndex = 0, origin = null, points 
     // Blocked streets force the local street router so the trajectory
     // re-routes around the block in realtime; ORS has no live closures.
     if (blockSig) {
+      const cached = routeCache.get(cacheKey);
+      const positions = cached ?? computeRoute(waypoints, blocks.map((b) => b.edge));
+      if (!cached) routeCache.set(cacheKey, positions);
+      setState({ positions, source: "reroute", ready: true });
+      return;
+    }
+
+    // Auto-reroutes also take the local router: instant, offline, and zero
+    // ORS quota — refinement from the network can wait until the driver is
+    // back on a planned leg.
+    if (isRerouteKey) {
       const cached = routeCache.get(cacheKey);
       const positions = cached ?? computeRoute(waypoints, blocks.map((b) => b.edge));
       if (!cached) routeCache.set(cacheKey, positions);
@@ -186,16 +252,36 @@ export function useRoutePath({ scheduleId, stopIndex = 0, origin = null, points 
   }, [cacheKey, enabled]);
 
   // Keep the line's first vertex pinned to the live truck position so the
-  // trajectory always connects to the marker between ORS refetches, and face
-  // the marker along the road direction it is about to travel.
-  const positions =
-    origin && state.positions.length >= 2
-      ? [[origin.lat, origin.lng], ...state.positions.slice(1)]
-      : state.positions;
+  // trajectory always connects to the marker between refetches, and face
+  // the marker along the road direction it is about to travel. The pinned
+  // origin is quantized to ~11m and the result memoized: parents re-render on
+  // every GPS echo / sim tick / bounds change, and without this each render
+  // hands react-leaflet a fresh array identity, redrawing the whole green
+  // trajectory every couple of seconds — the visible "dancing", worst while
+  // dragging or zooming. Now the path only rebuilds when it really moved.
+  const qLat = origin ? round4(origin.lat) : null;
+  const qLng = origin ? round4(origin.lng) : null;
+  const positions = useMemo(
+    () =>
+      origin && state.positions.length >= 2
+        ? [[qLat, qLng], ...state.positions.slice(1)]
+        : state.positions,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [qLat, qLng, state.positions]
+  );
+  // True while the origin sits off the drawn trajectory — drives the
+  // "Rerouting…" indicator and clears on its own once fresh geometry lands.
+  const rerouting =
+    !!autoReroute &&
+    !!enabled &&
+    !!origin &&
+    state.positions.length >= 2 &&
+    distToPathM(origin, state.positions) > REROUTE_AFTER_M;
   return {
     ...state,
     positions,
     heading: origin && positions.length >= 2 ? headingAlong(positions) : null,
+    rerouting,
   };
 }
 

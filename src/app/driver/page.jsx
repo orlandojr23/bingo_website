@@ -329,6 +329,7 @@ export default function DriverPage() {
         ? { lat: truckState.tracking.lat, lng: truckState.tracking.lng }
         : null,
     points: truckState?.phase === "completed" ? [] : routeStops,
+    autoReroute: true,
   });
 
   const driverRouteRef = useRef(driverRoute);
@@ -708,6 +709,20 @@ export default function DriverPage() {
     toast("Route ended.");
   };
 
+  // Memoized so the trajectory props keep stable references between renders:
+  // with the hook's stabilized positions, unconsumed re-renders (GPS echoes,
+  // bounds reports) no longer rebuild — and react-leaflet no longer redraws —
+  // the green line, which was the visible "dancing".
+  const mapRoutes = useMemo(() => [
+    isOnDuty && truckState?.phase !== "completed" && driverRoute.positions.length >= 2 && { id: `${routeScheduleId ?? "driver-route"}-leg`, ...driverRoute },
+    driverFuturePath.positions.length >= 2 && { id: `${routeScheduleId ?? "driver-route"}-future-${dStopIdx}`, ...driverFuturePath },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  ].filter(Boolean), [
+    isOnDuty, truckState?.phase, routeScheduleId, dStopIdx,
+    driverRoute.positions, driverRoute.heading, driverRoute.source, driverRoute.ready,
+    driverFuturePath.positions, driverFuturePath.heading, driverFuturePath.source, driverFuturePath.ready,
+  ]);
+
   const trucksForMap = useMemo(() => {
     if (!currentTruck || !truckState) return [];
     return [
@@ -773,10 +788,7 @@ export default function DriverPage() {
           <MapCanvas
             tickets={[]}
             trucks={trucksForMap}
-            routes={[
-              isOnDuty && truckState?.phase !== "completed" && driverRoute.positions.length >= 2 && { id: `${routeScheduleId ?? "driver-route"}-leg`, ...driverRoute },
-              driverFuturePath.positions.length >= 2 && { id: `${routeScheduleId ?? "driver-route"}-future-${dStopIdx}`, ...driverFuturePath },
-            ].filter(Boolean)}
+            routes={mapRoutes}
             mapMode="pins"
             currentStop={driverCurrentStop}
             upcomingStops={driverUpcomingStops}
@@ -1095,8 +1107,29 @@ export default function DriverPage() {
                                       } of ${routePoints.length}`
                                     : "—"}
                                 </span>
-                              </div>
-                            </div>
+          </div>
+        </div>
+
+        {/* Waze-style reroute indicator: appears while the driver is off the
+            drawn trajectory and a fresh path is being computed. */}
+        <AnimatePresence>
+          {isOnDuty && driverRoute.rerouting && (
+            <motion.div
+              key="rerouting-pill"
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="pointer-events-none absolute top-[calc(env(safe-area-inset-top)+76px)] inset-x-0 z-20 flex justify-center"
+            >
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-black/10 bg-white/95 px-3 py-1.5 text-[12px] font-semibold text-zinc-700 shadow-md backdrop-blur">
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-600" />
+                Rerouting…
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
                           </div>
                         </div>
                       </div>

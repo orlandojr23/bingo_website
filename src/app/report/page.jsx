@@ -30,7 +30,7 @@ import {
 import { TEJERO_SITOS } from "@/lib/mock-data";
 import { useTickets, addTicket, updateTicket, removeTicket } from "@/lib/tickets";
 import { useAuth } from "@/context/AuthContext";
-import { useLiveRoute, getSchedule, getSchedules, scheduleLabel } from "@/lib/live-route";
+import { useLiveRoute, getSchedule, getSchedules, scheduleLabel, selectTruckHeading } from "@/lib/live-route";
 import { playDing, playTrumpet, useSoundEnabled, setSoundEnabled } from "@/lib/sounds";
 import { useRoutePath } from "@/lib/use-route-path";
 import { useFleet } from "@/lib/fleet";
@@ -274,6 +274,7 @@ export default function ResidentMobilePWA() {
         ? { lat: activeTs.tracking.lat, lng: activeTs.tracking.lng }
         : null,
     points: routeCompleted ? [] : routePoints.slice(stopIndex, stopIndex + 1),
+    autoReroute: true,
   });
 
   // Compact numbered pins for every stop after the current one — likewise only
@@ -665,9 +666,9 @@ export default function ResidentMobilePWA() {
           lat: ts.tracking.lat || 10.3025,
           lng: ts.tracking.lng || 123.9095,
           heading:
-            t.id === activeTs?.truckId && routePath.heading != null
-              ? routePath.heading
-              : ts.tracking.heading || 90,
+            t.id === activeTs?.truckId
+              ? selectTruckHeading(ts, routePath.heading)
+              : selectTruckHeading(ts, null),
           eta: ts.tracking.eta || "5 mins",
           isActive: true,
         };
