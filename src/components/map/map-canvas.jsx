@@ -317,6 +317,14 @@ function TruckMarker({ trk, fading, bearing = 0 }) {
   const viewRef = useRef(view);
   viewRef.current = view;
   const animRef = useRef(null);
+  // When the marker mounts (Start/Resume), the first road-snapped fix lands
+  // just after the raw mount point. Fixes inside this window snap instead of
+  // gliding so the truck appears on the road while the pop-in plays, instead
+  // of visibly driving itself from the raw fix to the road.
+  const APPEAR_GRACE_MS = 5000;
+  const mountedAt = useRef(null);
+  if (mountedAt.current === null) mountedAt.current = performance.now();
+  const wasFading = useRef(fading);
 
   const activeIcon = truckIcon;
 
@@ -330,7 +338,7 @@ function TruckMarker({ trk, fading, bearing = 0 }) {
     const dLng = (trk.lng - v.lng) * 111000 * Math.cos((v.lat * Math.PI) / 180);
     const distMeters = Math.sqrt(dLat * dLat + dLng * dLng);
 
-    if (distMeters > 30) {
+    if (distMeters > 30 || performance.now() - mountedAt.current < APPEAR_GRACE_MS) {
       setView({ lat: trk.lat, lng: trk.lng, rot: trk.heading ?? 90 });
       animRef.current = null;
       return;
@@ -379,7 +387,14 @@ function TruckMarker({ trk, fading, bearing = 0 }) {
     if (!inner) return;
     if (fading) {
       inner.style.animation = "truckFadeOut 0.45s ease-in forwards";
+      wasFading.current = true;
       return;
+    }
+    // Stop → quick Resume reuses the same marker while it is mid-fade-out;
+    // replay the pop-in so it doesn't get stuck invisible from the fade fill.
+    if (wasFading.current) {
+      inner.style.animation = "truckPopIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)";
+      wasFading.current = false;
     }
     // Update: SVG is now rotated directly in the new logic, but wait, this is the old animation loop!
     // We should apply the rotation to the SVG to avoid conflicting with the pop-in scale animation.
@@ -777,7 +792,7 @@ function BearingWatcher({ onBearing }) {
   return null;
 }
 
-export default function MapCanvas({ tickets = [], trucks = [], routes = [], mapMode = "pins", center, zoom, highlightedTicketId, currentStop, upcomingStops = [], onSelectTicket, onMapDrag, onBoundsChange, flySignal, onMapReady, showZoomControl = false, showTicketPopup = true, rotatable = false, bearing = null, perspective3D = false }) {
+export default function MapCanvas({ tickets = [], trucks = [], routes = [], mapMode = "pins", center, zoom, highlightedTicketId, currentStop, upcomingStops = [], onSelectTicket, onMapDrag, onBoundsChange, flySignal, onMapReady, showZoomControl = false, showTicketPopup = true, rotatable = false, bearing = null, perspective3D = false, hidePausedTrucks = false }) {
   const [mounted, setMounted] = useState(false);
   const tileRef = useRef(null);
   const tejeroCenter = [10.3016, 123.9086];
@@ -794,8 +809,12 @@ export default function MapCanvas({ tickets = [], trucks = [], routes = [], mapM
   // On-duty trucks broadcast live; paused trucks (mid-route, GPS stopped via
   // End Route) stay visible at their last known position so admins can see an
   // assignment is still being held. Fully off-duty trucks stay hidden.
+  // The driver map passes hidePausedTrucks so End Route fades the marker out
+  // instead of leaving it parked on screen; Resume mounts it fresh with the
+  // pop-in. Removal flows through the fading-trucks hand-off below, so both
+  // directions animate instead of blinking.
   const activeTrucks = (trucks || []).filter(
-    (trk) => trk && (trk.isActive !== false || trk.phase === "enroute" || trk.phase === "onsite")
+    (trk) => trk && (trk.isActive !== false || (!hidePausedTrucks && (trk.phase === "enroute" || trk.phase === "onsite")))
   );
   const [fadingTrucks, setFadingTrucks] = useState([]);
   const prevActiveRef = useRef(activeTrucks);

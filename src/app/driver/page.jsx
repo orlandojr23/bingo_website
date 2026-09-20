@@ -848,6 +848,7 @@ export default function DriverPage() {
             rotatable
             bearing={navBearing}
             perspective3D={isOnDuty && truckFocused}
+            hidePausedTrucks
           />
         </div>
 
