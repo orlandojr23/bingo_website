@@ -410,7 +410,7 @@ function LiveMapContent() {
                 return (
                   <div className="mx-4 mb-2 shrink-0 rounded-xl border border-border bg-muted/40 p-3 text-xs leading-relaxed text-zinc-600">
                     <p className="mb-0.5 font-semibold text-foreground">Live Tracking</p>
-                    Truck <strong className="font-semibold text-foreground">{activeTruck.plate || activeTruck.id}</strong> is
+                    Truck <strong className="font-semibold text-foreground">{activeTruck.id}{activeTruck.plate ? ` (${activeTruck.plate})` : ""}</strong> is
                     currently on its collection route.{" "}
                     {ts?.onsite ? (
                       <>Currently collecting at {point?.name ?? "a stop"}.</>
@@ -449,7 +449,12 @@ function LiveMapContent() {
                       <TruckIcon
                         className={`h-4 w-4 ${trk.duty === "On Duty" ? "text-emerald-600" : trk.duty === "Paused" ? "text-amber-500" : "text-zinc-400"}`}
                       />
-                      <span className="text-xs font-semibold text-foreground">{trk.plate || trk.id}</span>
+                      <div className="flex min-w-0 flex-col">
+                        <span className="whitespace-nowrap text-xs font-semibold tabular-nums tracking-tight text-foreground">{trk.id}</span>
+                        {trk.plate && (
+                          <span className="truncate text-[11px] font-medium text-muted-foreground">{trk.plate}</span>
+                        )}
+                      </div>
                     </div>
                     <StatusBadge status={trk.duty} className="p-0 text-xs font-medium" />
                   </div>
