@@ -222,14 +222,14 @@ export default function CrudPage() {
                           <button
                             type="button"
                             onClick={() => handleRestore(r.id)}
-                            className="rounded-full bg-emerald-600/10 px-3 py-1 text-[13px] font-semibold text-emerald-700 transition-all active:scale-95 cursor-pointer"
+                            className="rounded-full bg-emerald-600/10 px-3 py-1 text-[13px] font-semibold text-emerald-700 transition-all hover:bg-emerald-600/20 active:scale-95 cursor-pointer"
                           >
                             Restore
                           </button>
                           <button
                             type="button"
                             onClick={() => setRecordToDelete(r)}
-                            className="inline-flex items-center gap-1.5 rounded-full bg-rose-600/10 px-3 py-1 text-[13px] font-semibold text-rose-600 transition-all active:scale-95 cursor-pointer"
+                            className="inline-flex items-center gap-1.5 rounded-full bg-rose-600/10 px-3 py-1 text-[13px] font-semibold text-rose-600 transition-all hover:bg-rose-600/20 active:scale-95 cursor-pointer"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                             Delete
@@ -240,14 +240,14 @@ export default function CrudPage() {
                           <button
                             type="button"
                             onClick={() => handleEdit(r)}
-                            className="rounded-full bg-muted px-3 py-1 text-[13px] font-semibold text-foreground transition-all active:scale-95 cursor-pointer"
+                            className="rounded-full bg-muted px-3 py-1 text-[13px] font-semibold text-foreground transition-all hover:bg-muted/80 active:scale-95 cursor-pointer"
                           >
                             Edit
                           </button>
                           <button
                             type="button"
                             onClick={() => setRecordToDelete(r)}
-                            className="inline-flex items-center gap-1.5 rounded-full bg-rose-600/10 px-3 py-1 text-[13px] font-semibold text-rose-600 transition-all active:scale-95 cursor-pointer"
+                            className="inline-flex items-center gap-1.5 rounded-full bg-rose-600/10 px-3 py-1 text-[13px] font-semibold text-rose-600 transition-all hover:bg-rose-600/20 active:scale-95 cursor-pointer"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                             Delete
@@ -317,14 +317,14 @@ export default function CrudPage() {
                                 <button
                                   type="button"
                                   onClick={() => handleRestore(r.id)}
-                                  className="rounded-full bg-emerald-600/10 px-3 py-1 text-[13px] font-semibold text-emerald-700 transition-all active:scale-95 cursor-pointer"
+                                  className="rounded-full bg-emerald-600/10 px-3 py-1 text-[13px] font-semibold text-emerald-700 transition-all hover:bg-emerald-600/20 active:scale-95 cursor-pointer"
                                 >
                                   Restore
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => setRecordToDelete(r)}
-                                  className="flex items-center gap-1 rounded-full bg-rose-600/10 px-3 py-1 text-[13px] font-semibold text-rose-600 transition-all active:scale-95 cursor-pointer"
+                                  className="flex items-center gap-1 rounded-full bg-rose-600/10 px-3 py-1 text-[13px] font-semibold text-rose-600 transition-all hover:bg-rose-600/20 active:scale-95 cursor-pointer"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
                                   Delete
@@ -335,14 +335,14 @@ export default function CrudPage() {
                                 <button
                                   type="button"
                                   onClick={() => handleEdit(r)}
-                                  className="rounded-full bg-muted px-3 py-1 text-[13px] font-semibold text-foreground transition-all active:scale-95 cursor-pointer"
+                                  className="rounded-full bg-muted px-3 py-1 text-[13px] font-semibold text-foreground transition-all hover:bg-muted/80 active:scale-95 cursor-pointer"
                                 >
                                   Edit
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => setRecordToDelete(r)}
-                                  className="flex items-center gap-1 rounded-full bg-rose-600/10 px-3 py-1 text-[13px] font-semibold text-rose-600 transition-all active:scale-95 cursor-pointer"
+                                  className="flex items-center gap-1 rounded-full bg-rose-600/10 px-3 py-1 text-[13px] font-semibold text-rose-600 transition-all hover:bg-rose-600/20 active:scale-95 cursor-pointer"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
                                   Delete

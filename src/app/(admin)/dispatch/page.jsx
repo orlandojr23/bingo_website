@@ -591,7 +591,7 @@ export default function DispatchPage() {
               <h2 className="text-sm font-semibold text-foreground">Fleet</h2>
               <span className="text-xs text-muted-foreground">{fleet.length} trucks</span>
             </div>
-            <Button variant="primary" onClick={() => openTruckSheet("add")}>
+            <Button variant="primary" className="h-10 rounded-xl px-4 text-[14px] font-semibold" onClick={() => openTruckSheet("add")}>
               <Plus className="h-4 w-4" />
               <span>Add Truck</span>
             </Button>
@@ -612,9 +612,8 @@ export default function DispatchPage() {
                   const dutyColor =
                     duty === "On Duty" ? "text-emerald-600" : duty === "Paused" ? "text-amber-500" : "text-zinc-400";
                   return (
-                    <button
+                    <div
                       key={t.id}
-                      type="button"
                       onClick={() => openTruckSheet("edit", t)}
                       className="group relative flex cursor-pointer flex-col justify-between rounded-2xl border border-border/60 bg-card p-3.5 text-left transition-all hover:border-zinc-300"
                     >
@@ -635,7 +634,20 @@ export default function DispatchPage() {
                           {t.driver || "Unassigned"}
                         </span>
                       </div>
-                    </button>
+
+                      <div className="mt-3 flex gap-2 border-t border-border-subtle pt-3">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openTruckSheet("edit", t);
+                          }}
+                          className="flex-1 cursor-pointer rounded-full bg-muted px-3 py-1.5 text-[13px] font-semibold text-foreground transition-all hover:bg-muted/80 active:scale-95"
+                        >
+                          Edit
+                        </button>
+                      </div>
+                    </div>
                   );
                 })}
               </div>
@@ -725,7 +737,7 @@ export default function DispatchPage() {
                           setStatus(sch.status);
                           setStopOrder(sch.routePoints || []);
                         }}
-                        className="flex-1 rounded-full bg-muted px-3 py-1.5 text-[13px] font-semibold text-foreground transition-all active:scale-95"
+                        className="flex-1 cursor-pointer rounded-full bg-muted px-3 py-1.5 text-[13px] font-semibold text-foreground transition-all hover:bg-muted/80 active:scale-95"
                       >
                         Edit
                       </button>
@@ -735,7 +747,7 @@ export default function DispatchPage() {
                           e.stopPropagation();
                           setScheduleToDelete(sch.id);
                         }}
-                        className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-rose-600/10 px-3 py-1.5 text-[13px] font-semibold text-rose-600 transition-all active:scale-95"
+                        className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-rose-600/10 px-3 py-1.5 text-[13px] font-semibold text-rose-600 transition-all hover:bg-rose-600/20 active:scale-95"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                         Delete

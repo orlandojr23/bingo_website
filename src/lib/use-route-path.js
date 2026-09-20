@@ -76,10 +76,9 @@ export function snapToRoute(origin, positions, maxDistM = 100) {
   if (typeof lat0 !== "number" || typeof lng0 !== "number" || isNaN(lat0) || isNaN(lng0)) return null;
   const mLat = 111320;
   const mLng = 111320 * Math.cos((lat0 * Math.PI) / 180);
-  const startSeg = positions.length > 2 ? 1 : 0;
   let best = null;
   let bestDist = Infinity;
-  for (let i = startSeg; i < positions.length - 1; i++) {
+  for (let i = 0; i < positions.length - 1; i++) {
     const aLat = Array.isArray(positions[i]) ? positions[i][0] : positions[i].lat;
     const aLng = Array.isArray(positions[i]) ? positions[i][1] : positions[i].lng;
     const bLat = Array.isArray(positions[i + 1]) ? positions[i + 1][0] : positions[i + 1].lat;
@@ -115,9 +114,6 @@ function headingAlong(positions, lookaheadM = 15) {
   const origin = { lat: positions[0][0], lng: positions[0][1] };
   const mLat = 111320;
   const mLng = 111320 * Math.cos((origin.lat * Math.PI) / 180);
-  // Segment 0 is the pinned origin→first cached vertex; once the truck moves
-  // it points backwards, so ignore it when real geometry follows.
-  const startSeg = positions.length > 2 ? 1 : 0;
 
   // Cumulative path distance (meters) at each vertex.
   const cum = [0];
@@ -129,7 +125,7 @@ function headingAlong(positions, lookaheadM = 15) {
 
   // Nearest segment to the origin + the along-path distance of the projection.
   let best = null;
-  for (let i = startSeg; i < positions.length - 1; i++) {
+  for (let i = 0; i < positions.length - 1; i++) {
     const a = { lat: positions[i][0], lng: positions[i][1] };
     const b = { lat: positions[i + 1][0], lng: positions[i + 1][1] };
     const ax = (a.lng - origin.lng) * mLng;
@@ -193,7 +189,7 @@ export function useRoutePath({ scheduleId, stopIndex = 0, origin = null, points 
     const cached = routeCache.get(cacheKey);
     return {
       positions: waypoints.length >= 2 ? (cached ?? waypoints.map((p) => [p.lat, p.lng])) : [],
-      source: cached ? (blockSig || isRerouteKey ? "reroute" : "ors") : "straight",
+      source: cached ? (blockSig ? "reroute" : "ors") : "straight",
       ready: waypoints.length >= 2,
     };
   });
@@ -204,7 +200,7 @@ export function useRoutePath({ scheduleId, stopIndex = 0, origin = null, points 
     const cached = routeCache.get(cacheKey);
     setState({
       positions: waypoints.length >= 2 ? (cached ?? waypoints.map((p) => [p.lat, p.lng])) : [],
-      source: cached ? (blockSig || isRerouteKey ? "reroute" : "ors") : "straight",
+      source: cached ? (blockSig ? "reroute" : "ors") : "straight",
       ready: waypoints.length >= 2,
     });
   }
@@ -236,16 +232,7 @@ export function useRoutePath({ scheduleId, stopIndex = 0, origin = null, points 
       return;
     }
 
-    // Auto-reroutes also take the local router: instant, offline, and zero
-    // ORS quota — refinement from the network can wait until the driver is
-    // back on a planned leg.
-    if (isRerouteKey) {
-      const cached = routeCache.get(cacheKey);
-      const positions = cached ?? computeRoute(waypoints, blocks.map((b) => b.edge));
-      if (!cached) routeCache.set(cacheKey, positions);
-      setState({ positions, source: "reroute", ready: true });
-      return;
-    }
+
 
     if (!ORS_KEY || Date.now() < backoffUntil) {
       const cached = routeCache.get(cacheKey);
@@ -322,7 +309,8 @@ export function useRoutePath({ scheduleId, stopIndex = 0, origin = null, points 
     () => {
       if (!origin || state.positions.length < 2) return state.positions;
       const head = roadPin ? [roadPin.lat, roadPin.lng] : [qLat, qLng];
-      return [head, ...state.positions.slice(1)];
+      const sliceIdx = roadPin && roadPin.i !== undefined ? roadPin.i + 1 : 1;
+      return [head, ...state.positions.slice(sliceIdx)];
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [qLat, qLng, state.positions, roadPin]
@@ -415,7 +403,6 @@ export function useTruckRoutes(live, fleet) {
           if (source !== "straight" && positions && positions.length >= 2) routeCache.set(cacheKey, positions);
         }
 
-        const withOrigin = [[origin.lat, origin.lng], ...positions.slice(1)];
         // Pin the drawn leg to the map-matched road point — the same point
         // admin markers use — so the line starts at the truck marker, never
         // at the raw phone fix.
@@ -423,7 +410,11 @@ export function useTruckRoutes(live, fleet) {
           { lat: round4(origin.lat), lng: round4(origin.lng) },
           positions
         );
-        if (roadPin) withOrigin[0] = [roadPin.lat, roadPin.lng];
+        const sliceIdx = roadPin && roadPin.i !== undefined ? roadPin.i + 1 : 1;
+        const withOrigin = [
+          roadPin ? [roadPin.lat, roadPin.lng] : [origin.lat, origin.lng],
+          ...positions.slice(sliceIdx)
+        ];
         results.push({
           id: t.id,
           positions: withOrigin,
