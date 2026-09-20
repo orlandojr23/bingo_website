@@ -880,15 +880,22 @@ export default function ResidentMobilePWA() {
   };
 
   const filteredSchedules = getSchedules().filter((s) => {
-    const matchesZone = selectedZone === "all" || s.zoneId === selectedZone || (s.routePoints || []).some((p) => p.name === selectedZone);
+    // No zone filter UI on this tab — match the search box only. Field
+    // lookups are guarded: the store uses collectionType/collectionDays
+    // while older shapes used type/days.
     const q = searchQuery.toLowerCase();
+    const type = s.type ?? s.collectionType ?? "";
+    const rawDays = s.days ?? s.collectionDays ?? [];
+    const daysList = Array.isArray(rawDays)
+      ? rawDays
+      : String(rawDays).split(",").map((d) => d.trim());
     const matchesQuery =
       !searchQuery ||
-      s.type.toLowerCase().includes(q) ||
-      s.days.some((d) => d.toLowerCase().includes(q)) ||
+      type.toLowerCase().includes(q) ||
+      daysList.some((d) => d.toLowerCase().includes(q)) ||
       scheduleLabel(s).toLowerCase().includes(q) ||
       (s.routePoints || []).some((p) => (p.name || "").toLowerCase().includes(q));
-    return matchesZone && matchesQuery;
+    return matchesQuery;
   });
 
   if (!sessionReady) {
