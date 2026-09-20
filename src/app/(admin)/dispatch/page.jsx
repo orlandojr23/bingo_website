@@ -591,7 +591,7 @@ export default function DispatchPage() {
               <h2 className="text-sm font-semibold text-foreground">Fleet</h2>
               <span className="text-xs text-muted-foreground">{fleet.length} trucks</span>
             </div>
-            <Button variant="primary" className="h-10 rounded-xl px-4 text-[14px] font-semibold" onClick={() => openTruckSheet("add")}>
+            <Button variant="secondary" className="h-10 rounded-xl px-4 text-[14px] font-semibold" onClick={() => openTruckSheet("add")}>
               <Plus className="h-4 w-4" />
               <span>Add Truck</span>
             </Button>

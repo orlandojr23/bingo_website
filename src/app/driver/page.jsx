@@ -527,10 +527,13 @@ export default function DriverPage() {
       if (watchIdRef.current !== null) {
         navigator.geolocation.clearWatch(watchIdRef.current);
         watchIdRef.current = null;
+        lastAcceptedGpsRef.current = null;
       }
       releaseWakeLock();
     };
   }, []);
+
+  const lastAcceptedGpsRef = useRef(null);
 
   const startGpsWatch = () => {
     if (watchIdRef.current !== null) return;
@@ -542,20 +545,34 @@ export default function DriverPage() {
     const id = navigator.geolocation.watchPosition(
       (pos) => {
         const { latitude, longitude, speed, heading, accuracy } = pos.coords;
-        let finalHeading = 90;
-
-        setCoords((prev) => {
-          // If stationary, the device might return null/NaN for heading. Keep the previous heading so the truck doesn't spin wildly.
-          // Also fix bug where heading=0 (North) evaluated to false in `heading || 90`.
-          finalHeading = (heading !== null && !isNaN(heading)) ? heading : prev.heading;
+        let finalHeading = (heading !== null && !isNaN(heading)) ? heading : null;
+        
+        const s = speed ? speed : 0;
+        const prev = lastAcceptedGpsRef.current;
+        
+        if (prev) {
+          const dx = (longitude - prev.lng) * 111320 * Math.cos((prev.lat * Math.PI) / 180);
+          const dy = (latitude - prev.lat) * 111320;
+          const distM = Math.hypot(dx, dy);
           
-          return {
-            lat: latitude,
-            lng: longitude,
-            speed: speed ? Math.round(speed * 3.6) : 0,
-            heading: finalHeading,
-            accuracy: Math.round(accuracy),
-          };
+          // Waze-style stationary noise filter: if moving very slowly (speed <= 1 m/s)
+          // and the GPS fix only jumped by < 10 meters, it's just satellite wobble while
+          // parked. Ignore it so the truck marker doesn't slide back and forth.
+          if (s <= 1 && distM < 10) {
+            return; 
+          }
+          if (finalHeading === null) finalHeading = prev.heading;
+        }
+
+        if (finalHeading === null) finalHeading = 90;
+        lastAcceptedGpsRef.current = { lat: latitude, lng: longitude, heading: finalHeading };
+
+        setCoords({
+          lat: latitude,
+          lng: longitude,
+          speed: s ? Math.round(s * 3.6) : 0,
+          heading: finalHeading,
+          accuracy: Math.round(accuracy),
         });
 
         if (truckFocusedRef.current) {
