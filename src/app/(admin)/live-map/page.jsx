@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useRef, Suspense } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { useTickets, updateTicket } from "@/lib/tickets";
-import { useLiveRoute, getSchedule } from "@/lib/live-route";
+import { useLiveRoute, getSchedule, dutyStatusOf } from "@/lib/live-route";
 import { useTruckRoutes } from "@/lib/use-route-path";
 import { useFleet } from "@/lib/fleet";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
@@ -57,6 +57,7 @@ function LiveMapContent() {
           heading: route?.heading ?? ts?.tracking.heading ?? 0,
           eta: ts?.tracking.eta,
           isActive: !!ts?.tracking.isActive,
+          duty: dutyStatusOf(ts),
         };
       }),
     [fleet, truckRoutes, live.trucks, live.driverByTruck]
@@ -435,11 +436,11 @@ function LiveMapContent() {
                   <div className="mb-2 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <TruckIcon
-                        className={`h-4 w-4 ${trk.isActive ? "text-emerald-600" : "text-zinc-400"}`}
+                        className={`h-4 w-4 ${trk.duty === "On Duty" ? "text-emerald-600" : trk.duty === "Paused" ? "text-amber-500" : "text-zinc-400"}`}
                       />
                       <span className="text-xs font-semibold text-foreground">{trk.plate || trk.id}</span>
                     </div>
-                    <StatusBadge status={trk.isActive ? "On Duty" : "Off Duty"} className="p-0 text-xs font-medium" />
+                    <StatusBadge status={trk.duty} className="p-0 text-xs font-medium" />
                   </div>
                   <div className="ml-6 flex flex-col gap-0.5 text-xs text-zinc-600">
                     <div>

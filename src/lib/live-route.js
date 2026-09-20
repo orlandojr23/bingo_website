@@ -52,6 +52,10 @@ export async function reinitSupabaseSync() {
     next.trucks = {};
     next.driverByTruck = {};
 
+    // Local-only telemetry flags (not columns in the DB). Preserve them across
+    // the reload so a fresh GPS feed isn't mistaken for a stale one.
+    const prevTrucks = getSnapshot().trucks || {};
+
     if (schedulesRes.data) {
       for (const s of schedulesRes.data) {
         const days = Array.isArray(s.collection_days)
@@ -76,6 +80,7 @@ export async function reinitSupabaseSync() {
 
     if (trackingRes.data) {
       for (const t of trackingRes.data) {
+        const prevTracking = prevTrucks[t.truck_id]?.tracking || {};
         next.trucks[t.truck_id] = {
           truckId: t.truck_id,
           scheduleId: t.schedule_id,
@@ -88,6 +93,9 @@ export async function reinitSupabaseSync() {
             heading: t.heading || 0,
             eta: t.eta || "Standby",
             isActive: t.is_active || false,
+            // Local-only: kept from the previous snapshot when present.
+            ...(prevTracking.lastGpsAt != null ? { lastGpsAt: prevTracking.lastGpsAt } : {}),
+            ...(prevTracking.simPaused != null ? { simPaused: prevTracking.simPaused } : {}),
           },
         };
         if (t.driver_id) {
@@ -149,6 +157,13 @@ async function initSupabaseSync() {
           if (payload.eventType === 'DELETE') {
             delete next.trucks[payload.old.truck_id];
           } else {
+            // A realtime row means fresh telemetry just landed in the DB (the
+            // driver's GPS pushes every ~2s; the local movement sim never
+            // writes to the DB). Stamp lastGpsAt so the sim — on THIS tab and
+            // every other tab watching — leaves this GPS-fed truck alone
+            // instead of dragging its marker onto the road-snapped path and
+            // fighting the next GPS fix (the exact↔road jumping).
+            const prevTracking = getSnapshot().trucks?.[t.truck_id]?.tracking || {};
             next.trucks[t.truck_id] = {
               truckId: t.truck_id,
               scheduleId: t.schedule_id,
@@ -161,6 +176,8 @@ async function initSupabaseSync() {
                 heading: t.heading || 0,
                 eta: t.eta || "Standby",
                 isActive: t.is_active || false,
+                lastGpsAt: Date.now(),
+                ...(prevTracking.simPaused != null ? { simPaused: prevTracking.simPaused } : {}),
               },
             };
             if (t.driver_id) {
@@ -385,6 +402,10 @@ export async function acceptAssignment(scheduleId) {
   }
   return write((next) => {
     if (next.schedules?.[scheduleId]) {
+      next.schedules = {
+        ...next.schedules,
+        [scheduleId]: { ...next.schedules[scheduleId], status: "Accepted" },
+      };
       next.scheduleStatus = { ...next.scheduleStatus, [scheduleId]: "Accepted" };
     }
   });
@@ -402,8 +423,7 @@ export async function startRoute(truckId, coords = null) {
   }
 
   const status = snap.scheduleStatus;
-  const mine = Object.values(snap.schedules || {}).filter((s) => s.truckId === truckId);
-  
+
   let startedId = null;
   let newPhase = null;
   let newTracking = null;
@@ -421,23 +441,34 @@ export async function startRoute(truckId, coords = null) {
       eta: ts.phase === "onsite" ? "On Site" : "5 mins",
     };
   } else {
-    const inProgress = mine.filter((s) => status[s.id] === "In Progress");
-    const scheduled = mine.filter((s) => status[s.id] === "Scheduled" || status[s.id] === "Assigned" || status[s.id] === "Accepted");
-    const pick = inProgress[inProgress.length - 1] || scheduled[scheduled.length - 1];
+    const effStatus = (s) => status[s.id] ?? s.status;
+    const mine = Object.values(snap.schedules || {}).filter((s) => s.truckId === truckId && !s.isArchived);
+    const inProgress = mine.filter((s) => effStatus(s) === "In Progress");
+    const accepted = mine.filter((s) => effStatus(s) === "Accepted");
+    // A driver must accept the admin's assignment before starting.
+    // "Scheduled" / "Assigned" schedules are NOT startable — startRoute
+    // refuses them by returning null so no tracking row is ever created.
+    const pick = inProgress[inProgress.length - 1] || accepted[accepted.length - 1];
     if (!pick) return null;
 
     startedId = pick.id;
     newPhase = "enroute";
     const first = pick.routePoints?.[0];
     const second = pick.routePoints?.[1];
-    let initialHeading = coords?.heading ?? ts.tracking.heading;
-    
-    // If we have a route, calculate the true initial heading instead of defaulting to 90 (East)
+    // App heading convention is compass bearing + 90 (map marker + course-up
+    // camera). coords.heading is the raw device compass, so convert it; the
+    // stored tracking heading is already in app convention.
+    let initialHeading =
+      coords?.heading != null
+        ? (Math.round(coords.heading) + 90) % 360
+        : (ts.tracking.heading ?? 90);
+
+    // If we have a route, calculate the true initial heading instead of the default
     if (first && second) {
       const dx = second.lng - first.lng;
       const dy = second.lat - first.lat;
-      initialHeading = (Math.atan2(dx, dy) * 180) / Math.PI;
-      if (initialHeading < 0) initialHeading += 360;
+      const compass = (Math.atan2(dx, dy) * 180) / Math.PI;
+      initialHeading = Math.round((compass + 90 + 360) % 360);
     }
 
     newTracking = {
@@ -584,10 +615,25 @@ export async function continueRoute(truckId) {
   });
 }
 
+// Three-state duty indicator shared by driver + admin UI:
+// - "On Duty": mid-route (enroute/onsite) and broadcasting GPS.
+// - "Paused": mid-route but GPS stopped via End Route — resumable, still holds the assignment.
+// - "Off Duty": idle, completed, or never started — no assignment in hand.
+export function dutyStatusOf(truckState) {
+  if (!truckState) return "Off Duty";
+  const midRoute = truckState.phase === "enroute" || truckState.phase === "onsite";
+  if (midRoute && truckState.tracking?.isActive) return "On Duty";
+  if (midRoute) return "Paused";
+  return "Off Duty";
+}
+
 export async function completeRoute(truckId) {
   const ts = getSnapshot().trucks[truckId];
-  if (!ts || !ts.scheduleId) return;
+  if (!ts || !ts.scheduleId) return false;
   const points = getSchedule(ts.scheduleId)?.routePoints ?? [];
+  // A route is only complete once the driver has passed every assigned stop.
+  // Completing early (or force-completing from elsewhere) is refused.
+  if (ts.stopIndex < points.length - 1) return false;
   const newIndex = Math.max(points.length - 1, 0);
 
   await supabase.from('live_tracking').update({
@@ -614,6 +660,7 @@ export async function completeRoute(truckId) {
     };
     next.scheduleStatus = { ...next.scheduleStatus, [ts.scheduleId]: "Completed" };
   });
+  return true;
 }
 
 export async function endRoute(truckId) {

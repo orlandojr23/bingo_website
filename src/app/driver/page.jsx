@@ -35,6 +35,7 @@ import {
   acceptAssignment,
   removeSchedule,
   reinitSupabaseSync,
+  dutyStatusOf,
 } from "@/lib/live-route";
 import { cn, haptic } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -245,6 +246,9 @@ export default function DriverPage() {
     !!truckState &&
     (truckState.phase === "enroute" || truckState.phase === "onsite") &&
     truckState.tracking.isActive;
+  // Three-state duty indicator: On Duty (broadcasting) / Paused (mid-route,
+  // GPS stopped — resumable) / Off Duty (idle or completed).
+  const dutyStatus = dutyStatusOf(truckState);
 
   const currentTruck =
     fleet.find((t) => t.id === selectedTruckId) || fleet[0] || { id: "—", plate: "—", driver: "—", capacity: "—" };
@@ -254,14 +258,32 @@ export default function DriverPage() {
   const assignedSchedule = useMemo(() => {
     if (!selectedTruckId) return null;
     const status = live.scheduleStatus;
+    const effStatus = (s) => status[s.id] ?? s.status;
     // Bug 2 fix: use s.truckId (the actual DB field), not s.activeTruckId which doesn't exist
-    const mine = getSchedules().filter((s) => s.truckId === selectedTruckId);
-    const inProgress = mine.filter((s) => status[s.id] === "In Progress");
-    const scheduled = mine.filter(
-      (s) => status[s.id] === "Scheduled" || status[s.id] === "Assigned" || status[s.id] === "Accepted"
+    const mine = getSchedules().filter((s) => s.truckId === selectedTruckId && !s.isArchived);
+    const inProgress = mine.filter((s) => effStatus(s) === "In Progress");
+    // Accepted assignments take priority over unaccepted ones so the driver
+    // is always guided to the assignment they can actually start.
+    const accepted = mine.filter((s) => effStatus(s) === "Accepted");
+    const pending = mine.filter(
+      (s) => effStatus(s) === "Scheduled" || effStatus(s) === "Assigned"
     );
-    return inProgress[inProgress.length - 1] || scheduled[scheduled.length - 1] || null;
+    return (
+      inProgress[inProgress.length - 1] ||
+      accepted[accepted.length - 1] ||
+      pending[pending.length - 1] ||
+      null
+    );
   }, [selectedTruckId, live]);
+
+  // Effective status of the assignment shown in the UI. A route can only be
+  // started after the driver accepts it (status "Accepted"); "Scheduled" /
+  // "Assigned" means the admin assigned it but the driver hasn't accepted yet.
+  const assignedScheduleStatus =
+    (assignedSchedule && (live.scheduleStatus[assignedSchedule.id] ?? assignedSchedule.status)) || null;
+  const isAssignmentAccepted =
+    assignedScheduleStatus === "Accepted" || assignedScheduleStatus === "In Progress";
+  const needsAcceptance = !!assignedSchedule && !isOnDuty && !isAssignmentAccepted;
 
   const hasAvailableAssignment =
     isOnDuty ||
@@ -550,7 +572,11 @@ export default function DriverPage() {
           updateTracking(selectedTruckIdRef.current, {
             lat: latitude,
             lng: longitude,
-            heading: Math.round(finalHeading), // Fixed: Removed the erroneous +90 offset!
+            // Device GPS reports a compass bearing (0 = North). The app's
+            // heading convention is compass + 90 (see headingAlong in
+            // use-route-path.js and simBearing in live-route.js), which is
+            // what the map marker and course-up camera expect.
+            heading: (Math.round(finalHeading) + 90) % 360,
             lastGpsAt: now,
           });
         }
@@ -594,10 +620,23 @@ export default function DriverPage() {
         return;
       }
 
+      // Gate: the driver must accept the admin's assignment before starting.
+      // Resuming a paused route is allowed without re-accepting.
+      if (!wasPaused && !isAssignmentAccepted) {
+        toast("Please accept your assignment in Tasks before starting the route.", { variant: "warning" });
+        switchTab("assignment");
+        return;
+      }
+
       // Bug 4 fix: await startRoute so GPS and wake lock don't activate before route is recorded
       const scheduleId = await startRoute(selectedTruckId, coords);
       if (!scheduleId) {
-        toast("No route assignments available.", { variant: "error" });
+        if (needsAcceptance) {
+          toast("Please accept your assignment in Tasks before starting the route.", { variant: "warning" });
+          switchTab("assignment");
+        } else {
+          toast("No route assignments available.", { variant: "error" });
+        }
         return;
       }
       setBroadcastStatus("Broadcasting live");
@@ -644,7 +683,11 @@ export default function DriverPage() {
       return;
     }
 
-    completeRoute(selectedTruckId);
+    const done = await completeRoute(selectedTruckId);
+    if (!done) {
+      toast("Pass by every stop before completing the route.", { variant: "warning" });
+      return;
+    }
     await stopGpsWatch();
     const next = getSchedules().find(
       (s) =>
@@ -678,6 +721,7 @@ export default function DriverPage() {
         heading: truckState.tracking.heading,
         eta: isOnDuty ? "Active On Route" : "Standby",
         isActive: truckState.tracking.isActive,
+        phase: truckState.phase,
       },
     ];
   }, [currentTruck, truckState, isOnDuty, liveDriver]);
@@ -968,13 +1012,17 @@ export default function DriverPage() {
                                 )}
                               >
                                 {!isOnDuty ? (
-                                  hasAvailableAssignment ? (
+                                  !hasAvailableAssignment ? (
                                     <>
-                                      <Play className="h-4 w-4 fill-white" /> Start Route
+                                      <Play className="h-4 w-4 fill-zinc-400 dark:fill-zinc-500" /> No Assignment Available
+                                    </>
+                                  ) : needsAcceptance ? (
+                                    <>
+                                      <Play className="h-4 w-4 fill-white" /> Accept Assignment to Start
                                     </>
                                   ) : (
                                     <>
-                                      <Play className="h-4 w-4 fill-zinc-400 dark:fill-zinc-500" /> No Assignment Available
+                                      <Play className="h-4 w-4 fill-white" /> Start Route
                                     </>
                                   )
                                 ) : truckState.phase === "enroute" ? (
@@ -991,6 +1039,20 @@ export default function DriverPage() {
                                   </>
                                 )}
                               </button>
+
+                            {needsAcceptance && (
+                              <p className="text-center text-[13px] leading-normal text-muted-foreground">
+                                Accept your assignment in{" "}
+                                <button
+                                  type="button"
+                                  onClick={() => switchTab("assignment")}
+                                  className="font-semibold text-emerald-600 underline underline-offset-2 cursor-pointer"
+                                >
+                                  Tasks
+                                </button>{" "}
+                                before starting the route.
+                              </p>
+                            )}
 
                             {isOnDuty && (
                               <button
@@ -1111,18 +1173,27 @@ export default function DriverPage() {
                             </div>
                           </div>
                           
-                          {(!isOnDuty && assignedSchedule && (live.scheduleStatus[assignedSchedule.id] === "Scheduled" || live.scheduleStatus[assignedSchedule.id] === "Assigned")) && (
+                          {(!isOnDuty && assignedSchedule && !isAssignmentAccepted) && (
                             <button
                               type="button"
-                              onClick={() => {
+                              onClick={async () => {
                                 haptic(15);
-                                acceptAssignment(assignedSchedule.id);
-                                toast("Assignment accepted.");
+                                try {
+                                  await acceptAssignment(assignedSchedule.id);
+                                  toast("Assignment accepted. You can now start the route.");
+                                } catch {
+                                  toast("Could not accept the assignment. Please try again.", { variant: "error" });
+                                }
                               }}
                               className="mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-[15px] font-semibold transition-all active:scale-[0.99] cursor-pointer bg-emerald-600 text-white active:bg-emerald-700"
                             >
                               Accept Assignment
                             </button>
+                          )}
+                          {(!isOnDuty && assignedSchedule && isAssignmentAccepted && assignedScheduleStatus === "Accepted") && (
+                            <p className="text-center text-[13px] font-medium text-emerald-600">
+                              Assignment accepted — go to Route to start.
+                            </p>
                           )}
                         </div>
                       </div>
@@ -1351,6 +1422,10 @@ export default function DriverPage() {
           <div className="mt-5 px-4">
             <p className="px-1 pb-1.5 text-[13px] text-muted-foreground">Terminal</p>
             <div className="divide-y divide-border/60 overflow-hidden rounded-2xl border border-border/60 bg-card">
+              <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
+                <span className="shrink-0 text-[15px] text-foreground">Duty Status</span>
+                <span className={`text-right text-[15px] font-semibold ${dutyStatus === "On Duty" ? "text-emerald-600" : dutyStatus === "Paused" ? "text-amber-600" : "text-muted-foreground"}`}>{dutyStatus}</span>
+              </div>
               <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
                 <span className="shrink-0 text-[15px] text-foreground">Compactor Unit</span>
                 <span className="truncate text-right text-[15px] text-muted-foreground">{selectedTruckId}</span>

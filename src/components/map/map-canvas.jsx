@@ -402,9 +402,15 @@ function TruckMarker({ trk, fading, bearing = 0 }) {
             <span className="font-semibold text-xs text-zinc-900">
               {trk.id}
             </span>
-            <span className="text-xs text-emerald-600 font-semibold">
-              • On Duty
-            </span>
+            {trk.isActive ? (
+              <span className="text-xs text-emerald-600 font-semibold">
+                • On Duty
+              </span>
+            ) : (
+              <span className="text-xs text-amber-600 font-semibold">
+                • Paused
+              </span>
+            )}
           </div>
           <div className="flex flex-col text-xs text-zinc-600 gap-0.5">
             <div><span className="font-semibold text-zinc-700">Driver:</span> {trk.driver}</div>
@@ -736,7 +742,12 @@ export default function MapCanvas({ tickets = [], trucks = [], routes = [], mapM
   const handleUserRotate = useCallback(() => setAutoFollow(false), []);
   const handleBearing = useCallback((deg) => setViewBearing(deg), []);
 
-  const activeTrucks = (trucks || []).filter((trk) => trk && trk.isActive !== false);
+  // On-duty trucks broadcast live; paused trucks (mid-route, GPS stopped via
+  // End Route) stay visible at their last known position so admins can see an
+  // assignment is still being held. Fully off-duty trucks stay hidden.
+  const activeTrucks = (trucks || []).filter(
+    (trk) => trk && (trk.isActive !== false || trk.phase === "enroute" || trk.phase === "onsite")
+  );
   const [fadingTrucks, setFadingTrucks] = useState([]);
   const prevActiveRef = useRef(activeTrucks);
 

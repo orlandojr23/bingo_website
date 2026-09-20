@@ -10,6 +10,7 @@ const statusConfig = {
   Suspended: { color: "text-rose-700" },
   Inactive: { color: "text-zinc-500" },
   "On Duty": { color: "text-emerald-700" },
+  Paused: { color: "text-amber-700" },
   "Off Duty": { color: "text-zinc-500" },
   Assigned: { color: "text-blue-700" },
   Accepted: { color: "text-blue-700" },

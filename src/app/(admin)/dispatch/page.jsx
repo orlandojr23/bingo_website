@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { Calendar, Plus, Minus, X, Search, Truck, Shuffle, MapPin, Trash2, ListTodo, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TEJERO_SITOS } from "@/lib/mock-data";
-import { useLiveRoute, getSchedules, addSchedule, updateSchedule, removeSchedule, assignDriver, estimateStopTime, retimeRoutePoints, scheduleLabel } from "@/lib/live-route";
+import { useLiveRoute, getSchedules, addSchedule, updateSchedule, removeSchedule, assignDriver, estimateStopTime, retimeRoutePoints, scheduleLabel, dutyStatusOf } from "@/lib/live-route";
 import { useRoutePath } from "@/lib/use-route-path";
 import { useFleet, addTruck, updateTruck, removeTruck } from "@/lib/fleet";
 import { useStaffRoster } from "@/lib/staff";
@@ -189,6 +189,13 @@ export default function DispatchPage() {
     e.preventDefault();
     if (!truckId || !type || !days || !time || stopOrder.length === 0) return;
 
+    // Only the driver completes a route — by passing every assigned stop.
+    // Admins cannot create a schedule that is already complete.
+    if (status === "Completed") {
+      toast("Only the driver can complete a route, by passing all of its stops.", { variant: "warning" });
+      return;
+    }
+
     setIsSubmittingSchedule(true);
     await addSchedule({
       ...buildScheduleFields(),
@@ -205,7 +212,14 @@ export default function DispatchPage() {
     if (!selectedSchedule || !truckId || !type || !days || !time || stopOrder.length === 0) return;
 
     if (live.scheduleStatus[selectedSchedule.id] === "In Progress" || selectedSchedule.status === "In Progress") {
-      toast("Cannot edit an in-progress schedule.", { variant: "warning" });
+      toast("This route is in progress — only the driver can complete it by passing all of its stops.", { variant: "warning" });
+      return;
+    }
+
+    // Only the driver completes a route — by passing every assigned stop.
+    // Admins cannot force a schedule to Completed.
+    if (status === "Completed" && (live.scheduleStatus[selectedSchedule.id] ?? selectedSchedule.status) !== "Completed") {
+      toast("Only the driver can complete a route, by passing all of its stops.", { variant: "warning" });
       return;
     }
 
@@ -539,8 +553,10 @@ export default function DispatchPage() {
           className={cn(inputClass, "cursor-pointer")}
         >
           <option value="Scheduled">Scheduled</option>
+          <option value="Assigned">Assigned</option>
+          <option value="Accepted">Accepted</option>
           <option value="In Progress">In Progress</option>
-          <option value="Completed">Completed</option>
+          <option value="Completed" disabled>Completed (driver only)</option>
         </select>
       </Field>
     </>
@@ -592,7 +608,9 @@ export default function DispatchPage() {
             ) : (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {fleet.map((t) => {
-                  const isActive = live.trucks[t.id]?.tracking?.isActive;
+                  const duty = dutyStatusOf(live.trucks[t.id]);
+                  const dutyColor =
+                    duty === "On Duty" ? "text-emerald-600" : duty === "Paused" ? "text-amber-500" : "text-zinc-400";
                   return (
                     <button
                       key={t.id}
@@ -602,13 +620,13 @@ export default function DispatchPage() {
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <Truck className={`h-4.5 w-4.5 shrink-0 mt-0.5 ${isActive ? "text-emerald-600" : "text-zinc-400"}`} />
+                          <Truck className={`h-4.5 w-4.5 shrink-0 mt-0.5 ${dutyColor}`} />
                           <div className="flex min-w-0 flex-col">
                             <span className="text-xs font-semibold text-foreground whitespace-nowrap tracking-tight tabular-nums">{t.id}</span>
                             <span className="text-[11px] font-medium text-muted-foreground whitespace-nowrap truncate">{t.plate}</span>
                           </div>
                         </div>
-                        <StatusBadge status={isActive ? "On Duty" : "Off Duty"} className="p-0 text-xs font-medium" />
+                        <StatusBadge status={duty} className="p-0 text-xs font-medium" />
                       </div>
 
                       <div className="mt-3 flex items-center justify-between border-t border-border-subtle pt-2.5 text-xs">
