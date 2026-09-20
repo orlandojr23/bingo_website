@@ -144,7 +144,7 @@ function headingAlong(positions, lookaheadM = 15) {
   const segLen = cum[best.i + 1] - cum[best.i];
   const target = Math.min(cum[best.i] + segLen * best.t + lookaheadM, total);
 
-  let i = startSeg;
+  let i = 0;
   while (i < positions.length - 2 && cum[i + 1] < target) i++;
   const a = { lat: positions[i][0], lng: positions[i][1] };
   const b = { lat: positions[i + 1][0], lng: positions[i + 1][1] };
