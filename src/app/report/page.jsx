@@ -160,6 +160,15 @@ function formatPhMobile(value) {
 }
 const isValidPhMobile = (digits) => /^09\d{9}$/.test(digits);
 
+// Proper name format (same as signup): letters only, single spaces,
+// Title Case on every word — "juan dela cruz" → "Juan Dela Cruz".
+const formatNameInput = (value) =>
+  value
+    .replace(/[^a-zA-ZÀ-ÿÑñ'’ .-]/g, "")
+    .replace(/\s{2,}/g, " ")
+    .toLowerCase()
+    .replace(/(^|[\s\-.'])([a-zà-ÿñ])/g, (m, sep, c) => sep + c.toUpperCase());
+
 // Glossy 3D-style waste-category icons for the Schedule cards — same
 // gradient + highlight + ground-shadow language as the map truck marker.
 function MalataIcon() {
@@ -220,6 +229,29 @@ function ResidualIcon() {
       <path d="M16.5 24 L31.5 24" stroke="#92400e" strokeWidth="1.2" opacity="0.4" />
       <path d="M17.2 30 L30.8 30" stroke="#92400e" strokeWidth="1.2" opacity="0.4" />
     </svg>
+  );
+}
+
+// Animated field note for the profile screens: expands/collapses with
+// height + fade (same language as signup's ErrorLine) so error, lock, and
+// pending messages never pop the layout.
+function ProfileFieldNote({ message, tone = "rose" }) {
+  return (
+    <AnimatePresence initial={false}>
+      {message && (
+        <motion.p
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: "auto", opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          transition={{ duration: 0.25, ease: "easeInOut" }}
+          className={`overflow-hidden px-1 pt-1.5 text-[12px] font-medium ${
+            tone === "emerald" ? "text-emerald-600" : tone === "muted" ? "text-muted-foreground" : "text-rose-500"
+          }`}
+        >
+          {message}
+        </motion.p>
+      )}
+    </AnimatePresence>
   );
 }
 
@@ -298,6 +330,7 @@ export default function ResidentMobilePWA() {
           name: data?.full_name || session.user.user_metadata?.full_name || "Resident",
           sitio: data?.sitio || session.user.user_metadata?.sitio,
           phone: session.user.user_metadata?.phone || data?.phone,
+          nameChangedAt: session.user.user_metadata?.nameChangedAt || null,
           id: session.user.id
         });
         setSessionReady(true);
@@ -336,8 +369,46 @@ export default function ResidentMobilePWA() {
   // email after the verification link is tapped). Persisted locally so the
   // notice survives reloads; cleared once the session email catches up.
   const [pendingEmail, setPendingEmail] = useState("");
+  // Returning to the Profile tab discards unsaved edits: the tab never
+  // unmounts when navigating, so without this an erased-but-unsaved field
+  // would still be empty when coming back instead of the stored value.
   const syncedPhoneRef = useRef("");
   const syncedEmailRef = useRef("");
+  const syncedNameRef = useRef("");
+  const prevTabRef = useRef(activeTab);
+  useEffect(() => {
+    const prev = prevTabRef.current;
+    prevTabRef.current = activeTab;
+    if (activeTab !== "profile" || prev === "profile") return;
+    const sessionPhone = formatPhMobile(residentSession?.phone || "");
+    const sessionEmail = residentSession?.email || "";
+    const sessionName = residentSession?.name || "";
+    syncedPhoneRef.current = sessionPhone;
+    syncedEmailRef.current = sessionEmail;
+    syncedNameRef.current = sessionName;
+    setPhoneDraft(sessionPhone);
+    setEmailDraft(sessionEmail);
+    setNameDraft(sessionName);
+    setPhoneError("");
+    setEmailError("");
+    setNameError("");
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmNewPassword("");
+    setPwErrors({});
+  }, [activeTab, residentSession]);
+  // Editable full name with a 30-day cooldown: the display name keys tickets
+  // and one notification audience, so renames are rationed. The other
+  // audience is the user id, which never changes.
+  const [nameDraft, setNameDraft] = useState("");
+  const [nameError, setNameError] = useState("");
+  const NAME_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
+  const nameChangedAt = residentSession?.nameChangedAt || null;
+  const nameUnlockAt = nameChangedAt ? nameChangedAt + NAME_COOLDOWN_MS : 0;
+  const nameLocked = nameUnlockAt > Date.now();
+  const nameUnlockLabel = nameLocked
+    ? new Date(nameUnlockAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+    : "";
   useEffect(() => {
     // Re-sync a field only when untouched (empty or still matching the last
     // synced value): a session refresh never wipes what the resident is
@@ -352,6 +423,11 @@ export default function ResidentMobilePWA() {
     if (!emailDraft || emailDraft === syncedEmailRef.current) {
       syncedEmailRef.current = sessionEmail;
       if (emailDraft !== sessionEmail) setEmailDraft(sessionEmail);
+    }
+    const sessionName = residentSession?.name || "";
+    if (!nameDraft || nameDraft === syncedNameRef.current) {
+      syncedNameRef.current = sessionName;
+      if (nameDraft !== sessionName) setNameDraft(sessionName);
     }
     try {
       const stored = window.localStorage.getItem(`bingo_pending_email_${residentSession?.id || "noid"}`);
@@ -369,7 +445,9 @@ export default function ResidentMobilePWA() {
     normalizePhMobile(phoneDraft) !== normalizePhMobile(residentSession?.phone || "");
   const emailDirty =
     emailDraft.trim().toLowerCase() !== (residentSession?.email || "").toLowerCase();
-  const profileDirty = phoneDirty || emailDirty;
+  const nameDirty =
+    !nameLocked && nameDraft.trim() !== (residentSession?.name || "");
+  const profileDirty = phoneDirty || emailDirty || nameDirty;
 
   // Resident password change (mirrors the driver flow): validate locally,
   // verify the current password by re-authenticating, then update via Auth.
@@ -448,6 +526,8 @@ export default function ResidentMobilePWA() {
     const digits = normalizePhMobile(phoneDraft);
     const nextEmail = emailDraft.trim().toLowerCase();
     const currentEmail = (residentSession?.email || "").toLowerCase();
+    const newName = nameDraft.trim();
+    const currentName = residentSession?.name || "";
 
     // Validate everything up front — nothing saves unless all of it is valid
     // and the resident pressed this button (drafts never write on type).
@@ -455,11 +535,16 @@ export default function ResidentMobilePWA() {
       setPhoneError("Enter a valid 11-digit mobile number (09xx xxx xxxx).");
       return;
     }
+    if (nameDirty && newName.length < 2) {
+      setNameError("Enter your full name (at least 2 characters).");
+      return;
+    }
     if (emailDirty && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nextEmail)) {
       setEmailError("Enter a valid email address.");
       return;
     }
     setPhoneError("");
+    setNameError("");
     setEmailError("");
     setPhoneSaving(true);
     try {
@@ -480,9 +565,22 @@ export default function ResidentMobilePWA() {
         syncedEmailRef.current = currentEmail;
         setEmailDraft(residentSession?.email || "");
       }
-      if (phoneDirty) {
-        const { error } = await supabase.auth.updateUser({ data: { phone: digits || null } });
+      // Phone + name share one metadata write (name carries the 30-day stamp).
+      const metaData = {};
+      if (phoneDirty) metaData.phone = digits || null;
+      if (nameDirty) {
+        metaData.full_name = newName;
+        metaData.nameChangedAt = Date.now();
+      }
+      if (Object.keys(metaData).length > 0) {
+        const { error } = await supabase.auth.updateUser({ data: metaData });
         if (error) throw error;
+      }
+      if (phoneDirty) {
+        setResidentSession((prev) => (prev ? { ...prev, phone: digits || null } : prev));
+        syncedPhoneRef.current = digits;
+      }
+      if (phoneDirty) {
         setResidentSession((prev) => (prev ? { ...prev, phone: digits || null } : prev));
         syncedPhoneRef.current = digits;
         // Mirror into the queryable profiles.phone column (best-effort: the
@@ -492,10 +590,30 @@ export default function ResidentMobilePWA() {
             .then(({ error: colErr }) => { if (colErr) console.warn("Profiles phone update failed:", colErr); });
         }
       }
+      if (nameDirty) {
+        setResidentSession((prev) =>
+          prev ? { ...prev, name: newName, nameChangedAt: Date.now() } : prev
+        );
+        syncedNameRef.current = newName;
+        // Mirror into profiles (best-effort) and migrate the resident's own
+        // tickets to the new reporter name so history doesn't orphan. Scoped
+        // by ticket id so same-name collisions are impossible.
+        if (residentSession?.id) {
+          supabase.from('profiles').update({ full_name: newName }).eq('id', residentSession.id)
+            .then(({ error: colErr }) => { if (colErr) console.warn("Profiles name update failed:", colErr); });
+          const ownIds = tickets.filter((t) => t.reporter === currentName && t.id).map((t) => t.id);
+          if (ownIds.length > 0) {
+            const results = await Promise.allSettled(ownIds.map((id) => updateTicket(id, { reporter: newName })));
+            if (results.some((r) => r.status === "rejected")) {
+              console.warn("Some ticket renames failed; history refreshes on next sync.");
+            }
+          }
+        }
+      }
       toast(
         emailDirty
           ? "Verification sent — tap the link in your new inbox to complete the email change."
-          : digits ? "Mobile number saved." : "Mobile number removed."
+          : nameDirty ? "Name updated." : digits ? "Mobile number saved." : "Mobile number removed."
       );
       haptic();
     } catch (err) {
@@ -2056,9 +2174,7 @@ export default function ResidentMobilePWA() {
                     }`}
                   />
                   {f.field === "newPassword" && <PasswordStrengthHint password={f.value} />}
-                  {pwErrors[f.field] && (
-                    <p className="text-[11px] font-medium text-rose-500">{pwErrors[f.field]}</p>
-                  )}
+                  <ProfileFieldNote message={pwErrors[f.field]} />
                 </div>
               ))}
               <button
@@ -2114,6 +2230,23 @@ export default function ResidentMobilePWA() {
           <p className="px-1 pb-1.5 text-[13px] text-muted-foreground">Account</p>
           <div className="divide-y divide-border/60 overflow-hidden rounded-2xl border border-border/60 bg-card">
             <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
+              <span className="shrink-0 text-[15px] text-foreground">Full Name</span>
+              <input
+                type="text"
+                value={nameDraft}
+                disabled={nameLocked}
+                onChange={(e) => {
+                  setNameDraft(formatNameInput(e.target.value).slice(0, 70));
+                  if (nameError) setNameError("");
+                }}
+                maxLength={70}
+                autoComplete="name"
+                placeholder="Your full name"
+                aria-label="Full name"
+                className="w-full min-w-0 flex-1 bg-transparent text-right text-[15px] text-foreground placeholder:text-muted-foreground/50 outline-none disabled:opacity-60"
+              />
+            </div>
+            <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
               <span className="shrink-0 text-[15px] text-foreground">Email</span>
               <input
                 type="email"
@@ -2151,17 +2284,17 @@ export default function ResidentMobilePWA() {
               <span className="text-right text-[15px] text-muted-foreground">{`${tickets.length} tickets`}</span>
             </div>
           </div>
-          {phoneError && (
-            <p className="px-1 pt-1.5 text-[12px] font-medium text-rose-500">{phoneError}</p>
-          )}
-          {emailError && (
-            <p className="px-1 pt-1.5 text-[12px] font-medium text-rose-500">{emailError}</p>
-          )}
-          {pendingEmail && (
-            <p className="px-1 pt-1.5 text-[12px] font-medium text-emerald-600">
-              Verification sent to {pendingEmail} — tap the link there to complete the change.
-            </p>
-          )}
+          <ProfileFieldNote message={phoneError} />
+          <ProfileFieldNote message={nameError} />
+          <ProfileFieldNote
+            message={nameLocked ? `Name can be changed again on ${nameUnlockLabel}.` : ""}
+            tone="muted"
+          />
+          <ProfileFieldNote message={emailError} />
+          <ProfileFieldNote
+            message={pendingEmail ? `Verification sent to ${pendingEmail} — tap the link there to complete the change.` : ""}
+            tone="emerald"
+          />
         </div>
 
         {/* Security group */}

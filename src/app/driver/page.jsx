@@ -143,6 +143,20 @@ export default function DriverPage() {
   const [pwErrors, setPwErrors] = useState({});
   const [pwSaving, setPwSaving] = useState(false);
 
+  // Re-entering the Profile tab discards unsaved password edits (same as the
+  // resident side): tabs never unmount, so without this a half-typed password
+  // would still be sitting in the fields when coming back.
+  const prevDriverTabRef = useRef(activeTab);
+  useEffect(() => {
+    const prev = prevDriverTabRef.current;
+    prevDriverTabRef.current = activeTab;
+    if (activeTab !== "profile" || prev === "profile") return;
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmNewPassword("");
+    setPwErrors({});
+  }, [activeTab]);
+
   const router = useRouter();
   const [sessionReady, setSessionReady] = useState(false);
   const [driverSession, setDriverSession] = useState(null);

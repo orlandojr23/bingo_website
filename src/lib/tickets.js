@@ -219,6 +219,7 @@ export async function updateTicket(id, patch) {
   if (patch.isArchived !== undefined) dbPatch.is_archived = patch.isArchived;
   // Allow updating report fields from the edit form
   if (patch.location !== undefined) dbPatch.location_name = patch.location;
+  if (patch.reporter !== undefined) dbPatch.reporter_name = patch.reporter;
   if (patch.barangay !== undefined) dbPatch.barangay = patch.barangay;
   if (patch.urgency !== undefined) dbPatch.urgency = patch.urgency;
   if (patch.category !== undefined) dbPatch.category = patch.category;

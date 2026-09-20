@@ -20,6 +20,15 @@ const PUBLIC_DOMAINS = ["gmail.com", "yahoo.com", "outlook.com", "hotmail.com", 
 
 const validateEmail = (emailStr) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailStr);
 
+// Proper name format: letters only, single spaces, Title Case on every word
+// (handles "dela cruz" → "Dela Cruz", "anne-marie" → "Anne-Marie" as typed).
+const formatNameInput = (value) =>
+  value
+    .replace(/[^a-zA-ZÀ-ÿÑñ'’ .-]/g, "")
+    .replace(/\s{2,}/g, " ")
+    .toLowerCase()
+    .replace(/(^|[\s\-.'])([a-zà-ÿñ])/g, (m, sep, c) => sep + c.toUpperCase());
+
 // Philippine mobile numbers: 09xx xxx xxxx (11 digits) — same shape the
 // resident profile editor uses, so what signup stores is what profile shows.
 // Accepts pasted +63… or 9xxxxxxxxx variants and folds them to 09….
@@ -425,7 +434,7 @@ export default function SignupPage() {
                     onChange={(e) =>
                       handleFieldChange(
                         "firstName",
-                        e.target.value.replace(/[^a-zA-ZÀ-ÿÑñ'’ .-]/g, "").replace(/\s{2,}/g, " "),
+                        formatNameInput(e.target.value),
                         setFirstName
                       )
                     }
@@ -446,7 +455,7 @@ export default function SignupPage() {
                     onChange={(e) =>
                       handleFieldChange(
                         "lastName",
-                        e.target.value.replace(/[^a-zA-ZÑñ' .-]/g, "").replace(/\s{2,}/g, " "),
+                        formatNameInput(e.target.value),
                         setLastName
                       )
                     }
