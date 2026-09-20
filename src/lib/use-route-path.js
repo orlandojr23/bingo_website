@@ -62,6 +62,45 @@ const REROUTE_AFTER_M = 50;
 // most this often instead of on every GPS fix.
 const REROUTE_COOLDOWN_MS = 15000;
 
+// Snap a raw GPS point to the nearest point on the road polyline
+// (Waze-style: marker stays on the road even when the phone is a few meters
+// off-road at a house/garage). Segment 0 is the pinned origin→first-vertex
+// stub and is ignored while the truck is off that stub.
+export function snapToRoute(origin, positions) {
+  if (!origin || !Array.isArray(positions) || positions.length < 2) return null;
+  const lat0 = typeof origin.lat === "number" ? origin.lat : origin[0];
+  const lng0 = typeof origin.lng === "number" ? origin.lng : origin[1];
+  if (typeof lat0 !== "number" || typeof lng0 !== "number" || isNaN(lat0) || isNaN(lng0)) return null;
+  const mLat = 111320;
+  const mLng = 111320 * Math.cos((lat0 * Math.PI) / 180);
+  const startSeg = positions.length > 2 ? 1 : 0;
+  let best = null;
+  let bestDist = Infinity;
+  for (let i = startSeg; i < positions.length - 1; i++) {
+    const aLat = Array.isArray(positions[i]) ? positions[i][0] : positions[i].lat;
+    const aLng = Array.isArray(positions[i]) ? positions[i][1] : positions[i].lng;
+    const bLat = Array.isArray(positions[i + 1]) ? positions[i + 1][0] : positions[i + 1].lat;
+    const bLng = Array.isArray(positions[i + 1]) ? positions[i + 1][1] : positions[i + 1].lng;
+    if (typeof aLat !== "number" || typeof aLng !== "number" || typeof bLat !== "number" || typeof bLng !== "number") continue;
+    const ax = (aLng - lng0) * mLng;
+    const ay = (aLat - lat0) * mLat;
+    const bx = (bLng - lng0) * mLng;
+    const by = (bLat - lat0) * mLat;
+    const dx = bx - ax;
+    const dy = by - ay;
+    const len2 = dx * dx + dy * dy;
+    const t = len2 > 0 ? Math.max(0, Math.min(1, -(ax * dx + ay * dy) / len2)) : 0;
+    const projLat = aLat + (bLat - aLat) * t;
+    const projLng = aLng + (bLng - aLng) * t;
+    const dist = Math.hypot(ax + dx * t, ay + dy * t);
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = { lat: projLat, lng: projLng, i, t };
+    }
+  }
+  return best;
+}
+
 // The truck icon faces north at rotation 0 and rotates clockwise by
 // (heading - 90), so heading = compass bearing + 90. Project the origin onto
 // the nearest route segment, then sample the bearing lookaheadM meters AHEAD

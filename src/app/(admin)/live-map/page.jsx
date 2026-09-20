@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { useTickets, updateTicket } from "@/lib/tickets";
 import { useLiveRoute, getSchedule, dutyStatusOf, selectTruckHeading } from "@/lib/live-route";
-import { useTruckRoutes } from "@/lib/use-route-path";
+import { useTruckRoutes, snapToRoute } from "@/lib/use-route-path";
 import { useFleet } from "@/lib/fleet";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
 import TicketDetailsModal from "@/components/modals/ticket-details-modal";
@@ -42,19 +42,32 @@ function LiveMapContent() {
 
   // Stable identity: without this, `trucksData` is a new array every render
   // and any effect depending on it re-fires forever.
+  // Waze-style: while a truck is en-route, snap its marker to the road so it
+  // appears waiting on the street even if the driver's raw GPS is off-road.
   const trucksData = useMemo(
     () =>
       fleet.map((t) => {
         const ts = live.trucks[t.id];
         const route = truckRoutes.find((r) => r.id === t.id);
+        let lat = ts?.tracking.lat || 10.3016;
+        let lng = ts?.tracking.lng || 123.9086;
+        let heading = selectTruckHeading(ts, route?.heading);
+        if (route && route.positions.length >= 2 && ts?.tracking?.isActive) {
+          const snapped = snapToRoute({ lat: ts.tracking.lat, lng: ts.tracking.lng }, route.positions);
+          if (snapped) {
+            lat = snapped.lat;
+            lng = snapped.lng;
+            if (route.heading != null) heading = route.heading;
+          }
+        }
         return {
           id: t.id,
           plate: t.plate,
           driver: live.driverByTruck[t.id] ?? t.driver,
           capacity: t.capacity,
-          lat: ts?.tracking.lat || 10.3016,
-          lng: ts?.tracking.lng || 123.9086,
-          heading: selectTruckHeading(ts, route?.heading),
+          lat,
+          lng,
+          heading,
           eta: ts?.tracking.eta,
           isActive: !!ts?.tracking.isActive,
           duty: dutyStatusOf(ts),

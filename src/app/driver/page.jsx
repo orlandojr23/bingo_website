@@ -39,7 +39,7 @@ import {
 } from "@/lib/live-route";
 import { cn, haptic } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { useRoutePath } from "@/lib/use-route-path";
+import { useRoutePath, snapToRoute } from "@/lib/use-route-path";
 import { useFleet } from "@/lib/fleet";
 import { getDriverSession, clearDriverSession } from "@/lib/driver-session";
 import { changeDriverPassword } from "@/lib/driver-accounts";
@@ -722,28 +722,39 @@ export default function DriverPage() {
     driverFuturePath.positions, driverFuturePath.heading, driverFuturePath.source, driverFuturePath.ready,
   ]);
 
+  // Waze-style: while navigating, the marker sticks to the road even if the
+  // raw GPS is a few meters off-road (house/garage). snapToRoute finds the
+  // closest point on the road polyline so the truck “waits on the road”.
+  const snappedTruck = useMemo(() => {
+    if (!isOnDuty || !truckState?.tracking || driverRoute.positions.length < 2) return null;
+    return snapToRoute({ lat: truckState.tracking.lat, lng: truckState.tracking.lng }, driverRoute.positions);
+  }, [isOnDuty, truckState?.tracking?.lat, truckState?.tracking?.lng, driverRoute.positions]);
+
   const trucksForMap = useMemo(() => {
     if (!currentTruck || !truckState) return [];
+    const s = snappedTruck;
     return [
       {
         id: currentTruck.id,
         plate: currentTruck.plate,
         driver: liveDriver,
         capacity: currentTruck.capacity,
-        lat: truckState.tracking.lat,
-        lng: truckState.tracking.lng,
-        heading: truckState.tracking.heading,
+        lat: s ? s.lat : truckState.tracking.lat,
+        lng: s ? s.lng : truckState.tracking.lng,
+        // When snapped, follow the road direction so the truck waits facing
+        // the route like Waze; otherwise fall back to device heading.
+        heading: s && driverRoute.heading != null ? driverRoute.heading : truckState.tracking.heading,
         eta: isOnDuty ? "Active On Route" : "Standby",
         isActive: truckState.tracking.isActive,
         phase: truckState.phase,
       },
     ];
-  }, [currentTruck, truckState, isOnDuty, liveDriver]);
+  }, [currentTruck, truckState, isOnDuty, liveDriver, snappedTruck, driverRoute.heading]);
 
   // Waze-style course-up camera while driving: heading up, auto-follow truck.
-  // Use the live travel heading so the camera matches actual motion.
+  // When snapped, use the road heading so the map stays aligned to the route.
   const navBearing = isOnDuty
-    ? Math.round(truckState?.tracking.heading ?? driverRoute.heading ?? 0)
+    ? Math.round((snappedTruck && driverRoute.heading != null ? driverRoute.heading : truckState?.tracking.heading) ?? 0)
     : null;
 
   useEffect(() => {
@@ -755,23 +766,30 @@ export default function DriverPage() {
         requestWakeLock();
         startGpsWatch();
       }
-      if (truckState?.tracking?.lat != null && truckState?.tracking?.lng != null) {
+      const s = snappedTruck;
+      if (s) {
+        setMapCenter([s.lat, s.lng]);
+      } else if (truckState?.tracking?.lat != null && truckState?.tracking?.lng != null) {
         setMapCenter([truckState.tracking.lat, truckState.tracking.lng]);
       }
     } else {
       stopGpsWatch();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOnDuty]);
+  }, [isOnDuty, snappedTruck]);
 
   const trackLat = truckState?.tracking.lat;
   const trackLng = truckState?.tracking.lng;
   useEffect(() => {
-    if (isOnDuty && truckFocused && trackLat != null && trackLng != null) {
-      setMapCenter([trackLat, trackLng]);
+    if (isOnDuty && truckFocused) {
+      if (snappedTruck) {
+        setMapCenter([snappedTruck.lat, snappedTruck.lng]);
+      } else if (trackLat != null && trackLng != null) {
+        setMapCenter([trackLat, trackLng]);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trackLat, trackLng]);
+  }, [trackLat, trackLng, snappedTruck]);
 
   if (!sessionReady) {
     return <DriverShellSkeleton />;

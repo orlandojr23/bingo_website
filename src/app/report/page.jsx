@@ -32,7 +32,7 @@ import { useTickets, addTicket, updateTicket, removeTicket } from "@/lib/tickets
 import { useAuth } from "@/context/AuthContext";
 import { useLiveRoute, getSchedule, getSchedules, scheduleLabel, selectTruckHeading } from "@/lib/live-route";
 import { playDing, playTrumpet, useSoundEnabled, setSoundEnabled } from "@/lib/sounds";
-import { useRoutePath } from "@/lib/use-route-path";
+import { useRoutePath, snapToRoute } from "@/lib/use-route-path";
 import { useFleet } from "@/lib/fleet";
 import { clearResidentSession } from "@/lib/resident-session";
 import { reverseGeocode } from "@/lib/geocode";
@@ -653,22 +653,36 @@ export default function ResidentMobilePWA() {
   };
 
   // Active trucks for live tracking map (Only show trucks whose drivers started their route!)
+  // Waze-style: when a truck is navigating, snap its marker to the road so a
+  // resident watching sees the truck waiting on the street even if the driver's
+  // raw GPS is a few meters off-road at a house.
   const activeTrucks = useMemo(() => {
     return (fleet || [])
       .map((t) => {
         const ts = (live.trucks || {})[t.id];
         if (!ts || !ts.tracking.isActive) return null;
+        let lat = ts.tracking.lat || 10.3025;
+        let lng = ts.tracking.lng || 123.9095;
+        let heading =
+          t.id === activeTs?.truckId
+            ? selectTruckHeading(ts, routePath.heading)
+            : selectTruckHeading(ts, null);
+        if (t.id === activeTs?.truckId && routePath.positions.length >= 2) {
+          const snapped = snapToRoute({ lat: ts.tracking.lat, lng: ts.tracking.lng }, routePath.positions);
+          if (snapped) {
+            lat = snapped.lat;
+            lng = snapped.lng;
+            if (routePath.heading != null) heading = routePath.heading;
+          }
+        }
         return {
           id: t.id,
           plate: t.plate,
           driver: t.driver,
           capacity: t.capacity,
-          lat: ts.tracking.lat || 10.3025,
-          lng: ts.tracking.lng || 123.9095,
-          heading:
-            t.id === activeTs?.truckId
-              ? selectTruckHeading(ts, routePath.heading)
-              : selectTruckHeading(ts, null),
+          lat,
+          lng,
+          heading,
           eta: ts.tracking.eta || "5 mins",
           isActive: true,
         };
@@ -1024,7 +1038,13 @@ export default function ResidentMobilePWA() {
                   setIsMapSheetExpanded(false);
                   setTruckFocused(true);
                   if (activeTs?.tracking) {
-                    setMapCenter([activeTs.tracking.lat, activeTs.tracking.lng]);
+                    let cLat = activeTs.tracking.lat;
+                    let cLng = activeTs.tracking.lng;
+                    if (routePath.positions.length >= 2) {
+                      const s = snapToRoute({ lat: cLat, lng: cLng }, routePath.positions);
+                      if (s) { cLat = s.lat; cLng = s.lng; }
+                    }
+                    setMapCenter([cLat, cLng]);
                     setMapZoom(17);
                     setFlySignal((s) => s + 1);
                   }
