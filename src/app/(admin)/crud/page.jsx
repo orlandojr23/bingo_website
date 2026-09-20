@@ -14,6 +14,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { PanelStat } from "@/components/ui/panel-stat";
 import { inputClass, labelClass } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useLockBodyScroll } from "@/lib/use-lock-body-scroll";
 import CrudDeleteModal from "@/components/modals/crud-delete-modal";
 import { useTickets, useArchivedTickets, addTicket, updateTicket, removeTicket, restoreTicket, hardDeleteTicket } from "@/lib/tickets";
 
@@ -124,6 +125,10 @@ export default function CrudPage() {
   };
 
   const isSheetOpen = isAdding || editingId !== null;
+
+  // Lock background scroll while the form sheet is open so scrolling the
+  // form never scrolls the page behind it.
+  useLockBodyScroll(isSheetOpen);
   const pendingCount = records.filter((r) => r.status === "Pending").length;
 
   return (
@@ -163,7 +168,7 @@ export default function CrudPage() {
           </button>
         </div>
 
-        <div className="grid shrink-0 grid-cols-2 gap-3 sm:gap-3.5 max-w-sm sm:max-w-md">
+        <div className="grid shrink-0 grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5 max-w-sm sm:max-w-md">
           <PanelStat label={viewMode === "trash" ? "Archived Reports" : "Total Reports"} value={records.length} hint={viewMode === "trash" ? "Reports in trash" : "All reports on record"} />
           <PanelStat label="Waiting" value={pendingCount} hint="Needs attention" tone="rose" />
         </div>
@@ -366,7 +371,7 @@ export default function CrudPage() {
 
       <AnimatePresence>
         {isSheetOpen && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-stretch justify-end pointer-events-none overflow-hidden">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-stretch justify-center sm:justify-end pointer-events-none overflow-hidden">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -379,16 +384,16 @@ export default function CrudPage() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="relative z-10 flex h-auto max-h-[85dvh] sm:h-full sm:max-h-full w-full max-w-md flex-col overflow-hidden rounded-t-2xl sm:rounded-none border-t sm:border-t-0 sm:border-l border-border bg-card p-4 sm:p-6 shadow-2xl pointer-events-auto self-end sm:self-auto"
+              className="relative z-10 flex h-full w-full min-w-0 flex-col overflow-hidden bg-card pointer-events-auto sm:max-w-md sm:border-l sm:border-border sm:shadow-2xl"
             >
-              <form onSubmit={handleSave} className="flex h-full flex-col justify-between overflow-hidden">
-                <div className="flex shrink-0 items-start justify-between border-b border-border pb-3">
-                  <div>
+              <form onSubmit={handleSave} className="mx-auto flex h-full w-full max-w-3xl flex-col justify-between overflow-hidden p-4 sm:p-6">
+                <div className="flex shrink-0 touch-none items-start justify-between gap-2 border-b border-border pb-3">
+                  <div className="min-w-0 flex-1">
                     <h2 className="text-sm font-semibold text-foreground">
                       {editingId ? `Update Report` : "Create New Report"}
                     </h2>
                     {editingId && (
-                      <span className="text-xs font-semibold text-muted-foreground tracking-tight tabular-nums">
+                      <span className="block truncate text-xs font-semibold text-muted-foreground tracking-tight tabular-nums" title={editingId}>
                         {editingId}
                       </span>
                     )}
@@ -404,7 +409,7 @@ export default function CrudPage() {
                   </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto py-3 gap-5 flex flex-col min-h-0">
+                <div className="flex-1 overflow-y-auto overscroll-contain py-3 gap-5 flex flex-col min-h-0">
                   <div className="flex flex-col gap-4">
                     <div className="flex flex-col gap-1.5">
                       <label className={labelClass}>Location</label>
@@ -419,7 +424,7 @@ export default function CrudPage() {
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div className="flex flex-col gap-1.5">
                         <label className={labelClass}>Barangay</label>
                         <input
@@ -445,7 +450,7 @@ export default function CrudPage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div className="flex flex-col gap-1.5">
                         <label className={labelClass}>Waste Category</label>
                         <select
@@ -499,7 +504,7 @@ export default function CrudPage() {
                   </div>
                 </div>
 
-                <div className="mt-auto shrink-0 flex items-center justify-end gap-2 border-t border-border-subtle pt-4">
+                <div className="mt-auto shrink-0 touch-none flex items-center justify-end gap-2 border-t border-border-subtle pt-4">
                   <Button variant="secondary" size="sm" type="button" className="h-10 rounded-xl px-4 text-[14px] font-semibold" onClick={resetForm}>
                     Cancel
                   </Button>

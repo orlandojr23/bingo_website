@@ -281,12 +281,13 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
                 </div>
               </div>
 
-              <div className="mt-auto shrink-0 flex items-center justify-between gap-3 border-t border-border p-4 sm:p-5 bg-card">
+              <div className="mt-auto shrink-0 flex flex-col gap-2 border-t border-border p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:p-5 bg-card">
                 <div className="flex items-center">
                   {onLocateOnMap ? (
                     <Button
                       variant="primary"
                       size="sm"
+                      className="w-full sm:w-auto"
                       onClick={() => {
                         onLocateOnMap(ticket);
                         onClose();
@@ -295,15 +296,15 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
                       <span>Locate on Map</span>
                     </Button>
                   ) : (
-                    <Link href={`/live-map?ticketId=${ticket.id}`} onClick={onClose}>
-                      <Button variant="primary" size="sm">
+                    <Link href={`/live-map?ticketId=${ticket.id}`} onClick={onClose} className="w-full sm:w-auto">
+                      <Button variant="primary" size="sm" className="w-full sm:w-auto">
                         <span>Locate on Map</span>
                       </Button>
                     </Link>
                   )}
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="grid grid-cols-2 items-center gap-2 sm:flex">
                   <Button variant="secondary" size="sm" onClick={onClose}>
                     Cancel
                   </Button>

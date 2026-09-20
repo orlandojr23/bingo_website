@@ -138,7 +138,7 @@ export default function AdminLayout({ children }) {
           </button>
         </div>
 
-        <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden animate-in-fade">
+        <main id="admin-main-scroll" className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden">
           {children}
         </main>
       </div>

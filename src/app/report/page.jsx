@@ -2310,6 +2310,38 @@ export default function ResidentMobilePWA() {
           </button>
         </div>
 
+        {/* Preferences group */}
+        <div className="mt-5 px-4">
+          <p className="px-1 pb-1.5 text-[13px] text-muted-foreground">Preferences</p>
+          <div className="flex min-h-[48px] w-full items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card px-4 py-2.5">
+            <div className="min-w-0 flex-1">
+              <p className="text-[15px] text-foreground">Notification Sounds</p>
+              <p className="mt-0.5 text-[13px] leading-normal text-muted-foreground">
+                Play a ding and chime for pickup alerts and report updates
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={soundEnabled}
+              aria-label="Toggle notification sounds"
+              onClick={() => {
+                setSoundEnabled(!soundEnabled);
+                haptic();
+              }}
+              className={`relative h-7 w-12 shrink-0 rounded-full transition-colors cursor-pointer ${
+                soundEnabled ? "bg-emerald-600" : "bg-zinc-300 dark:bg-zinc-700"
+              }`}
+            >
+              <span
+                className={`absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                  soundEnabled ? "translate-x-5" : "translate-x-0"
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+
         {/* Actions */}
         <div className="mt-5 space-y-2.5 px-4">
           <button

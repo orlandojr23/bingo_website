@@ -22,6 +22,7 @@ import {
 } from "@/lib/driver-accounts";
 import { useStaffRoster, saveStaffRoster, fetchStaffRoster } from "@/lib/staff";
 import ConfirmModal from "@/components/ui/confirm-modal";
+import { useLockBodyScroll } from "@/lib/use-lock-body-scroll";
 import { supabase } from "@/lib/supabase";
 import { createClient } from "@supabase/supabase-js";
 
@@ -397,6 +398,10 @@ export default function StaffPage() {
 
   const formOpen = isAdding || selectedDriver !== null;
 
+  // Lock background scroll while the form sheet is open so scrolling the
+  // form never scrolls the page behind it.
+  useLockBodyScroll(formOpen || isVerifyingOtp);
+
   return (
     <div className="relative flex min-h-full w-full min-w-0 overflow-x-hidden bg-background">
       <div className="relative z-10 flex flex-1 min-w-0 flex-col gap-5 p-4 [scrollbar-gutter:stable] sm:gap-6 sm:p-6 lg:p-8 pb-6 sm:pb-8 lg:pb-10">
@@ -411,7 +416,7 @@ export default function StaffPage() {
           }
         />
 
-        <div className="grid shrink-0 grid-cols-2 gap-3.5 max-w-sm sm:max-w-md">
+        <div className="grid shrink-0 grid-cols-1 sm:grid-cols-2 gap-3.5 max-w-sm sm:max-w-md">
           <PanelStat label="Drivers" value={totalDrivers} hint="Registered accounts" />
           <PanelStat label="Assigned Trucks" value={assignedCompactors} hint="Drivers with a truck" tone="emerald" />
         </div>
@@ -431,15 +436,15 @@ export default function StaffPage() {
 
         <div className="flex-1 min-w-0 rounded-2xl border border-border bg-card/95 shadow-sm overflow-hidden flex flex-col">
           <div className="flex-1 overflow-x-auto min-h-0">
-            <table className="w-full text-left text-xs border-collapse">
+            <table className="w-full min-w-[720px] text-left text-xs border-collapse">
               <thead>
                 <tr className="border-b border-border bg-muted/40 font-semibold text-muted-foreground">
-                  <th className="py-3 px-4">Driver ID</th>
-                  <th className="py-3 px-4">Full Name</th>
-                  <th className="py-3 px-4">Login Email</th>
-                  <th className="py-3 px-4">Assigned Truck</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                  <th className="py-3 px-4 whitespace-nowrap">Driver ID</th>
+                  <th className="py-3 px-4 whitespace-nowrap">Full Name</th>
+                  <th className="py-3 px-4 whitespace-nowrap hidden md:table-cell">Login Email</th>
+                  <th className="py-3 px-4 whitespace-nowrap">Assigned Truck</th>
+                  <th className="py-3 px-4 whitespace-nowrap">Status</th>
+                  <th className="py-3 px-4 text-right whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/60">
@@ -466,16 +471,16 @@ export default function StaffPage() {
                           selectedDriver?.id === person.id ? "bg-emerald-50/50 dark:bg-emerald-950/20" : ""
                         }`}
                       >
-                        <td className="py-3 px-4 font-mono font-bold text-foreground">
+                        <td className="py-3 px-4 font-mono font-bold text-foreground whitespace-nowrap">
                           {person.id}
                         </td>
-                        <td className="py-3 px-4 font-bold text-foreground">
+                        <td className="py-3 px-4 font-bold text-foreground whitespace-nowrap">
                           {person.name}
                         </td>
-                        <td className="py-3 px-4 font-mono text-muted-foreground">
+                        <td className="py-3 px-4 font-mono text-muted-foreground whitespace-nowrap hidden md:table-cell">
                           {person.username}
                         </td>
-                        <td className="py-3 px-4 font-medium text-foreground">
+                        <td className="py-3 px-4 font-medium text-foreground whitespace-nowrap">
                           {assigned ? (
                             <span className="inline-flex items-center gap-1.5 font-bold text-emerald-700 dark:text-emerald-400">
                               {truckLabel(assigned)}
@@ -487,7 +492,7 @@ export default function StaffPage() {
                         <td className="py-3 px-4">
                           <StatusBadge status={person.status || "Active"} showDot={false} />
                         </td>
-                        <td className="py-3 px-4 text-right">
+                        <td className="py-3 px-4 text-right whitespace-nowrap">
                           <div className="flex items-center justify-end gap-2">
                             <button
                               type="button"
@@ -529,7 +534,7 @@ export default function StaffPage() {
 
       <AnimatePresence>
         {formOpen && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-stretch justify-end pointer-events-none overflow-hidden">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-stretch justify-center sm:justify-end pointer-events-none overflow-hidden">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -542,13 +547,13 @@ export default function StaffPage() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="relative z-10 flex h-auto max-h-[85dvh] sm:h-full sm:max-h-full w-full max-w-md flex-col overflow-hidden rounded-t-2xl sm:rounded-none border-t sm:border-t-0 sm:border-l border-border bg-card p-4 sm:p-6 shadow-2xl pointer-events-auto self-end sm:self-auto"
+              className="relative z-10 flex h-full w-full min-w-0 flex-col overflow-hidden bg-card pointer-events-auto sm:max-w-md sm:border-l sm:border-border sm:shadow-2xl"
             >
               <form
                 onSubmit={isVerifyingOtp ? handleVerifyOtp : (isAdding ? handleAddDriver : handleUpdateDriver)}
-                className="flex h-full flex-col justify-between overflow-hidden"
+                className="mx-auto flex h-full w-full max-w-3xl flex-col justify-between overflow-hidden p-4 sm:p-6"
               >
-                <div className="flex shrink-0 items-start justify-between border-b border-border/60 pb-3">
+                <div className="flex shrink-0 touch-none items-start justify-between border-b border-border/60 pb-3">
                   {isAdding ? (
                     <h2 className="text-[17px] font-semibold tracking-tight text-foreground">Add New Driver</h2>
                   ) : (
@@ -569,7 +574,7 @@ export default function StaffPage() {
                   </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto py-3 gap-5 flex flex-col min-h-0">
+                <div className="flex-1 overflow-y-auto overscroll-contain py-3 gap-5 flex flex-col min-h-0">
                   {isVerifyingOtp ? (
                     <div className="flex flex-col gap-6 items-center justify-center text-center py-8">
                       <div className="flex h-12 w-12 items-center justify-center rounded-full text-emerald-600 mb-2">
@@ -742,7 +747,7 @@ export default function StaffPage() {
                   )}
                 </div>
 
-                <div className="mt-auto shrink-0 flex flex-col gap-3 border-t border-border-subtle pt-4">
+                <div className="mt-auto shrink-0 touch-none flex flex-col gap-3 border-t border-border-subtle pt-4">
                   {formError && (
                     <p className="rounded-2xl border border-rose-200 bg-rose-50 px-3.5 py-3 text-[13px] font-medium text-rose-600">
                       {formError}

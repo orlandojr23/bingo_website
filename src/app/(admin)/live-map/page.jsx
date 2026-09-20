@@ -379,9 +379,9 @@ function LiveMapContent() {
                       <div className="mb-2 truncate text-[13px] text-muted-foreground">
                         {t.barangay}, {t.city || "Cebu City"}
                       </div>
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2">
                         <StatusBadge status={t.status} />
-                        <span className="text-xs font-medium text-muted-foreground tracking-tight tabular-nums">
+                        <span className="truncate text-xs font-medium text-muted-foreground tracking-tight tabular-nums">
                           {t.timestamp ? formatTicketDateTime(t.timestamp) : `${t.date || ""}${t.time ? ` · ${t.time}` : ""}`}
                         </span>
                       </div>

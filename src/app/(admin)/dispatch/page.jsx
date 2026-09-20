@@ -19,6 +19,7 @@ import { inputClass, labelClass } from "@/components/ui/input";
 import { MapSkeleton } from "@/components/ui/skeletons";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/pwa/Toast";
+import { useLockBodyScroll } from "@/lib/use-lock-body-scroll";
 
 // Helpers for the Collection Days text input — title-cases day names on type,
 // and normalises the final value on blur so "monday, wednesday" → "Monday, Wednesday".
@@ -564,6 +565,11 @@ export default function DispatchPage() {
 
   const isSheetOpen = isAdding || selectedSchedule !== null;
 
+  // Lock background scroll while a form sheet is open so scrolling the
+  // form never scrolls the page behind it.
+  useLockBodyScroll(isSheetOpen);
+  useLockBodyScroll(truckSheet !== null);
+
   return (
     <div className="relative flex min-h-full w-full min-w-0 overflow-x-hidden bg-background">
       <div className="relative z-10 flex flex-1 min-w-0 flex-col gap-5 p-4 [scrollbar-gutter:stable] sm:gap-6 sm:p-6 lg:p-8 pb-6 sm:pb-8 lg:pb-10">
@@ -580,18 +586,18 @@ export default function DispatchPage() {
 
 
 
-        <div className="grid shrink-0 grid-cols-2 gap-3 sm:gap-3.5 max-w-sm sm:max-w-md">
+        <div className="grid shrink-0 grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5 max-w-sm sm:max-w-md">
           <PanelStat label="Schedules" value={totalSchedules} hint="Total collection schedules" />
           <PanelStat label="Trucks Out" value={activeDispatches} hint="Currently collecting" tone="emerald" />
         </div>
 
         <div className="shrink-0 rounded-2xl border border-border/60 bg-card p-4">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 sm:gap-3">
+            <div className="flex min-w-0 items-center gap-2">
               <h2 className="text-sm font-semibold text-foreground">Fleet</h2>
-              <span className="text-xs text-muted-foreground">{fleet.length} trucks</span>
+              <span className="text-xs text-muted-foreground whitespace-nowrap">{fleet.length} trucks</span>
             </div>
-            <Button variant="secondary" className="h-10 rounded-xl px-4 text-[14px] font-semibold" onClick={() => openTruckSheet("add")}>
+            <Button variant="secondary" className="h-10 shrink-0 rounded-xl px-4 text-[14px] font-semibold" onClick={() => openTruckSheet("add")}>
               <Plus className="h-4 w-4" />
               <span>Add Truck</span>
             </Button>
@@ -766,7 +772,7 @@ export default function DispatchPage() {
 
       <AnimatePresence>
         {isSheetOpen && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-stretch justify-end pointer-events-none overflow-hidden">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-stretch justify-center sm:justify-end pointer-events-none overflow-hidden">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -779,18 +785,18 @@ export default function DispatchPage() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="relative z-10 flex h-auto max-h-[85dvh] sm:h-full sm:max-h-full w-full max-w-md flex-col overflow-hidden rounded-t-2xl sm:rounded-none border-t sm:border-t-0 sm:border-l border-border bg-card p-4 sm:p-6 shadow-2xl pointer-events-auto self-end sm:self-auto"
+              className="relative z-10 flex h-full w-full min-w-0 flex-col overflow-hidden bg-card pointer-events-auto sm:max-w-md sm:border-l sm:border-border sm:shadow-2xl"
             >
               <form
                 onSubmit={isAdding ? handleAddSchedule : handleUpdateSchedule}
-                className="flex h-full flex-col justify-between overflow-hidden"
+                className="mx-auto flex h-full w-full max-w-3xl flex-col justify-between overflow-hidden p-4 sm:p-6"
               >
-                <div className="flex shrink-0 items-start justify-between border-b border-border/60 pb-3">
+                <div className="flex shrink-0 touch-none items-start justify-between border-b border-border/60 pb-3">
                   {isAdding ? (
                     <h2 className="text-[17px] font-semibold tracking-tight text-foreground">Create Assignment</h2>
                   ) : (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold text-foreground tracking-tight tabular-nums">
+                    <div className="flex min-w-0 flex-1 items-center gap-2">
+                      <span className="min-w-0 flex-1 truncate text-xs font-semibold text-foreground tracking-tight tabular-nums" title={selectedSchedule?.id}>
                         {selectedSchedule?.id}
                       </span>
                       <StatusBadge status={selectedSchedule ? effStatus(selectedSchedule) : "Scheduled"} />
@@ -806,11 +812,11 @@ export default function DispatchPage() {
                   </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto py-3 gap-5 flex flex-col min-h-0">
+                <div className="flex-1 overflow-y-auto overscroll-contain py-3 gap-5 flex flex-col min-h-0">
                   <div className="mt-1 flex flex-col gap-4">{formFields}</div>
                 </div>
 
-                <div className="mt-auto shrink-0 flex items-center justify-end gap-2 border-t border-border-subtle pt-4">
+                <div className="mt-auto shrink-0 touch-none flex items-center justify-end gap-2 border-t border-border-subtle pt-4">
                   <Button
                     variant="secondary"
                     type="button"
@@ -844,7 +850,7 @@ export default function DispatchPage() {
 
       <AnimatePresence>
         {truckSheet && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-stretch justify-end pointer-events-none overflow-hidden">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-stretch justify-center sm:justify-end pointer-events-none overflow-hidden">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -857,10 +863,10 @@ export default function DispatchPage() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="relative z-10 flex h-auto max-h-[85dvh] sm:h-full sm:max-h-full w-full max-w-md flex-col overflow-hidden rounded-t-2xl sm:rounded-none border-t sm:border-t-0 sm:border-l border-border bg-card p-4 sm:p-6 shadow-2xl pointer-events-auto self-end sm:self-auto"
+              className="relative z-10 flex h-full w-full min-w-0 flex-col overflow-hidden bg-card pointer-events-auto sm:max-w-md sm:border-l sm:border-border sm:shadow-2xl"
             >
-              <form onSubmit={handleTruckSubmit} className="flex h-full flex-col justify-between overflow-hidden">
-                <div className="flex shrink-0 items-start justify-between border-b border-border pb-3">
+              <form onSubmit={handleTruckSubmit} className="mx-auto flex h-full w-full max-w-3xl flex-col justify-between overflow-hidden p-4 sm:p-6">
+                <div className="flex shrink-0 touch-none items-start justify-between border-b border-border pb-3">
                   <h2 className="text-sm font-semibold text-foreground">
                     {truckSheet.mode === "add" ? "Add Truck" : `Edit ${truckSheet.truck?.id}`}
                   </h2>
@@ -874,7 +880,7 @@ export default function DispatchPage() {
                   </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto py-3 gap-5 flex flex-col min-h-0">
+                <div className="flex-1 overflow-y-auto overscroll-contain py-3 gap-5 flex flex-col min-h-0">
                   <div className="mt-1 flex flex-col gap-4">
                     <Field label="Truck Code">
                       <input
@@ -934,16 +940,16 @@ export default function DispatchPage() {
                   </div>
                 </div>
 
-                <div className="mt-auto shrink-0 flex items-center justify-between gap-2 border-t border-border-subtle pt-4">
+                <div className="mt-auto shrink-0 touch-none flex flex-col-reverse gap-2 border-t border-border-subtle pt-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     {truckSheet.mode === "edit" && (
-                      <Button variant="secondary" type="button" onClick={handleTruckDeleteRequest} className="h-10 gap-1.5 rounded-xl px-4 text-[14px] text-rose-600">
+                      <Button variant="secondary" type="button" onClick={handleTruckDeleteRequest} className="h-10 w-full gap-1.5 rounded-xl px-4 text-[14px] text-rose-600 sm:w-auto">
                         <Trash2 className="w-4 h-4" />
                         Remove Truck
                       </Button>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="grid grid-cols-2 items-center gap-2 sm:flex">
                     <Button variant="secondary" type="button" className="h-10 rounded-xl px-4 text-[14px] font-semibold" onClick={() => setTruckSheet(null)}>
                       Cancel
                     </Button>

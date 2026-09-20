@@ -95,7 +95,7 @@ export default function BinPage() {
                 {filteredTickets.map((t) => (
                   <div key={t.id} className="group flex flex-col justify-between rounded-2xl border border-border/60 bg-card p-4 transition-all">
                     <div className="flex shrink-0 flex-nowrap items-center justify-between gap-2">
-                      <span className="shrink-0 whitespace-nowrap text-xs font-semibold tracking-tight text-foreground tabular-nums">
+                      <span className="min-w-0 flex-1 truncate text-xs font-semibold tracking-tight text-foreground tabular-nums" title={t.id}>
                         {t.id}
                       </span>
                       <UrgencyBadge urgency={t.urgency} />
@@ -149,7 +149,7 @@ export default function BinPage() {
                 {filteredSchedules.map((sch) => (
                   <div key={sch.id} className="group flex flex-col justify-between rounded-2xl border border-border/60 bg-card p-4 transition-all">
                     <div className="flex shrink-0 flex-nowrap items-center justify-between gap-2">
-                      <span className="shrink-0 whitespace-nowrap text-xs font-semibold tracking-tight text-foreground tabular-nums">
+                      <span className="min-w-0 flex-1 truncate text-xs font-semibold tracking-tight text-foreground tabular-nums" title={sch.id}>
                         {sch.id}
                       </span>
                       <StatusBadge status={sch.status} />

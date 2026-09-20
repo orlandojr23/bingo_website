@@ -103,7 +103,7 @@ export default function TicketsPage() {
           description="All waste reports submitted by residents and their current status"
         />
 
-        <div className="grid shrink-0 grid-cols-2 gap-3 sm:gap-3.5 max-w-sm sm:max-w-md">
+        <div className="grid shrink-0 grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5 max-w-sm sm:max-w-md">
           <PanelStat label="Total Reports" value={totalReports} hint="All submitted reports" />
           <PanelStat label="Waiting" value={pendingReports} hint="Needs attention" tone="rose" />
         </div>
@@ -120,11 +120,11 @@ export default function TicketsPage() {
             />
           </div>
 
-          <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto">
+          <div className="grid w-full shrink-0 grid-cols-2 items-center gap-2 sm:flex sm:w-auto">
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className={cn(inputClass, "cursor-pointer flex-1 sm:w-auto sm:flex-none")}
+              className={cn(inputClass, "cursor-pointer w-full sm:w-auto sm:flex-none")}
             >
               <option value="All">All Statuses</option>
               <option value="Pending">Waiting</option>
@@ -134,7 +134,7 @@ export default function TicketsPage() {
             <select
               value={urgencyFilter}
               onChange={(e) => setUrgencyFilter(e.target.value)}
-              className={cn(inputClass, "cursor-pointer flex-1 sm:w-auto sm:flex-none")}
+              className={cn(inputClass, "cursor-pointer w-full sm:w-auto sm:flex-none")}
             >
               <option value="All">All Priorities</option>
               <option value="Low">Low</option>
@@ -146,7 +146,7 @@ export default function TicketsPage() {
             <select
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
-              className={cn(inputClass, "cursor-pointer flex-1 sm:w-auto sm:flex-none")}
+              className={cn(inputClass, "cursor-pointer w-full col-span-2 sm:col-span-1 sm:w-auto sm:flex-none")}
             >
               <option value="All">All Time</option>
               <option value="Today">Today</option>

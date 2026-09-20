@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import {
   Bell,
@@ -141,6 +141,20 @@ export default function NotificationsPage() {
   const totalCount = notifications.length;
   const isSheetOpen = selectedNotif !== null;
 
+  // Lock background scroll when modal is open
+  useEffect(() => {
+    const mainEl = document.getElementById("admin-main-scroll");
+    if (!mainEl) return;
+    if (isSheetOpen) {
+      mainEl.style.overflow = "hidden";
+    } else {
+      mainEl.style.overflow = "";
+    }
+    return () => {
+      mainEl.style.overflow = "";
+    };
+  }, [isSheetOpen]);
+
   return (
     <div className="relative flex min-h-full w-full min-w-0 overflow-x-hidden bg-background">
       <div className="relative z-10 flex flex-1 min-w-0 flex-col gap-5 p-4 [scrollbar-gutter:stable] sm:gap-6 sm:p-6 lg:p-8 pb-6 sm:pb-8 lg:pb-10">
@@ -157,7 +171,7 @@ export default function NotificationsPage() {
           }
         />
 
-        <div className="grid shrink-0 grid-cols-2 gap-3 sm:gap-3.5 max-w-sm sm:max-w-md">
+        <div className="grid shrink-0 grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5 max-w-sm sm:max-w-md">
           <PanelStat label="Alerts" value={totalCount} hint="Total received" />
           <PanelStat label="Unread" value={unreadCount} hint="Awaiting your review" tone="emerald" />
         </div>
@@ -289,7 +303,7 @@ export default function NotificationsPage() {
 
       <AnimatePresence>
         {isSheetOpen && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-stretch justify-end pointer-events-none overflow-hidden">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-stretch justify-center sm:justify-end pointer-events-none overflow-hidden">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -302,7 +316,7 @@ export default function NotificationsPage() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="relative z-10 flex h-auto max-h-[85dvh] sm:h-full sm:max-h-full w-full max-w-md flex-col overflow-hidden rounded-t-2xl sm:rounded-none border-t sm:border-t-0 sm:border-l border-border bg-card p-4 sm:p-6 shadow-2xl pointer-events-auto self-end sm:self-auto"
+              className="relative z-10 flex h-auto max-h-[85dvh] sm:h-full sm:max-h-full w-full max-w-md min-w-0 flex-col overflow-hidden rounded-t-2xl sm:rounded-none border-t sm:border-t-0 sm:border-l border-border bg-card p-4 sm:p-6 shadow-2xl pointer-events-auto"
             >
               <div className="flex h-full flex-col justify-between overflow-hidden">
                 <div className="flex shrink-0 items-start justify-between border-b border-border/60 pb-3">

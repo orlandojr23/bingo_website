@@ -67,7 +67,7 @@ export default function AnalyticsPage() {
           description="Performance and cleanup analytics for Barangay Tejero"
         />
 
-        <div className="grid shrink-0 grid-cols-2 gap-3 sm:grid-cols-3 max-w-sm sm:max-w-xl">
+        <div className="grid shrink-0 grid-cols-1 gap-3 sm:grid-cols-3 max-w-sm sm:max-w-xl">
           {kpis.map((kpi) => (
             <PanelStat
               key={kpi.label}
@@ -99,7 +99,7 @@ export default function AnalyticsPage() {
                 const resolvedHeight = (item.resolved / maxVal) * 100;
 
                 return (
-                  <div key={item.month} className="flex h-full flex-1 flex-col items-center justify-end gap-2">
+                  <div key={item.month} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-2">
                     <div className="flex h-full w-full max-w-[32px] items-end justify-center gap-1">
                       <div
                         style={{ height: mounted ? `${totalHeight}%` : "0%" }}
@@ -118,7 +118,7 @@ export default function AnalyticsPage() {
                         </div>
                       </div>
                     </div>
-                    <span className="text-xs font-medium text-muted-foreground tracking-tight tabular-nums">
+                    <span className="max-w-full truncate text-[10px] font-medium text-muted-foreground tracking-tight tabular-nums sm:text-xs">
                       {item.month}
                     </span>
                   </div>
@@ -151,9 +151,9 @@ export default function AnalyticsPage() {
             <div className="flex flex-col gap-3.5 py-1">
               {categories.map((cat, idx) => (
                 <div key={cat.name} className="flex flex-col gap-1.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-foreground">{cat.name}</span>
-                    <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-between gap-2 text-xs">
+                    <span className="min-w-0 flex-1 truncate font-semibold text-foreground">{cat.name}</span>
+                    <div className="flex shrink-0 items-center gap-2">
                       <span className="text-muted-foreground">{cat.count} reports</span>
                       <span className="w-9 text-right font-semibold text-foreground tracking-tight tabular-nums">
                         {cat.percentage}
