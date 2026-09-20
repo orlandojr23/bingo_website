@@ -549,6 +549,11 @@ function MapCameraController({ center, zoom, onMapDrag, onBoundsChange, flySigna
   // back with an animated setView, which reads as the map "reacting" to —
   // and fighting — the drag.
   const draggingRef = useRef(false);
+  // Same idea for zoom gestures: pinch/button zoom fires zoomstart/zoomend,
+  // NOT drag events, so without this a GPS push landing mid-zoom animates the
+  // camera and the trajectory swings with your POV instead of staying put.
+  const zoomingRef = useRef(false);
+  const cameraHeld = () => draggingRef.current || zoomingRef.current;
 
   // Any rotation we did not trigger ourselves came from a user gesture
   // (two-finger rotate / shift+wheel), which pauses the auto camera.
@@ -561,9 +566,9 @@ function MapCameraController({ center, zoom, onMapDrag, onBoundsChange, flySigna
   }, [map, onUserRotate]);
 
   // Reactive camera follow: smoothly pan as the center prop updates.
-  // Suspended while the user is actively dragging (see draggingRef).
+  // Suspended while the user is actively dragging or zooming (see cameraHeld).
   useEffect(() => {
-    if (!center || draggingRef.current) return;
+    if (!center || cameraHeld()) return;
     const tuple = toLatLngTuple(center);
     if (!tuple) return;
     if (
@@ -582,8 +587,10 @@ function MapCameraController({ center, zoom, onMapDrag, onBoundsChange, flySigna
 
   // Course-up camera (Waze-style): rotate the map so the travel heading is up.
   // bearing === null means the user is rotating manually; leave them alone.
+  // Also held during zoom gestures so a heading update can't start a rotation
+  // tween mid-zoom and make the trajectory swing.
   useEffect(() => {
-    if (bearing == null || !map._rotate || typeof map.setBearing !== "function") return;
+    if (bearing == null || zoomingRef.current || !map._rotate || typeof map.setBearing !== "function") return;
     const apply = (deg) => {
       selfRotate.current = true;
       map.setBearing(deg);
@@ -612,7 +619,7 @@ function MapCameraController({ center, zoom, onMapDrag, onBoundsChange, flySigna
   // A manual drag moves the map without updating React state, so re-clicking a
   // recenter button sends identical center/zoom values; flySignal forces the fly.
   useEffect(() => {
-    if (!flySignal || draggingRef.current) return;
+    if (!flySignal || cameraHeld()) return;
     const tuple = toLatLngTuple(centerRef.current);
     if (tuple) map.flyTo(tuple, zoomRef.current, { animate: true, duration: 0.8 });
   }, [flySignal, map]);
@@ -629,11 +636,21 @@ function MapCameraController({ center, zoom, onMapDrag, onBoundsChange, flySigna
     const handleDragEnd = () => {
       draggingRef.current = false;
     };
+    const handleZoomStart = () => {
+      zoomingRef.current = true;
+    };
+    const handleZoomEnd = () => {
+      zoomingRef.current = false;
+    };
     map.on("dragstart", handleDragStart);
     map.on("dragend", handleDragEnd);
+    map.on("zoomstart", handleZoomStart);
+    map.on("zoomend", handleZoomEnd);
     return () => {
       map.off("dragstart", handleDragStart);
       map.off("dragend", handleDragEnd);
+      map.off("zoomstart", handleZoomStart);
+      map.off("zoomend", handleZoomEnd);
     };
   }, [map]);
 
@@ -717,9 +734,9 @@ function MapCameraController({ center, zoom, onMapDrag, onBoundsChange, flySigna
     const zoomChanged = zoom !== prevZoomRef.current;
     if (centerChanged) prevCenterRef.current = [lat, lng];
     if (zoomChanged) prevZoomRef.current = zoom;
-    // Never animate the camera mid-drag: refs above still advance so follow
-    // resumes cleanly from the next update instead of yanking the view back.
-    if (draggingRef.current) return;
+    // Never animate the camera mid-drag or mid-zoom: refs above still advance
+    // so follow resumes cleanly from the next update instead of yanking back.
+    if (cameraHeld()) return;
     if (zoomChanged) {
       map.flyTo([lat, lng], zoom, { animate: true, duration: 0.8 });
     } else if (centerChanged) {

@@ -65,8 +65,11 @@ const REROUTE_COOLDOWN_MS = 15000;
 // Snap a raw GPS point to the nearest point on the road polyline
 // (Waze-style: marker stays on the road even when the phone is a few meters
 // off-road at a house/garage). Segment 0 is the pinned origin→first-vertex
-// stub and is ignored while the truck is off that stub.
-export function snapToRoute(origin, positions) {
+// stub and is ignored while the truck is off that stub. Returns null when
+// there is no usable geometry — or the fix is further than maxDistM from the
+// line (beyond that the raw fix is more truthful than a teleport, and the
+// heading falls back to the device's direction of travel).
+export function snapToRoute(origin, positions, maxDistM = 100) {
   if (!origin || !Array.isArray(positions) || positions.length < 2) return null;
   const lat0 = typeof origin.lat === "number" ? origin.lat : origin[0];
   const lng0 = typeof origin.lng === "number" ? origin.lng : origin[1];
@@ -98,6 +101,7 @@ export function snapToRoute(origin, positions) {
       best = { lat: projLat, lng: projLng, i, t };
     }
   }
+  if (!best || bestDist > maxDistM) return null;
   return best;
 }
 
