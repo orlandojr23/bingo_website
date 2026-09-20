@@ -39,6 +39,7 @@ import {
   dutyStatusOf,
 } from "@/lib/live-route";
 import { cn, haptic } from "@/lib/utils";
+import { playDing, useSoundEnabled } from "@/lib/sounds";
 import { Button } from "@/components/ui/button";
 import { useRoutePath } from "@/lib/use-route-path";
 import { useFleet } from "@/lib/fleet";
@@ -267,6 +268,7 @@ export default function DriverPage() {
 
   const live = useLiveRoute();
   const fleet = useFleet();
+  const soundEnabled = useSoundEnabled();
   const truckState = live.trucks[selectedTruckId];
   const isOnDuty =
     !!truckState &&
@@ -328,6 +330,25 @@ export default function DriverPage() {
         (status[s.id] === "In Progress" || status[s.id] === "Scheduled" || status[s.id] === "Assigned" || status[s.id] === "Accepted")
     ).length;
   }, [selectedTruckId, live]);
+
+  // New-task ding: whenever the admin assigns work to this truck, the queued
+  // count grows — play the same ding residents hear. The snapshot present on
+  // mount (or after switching trucks) is only recorded so opening the page
+  // with pending work never replays sound for past events. Completions and
+  // removals shrink the count and stay silent.
+  const assignmentSoundRef = useRef(null);
+  useEffect(() => {
+    const key = selectedTruckId || "";
+    const prev = assignmentSoundRef.current;
+    if (!prev || prev.truckId !== key) {
+      assignmentSoundRef.current = { truckId: key, count: pendingAssignments };
+      return;
+    }
+    if (pendingAssignments > prev.count && soundEnabled) {
+      playDing();
+    }
+    assignmentSoundRef.current = { truckId: key, count: pendingAssignments };
+  }, [pendingAssignments, selectedTruckId, soundEnabled]);
 
   const assignedZone = assignedSchedule
     ? mockPilotData.zones.find((z) => z.id === assignedSchedule.zoneId)
