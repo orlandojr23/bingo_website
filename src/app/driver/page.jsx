@@ -595,8 +595,8 @@ export default function DriverPage() {
             lng: longitude,
             // Device GPS reports a compass bearing (0 = North). The app's
             // heading convention is compass + 90 (see headingAlong in
-            // use-route-path.js and simBearing in live-route.js), which is
-            // what the map marker and course-up camera expect.
+            // use-route-path.js), which is what the map marker and
+            // course-up camera expect.
             heading: (Math.round(finalHeading) + 90) % 360,
             lastGpsAt: now,
           });

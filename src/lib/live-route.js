@@ -1,7 +1,5 @@
 import { useSyncExternalStore } from "react";
 import { mockPilotData, TEJERO_SITOS } from "@/lib/mock-data";
-import { nearestEdge } from "@/lib/router";
-import { routeCache, cacheKeyFor, blocksSignature } from "@/lib/route-cache";
 import { pushNotification } from "@/lib/notifications";
 import { supabase } from "@/lib/supabase";
 
@@ -158,11 +156,8 @@ async function initSupabaseSync() {
             delete next.trucks[payload.old.truck_id];
           } else {
             // A realtime row means fresh telemetry just landed in the DB (the
-            // driver's GPS pushes every ~2s; the local movement sim never
-            // writes to the DB). Stamp lastGpsAt so the sim — on THIS tab and
-            // every other tab watching — leaves this GPS-fed truck alone
-            // instead of dragging its marker onto the road-snapped path and
-            // fighting the next GPS fix (the exact↔road jumping).
+            // driver's GPS pushes every ~2s). Stamp lastGpsAt so heading
+            // selection prefers the real direction of travel.
             const prevTracking = getSnapshot().trucks?.[t.truck_id]?.tracking || {};
             next.trucks[t.truck_id] = {
               truckId: t.truck_id,
@@ -619,10 +614,9 @@ export async function continueRoute(truckId) {
 // Which direction should the truck marker face?
 // Fresh GPS (< GPS_FRESH_MS) means the driver is actively moving, so face the
 // actual direction of travel from the device. Otherwise fall back to the
-// planned-route direction (road ahead toward the next stop), which is also
-// what the offline movement sim follows. Without this priority the marker
-// faces the route while the driver goes another way — reading as "driving
-// backwards".
+// planned-route direction (road ahead toward the next stop). Without this
+// priority the marker faces the route while the driver goes another way —
+// reading as "driving backwards".
 const GPS_FRESH_MS = 15000;
 
 export function selectTruckHeading(truckState, routeHeading = null) {
@@ -782,121 +776,13 @@ export function useLiveRoute() {
 }
 
 
-// ---- Live movement sim: advance on-duty trucks toward their next stop every
-// 4 seconds so the marker glides in realtime on every map (admin, resident,
-// driver). The 4s tick lands before the marker's 4.6s glide finishes, so each
-// update retargets mid-glide and motion never pauses; the 36m step keeps the
-// same 9 m/s speed as the old 45m/5s cadence. Any tab may tick; lastSimAt
-// dedupes concurrent tabs. Trucks fed by real GPS (recent lastGpsAt) or
-// seeded by tests (simPaused) are left alone.
-const SIM_INTERVAL_MS = 4000;
-const SIM_STEP_M = 36;
-const SIM_STOP_GAP_M = 25;
-
-function simMeters(aLat, aLng, bLat, bLng) {
-  const dy = (bLat - aLat) * 111320;
-  const dx = (bLng - aLng) * 111320 * Math.cos((aLat * Math.PI) / 180);
-  return Math.hypot(dx, dy);
-}
-
-function simBearing(aLat, aLng, bLat, bLng) {
-  const dx = (bLng - aLng) * Math.cos((aLat * Math.PI) / 180);
-  const dy = bLat - aLat;
-  // App convention: heading = compass bearing + 90 (icon faces north at 0).
-  return Math.round(((Math.atan2(dx, dy) * 180) / Math.PI + 90 + 360) % 360);
-}
-
-// Walk stepM forward along the drawn route polyline (projecting the truck
-// onto its nearest vertex first). Returns null once the remaining path is
-// inside the arrival window so arrival stays manual.
-function advanceAlongPath(path, lat, lng, stepM, gapM) {
-  let startIdx = 0;
-  let best = Infinity;
-  for (let i = 0; i < path.length; i++) {
-    const d = simMeters(lat, lng, path[i][0], path[i][1]);
-    if (d < best) {
-      best = d;
-      startIdx = i;
-    }
-  }
-  const segs = [];
-  let total = 0;
-  for (let i = startIdx; i < path.length - 1; i++) {
-    const len = simMeters(path[i][0], path[i][1], path[i + 1][0], path[i + 1][1]);
-    segs.push(len);
-    total += len;
-  }
-  if (total <= gapM) return null;
-  let walk = Math.min(stepM, total - gapM);
-  let i = startIdx;
-  for (; i < path.length - 2; i++) {
-    if (walk <= segs[i - startIdx]) break;
-    walk -= segs[i - startIdx];
-  }
-  const a = path[i];
-  const b = path[i + 1];
-  const segLen = segs[i - startIdx];
-  const r = segLen > 0 ? walk / segLen : 1;
-  return {
-    lat: a[0] + (b[0] - a[0]) * r,
-    lng: a[1] + (b[1] - a[1]) * r,
-    heading: simBearing(a[0], a[1], b[0], b[1]),
-  };
-}
-
-function simTick() {
-  const snap = getSnapshot();
-  const now = Date.now();
-  if (now - (snap.lastSimAt || 0) < SIM_INTERVAL_MS - 800) return;
-
-  const blockSig = blocksSignature(snap.roadBlocks || []);
-  const trucks = { ...snap.trucks };
-  let moved = false;
-  for (const [id, ts] of Object.entries(trucks)) {
-    if (!ts || ts.phase !== "enroute" || !ts.tracking?.isActive || !ts.scheduleId) continue;
-    if (ts.tracking.simPaused) continue;
-    if (now - (ts.tracking.lastGpsAt || 0) < 10000) continue;
-    const point = getSchedule(ts.scheduleId)?.routePoints?.[ts.stopIndex];
-    if (!point) continue;
-
-    // Follow the same cached street route the maps are drawing so the truck
-    // stays on the green trajectory (and honors re-route detours).
-    const origin = { lat: ts.tracking.lat, lng: ts.tracking.lng };
-    const path = routeCache.get(cacheKeyFor(ts.scheduleId, ts.stopIndex, origin, 2, blockSig));
-    const advanced =
-      path && path.length >= 2
-        ? advanceAlongPath(path, origin.lat, origin.lng, SIM_STEP_M, SIM_STOP_GAP_M)
-        : null;
-    if (advanced) {
-      trucks[id] = { ...ts, tracking: { ...ts.tracking, ...advanced } };
-      moved = true;
-      continue;
-    }
-    if (path && path.length >= 2) continue; // at arrival window on a real route
-
-    const dist = simMeters(ts.tracking.lat, ts.tracking.lng, point.lat, point.lng);
-    if (dist <= SIM_STOP_GAP_M) continue;
-    const ratio = Math.min(SIM_STEP_M, dist - SIM_STOP_GAP_M) / dist;
-    trucks[id] = {
-      ...ts,
-      tracking: {
-        ...ts.tracking,
-        lat: ts.tracking.lat + (point.lat - ts.tracking.lat) * ratio,
-        lng: ts.tracking.lng + (point.lng - ts.tracking.lng) * ratio,
-        heading: simBearing(ts.tracking.lat, ts.tracking.lng, point.lat, point.lng),
-      },
-    };
-    moved = true;
-  }
-  if (!moved) return;
-  write((next) => {
-    next.trucks = trucks;
-    next.lastSimAt = now;
-  });
-}
-
-let simTimer = null;
-export function ensureRouteSim() {
-  if (simTimer || typeof window === "undefined") return;
-  simTimer = setInterval(simTick, SIM_INTERVAL_MS);
-}
+// ---- Autonomous movement sim REMOVED (it advanced every on-duty truck 36m
+// toward its next stop every 4s). It dragged the marker along the route on
+// its own whenever real GPS was stale — including right after Start Route
+// while the real truck was still parked. A parked truck's fixes are
+// intentionally filtered out by the driver's stationary noise gate, so
+// lastGpsAt never refreshed and the sim took over, reading exactly like mock
+// data. Markers are now strictly real-GPS: a truck only moves on screen when
+// the driver's device pushes a fix via updateTracking, Uber/Waze-style.
+// Kept as a no-op so existing useLiveRoute() callers don't change.
+export function ensureRouteSim() {}
