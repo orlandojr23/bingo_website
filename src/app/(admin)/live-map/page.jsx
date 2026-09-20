@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { useTickets, updateTicket } from "@/lib/tickets";
 import { useLiveRoute, getSchedule, dutyStatusOf, selectTruckHeading } from "@/lib/live-route";
-import { useTruckRoutes, snapToRoute } from "@/lib/use-route-path";
+import { useTruckRoutes } from "@/lib/use-route-path";
 import { useFleet } from "@/lib/fleet";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
 import TicketDetailsModal from "@/components/modals/ticket-details-modal";
@@ -42,8 +42,9 @@ function LiveMapContent() {
 
   // Stable identity: without this, `trucksData` is a new array every render
   // and any effect depending on it re-fires forever.
-  // Waze-style: while a truck is en-route, snap its marker to the road so it
-  // appears waiting on the street even if the driver's raw GPS is off-road.
+  // Marker rides at the same map-matched road point the drawn leg starts at
+  // (route.snappedOrigin) — line and marker share one source, so they can
+  // never separate even when the raw phone fix sits inside a house.
   const trucksData = useMemo(
     () =>
       fleet.map((t) => {
@@ -52,13 +53,10 @@ function LiveMapContent() {
         let lat = ts?.tracking.lat || 10.3016;
         let lng = ts?.tracking.lng || 123.9086;
         let heading = selectTruckHeading(ts, route?.heading);
-        if (route && route.positions.length >= 2 && ts?.tracking?.isActive) {
-          const snapped = snapToRoute({ lat: ts.tracking.lat, lng: ts.tracking.lng }, route.positions);
-          if (snapped) {
-            lat = snapped.lat;
-            lng = snapped.lng;
-            if (route.heading != null) heading = route.heading;
-          }
+        if (route?.snappedOrigin && ts?.tracking?.isActive) {
+          lat = route.snappedOrigin.lat;
+          lng = route.snappedOrigin.lng;
+          if (route.heading != null) heading = route.heading;
         }
         return {
           id: t.id,

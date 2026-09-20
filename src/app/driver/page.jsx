@@ -39,7 +39,7 @@ import {
 } from "@/lib/live-route";
 import { cn, haptic } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { useRoutePath, snapToRoute } from "@/lib/use-route-path";
+import { useRoutePath } from "@/lib/use-route-path";
 import { useFleet } from "@/lib/fleet";
 import { getDriverSession, clearDriverSession } from "@/lib/driver-session";
 import { changeDriverPassword } from "@/lib/driver-accounts";
@@ -330,6 +330,9 @@ export default function DriverPage() {
         : null,
     points: truckState?.phase === "completed" ? [] : routeStops,
     autoReroute: true,
+    // The drawn leg starts at the map-matched road point; the marker below
+    // uses driverRoute.snappedOrigin so line and marker share one source.
+    pinToRoad: true,
   });
 
   const driverRouteRef = useRef(driverRoute);
@@ -722,13 +725,10 @@ export default function DriverPage() {
     driverFuturePath.positions, driverFuturePath.heading, driverFuturePath.source, driverFuturePath.ready,
   ]);
 
-  // Waze-style: while navigating, the marker sticks to the road even if the
-  // raw GPS is a few meters off-road (house/garage). snapToRoute finds the
-  // closest point on the road polyline so the truck “waits on the road”.
-  const snappedTruck = useMemo(() => {
-    if (!isOnDuty || !truckState?.tracking || driverRoute.positions.length < 2) return null;
-    return snapToRoute({ lat: truckState.tracking.lat, lng: truckState.tracking.lng }, driverRoute.positions);
-  }, [isOnDuty, truckState?.tracking?.lat, truckState?.tracking?.lng, driverRoute.positions]);
+  // Marker rides at the same map-matched road point the trajectory starts at
+  // (driverRoute.snappedOrigin) — line and marker can never separate, even
+  // when the raw phone fix sits inside a house. Null = draw raw GPS.
+  const snappedTruck = driverRoute.snappedOrigin;
 
   const trucksForMap = useMemo(() => {
     if (!currentTruck || !truckState) return [];

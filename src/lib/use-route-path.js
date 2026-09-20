@@ -175,7 +175,7 @@ async function fetchOrs(waypoints) {
   return coords.map(([lng, lat]) => [lat, lng]);
 }
 
-export function useRoutePath({ scheduleId, stopIndex = 0, origin = null, points = [], blocks = [], enabled = true, autoReroute = false }) {
+export function useRoutePath({ scheduleId, stopIndex = 0, origin = null, points = [], blocks = [], enabled = true, autoReroute = false, pinToRoad = false }) {
   const waypoints = enabled ? buildWaypoints(origin, points) : [];
   const blockSig = blocksSignature(blocks);
   const baseKey = cacheKeyFor(scheduleId, stopIndex, origin, waypoints.length, blockSig);
@@ -304,13 +304,28 @@ export function useRoutePath({ scheduleId, stopIndex = 0, origin = null, points 
   // dragging or zooming. Now the path only rebuilds when it really moved.
   const qLat = origin ? round4(origin.lat) : null;
   const qLng = origin ? round4(origin.lng) : null;
-  const positions = useMemo(
+  // Road-pinned first vertex: when pinToRoad is on, the drawn line starts at
+  // the map-matched road point instead of the raw phone fix — the same point
+  // the truck marker is drawn at, so line and marker can never separate
+  // (e.g. line starting inside the driver's house). Snapping runs on the
+  // quantized origin so GPS wobble doesn't rebuild the array (see below).
+  // Detection, keys, and fetches still use the raw origin.
+  const roadPin = useMemo(
     () =>
-      origin && state.positions.length >= 2
-        ? [[qLat, qLng], ...state.positions.slice(1)]
-        : state.positions,
+      pinToRoad && origin && state.positions.length >= 2
+        ? snapToRoute({ lat: qLat, lng: qLng }, state.positions)
+        : null,
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [qLat, qLng, state.positions]
+    [pinToRoad, qLat, qLng, state.positions]
+  );
+  const positions = useMemo(
+    () => {
+      if (!origin || state.positions.length < 2) return state.positions;
+      const head = roadPin ? [roadPin.lat, roadPin.lng] : [qLat, qLng];
+      return [head, ...state.positions.slice(1)];
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [qLat, qLng, state.positions, roadPin]
   );
   // True while the origin sits off the drawn trajectory — drives the
   // "Rerouting…" indicator and clears on its own once fresh geometry lands.
@@ -325,6 +340,9 @@ export function useRoutePath({ scheduleId, stopIndex = 0, origin = null, points 
     positions,
     heading: origin && positions.length >= 2 ? headingAlong(positions) : null,
     rerouting,
+    // The road point the line is pinned to (null = raw origin is drawn).
+    // Marker builders should draw the truck here so marker and line coincide.
+    snappedOrigin: roadPin,
   };
 }
 
@@ -398,11 +416,20 @@ export function useTruckRoutes(live, fleet) {
         }
 
         const withOrigin = [[origin.lat, origin.lng], ...positions.slice(1)];
+        // Pin the drawn leg to the map-matched road point — the same point
+        // admin markers use — so the line starts at the truck marker, never
+        // at the raw phone fix.
+        const roadPin = snapToRoute(
+          { lat: round4(origin.lat), lng: round4(origin.lng) },
+          positions
+        );
+        if (roadPin) withOrigin[0] = [roadPin.lat, roadPin.lng];
         results.push({
           id: t.id,
           positions: withOrigin,
           source,
           heading: headingAlong(withOrigin),
+          snappedOrigin: roadPin,
         });
       }
       if (!cancelled) setRoutes(results);

@@ -32,7 +32,7 @@ import { useTickets, addTicket, updateTicket, removeTicket } from "@/lib/tickets
 import { useAuth } from "@/context/AuthContext";
 import { useLiveRoute, getSchedule, getSchedules, scheduleLabel, selectTruckHeading } from "@/lib/live-route";
 import { playDing, playTrumpet, useSoundEnabled, setSoundEnabled } from "@/lib/sounds";
-import { useRoutePath, snapToRoute } from "@/lib/use-route-path";
+import { useRoutePath } from "@/lib/use-route-path";
 import { useFleet } from "@/lib/fleet";
 import { clearResidentSession } from "@/lib/resident-session";
 import { reverseGeocode } from "@/lib/geocode";
@@ -275,6 +275,9 @@ export default function ResidentMobilePWA() {
         : null,
     points: routeCompleted ? [] : routePoints.slice(stopIndex, stopIndex + 1),
     autoReroute: true,
+    // The drawn leg starts at the map-matched road point; the marker below
+    // uses routePath.snappedOrigin so line and marker share one source.
+    pinToRoad: true,
   });
 
   // Compact numbered pins for every stop after the current one — likewise only
@@ -653,9 +656,8 @@ export default function ResidentMobilePWA() {
   };
 
   // Active trucks for live tracking map (Only show trucks whose drivers started their route!)
-  // Waze-style: when a truck is navigating, snap its marker to the road so a
-  // resident watching sees the truck waiting on the street even if the driver's
-  // raw GPS is a few meters off-road at a house.
+  // Marker rides at the same map-matched road point the drawn leg starts at
+  // (routePath.snappedOrigin) — line and marker share one source.
   const activeTrucks = useMemo(() => {
     return (fleet || [])
       .map((t) => {
@@ -667,13 +669,10 @@ export default function ResidentMobilePWA() {
           t.id === activeTs?.truckId
             ? selectTruckHeading(ts, routePath.heading)
             : selectTruckHeading(ts, null);
-        if (t.id === activeTs?.truckId && routePath.positions.length >= 2) {
-          const snapped = snapToRoute({ lat: ts.tracking.lat, lng: ts.tracking.lng }, routePath.positions);
-          if (snapped) {
-            lat = snapped.lat;
-            lng = snapped.lng;
-            if (routePath.heading != null) heading = routePath.heading;
-          }
+        if (t.id === activeTs?.truckId && routePath.snappedOrigin) {
+          lat = routePath.snappedOrigin.lat;
+          lng = routePath.snappedOrigin.lng;
+          if (routePath.heading != null) heading = routePath.heading;
         }
         return {
           id: t.id,
@@ -1038,13 +1037,8 @@ export default function ResidentMobilePWA() {
                   setIsMapSheetExpanded(false);
                   setTruckFocused(true);
                   if (activeTs?.tracking) {
-                    let cLat = activeTs.tracking.lat;
-                    let cLng = activeTs.tracking.lng;
-                    if (routePath.positions.length >= 2) {
-                      const s = snapToRoute({ lat: cLat, lng: cLng }, routePath.positions);
-                      if (s) { cLat = s.lat; cLng = s.lng; }
-                    }
-                    setMapCenter([cLat, cLng]);
+                    const s = routePath.snappedOrigin;
+                    setMapCenter(s ? [s.lat, s.lng] : [activeTs.tracking.lat, activeTs.tracking.lng]);
                     setMapZoom(17);
                     setFlySignal((s) => s + 1);
                   }
