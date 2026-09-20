@@ -64,6 +64,7 @@ export async function fetchStaffRoster() {
         role: "Driver",
         username: d.email || "",
         status: d.status || "Active",
+        phone: d.phone || null,
       }));
 
       cache = dbMapped;

@@ -13,6 +13,7 @@ import {
   Map as MapIcon,
   ClipboardList,
   History,
+  Route as RouteIcon,
   ChevronLeft,
   ChevronRight,
   LocateFixed,
@@ -66,6 +67,35 @@ function assignedAreaTagline(schedule, zone) {
   return `${names[0]} +${names.length - 1} stops`;
 }
 
+// Bottom-nav tab: the active tab gets a duotone (tinted-fill + bold-stroke)
+// emerald icon — no background pill, just the icon and label.
+function DriverTab({ id, label, icon: Icon, activeTab, onSelect, badge = 0 }) {
+  const active = activeTab === id;
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-label={label}
+      className={`relative flex flex-col items-center justify-center gap-1 transition-all active:scale-90 cursor-pointer ${active ? "text-emerald-600" : "text-zinc-400"}`}
+    >
+      <span className="relative flex h-8 items-center justify-center px-4">
+        <Icon
+          className="relative h-6 w-6"
+          strokeWidth={active ? 2.25 : 1.75}
+          fill={active ? "currentColor" : "none"}
+          fillOpacity={active ? 0.18 : 0}
+        />
+        {badge > 0 && (
+          <span className="absolute right-1.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold leading-none text-white">
+            {badge > 9 ? "9+" : badge}
+          </span>
+        )}
+      </span>
+      <span className={`text-[10px] leading-none ${active ? "font-semibold" : "font-medium"}`}>{label}</span>
+    </button>
+  );
+}
+
 export default function DriverPage() {
   const [selectedTruckId, setSelectedTruckId] = useState("");
   const [wakeLockActive, setWakeLockActive] = useState(false);
@@ -108,9 +138,7 @@ export default function DriverPage() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
-  const [showCurrent, setShowCurrent] = useState(false);
-  const [showNew, setShowNew] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
+  const [showPasswords, setShowPasswords] = useState(false);
   const [pwErrors, setPwErrors] = useState({});
   const [pwSaving, setPwSaving] = useState(false);
 
@@ -226,9 +254,7 @@ export default function DriverPage() {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmNewPassword("");
-      setShowCurrent(false);
-      setShowNew(false);
-      setShowConfirm(false);
+      setShowPasswords(false);
       toast("Password changed successfully.");
       haptic();
       setProfileView("main");
@@ -390,6 +416,8 @@ export default function DriverPage() {
       return {
         id: "status",
         live: true,
+        icon: CheckCircle2,
+        tone: "text-emerald-600",
         title: "Route completed",
         subtitle: zoneName ? `Next up: ${zoneName}` : "No more routes today",
       };
@@ -398,6 +426,8 @@ export default function DriverPage() {
       return {
         id: "status",
         live: true,
+        icon: CheckCircle2,
+        tone: "text-emerald-600",
         title: `Collecting at ${currentPoint?.name ?? "stop"}`,
         subtitle: `Stop ${(truckState?.stopIndex ?? 0) + 1} of ${routePoints.length}`,
       };
@@ -406,6 +436,8 @@ export default function DriverPage() {
       return {
         id: "status",
         live: true,
+        icon: Truck,
+        tone: "text-emerald-600",
         title: `En route to ${currentPoint?.name ?? "next stop"}`,
         subtitle: `Stop ${(truckState?.stopIndex ?? 0) + 1} of ${routePoints.length}${startTime ? ` • ${startTime}` : ""}`,
       };
@@ -413,6 +445,8 @@ export default function DriverPage() {
     if (isPaused) {
       return {
         id: "status",
+        icon: ClipboardList,
+        tone: "text-amber-500",
         title: "Route paused",
         subtitle: "Start Route to resume",
       };
@@ -420,6 +454,8 @@ export default function DriverPage() {
     if (assignedSchedule) {
       return {
         id: "status",
+        icon: ClipboardList,
+        tone: "text-emerald-600",
         title: `${pendingAssignments} new assignment${pendingAssignments === 1 ? "" : "s"}`,
         subtitle: `${zoneName ?? "New route"}${startTime ? ` • ${startTime}` : ""}`,
       };
@@ -427,6 +463,8 @@ export default function DriverPage() {
 
     return {
       id: "greeting",
+      icon: null,
+      tone: "text-foreground",
       title: greetingTitle,
       subtitle: `${new Date().toLocaleDateString("en-US", {
         weekday: "long",
@@ -864,14 +902,25 @@ export default function DriverPage() {
             <AnimatePresence mode="wait">
               <motion.div
                 key={`${currentBanner.id}-${currentBanner.title}`}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 6 }}
                 transition={{ duration: 0.25, ease: "easeOut" }}
                 className="flex items-center gap-2.5 min-w-0 w-full"
               >
                 {currentBanner.live && (
-                  <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-600" />
+                  <span className="relative flex h-2 w-2 shrink-0">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-60" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-600" />
+                  </span>
+                )}
+                {currentBanner.icon && (
+                  <currentBanner.icon
+                    className={`h-6 w-6 shrink-0 ${currentBanner.tone ?? "text-foreground"}`}
+                    strokeWidth={2.25}
+                    fill="currentColor"
+                    fillOpacity={0.18}
+                  />
                 )}
 
                 <div className="min-w-0 flex-1">
@@ -968,55 +1017,42 @@ export default function DriverPage() {
         {activeTab === "map" && (
         <div className="fixed bottom-0 inset-x-0 z-[100] border-t border-black/10 bg-background/85 backdrop-blur-xl shadow-[0_-4px_16px_rgba(0,0,0,0.06)] pb-[env(safe-area-inset-bottom)]">
           <div className="grid grid-cols-5 h-[64px] max-w-md mx-auto px-2">
-            {/* 1. Map */}
-            <button
-              type="button"
-              onClick={() => { switchTab("map"); }}
-              className={`flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer ${activeTab === "map" ? "text-emerald-600" : "text-zinc-400"}`}
-            >
-              <MapIcon className="h-6 w-6" strokeWidth={activeTab === "map" ? 2.25 : 1.75} />
-              <span className={`text-[10px] leading-none ${activeTab === "map" ? "font-semibold" : "font-medium"}`}>Map</span>
-            </button>
-
-            {/* 2. Route */}
-            <button
-              type="button"
-              onClick={() => { switchTab("route"); }}
-              className={`flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer ${activeTab === "route" ? "text-emerald-600" : "text-zinc-400"}`}
-            >
-              <Play className="h-6 w-6" strokeWidth={activeTab === "route" ? 2.25 : 1.75} />
-              <span className={`text-[10px] leading-none ${activeTab === "route" ? "font-semibold" : "font-medium"}`}>Route</span>
-            </button>
-
-            {/* 3. Assignment */}
-            <button
-              type="button"
-              onClick={() => { switchTab("assignment"); }}
-              className={`flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer ${activeTab === "assignment" ? "text-emerald-600" : "text-zinc-400"}`}
-            >
-              <ClipboardList className="h-6 w-6" strokeWidth={activeTab === "assignment" ? 2.25 : 1.75} />
-              <span className={`text-[10px] leading-none ${activeTab === "assignment" ? "font-semibold" : "font-medium"}`}>Tasks</span>
-            </button>
-
-            {/* 4. History */}
-            <button
-              type="button"
-              onClick={() => { switchTab("history"); }}
-              className={`flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer ${activeTab === "history" ? "text-emerald-600" : "text-zinc-400"}`}
-            >
-              <History className="h-6 w-6" strokeWidth={activeTab === "history" ? 2.25 : 1.75} />
-              <span className={`text-[10px] leading-none ${activeTab === "history" ? "font-semibold" : "font-medium"}`}>History</span>
-            </button>
-
-            {/* 5. Profile */}
-            <button
-              type="button"
-              onClick={() => { setProfileView("main"); switchTab("profile"); }}
-              className={`flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer ${activeTab === "profile" ? "text-emerald-600" : "text-zinc-400"}`}
-            >
-              <User className="h-6 w-6" strokeWidth={activeTab === "profile" ? 2.25 : 1.75} />
-              <span className={`text-[10px] leading-none ${activeTab === "profile" ? "font-semibold" : "font-medium"}`}>Profile</span>
-            </button>
+            <DriverTab
+              id="map"
+              label="Map"
+              icon={MapIcon}
+              activeTab={activeTab}
+              onSelect={() => { switchTab("map"); }}
+            />
+            <DriverTab
+              id="route"
+              label="Route"
+              icon={RouteIcon}
+              activeTab={activeTab}
+              onSelect={() => { switchTab("route"); }}
+            />
+            <DriverTab
+              id="assignment"
+              label="Tasks"
+              icon={ClipboardList}
+              activeTab={activeTab}
+              onSelect={() => { switchTab("assignment"); }}
+              badge={pendingAssignments}
+            />
+            <DriverTab
+              id="history"
+              label="History"
+              icon={History}
+              activeTab={activeTab}
+              onSelect={() => { switchTab("history"); }}
+            />
+            <DriverTab
+              id="profile"
+              label="Profile"
+              icon={User}
+              activeTab={activeTab}
+              onSelect={() => { setProfileView("main"); switchTab("profile"); }}
+            />
           </div>
         </div>
         )}
@@ -1124,11 +1160,11 @@ export default function DriverPage() {
                             <div className="divide-y divide-border/60 overflow-hidden rounded-2xl border border-border/60 bg-card">
                               <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
                                 <span className="shrink-0 text-[15px] text-muted-foreground">Active Route</span>
-                                <span className="truncate text-right text-[15px] text-foreground">{activeSchedule ? scheduleLabel(activeSchedule) : "No Active Route"}</span>
+                                <span className="text-right text-[15px] leading-snug break-words text-foreground">{activeSchedule ? scheduleLabel(activeSchedule) : "No Active Route"}</span>
                               </div>
                               <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
                                 <span className="shrink-0 text-[15px] text-muted-foreground">Next Stop</span>
-                                <span className="truncate text-right text-[15px] text-foreground">
+                                <span className="text-right text-[15px] leading-snug break-words text-foreground">
                                   {truckState?.phase === "completed"
                                     ? "Route Completed"
                                     : truckState?.onsite
@@ -1204,23 +1240,23 @@ export default function DriverPage() {
                           <div className="divide-y divide-border/60 overflow-hidden rounded-2xl border border-border/60 bg-card">
                             <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
                               <span className="shrink-0 text-[15px] text-muted-foreground">Assigned Unit</span>
-                              <span className="truncate text-right text-[15px] text-foreground">{`${currentTruck.id} (${currentTruck.plate})`}</span>
+                              <span className="text-right text-[15px] leading-snug break-words text-foreground">{`${currentTruck.id} (${currentTruck.plate})`}</span>
                             </div>
                             <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
                               <span className="shrink-0 text-[15px] text-muted-foreground">Driver Operator</span>
-                              <span className="truncate text-right text-[15px] text-foreground">{liveDriver || "—"}</span>
+                              <span className="text-right text-[15px] leading-snug break-words text-foreground">{liveDriver || "—"}</span>
                             </div>
                             <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
                               <span className="shrink-0 text-[15px] text-muted-foreground">Payload Capacity</span>
-                              <span className="truncate text-right text-[15px] text-foreground">{currentTruck.capacity}</span>
+                              <span className="text-right text-[15px] leading-snug break-words text-foreground">{currentTruck.capacity}</span>
                             </div>
                             <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
                               <span className="shrink-0 text-[15px] text-muted-foreground">Waste Collection</span>
-                              <span className="truncate text-right text-[15px] text-foreground">{assignedSchedule?.collectionType ?? "—"}</span>
+                              <span className="text-right text-[15px] leading-snug break-words text-foreground">{assignedSchedule?.collectionType ?? "—"}</span>
                             </div>
                             <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
                               <span className="shrink-0 text-[15px] text-muted-foreground">Scheduled Days</span>
-                              <span className="truncate text-right text-[15px] text-foreground">
+                              <span className="text-right text-[15px] leading-snug break-words text-foreground">
                                 {Array.isArray(assignedSchedule?.collectionDays)
                                   ? assignedSchedule.collectionDays.join(", ")
                                   : (assignedSchedule?.collectionDays ?? "—")}
@@ -1228,7 +1264,7 @@ export default function DriverPage() {
                             </div>
                             <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
                               <span className="shrink-0 text-[15px] text-muted-foreground">Scheduled Hours</span>
-                              <span className="truncate text-right text-[15px] tabular-nums text-foreground">{assignedSchedule?.time ?? "—"}</span>
+                              <span className="text-right text-[15px] tabular-nums leading-snug break-words text-foreground">{assignedSchedule?.time ?? "—"}</span>
                             </div>
                           </div>
                           
@@ -1288,7 +1324,7 @@ export default function DriverPage() {
                 <div className="flex flex-1 flex-col space-y-2.5 p-4">
                     {/* Tab 3: History */}
                     {activeTab === "history" && (
-                      <div className="space-y-2.5">
+                      <div className="flex flex-1 flex-col space-y-2.5">
                         {(() => {
                           const history = getSchedules().filter(
                             (s) =>
@@ -1298,7 +1334,7 @@ export default function DriverPage() {
                           );
                           if (history.length === 0) {
                             return (
-                              <div className="flex flex-1 flex-col items-center justify-center min-h-[50vh] px-6 py-16 text-center">
+                              <div className="flex flex-1 flex-col items-center justify-center px-6 py-16 text-center">
                                 <CheckCircle2 className="h-12 w-12 text-muted-foreground/40" strokeWidth={1.5} />
                                 <h3 className="mt-4 text-[17px] font-semibold tracking-tight text-foreground">No completed routes</h3>
                                 <p className="mt-1 max-w-[240px] text-[13px] leading-normal text-muted-foreground">
@@ -1310,7 +1346,7 @@ export default function DriverPage() {
                           return history.map((s) => (
                             <div key={s.id} className="rounded-2xl border border-border/60 bg-card p-4 flex items-center justify-between gap-3">
                               <div className="min-w-0 flex-1">
-                                <h3 className="text-[16px] font-semibold tracking-tight text-foreground truncate">{scheduleLabel(s)}</h3>
+                                <h3 className="text-[16px] font-semibold tracking-tight text-foreground leading-snug break-words">{scheduleLabel(s)}</h3>
                                 <p className="mt-0.5 text-[13px] text-muted-foreground">{s.time || "No time specified"}</p>
                               </div>
                               <button
@@ -1320,7 +1356,7 @@ export default function DriverPage() {
                                   removeSchedule(s.id);
                                   toast("Route archived from history.");
                                 }}
-                                className="shrink-0 rounded-full bg-rose-600/10 px-3.5 py-1.5 text-[13px] font-semibold text-rose-600 transition-all active:scale-95 cursor-pointer"
+                                className="shrink-0 rounded-full bg-rose-600/10 px-3.5 py-1.5 text-[13px] font-semibold text-rose-600 transition-all hover:bg-rose-600/20 active:scale-95 cursor-pointer"
                               >
                                 Archive
                               </button>
@@ -1375,50 +1411,36 @@ export default function DriverPage() {
                 field: "current",
                 value: currentPassword,
                 setter: setCurrentPassword,
-                show: showCurrent,
-                setShow: setShowCurrent,
                 placeholder: "Current password",
               },
               {
                 field: "newPassword",
                 value: newPassword,
                 setter: setNewPassword,
-                show: showNew,
-                setShow: setShowNew,
                 placeholder: "New password",
               },
               {
                 field: "confirm",
                 value: confirmNewPassword,
                 setter: setConfirmNewPassword,
-                show: showConfirm,
-                setShow: setShowConfirm,
                 placeholder: "Re-enter new password",
               },
             ].map((f) => (
               <div key={f.field} className="flex flex-col gap-1">
                 <div className="relative">
                   <input
-                    type={f.show ? "text" : "password"}
+                    type={showPasswords ? "text" : "password"}
                     value={f.value}
                     onChange={(e) => handlePwFieldChange(f.field, e.target.value.replace(/\s/g, ""), f.setter)}
                     maxLength={64}
                     autoComplete={f.field === "current" ? "current-password" : "new-password"}
-                    className={`w-full rounded-2xl border bg-card px-3.5 py-3.5 pr-11 text-[16px] text-foreground placeholder:text-muted-foreground/50 outline-none transition-colors ${
+                    className={`w-full rounded-2xl border bg-card px-3.5 py-3.5 text-[16px] text-foreground placeholder:text-muted-foreground/50 outline-none transition-colors ${
                       pwErrors[f.field]
                         ? "border-rose-300 focus:border-rose-400"
                         : "border-border/60 focus:border-zinc-400"
                     }`}
                     placeholder={f.placeholder}
                   />
-                  <button
-                    type="button"
-                    onClick={() => f.setShow(!f.show)}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 cursor-pointer text-muted-foreground/70 transition-colors hover:text-foreground"
-                    aria-label={f.show ? "Hide password" : "Show password"}
-                  >
-                    {f.show ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-                  </button>
                 </div>
                 {f.field === "newPassword" && <PasswordStrengthHint password={f.value} />}
                 <AnimatePresence initial={false}>
@@ -1436,6 +1458,16 @@ export default function DriverPage() {
                 </AnimatePresence>
               </div>
             ))}
+
+            <button
+              type="button"
+              onClick={() => setShowPasswords(!showPasswords)}
+              className="flex items-center gap-2 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
+              aria-label={showPasswords ? "Hide passwords" : "Show passwords"}
+            >
+              {showPasswords ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+              {showPasswords ? "Hide passwords" : "Show passwords"}
+            </button>
 
             <Button
               variant="primary"
@@ -1487,11 +1519,11 @@ export default function DriverPage() {
               </div>
               <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
                 <span className="shrink-0 text-[15px] text-foreground">Compactor Unit</span>
-                <span className="truncate text-right text-[15px] text-muted-foreground">{selectedTruckId}</span>
+                <span className="text-right text-[15px] leading-snug break-words text-muted-foreground">{selectedTruckId}</span>
               </div>
               <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
                 <span className="shrink-0 text-[15px] text-foreground">Plate</span>
-                <span className="truncate text-right text-[15px] text-muted-foreground">{currentTruck.plate}</span>
+                <span className="text-right text-[15px] leading-snug break-words text-muted-foreground">{currentTruck.plate}</span>
               </div>
               <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
                 <span className="shrink-0 text-[15px] text-foreground">Device Battery</span>

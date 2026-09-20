@@ -17,7 +17,8 @@ import {
   Ticket,
   Truck,
   Bell,
-  RefreshCw,
+  Eye,
+  EyeOff,
   ChevronRight,
   LogOut,
   ShieldCheck,
@@ -42,6 +43,7 @@ import { supabase } from "@/lib/supabase";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MapSkeleton, ResidentShellSkeleton } from "@/components/ui/skeletons";
+import PasswordStrengthHint from "@/components/ui/password-strength-hint";
 import { InfoRow } from "@/components/ui/info-row";
 import { useToast } from "@/components/pwa/Toast";
 import {
@@ -110,6 +112,115 @@ function pathMeters(positions) {
     meters += Math.hypot((lat2 - lat1) * mLat, (lng2 - lng1) * mLng);
   }
   return meters;
+}
+
+// Bottom-nav tab: the active tab gets a duotone (tinted-fill + bold-stroke)
+// emerald icon — no background pill, just the icon and label. `badge` shows
+// a count bubble (open tickets). `tourId` preserves product-tour anchors.
+function ResidentTab({ id, label, icon: Icon, active, onSelect, badge = 0, tourId }) {
+  return (
+    <button
+      type="button"
+      data-tour={tourId}
+      onClick={onSelect}
+      aria-label={label}
+      className={`flex flex-col items-center justify-center gap-1 transition-all active:scale-90 cursor-pointer ${active ? "text-emerald-600" : "text-zinc-400"}`}
+    >
+      <span className="relative flex h-8 items-center justify-center px-4">
+        <Icon
+          className="relative h-6 w-6"
+          strokeWidth={active ? 2.25 : 1.75}
+          fill={active ? "currentColor" : "none"}
+          fillOpacity={active ? 0.18 : 0}
+        />
+        {badge > 0 && (
+          <span className="absolute right-1.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold leading-none text-white">
+            {badge > 9 ? "9+" : badge}
+          </span>
+        )}
+      </span>
+      <span className={`text-[10px] leading-none ${active ? "font-semibold" : "font-medium"}`}>{label}</span>
+    </button>
+  );
+}
+
+// Philippine mobile numbers: 09xx xxx xxxx (11 digits). Accepts pasted
+// +63… or 9xxxxxxxxx variants and folds them to the 09… form.
+function normalizePhMobile(value) {
+  let d = String(value || "").replace(/\D/g, "");
+  if (d.startsWith("63") && d.length > 11) d = "0" + d.slice(2);
+  else if (d.startsWith("9") && d.length === 10) d = "0" + d;
+  return d.slice(0, 11);
+}
+function formatPhMobile(value) {
+  const d = normalizePhMobile(value);
+  if (d.length <= 4) return d;
+  if (d.length <= 7) return `${d.slice(0, 4)} ${d.slice(4)}`;
+  return `${d.slice(0, 4)} ${d.slice(4, 7)} ${d.slice(7)}`;
+}
+const isValidPhMobile = (digits) => /^09\d{9}$/.test(digits);
+
+// Glossy 3D-style waste-category icons for the Schedule cards — same
+// gradient + highlight + ground-shadow language as the map truck marker.
+function MalataIcon() {
+  return (
+    <svg width="30" height="30" viewBox="0 0 48 48" fill="none" style={{ filter: "drop-shadow(0 3px 4px rgba(0,0,0,0.20))" }}>
+      <defs>
+        <linearGradient id="waste-malata" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#34d399" />
+          <stop offset="1" stopColor="#059669" />
+        </linearGradient>
+      </defs>
+      <ellipse cx="24" cy="41" rx="10" ry="2.5" fill="#000" opacity="0.12" />
+      <path d="M24 5 C36 13 38.5 29 24 42.5 C9.5 29 12 13 24 5 Z" fill="url(#waste-malata)" />
+      <path d="M24 10 L24 37" stroke="#065f46" strokeWidth="1.6" strokeLinecap="round" opacity="0.55" />
+      <path d="M24 17 L18.5 21 M24 17 L29.5 21 M24 25 L18 29.5 M24 25 L30 29.5" stroke="#065f46" strokeWidth="1.3" strokeLinecap="round" opacity="0.45" />
+      <path d="M19 12 C15 18 14.5 26 18 33 C14.5 26 15.5 17 20.5 11 Z" fill="#fff" opacity="0.35" />
+      <rect x="22.6" y="40" width="2.8" height="4" rx="1.4" fill="#065f46" />
+    </svg>
+  );
+}
+
+function RecyclableIcon() {
+  return (
+    <svg width="30" height="30" viewBox="0 0 48 48" fill="none" style={{ filter: "drop-shadow(0 3px 4px rgba(0,0,0,0.20))" }}>
+      <defs>
+        <linearGradient id="waste-recycle" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#60a5fa" />
+          <stop offset="1" stopColor="#2563eb" />
+        </linearGradient>
+        <g id="waste-rc-arrow">
+          <path d="M25.7,12.2 A10,10 0 0 1 33.4,25.4" fill="none" stroke="url(#waste-recycle)" strokeWidth="4.5" strokeLinecap="round" />
+          <polygon points="32.2,28.7 36.3,24.9 31.5,23.1" fill="#2563eb" />
+        </g>
+      </defs>
+      <ellipse cx="24" cy="41" rx="10" ry="2.5" fill="#000" opacity="0.12" />
+      <use href="#waste-rc-arrow" />
+      <use href="#waste-rc-arrow" transform="rotate(120 24 22)" />
+      <use href="#waste-rc-arrow" transform="rotate(240 24 22)" />
+      <path d="M14 12 A13,13 0 0 1 22 6.5" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" opacity="0.5" />
+    </svg>
+  );
+}
+
+function ResidualIcon() {
+  return (
+    <svg width="30" height="30" viewBox="0 0 48 48" fill="none" style={{ filter: "drop-shadow(0 3px 4px rgba(0,0,0,0.20))" }}>
+      <defs>
+        <linearGradient id="waste-residual" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#fbbf24" />
+          <stop offset="1" stopColor="#b45309" />
+        </linearGradient>
+      </defs>
+      <ellipse cx="24" cy="41" rx="10" ry="2.5" fill="#000" opacity="0.12" />
+      <path d="M20 6 L28 6 L26.5 11 L21.5 11 Z" fill="#92400e" />
+      <rect x="19" y="10" width="10" height="2.6" rx="1.3" fill="#78350f" />
+      <path d="M15 15 L33 15 L30.8 36.5 A4.5,4.5 0 0 1 26.3,41 L21.7,41 A4.5,4.5 0 0 1 17.2,36.5 Z" fill="url(#waste-residual)" />
+      <path d="M19.5 18 L21.5 18 L20.2 36 L18.6 35.4 Z" fill="#fff" opacity="0.35" />
+      <path d="M16.5 24 L31.5 24" stroke="#92400e" strokeWidth="1.2" opacity="0.4" />
+      <path d="M17.2 30 L30.8 30" stroke="#92400e" strokeWidth="1.2" opacity="0.4" />
+    </svg>
+  );
 }
 
 export default function ResidentMobilePWA() {
@@ -190,12 +301,213 @@ export default function ResidentMobilePWA() {
           id: session.user.id
         });
         setSessionReady(true);
+
+        // Shared phone copy (migrations/20260923000000_profiles_phone.sql).
+        // Fetched separately and best-effort: if the column doesn't exist yet
+        // (migration not run), this fails quietly and metadata stands.
+        // Metadata is the source of truth for display; when it holds a number
+        // the column lacks, heal the column so admins/searches can see it.
+        supabase.from('profiles').select('phone').eq('id', session.user.id).single().then(({ data: p, error: pErr }) => {
+          if (pErr || !p) return;
+          const rowPhone = p.phone || null;
+          const metaPhone = session.user.user_metadata?.phone || null;
+          if (metaPhone && metaPhone !== rowPhone) {
+            supabase.from('profiles').update({ phone: metaPhone }).eq('id', session.user.id)
+              .then(({ error: upErr }) => { if (upErr) console.warn("Profiles phone backfill failed:", upErr); });
+          }
+        });
       });
     });
   }, [router, user, authLoading]);
 
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [runProductTour, setRunProductTour] = useState(false);
+
+  // Editable mobile number: drafted locally, persisted to the auth
+  // user_metadata.phone the profile already reads from (see session load
+  // above) ONLY when the resident presses Save — typing never writes.
+  const [phoneDraft, setPhoneDraft] = useState("");
+  const [phoneSaving, setPhoneSaving] = useState(false);
+  const [phoneError, setPhoneError] = useState("");
+  // Editable email: same draft-only discipline as the phone number.
+  const [emailDraft, setEmailDraft] = useState("");
+  const [emailError, setEmailError] = useState("");
+  // New address awaiting confirmation (Supabase only switches the login
+  // email after the verification link is tapped). Persisted locally so the
+  // notice survives reloads; cleared once the session email catches up.
+  const [pendingEmail, setPendingEmail] = useState("");
+  const syncedPhoneRef = useRef("");
+  const syncedEmailRef = useRef("");
+  useEffect(() => {
+    // Re-sync a field only when untouched (empty or still matching the last
+    // synced value): a session refresh never wipes what the resident is
+    // typing, but a genuinely new session value (e.g. email after the
+    // verification link is tapped) flows into the field.
+    const sessionPhone = formatPhMobile(residentSession?.phone || "");
+    if (!phoneDraft || phoneDraft === syncedPhoneRef.current) {
+      syncedPhoneRef.current = sessionPhone;
+      if (phoneDraft !== sessionPhone) setPhoneDraft(sessionPhone);
+    }
+    const sessionEmail = residentSession?.email || "";
+    if (!emailDraft || emailDraft === syncedEmailRef.current) {
+      syncedEmailRef.current = sessionEmail;
+      if (emailDraft !== sessionEmail) setEmailDraft(sessionEmail);
+    }
+    try {
+      const stored = window.localStorage.getItem(`bingo_pending_email_${residentSession?.id || "noid"}`);
+      if (stored && stored.toLowerCase() === sessionEmail.toLowerCase()) {
+        window.localStorage.removeItem(`bingo_pending_email_${residentSession?.id}`);
+        setPendingEmail("");
+      } else {
+        setPendingEmail(stored || "");
+      }
+    } catch {}
+  }, [residentSession]);
+
+  // Save is only enabled when the draft actually differs from what's stored.
+  const phoneDirty =
+    normalizePhMobile(phoneDraft) !== normalizePhMobile(residentSession?.phone || "");
+  const emailDirty =
+    emailDraft.trim().toLowerCase() !== (residentSession?.email || "").toLowerCase();
+  const profileDirty = phoneDirty || emailDirty;
+
+  // Resident password change (mirrors the driver flow): validate locally,
+  // verify the current password by re-authenticating, then update via Auth.
+  const [residentProfileView, setResidentProfileView] = useState("main");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [showPwFields, setShowPwFields] = useState(false);
+  const [pwErrors, setPwErrors] = useState({});
+  const [pwSaving, setPwSaving] = useState(false);
+
+  const handlePwFieldChange = (value, setter) => {
+    setter(value.replace(/\s/g, ""));
+    if (Object.keys(pwErrors).length > 0) setPwErrors({});
+  };
+
+  const handleChangePassword = async () => {
+    const newErrors = {};
+    if (!currentPassword) {
+      newErrors.current = "Please enter your current password.";
+    }
+    if (!newPassword) {
+      newErrors.newPassword = "Please enter a new password.";
+    } else if (newPassword.length < 6) {
+      newErrors.newPassword = "Password must be at least 6 characters.";
+    } else if (currentPassword && newPassword === currentPassword) {
+      newErrors.newPassword = "New password must be different from your current password.";
+    }
+    if (!confirmNewPassword) {
+      newErrors.confirm = "Please re-enter your new password.";
+    } else if (newPassword && confirmNewPassword !== newPassword) {
+      newErrors.confirm = "Passwords do not match.";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setPwErrors(newErrors);
+      return;
+    }
+    setPwErrors({});
+    setPwSaving(true);
+
+    try {
+      const { error: verifyErr } = await supabase.auth.signInWithPassword({
+        email: residentSession?.email || "",
+        password: currentPassword,
+      });
+      if (verifyErr) {
+        setPwErrors({ current: "Your current password is incorrect." });
+        setPwSaving(false);
+        return;
+      }
+
+      const { error: updateErr } = await supabase.auth.updateUser({ password: newPassword });
+      if (updateErr) {
+        setPwErrors({ newPassword: updateErr.message });
+        setPwSaving(false);
+        return;
+      }
+
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmNewPassword("");
+      setShowPwFields(false);
+      setResidentProfileView("main");
+      toast("Password changed successfully.");
+      haptic();
+    } catch {
+      setPwErrors({ current: "Something went wrong. Please try again." });
+    } finally {
+      setPwSaving(false);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    if (!profileDirty || phoneSaving) return;
+    const digits = normalizePhMobile(phoneDraft);
+    const nextEmail = emailDraft.trim().toLowerCase();
+    const currentEmail = (residentSession?.email || "").toLowerCase();
+
+    // Validate everything up front — nothing saves unless all of it is valid
+    // and the resident pressed this button (drafts never write on type).
+    if (digits && !isValidPhMobile(digits)) {
+      setPhoneError("Enter a valid 11-digit mobile number (09xx xxx xxxx).");
+      return;
+    }
+    if (emailDirty && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nextEmail)) {
+      setEmailError("Enter a valid email address.");
+      return;
+    }
+    setPhoneError("");
+    setEmailError("");
+    setPhoneSaving(true);
+    try {
+      // Email first: Supabase keeps the old login until the new address is
+      // verified via the emailed link — the session email does NOT change yet.
+      if (emailDirty) {
+        const { error: emailErr } = await supabase.auth.updateUser(
+          { email: nextEmail },
+          { emailRedirectTo: `${window.location.origin}/report` }
+        );
+        if (emailErr) throw emailErr;
+        try {
+          window.localStorage.setItem(`bingo_pending_email_${residentSession?.id}`, nextEmail);
+        } catch {}
+        setPendingEmail(nextEmail);
+        // Revert the field to the still-current login email; the pending
+        // notice below carries the new address until confirmation lands.
+        syncedEmailRef.current = currentEmail;
+        setEmailDraft(residentSession?.email || "");
+      }
+      if (phoneDirty) {
+        const { error } = await supabase.auth.updateUser({ data: { phone: digits || null } });
+        if (error) throw error;
+        setResidentSession((prev) => (prev ? { ...prev, phone: digits || null } : prev));
+        syncedPhoneRef.current = digits;
+        // Mirror into the queryable profiles.phone column (best-effort: the
+        // metadata write above is what the display actually reads).
+        if (residentSession?.id) {
+          supabase.from('profiles').update({ phone: digits || null }).eq('id', residentSession.id)
+            .then(({ error: colErr }) => { if (colErr) console.warn("Profiles phone update failed:", colErr); });
+        }
+      }
+      toast(
+        emailDirty
+          ? "Verification sent — tap the link in your new inbox to complete the email change."
+          : digits ? "Mobile number saved." : "Mobile number removed."
+      );
+      haptic();
+    } catch (err) {
+      const msg = err?.message || "Could not save changes. Check connection.";
+      // Attribute auth errors to the email row when an email change was in
+      // flight, otherwise surface a generic failure toast.
+      if (emailDirty) setEmailError(msg);
+      else toast(msg, { variant: "error" });
+    } finally {
+      setPhoneSaving(false);
+    }
+  };
 
   useEffect(() => {
     if (!sessionReady || !residentSession?.id) return;
@@ -329,6 +641,8 @@ export default function ResidentMobilePWA() {
       return {
         id: "truck-live-completed",
         live: true,
+        icon: CheckCircle2,
+        tone: "text-emerald-600",
         title: "Collection complete",
         subtitle: "All pickups complete",
       };
@@ -338,6 +652,8 @@ export default function ResidentMobilePWA() {
       return {
         id: "truck-live-arrived",
         live: true,
+        icon: CheckCircle2,
+        tone: "text-emerald-600",
         title: "Truck arrived",
         subtitle: `Collecting at ${point?.name ?? "your stop"}`,
       };
@@ -345,6 +661,8 @@ export default function ResidentMobilePWA() {
     return {
       id: "truck-live-enroute",
       live: true,
+      icon: Truck,
+      tone: "text-emerald-600",
       title:
         liveEta === "Arriving now"
           ? "Truck arriving now"
@@ -392,6 +710,12 @@ export default function ResidentMobilePWA() {
   const residentNotifs = useNotifications(residentAudiences);
   const residentUnread = residentNotifs.filter((n) => !n.isRead).length;
 
+  // Open reports filed by this resident — drives the Tickets tab badge.
+  const myOpenTickets = useMemo(
+    () => tickets.filter((t) => t.reporter === residentSession?.name && t.status !== "Resolved").length,
+    [tickets, residentSession?.name]
+  );
+
   // Single truthful status message derived from real schedules: pickup today,
   // or no pickup today with the next collection day.
   const pickupStatus = useMemo(() => {
@@ -406,6 +730,8 @@ export default function ResidentMobilePWA() {
       const start = String(today.time || "").split("-")[0].trim();
       return {
         id: "pickup-status-today",
+        icon: Calendar,
+        tone: "text-emerald-600",
         title: "Pickup today",
         subtitle: `${today.type}${start ? ` • ${start}` : ""}`,
       };
@@ -420,6 +746,8 @@ export default function ResidentMobilePWA() {
         const start = String(hit.time || "").split("-")[0].trim();
         return {
           id: "pickup-status-next",
+          icon: Calendar,
+          tone: "text-muted-foreground",
           title: "No pickup today",
           subtitle: `Next: ${label}${start ? ` at ${start}` : ""}`,
         };
@@ -427,6 +755,8 @@ export default function ResidentMobilePWA() {
     }
     return {
       id: "pickup-status-none",
+      icon: Calendar,
+      tone: "text-muted-foreground",
       title: "No pickup today",
       subtitle: "No schedule posted",
     };
@@ -456,6 +786,8 @@ export default function ResidentMobilePWA() {
     const list = [
       {
         id: "greeting",
+        icon: null,
+        tone: "text-foreground",
         title: greetingTitle,
         subtitle: new Date().toLocaleDateString("en-US", {
           weekday: "long",
@@ -465,6 +797,8 @@ export default function ResidentMobilePWA() {
       },
       {
         id: "report-action",
+        icon: Camera,
+        tone: "text-emerald-600",
         title: "Spotted Waste?",
         subtitle: "Tap Report below",
       },
@@ -985,14 +1319,25 @@ export default function ResidentMobilePWA() {
               <AnimatePresence mode="wait">
                 <motion.div
                   key={currentBanner.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 6 }}
                   transition={{ duration: 0.25, ease: "easeOut" }}
                   className="flex items-center gap-2.5 min-w-0 w-full"
                 >
                   {currentBanner.live && (
-                    <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-600" />
+                    <span className="relative flex h-2 w-2 shrink-0">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-60" />
+                      <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-600" />
+                    </span>
+                  )}
+                  {currentBanner.icon && (
+                    <currentBanner.icon
+                      className={`h-6 w-6 shrink-0 ${currentBanner.tone ?? "text-foreground"}`}
+                      strokeWidth={2.25}
+                      fill="currentColor"
+                      fillOpacity={0.18}
+                    />
                   )}
 
                   <div className="min-w-0 flex-1">
@@ -1016,7 +1361,12 @@ export default function ResidentMobilePWA() {
             className="relative ml-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-foreground transition-all hover:bg-muted active:scale-95 cursor-pointer"
             aria-label="Report updates"
           >
-            <Bell className="h-5 w-5" strokeWidth={2} />
+            <Bell
+              className={`h-5 w-5 ${residentUnread > 0 ? "text-emerald-600" : ""}`}
+              strokeWidth={2}
+              fill={residentUnread > 0 ? "currentColor" : "none"}
+              fillOpacity={residentUnread > 0 ? 0.18 : 0}
+            />
             {residentUnread > 0 && (
               <span className="absolute -top-0.5 -right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-bold leading-none text-white">
                 {residentUnread > 9 ? "9+" : residentUnread}
@@ -1115,26 +1465,21 @@ export default function ResidentMobilePWA() {
         {activeTab === "map" && !showUpdates && !selectedTicket && (
         <div className="fixed bottom-0 inset-x-0 z-[100] border-t border-black/10 bg-background/85 backdrop-blur-xl shadow-[0_-4px_16px_rgba(0,0,0,0.06)] pb-[env(safe-area-inset-bottom)]">
           <div className="grid grid-cols-5 h-[64px] max-w-md mx-auto px-2">
-            {/* 1. Map */}
-            <button
-              type="button"
-              onClick={() => { setActiveTab("map"); haptic(); }}
-              className={`flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer ${activeTab === "map" ? "text-emerald-600" : "text-zinc-400"}`}
-            >
-              <MapIcon className="h-6 w-6" strokeWidth={activeTab === "map" ? 2.25 : 1.75} />
-              <span className={`text-[10px] leading-none ${activeTab === "map" ? "font-semibold" : "font-medium"}`}>Map</span>
-            </button>
-
-            {/* 2. Schedule */}
-            <button
-              type="button"
-              data-tour="nav-tab-schedule"
-              onClick={() => { setActiveTab("schedule"); haptic(); }}
-              className={`flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer ${activeTab === "schedule" ? "text-emerald-600" : "text-zinc-400"}`}
-            >
-              <Calendar className="h-6 w-6" strokeWidth={activeTab === "schedule" ? 2.25 : 1.75} />
-              <span className={`text-[10px] leading-none ${activeTab === "schedule" ? "font-semibold" : "font-medium"}`}>Schedule</span>
-            </button>
+            <ResidentTab
+              id="map"
+              label="Map"
+              icon={MapIcon}
+              active={activeTab === "map"}
+              onSelect={() => { setActiveTab("map"); haptic(); }}
+            />
+            <ResidentTab
+              id="schedule"
+              label="Schedule"
+              icon={Calendar}
+              active={activeTab === "schedule"}
+              onSelect={() => { setActiveTab("schedule"); haptic(); }}
+              tourId="nav-tab-schedule"
+            />
 
             {/* 3. Report (elevated center action) */}
             <button
@@ -1148,27 +1493,23 @@ export default function ResidentMobilePWA() {
               <span className="text-[10px] font-semibold leading-none text-emerald-600">Report</span>
             </button>
 
-            {/* 4. Tickets */}
-            <button
-              type="button"
-              data-tour="nav-tab-tickets"
-              onClick={() => { setActiveTab("tickets"); haptic(); }}
-              className={`flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer ${activeTab === "tickets" ? "text-emerald-600" : "text-zinc-400"}`}
-            >
-              <Ticket className="h-6 w-6" strokeWidth={activeTab === "tickets" ? 2.25 : 1.75} />
-              <span className={`text-[10px] leading-none ${activeTab === "tickets" ? "font-semibold" : "font-medium"}`}>Tickets</span>
-            </button>
-
-            {/* 5. Profile */}
-            <button
-              type="button"
-              data-tour="profile-btn"
-              onClick={() => { setActiveTab("profile"); haptic(); }}
-              className={`flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer ${activeTab === "profile" ? "text-emerald-600" : "text-zinc-400"}`}
-            >
-              <User className="h-6 w-6" strokeWidth={activeTab === "profile" ? 2.25 : 1.75} />
-              <span className={`text-[10px] leading-none ${activeTab === "profile" ? "font-semibold" : "font-medium"}`}>Profile</span>
-            </button>
+            <ResidentTab
+              id="tickets"
+              label="Tickets"
+              icon={Ticket}
+              active={activeTab === "tickets"}
+              onSelect={() => { setActiveTab("tickets"); haptic(); }}
+              badge={myOpenTickets}
+              tourId="nav-tab-tickets"
+            />
+            <ResidentTab
+              id="profile"
+              label="Profile"
+              icon={User}
+              active={activeTab === "profile"}
+              onSelect={() => { setResidentProfileView("main"); setActiveTab("profile"); haptic(); }}
+              tourId="profile-btn"
+            />
           </div>
         </div>
         )}
@@ -1209,9 +1550,17 @@ export default function ResidentMobilePWA() {
                       </p>
                     </div>
                   ) : filteredSchedules.map((sch) => {
-                    const isRecyclable = sch.type?.includes("Recyclable");
-                    const isDiliMalata = sch.type?.includes("Dili Malata");
-                    const isBiodegradable = !isRecyclable && !isDiliMalata;
+                    // Category truth: the store uses collectionType while older
+                    // shapes used type — icon and badge read both so they agree.
+                    const wasteKind = (() => {
+                      const t = sch.type ?? sch.collectionType ?? "";
+                      if (t.includes("Recyclable")) return "recyclable";
+                      if (t.includes("Dili Malata")) return "residual";
+                      return "malata";
+                    })();
+                    const isRecyclable = wasteKind === "recyclable";
+                    const isDiliMalata = wasteKind === "residual";
+                    const isBiodegradable = wasteKind === "malata";
 
                     const areaTitle = scheduleLabel(sch);
 
@@ -1224,7 +1573,16 @@ export default function ResidentMobilePWA() {
                       Saturday: "Sat",
                       Sunday: "Sun",
                     };
-                    const formattedDays = (sch.days || []).map((d) => DAY_ABBR[d] || d).join(", ");
+                    const formattedDaysSource = sch.days ?? sch.collectionDays ?? [];
+                    const daysList = (Array.isArray(formattedDaysSource) ? formattedDaysSource : String(formattedDaysSource).split(","))
+                      .map((d) => d.trim())
+                      .filter(Boolean);
+                    const formattedDays = daysList.map((d) => DAY_ABBR[d] || d).join(", ");
+                    // Subtle "today" signal from the device weekday — no
+                    // timestamps stored or shown, just a highlight when this
+                    // card collects today.
+                    const todayName = new Date().toLocaleDateString("en-US", { weekday: "long" });
+                    const isToday = daysList.includes(todayName);
 
                     const categoryBadgeLabel = isBiodegradable
                       ? "Malata"
@@ -1237,7 +1595,19 @@ export default function ResidentMobilePWA() {
                         key={sch.id}
                         className="rounded-2xl border border-border/60 bg-card p-4"
                       >
-                        <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <span
+                            className={cn(
+                              "flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl",
+                              isBiodegradable
+                                ? "bg-emerald-600/10"
+                                : isRecyclable
+                                  ? "bg-blue-600/10"
+                                  : "bg-amber-600/10"
+                            )}
+                          >
+                            {isBiodegradable ? <MalataIcon /> : isRecyclable ? <RecyclableIcon /> : <ResidualIcon />}
+                          </span>
                           <h3 className="min-w-0 flex-1 text-[16px] font-semibold leading-snug tracking-tight text-foreground">
                             {areaTitle}
                           </h3>
@@ -1256,7 +1626,14 @@ export default function ResidentMobilePWA() {
                         </div>
 
                         <div className="mt-3 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 border-t border-border/60 pt-2.5">
-                          <span className="text-[13px] text-muted-foreground">{formattedDays}</span>
+                          <span className="text-[13px] text-muted-foreground">
+                            {isToday && (
+                              <span className="mr-1.5 inline-flex items-center rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                                Today
+                              </span>
+                            )}
+                            {formattedDays}
+                          </span>
                           <span className="ml-auto whitespace-nowrap text-[13px] font-semibold tabular-nums text-foreground">{sch.time}</span>
                         </div>
                       </div>
@@ -1290,9 +1667,9 @@ export default function ResidentMobilePWA() {
           <h1 className="text-[17px] font-semibold tracking-tight text-foreground">New Report</h1>
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto p-4 pb-10">
+      <div className="flex flex-1 flex-col overflow-y-auto p-4 pb-10">
         {submittedTicket ? (
-        <div className="flex min-h-[50vh] flex-col items-center justify-center px-6 py-12 text-center">
+        <div className="flex flex-1 flex-col items-center justify-center px-6 py-12 text-center">
           <CheckCircle2 className="h-12 w-12 text-emerald-600" strokeWidth={1.5} />
           <h2 className="mt-4 text-[17px] font-semibold tracking-tight text-foreground">
             Report Dispatched
@@ -1515,7 +1892,7 @@ export default function ResidentMobilePWA() {
                 )}
               >
                 {isSubmitting ? (
-                  <RefreshCw className="h-5 w-5 animate-spin" strokeWidth={2} />
+                  <Loader2 className="h-5 w-5 animate-spin" strokeWidth={2} />
                   ) : editingTicketId ? (
                     "Update Report"
                   ) : (
@@ -1558,7 +1935,12 @@ export default function ResidentMobilePWA() {
             className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-all hover:bg-muted active:scale-95 active:bg-muted cursor-pointer"
             aria-label="Report updates"
           >
-            <Bell className="h-5 w-5" strokeWidth={2} />
+            <Bell
+              className={`h-5 w-5 ${residentUnread > 0 ? "text-emerald-600" : ""}`}
+              strokeWidth={2}
+              fill={residentUnread > 0 ? "currentColor" : "none"}
+              fillOpacity={residentUnread > 0 ? 0.18 : 0}
+            />
             {residentUnread > 0 && (
               <span className="absolute top-0.5 right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-bold leading-none text-white">
                 {residentUnread > 9 ? "9+" : residentUnread}
@@ -1590,7 +1972,7 @@ export default function ResidentMobilePWA() {
                       <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">
                         {ticket.category || "Waste Report"}
                       </p>
-                      <p className="truncate text-[16px] font-semibold tracking-tight text-foreground">
+                      <p className="text-[16px] font-semibold tracking-tight leading-snug break-words text-foreground">
                         {ticket.location}
                       </p>
                       {ticket.description || ticket.notes ? (
@@ -1633,16 +2015,88 @@ export default function ResidentMobilePWA() {
         <div className="relative flex h-[52px] items-center justify-center px-2">
           <button
             type="button"
-            onClick={() => { setActiveTab("map"); haptic(); }}
+            onClick={() => { residentProfileView === "password" ? setResidentProfileView("main") : setActiveTab("map"); haptic(); }}
             className="absolute left-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-all hover:bg-muted active:scale-95 active:bg-muted cursor-pointer"
-            aria-label="Back to map"
+            aria-label={residentProfileView === "password" ? "Back to profile" : "Back to map"}
           >
             <ChevronLeft className="h-6 w-6" strokeWidth={2} />
           </button>
-          <h1 className="text-[17px] font-semibold tracking-tight text-foreground">Profile</h1>
+          <h1 className="text-[17px] font-semibold tracking-tight text-foreground">{residentProfileView === "password" ? "Change Password" : "Profile"}</h1>
         </div>
       </div>
       <div className="flex-1 overflow-y-auto bg-muted/40 pb-10">
+      <AnimatePresence mode="wait" initial={false}>
+      {residentProfileView === "password" ? (
+        <motion.div
+          key="resident-profile-password"
+          initial={{ x: 48, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          exit={{ x: 48, opacity: 0 }}
+          transition={{ duration: 0.18, ease: "easeOut" }}
+        >
+          <div className="mt-5 px-4">
+            <div className="rounded-2xl border border-border/60 bg-card p-4 space-y-2.5">
+              {[
+                { field: "current", value: currentPassword, setter: setCurrentPassword, placeholder: "Current password", auto: "current-password" },
+                { field: "newPassword", value: newPassword, setter: setNewPassword, placeholder: "New password", auto: "new-password" },
+                { field: "confirm", value: confirmNewPassword, setter: setConfirmNewPassword, placeholder: "Re-enter new password", auto: "new-password" },
+              ].map((f) => (
+                <div key={f.field} className="flex flex-col gap-1">
+                  <input
+                    type={showPwFields ? "text" : "password"}
+                    value={f.value}
+                    onChange={(e) => handlePwFieldChange(e.target.value, f.setter)}
+                    maxLength={64}
+                    autoComplete={f.auto}
+                    placeholder={f.placeholder}
+                    className={`w-full rounded-2xl border bg-card px-3.5 py-3.5 text-[16px] text-foreground placeholder:text-muted-foreground/50 outline-none transition-colors ${
+                      pwErrors[f.field]
+                        ? "border-rose-300 focus:border-rose-400"
+                        : "border-border/60 focus:border-zinc-400"
+                    }`}
+                  />
+                  {f.field === "newPassword" && <PasswordStrengthHint password={f.value} />}
+                  {pwErrors[f.field] && (
+                    <p className="text-[11px] font-medium text-rose-500">{pwErrors[f.field]}</p>
+                  )}
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setShowPwFields(!showPwFields)}
+                className="flex items-center gap-2 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
+                aria-label={showPwFields ? "Hide passwords" : "Show passwords"}
+              >
+                {showPwFields ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                {showPwFields ? "Hide passwords" : "Show passwords"}
+              </button>
+              <Button
+                variant="primary"
+                size="md"
+                disabled={pwSaving}
+                onClick={handleChangePassword}
+                className="h-12 w-full rounded-2xl text-[15px] font-semibold"
+              >
+                {pwSaving ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span>Updating...</span>
+                  </>
+                ) : (
+                  "Update Password"
+                )}
+              </Button>
+            </div>
+          </div>
+        </motion.div>
+      ) : (
+        <motion.div
+          key="resident-profile-main"
+          initial={{ x: -48, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          exit={{ x: -48, opacity: 0 }}
+          transition={{ duration: 0.18, ease: "easeOut" }}
+        >
         {/* Centered profile header */}
         <div className="flex flex-col items-center px-4 pb-2 pt-6 text-center">
           <div className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-emerald-600 text-[28px] font-semibold leading-none text-white shadow-sm">
@@ -1661,29 +2115,84 @@ export default function ResidentMobilePWA() {
           <div className="divide-y divide-border/60 overflow-hidden rounded-2xl border border-border/60 bg-card">
             <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
               <span className="shrink-0 text-[15px] text-foreground">Email</span>
-              <span className="truncate text-right text-[15px] text-muted-foreground">{residentSession?.email || "—"}</span>
+              <input
+                type="email"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                value={emailDraft}
+                onChange={(e) => {
+                  setEmailDraft(e.target.value.replace(/\s/g, ""));
+                  if (emailError) setEmailError("");
+                }}
+                placeholder="you@gmail.com"
+                aria-label="Email address"
+                className="w-full min-w-0 flex-1 bg-transparent text-right text-[15px] text-foreground placeholder:text-muted-foreground/50 outline-none"
+              />
             </div>
             <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
               <span className="shrink-0 text-[15px] text-foreground">Mobile Phone</span>
-              <span className="truncate text-right text-[15px] text-muted-foreground">{residentSession?.phone || "—"}</span>
+              <input
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                value={phoneDraft}
+                onChange={(e) => {
+                  setPhoneDraft(formatPhMobile(e.target.value));
+                  if (phoneError) setPhoneError("");
+                }}
+                placeholder="09xx xxx xxxx"
+                aria-label="Mobile phone number"
+                className="w-full min-w-0 flex-1 bg-transparent text-right text-[15px] text-foreground placeholder:text-muted-foreground/50 outline-none"
+              />
             </div>
             <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
               <span className="shrink-0 text-[15px] text-foreground">Reports Filed</span>
               <span className="text-right text-[15px] text-muted-foreground">{`${tickets.length} tickets`}</span>
             </div>
           </div>
+          {phoneError && (
+            <p className="px-1 pt-1.5 text-[12px] font-medium text-rose-500">{phoneError}</p>
+          )}
+          {emailError && (
+            <p className="px-1 pt-1.5 text-[12px] font-medium text-rose-500">{emailError}</p>
+          )}
+          {pendingEmail && (
+            <p className="px-1 pt-1.5 text-[12px] font-medium text-emerald-600">
+              Verification sent to {pendingEmail} — tap the link there to complete the change.
+            </p>
+          )}
+        </div>
+
+        {/* Security group */}
+        <div className="mt-5 px-4">
+          <p className="px-1 pb-1.5 text-[13px] text-muted-foreground">Security</p>
+          <button
+            type="button"
+            onClick={() => { setResidentProfileView("password"); haptic(); }}
+            className="flex min-h-[48px] w-full cursor-pointer items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card px-4 py-2.5 transition-all active:bg-muted"
+          >
+            <span className="text-[15px] text-foreground">Change Password</span>
+            <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground/50" />
+          </button>
         </div>
 
         {/* Actions */}
         <div className="mt-5 space-y-2.5 px-4">
           <button
             type="button"
-            onClick={() => {
-              toast("Profile preferences saved.");
-            }}
-            className="flex h-12 w-full items-center justify-center rounded-2xl bg-emerald-600 px-6 text-[15px] font-semibold text-white transition-all hover:bg-emerald-700 active:scale-[0.99] cursor-pointer"
+            onClick={handleSaveProfile}
+            disabled={phoneSaving || !profileDirty}
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-6 text-[15px] font-semibold text-white transition-all hover:bg-emerald-700 active:scale-[0.99] cursor-pointer disabled:opacity-60 disabled:pointer-events-none"
           >
-            Save Preferences
+            {phoneSaving ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span>Saving...</span>
+              </>
+            ) : (
+              "Save Changes"
+            )}
           </button>
           <button
             type="button"
@@ -1696,7 +2205,9 @@ export default function ResidentMobilePWA() {
             Sign Out
           </button>
         </div>
-
+        </motion.div>
+      )}
+      </AnimatePresence>
       </div>
     </motion.div>
   )}
@@ -1767,11 +2278,11 @@ export default function ResidentMobilePWA() {
           <div className="divide-y divide-border/60 overflow-hidden rounded-2xl border border-border/60 bg-card px-4 py-1">
             <div className="flex min-h-[48px] items-center justify-between gap-3 py-2.5">
               <span className="shrink-0 text-[15px] text-muted-foreground">Category</span>
-              <span className="truncate text-right text-[15px] text-foreground">{selectedTicket.category}</span>
+              <span className="text-right text-[15px] leading-snug break-words text-foreground">{selectedTicket.category}</span>
             </div>
             <div className="flex min-h-[48px] items-center justify-between gap-3 py-2.5">
               <span className="shrink-0 text-[15px] text-muted-foreground">Barangay</span>
-              <span className="truncate text-right text-[15px] text-foreground">{`${selectedTicket.barangay}, ${selectedTicket.city || "Cebu City"}`}</span>
+              <span className="text-right text-[15px] leading-snug break-words text-foreground">{`${selectedTicket.barangay}, ${selectedTicket.city || "Cebu City"}`}</span>
             </div>
             <div className="flex min-h-[48px] items-center justify-between gap-3 py-2.5">
               <span className="shrink-0 text-[15px] text-muted-foreground">Date submitted</span>

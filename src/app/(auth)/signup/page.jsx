@@ -20,18 +20,26 @@ const PUBLIC_DOMAINS = ["gmail.com", "yahoo.com", "outlook.com", "hotmail.com", 
 
 const validateEmail = (emailStr) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailStr);
 
+// Philippine mobile numbers: 09xx xxx xxxx (11 digits) — same shape the
+// resident profile editor uses, so what signup stores is what profile shows.
+// Accepts pasted +63… or 9xxxxxxxxx variants and folds them to 09….
+function normalizePhMobile(value) {
+  let d = String(value || "").replace(/\D/g, "");
+  if (d.startsWith("63") && d.length > 11) d = "0" + d.slice(2);
+  else if (d.startsWith("9") && d.length === 10) d = "0" + d;
+  return d.slice(0, 11);
+}
+function formatPhMobile(value) {
+  const d = normalizePhMobile(value);
+  if (d.length <= 4) return d;
+  if (d.length <= 7) return `${d.slice(0, 4)} ${d.slice(4)}`;
+  return `${d.slice(0, 4)} ${d.slice(4, 7)} ${d.slice(7)}`;
+}
+
 const validatePhPhone = (phoneStr) => {
-  const clean = phoneStr.trim().replace(/[\s-]/g, "");
-  if (!clean) return "Please enter your mobile number.";
-  if (clean.startsWith("+63")) {
-    if (!clean.startsWith("+639")) return "PH mobile number must start with +639 (e.g. +639171234567) or 09.";
-    if (clean.length !== 13) return "PH mobile number with +639 must be 13 characters.";
-    if (!/^\+639\d{9}$/.test(clean)) return "Please enter a valid PH mobile number.";
-  } else {
-    if (!clean.startsWith("09")) return "PH mobile number must start with 09 (e.g. 09171234567).";
-    if (clean.length !== 11) return "PH mobile number must be exactly 11 digits (e.g. 09171234567).";
-    if (!/^09\d{9}$/.test(clean)) return "Please enter a valid PH mobile number.";
-  }
+  const digits = normalizePhMobile(phoneStr);
+  if (!digits) return "Please enter your mobile number.";
+  if (!/^09\d{9}$/.test(digits)) return "Enter a valid 11-digit mobile number (09xx xxx xxxx).";
   return null;
 };
 
@@ -236,7 +244,7 @@ export default function SignupPage() {
 
     try {
       const trimmedEmail = email.trim().toLowerCase();
-      const cleanPhone = phone.trim().replace(/[\s-]/g, "");
+      const cleanPhone = normalizePhMobile(phone);
       const fullName = `${firstName.trim()} ${lastName.trim()}`;
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: trimmedEmail,
@@ -464,14 +472,14 @@ export default function SignupPage() {
                   onChange={(e) =>
                     handleFieldChange(
                       "phone",
-                      e.target.value.replace(/[^\d+]/g, "").slice(0, 13),
+                      formatPhMobile(e.target.value).slice(0, 13),
                       setPhone
                     )
                   }
                   maxLength={13}
                   autoComplete="tel"
                   className={fieldClass(!!errors.phone)}
-                  placeholder="Mobile number (09171234567)"
+                  placeholder="Mobile number (09xx xxx xxxx)"
                 />
               </div>
               <ErrorLine message={errors.phone} />
