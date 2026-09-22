@@ -186,8 +186,8 @@ export async function addTicket(ticket) {
       audience: "admin",
       type: isEmergency ? "Emergency" : "Ticket",
       title: isEmergency
-        ? `Emergency: ${ticket.category || "Waste report"} — ${ticket.location}`
-        : `New report: ${ticket.category || "Waste report"} — ${ticket.location}`,
+        ? `Emergency: ${ticket.category || "Waste report"} at ${ticket.location}`
+        : `New report: ${ticket.category || "Waste report"} at ${ticket.location}`,
       message: `${ticket.reporter || "A resident"} reported ${ticket.category || "waste"} at ${ticket.location}, Brgy. ${ticket.barangay || "Tejero"}. Priority: ${ticket.urgency || "High"}.`,
       location: `${ticket.location}, Brgy. ${ticket.barangay || "Tejero"}`,
       actionUrl: newId ? `/live-map?ticketId=${newId}` : "/tickets",

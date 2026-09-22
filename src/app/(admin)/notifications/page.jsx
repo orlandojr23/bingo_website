@@ -97,12 +97,14 @@ export default function NotificationsPage() {
   // columns exist (or the push happened in this session) — otherwise derive
   // them from the ticket reference carried by the dedupe key, so the card
   // never degrades to "System" for a report that still exists.
+  const cleanTitle = (t) => (typeof t === "string" ? t.split(" — ").join(" at ") : t);
   const notifications = storeNotifications.map((n) => {
     const linkedTicket = n.ticketId
       ? allTickets.find((t) => String(t.id) === String(n.ticketId))
       : null;
     return {
       ...n,
+      title: cleanTitle(n.title),
       barangay: linkedTicket?.barangay || "Tejero",
       location: n.location || linkedTicket?.location || null,
       timestamp: timeAgoLabel(n.at),

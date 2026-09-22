@@ -254,7 +254,7 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
 
                   <DetailBlock label="Barangay">
                     <span className="text-sm font-semibold text-foreground">{ticket.barangay || "Tejero"}</span>
-                    <span className="text-xs text-muted-foreground">Cebu City — notified of this report</span>
+                    <span className="text-xs text-muted-foreground">Cebu City</span>
                   </DetailBlock>
                 </div>
 
