@@ -213,14 +213,14 @@ export default function TicketsPage() {
                       <InfoRow label="Reported By" value={t.reporter} />
                     </div>
 
-                    <div className="mt-4 flex gap-2 border-t border-border-subtle pt-3">
+                    <div className="mt-2 flex shrink-0 items-center justify-end gap-2">
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           setSelectedTicket(t);
                         }}
-                        className="flex-1 cursor-pointer rounded-full bg-muted px-3 py-1.5 text-[13px] font-semibold text-foreground transition-all hover:bg-muted/80 active:scale-95"
+                        className="inline-flex cursor-pointer items-center rounded-full bg-muted px-3 py-1 text-[13px] font-semibold text-foreground transition-all hover:bg-muted/80 active:scale-95"
                       >
                         Edit
                       </button>
@@ -230,7 +230,7 @@ export default function TicketsPage() {
                           e.stopPropagation();
                           setTicketToDelete(t);
                         }}
-                        className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-rose-600/10 px-3 py-1.5 text-[13px] font-semibold text-rose-600 transition-all hover:bg-rose-600/20 active:scale-95"
+                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-rose-600/10 px-3 py-1 text-[13px] font-semibold text-rose-600 transition-all hover:bg-rose-600/20 active:scale-95"
                         title="Move to Trash"
                       >
                         <Trash2 className="w-3.5 h-3.5" />

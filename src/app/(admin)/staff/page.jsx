@@ -587,12 +587,29 @@ export default function StaffPage() {
                           Ask the driver for the code to activate their account.
                         </p>
                       </div>
-                      <div className="w-full max-w-[280px]">
+                      <div className="w-full max-w-[280px] flex flex-col gap-1.5">
                         <OtpInput
                           value={otpCode}
-                          onChange={(v) => setOtpCode(v.replace(/\D/g, "").slice(0, 6))}
+                          onChange={(v) => {
+                            setOtpCode(v.replace(/\D/g, "").slice(0, 6));
+                            if (formError) setFormError("");
+                          }}
+                          hasError={!!formError}
                           autoFocus={false}
                         />
+                        <AnimatePresence initial={false}>
+                          {formError && (
+                            <motion.p
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.25, ease: "easeInOut" }}
+                              className="overflow-hidden text-xs font-medium text-rose-500 text-center"
+                            >
+                              {formError}
+                            </motion.p>
+                          )}
+                        </AnimatePresence>
                       </div>
 
                       {/* Resend row */}
@@ -748,11 +765,21 @@ export default function StaffPage() {
                 </div>
 
                 <div className="mt-auto shrink-0 touch-none flex flex-col gap-3 border-t border-border-subtle pt-4">
-                  {formError && (
-                    <p className="rounded-2xl border border-rose-200 bg-rose-50 px-3.5 py-3 text-[13px] font-medium text-rose-600">
-                      {formError}
-                    </p>
-                  )}
+                  <AnimatePresence initial={false}>
+                    {formError && !isVerifyingOtp && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.25, ease: "easeInOut" }}
+                        className="overflow-hidden"
+                      >
+                        <p className="rounded-2xl border border-rose-200 bg-rose-50 px-3.5 py-3 text-[13px] font-medium text-rose-600">
+                          {formError}
+                        </p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                   <div className="flex items-center justify-end gap-2">
                     <Button
                       variant="secondary"

@@ -115,17 +115,17 @@ export default function BinPage() {
                       <InfoRow label="Reported By" value={t.reporter} />
                     </div>
                     
-                    <div className="mt-4 flex gap-2">
+                    <div className="mt-2 flex shrink-0 items-center justify-end gap-2">
                       <button
                         onClick={() => handleRestore(t.id)}
-                        className="flex-1 rounded-full bg-muted px-3 py-1.5 text-[13px] font-semibold text-foreground transition-all hover:bg-muted/80 active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-[13px] font-semibold text-foreground transition-all hover:bg-muted/80 active:scale-95"
                       >
                         <RotateCcw className="w-3.5 h-3.5" />
                         Restore
                       </button>
                       <button
                         onClick={() => setItemToDelete(t.id)}
-                        className="flex-1 rounded-full bg-rose-600/10 px-3 py-1.5 text-[13px] font-semibold text-rose-600 transition-all hover:bg-rose-600/20 active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-rose-600/10 px-3 py-1 text-[13px] font-semibold text-rose-600 transition-all hover:bg-rose-600/20 active:scale-95"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                         Delete
@@ -171,17 +171,17 @@ export default function BinPage() {
                       </div>
                     </div>
                     
-                    <div className="mt-4 flex gap-2">
+                    <div className="mt-2 flex shrink-0 items-center justify-end gap-2">
                       <button
                         onClick={() => handleRestore(sch.id)}
-                        className="flex-1 rounded-full bg-muted px-3 py-1.5 text-[13px] font-semibold text-foreground transition-all hover:bg-muted/80 active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-[13px] font-semibold text-foreground transition-all hover:bg-muted/80 active:scale-95"
                       >
                         <RotateCcw className="w-3.5 h-3.5" />
                         Restore
                       </button>
                       <button
                         onClick={() => setItemToDelete(sch.id)}
-                        className="flex-1 rounded-full bg-rose-600/10 px-3 py-1.5 text-[13px] font-semibold text-rose-600 transition-all hover:bg-rose-600/20 active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-rose-600/10 px-3 py-1 text-[13px] font-semibold text-rose-600 transition-all hover:bg-rose-600/20 active:scale-95"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                         Delete

@@ -641,14 +641,14 @@ export default function DispatchPage() {
                         </span>
                       </div>
 
-                      <div className="mt-3 flex gap-2 border-t border-border-subtle pt-3">
+                      <div className="mt-3 flex shrink-0 items-center justify-end">
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             openTruckSheet("edit", t);
                           }}
-                          className="flex-1 cursor-pointer rounded-full bg-muted px-3 py-1.5 text-[13px] font-semibold text-foreground transition-all hover:bg-muted/80 active:scale-95"
+                          className="inline-flex cursor-pointer items-center rounded-full bg-muted px-3 py-1 text-[13px] font-semibold text-foreground transition-all hover:bg-muted/80 active:scale-95"
                         >
                           Edit
                         </button>
@@ -729,7 +729,7 @@ export default function DispatchPage() {
                       </div>
                     </div>
 
-                    <div className="mt-4 flex gap-2 border-t border-border-subtle pt-3">
+                    <div className="mt-2 flex shrink-0 items-center justify-end gap-2">
                       <button
                         type="button"
                         onClick={(e) => {
@@ -743,7 +743,7 @@ export default function DispatchPage() {
                           setStatus(sch.status);
                           setStopOrder(sch.routePoints || []);
                         }}
-                        className="flex-1 cursor-pointer rounded-full bg-muted px-3 py-1.5 text-[13px] font-semibold text-foreground transition-all hover:bg-muted/80 active:scale-95"
+                        className="inline-flex cursor-pointer items-center rounded-full bg-muted px-3 py-1 text-[13px] font-semibold text-foreground transition-all hover:bg-muted/80 active:scale-95"
                       >
                         Edit
                       </button>
@@ -753,7 +753,7 @@ export default function DispatchPage() {
                           e.stopPropagation();
                           setScheduleToDelete(sch.id);
                         }}
-                        className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-rose-600/10 px-3 py-1.5 text-[13px] font-semibold text-rose-600 transition-all hover:bg-rose-600/20 active:scale-95"
+                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-rose-600/10 px-3 py-1 text-[13px] font-semibold text-rose-600 transition-all hover:bg-rose-600/20 active:scale-95"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                         Delete
@@ -796,9 +796,7 @@ export default function DispatchPage() {
                     <h2 className="text-[17px] font-semibold tracking-tight text-foreground">Create Assignment</h2>
                   ) : (
                     <div className="flex min-w-0 flex-1 items-center gap-2">
-                      <span className="min-w-0 flex-1 truncate text-xs font-semibold text-foreground tracking-tight tabular-nums" title={selectedSchedule?.id}>
-                        {selectedSchedule?.id}
-                      </span>
+                      <h2 className="text-[17px] font-semibold tracking-tight text-foreground">Edit Assignment</h2>
                       <StatusBadge status={selectedSchedule ? effStatus(selectedSchedule) : "Scheduled"} />
                     </div>
                   )}
@@ -866,8 +864,8 @@ export default function DispatchPage() {
               className="relative z-10 flex h-full w-full min-w-0 flex-col overflow-hidden bg-card pointer-events-auto sm:max-w-md sm:border-l sm:border-border sm:shadow-2xl"
             >
               <form onSubmit={handleTruckSubmit} className="mx-auto flex h-full w-full max-w-3xl flex-col justify-between overflow-hidden p-4 sm:p-6">
-                <div className="flex shrink-0 touch-none items-start justify-between border-b border-border pb-3">
-                  <h2 className="text-sm font-semibold text-foreground">
+                <div className="flex shrink-0 touch-none items-start justify-between border-b border-border/60 pb-3">
+                  <h2 className="text-[17px] font-semibold tracking-tight text-foreground">
                     {truckSheet.mode === "add" ? "Add Truck" : `Edit ${truckSheet.truck?.id}`}
                   </h2>
                   <button
@@ -932,11 +930,21 @@ export default function DispatchPage() {
                         className={inputClass}
                       />
                     </Field>
-                    {truckError && (
-                      <p className="rounded-2xl border border-rose-200 bg-rose-50 px-3.5 py-3 text-[13px] font-medium text-rose-600">
-                        {truckError}
-                      </p>
-                    )}
+                    <AnimatePresence initial={false}>
+                      {truckError && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.25, ease: "easeInOut" }}
+                          className="overflow-hidden"
+                        >
+                          <p className="rounded-2xl border border-rose-200 bg-rose-50 px-3.5 py-3 text-[13px] font-medium text-rose-600">
+                            {truckError}
+                          </p>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 </div>
 

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ImageOff } from "lucide-react";
+import { X, ImageOff, MapPin } from "lucide-react";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatTicketDateLong, formatTicketTime } from "@/lib/utils";
@@ -197,12 +197,12 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
   const modalContent = (
     <AnimatePresence>
       {isOpen && ticket && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-stretch justify-end overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-stretch justify-center sm:justify-end pointer-events-none overflow-hidden">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-black/40 sm:bg-transparent"
+            className="absolute inset-0 bg-black/40 sm:bg-transparent pointer-events-auto"
             onClick={onClose}
           />
 
@@ -211,14 +211,14 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="relative z-10 flex h-auto max-h-[85dvh] sm:h-full sm:max-h-full w-full max-w-md flex-col overflow-hidden rounded-t-2xl sm:rounded-none border-t sm:border-t-0 sm:border-l border-border bg-card shadow-2xl self-end sm:self-auto"
+            className="relative z-10 flex h-full w-full min-w-0 flex-col overflow-hidden bg-card pointer-events-auto sm:max-w-md sm:border-l sm:border-border sm:shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex h-full flex-col justify-between overflow-hidden">
-              <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-5 sm:p-6">
-                <div className="flex shrink-0 items-start justify-between border-b border-border pb-4">
-                  <div className="flex flex-wrap items-center gap-2.5">
-                    <span className="text-base font-semibold text-foreground tracking-tight">{ticket.category || "Waste Report"}</span>
+            <div className="mx-auto flex h-full w-full max-w-3xl flex-col justify-between overflow-hidden p-4 sm:p-6">
+              <div className="flex-1 overflow-y-auto overscroll-contain py-3 gap-5 flex flex-col min-h-0">
+                <div className="flex shrink-0 touch-none items-start justify-between border-b border-border/60 pb-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[17px] font-semibold text-foreground tracking-tight">{ticket.category || "Waste Report"}</span>
                     <UrgencyBadge urgency={ticket.urgency} />
                     <StatusBadge status={ticket.status} />
                   </div>
@@ -226,10 +226,10 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
                   <button
                     type="button"
                     onClick={onClose}
-                    className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer"
-                    aria-label="Close sheet"
+                    className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
+                    aria-label="Close panel"
                   >
-                    <X className="h-5 w-5" />
+                    <X className="h-4 w-4" />
                   </button>
                 </div>
 
@@ -281,23 +281,25 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
                 </div>
               </div>
 
-              <div className="mt-auto shrink-0 flex flex-col gap-2 border-t border-border p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:p-5 bg-card">
+              <div className="mt-auto shrink-0 touch-none flex flex-col-reverse gap-2 border-t border-border-subtle pt-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center">
                   {onLocateOnMap ? (
                     <Button
-                      variant="primary"
+                      variant="secondary"
                       size="sm"
-                      className="w-full sm:w-auto"
+                      className="h-10 w-full gap-1.5 rounded-xl px-4 text-[14px] font-semibold sm:w-auto"
                       onClick={() => {
                         onLocateOnMap(ticket);
                         onClose();
                       }}
                     >
+                      <MapPin className="w-4 h-4" />
                       <span>Locate on Map</span>
                     </Button>
                   ) : (
                     <Link href={`/live-map?ticketId=${ticket.id}`} onClick={onClose} className="w-full sm:w-auto">
-                      <Button variant="primary" size="sm" className="w-full sm:w-auto">
+                      <Button variant="secondary" size="sm" className="h-10 w-full gap-1.5 rounded-xl px-4 text-[14px] font-semibold sm:w-auto">
+                        <MapPin className="w-4 h-4" />
                         <span>Locate on Map</span>
                       </Button>
                     </Link>
@@ -305,10 +307,10 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
                 </div>
 
                 <div className="grid grid-cols-2 items-center gap-2 sm:flex">
-                  <Button variant="secondary" size="sm" onClick={onClose}>
+                  <Button variant="secondary" size="sm" className="h-10 rounded-xl px-4 text-[14px] font-semibold" onClick={onClose}>
                     Cancel
                   </Button>
-                  <Button variant="primary" size="sm" onClick={handleSave}>
+                  <Button variant="primary" size="sm" className="h-10 rounded-xl px-4 text-[14px] font-semibold" onClick={handleSave}>
                     {selectedStatus === "Resolved" && ticket.status !== "Resolved"
                       ? "Mark as Cleaned Up"
                       : "Save Changes"}
