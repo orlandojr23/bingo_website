@@ -9,6 +9,7 @@ import { inputClass, labelClass } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import PasswordStrengthHint from "@/components/ui/password-strength-hint";
 import { useSoundEnabled, setSoundEnabled } from "@/lib/sounds";
+import { useAuth } from "@/context/AuthContext";
 
 function Toggle({ checked, onChange }) {
   return (
@@ -31,6 +32,7 @@ function Toggle({ checked, onChange }) {
 }
 
 export default function SettingsPage() {
+  const { setProfile: setAuthProfile, refreshProfile } = useAuth();
   const [toastMessage, setToastMessage] = useState(null);
 
   const showToast = (message) => {
@@ -76,21 +78,46 @@ export default function SettingsPage() {
     if (error) {
       showToast("Error saving profile: " + error.message);
     } else {
+      // Real-time: push the new name into the global AuthContext so
+      // Dashboard "Good morning, ..." and any other header updates
+      // without a page reload. Refresh from DB to stay in sync.
+      setAuthProfile((prev) =>
+        prev
+          ? { ...prev, full_name: profile.full_name }
+          : { full_name: profile.full_name, id: userId, email: profile.email }
+      );
+      refreshProfile();
       showToast("Admin profile saved successfully.");
     }
   };
 
-  const [notifications, setNotifications] = useState({
+  const NOTIF_PREFS_KEY = "bingo-admin-notif-prefs";
+  const DEFAULT_NOTIF_PREFS = {
     criticalAlerts: true,
     gpsWarnings: true,
     dailySummary: true,
     citizenDisputes: false,
-  });
+  };
+  const [notifications, setNotifications] = useState(DEFAULT_NOTIF_PREFS);
   const soundEnabled = useSoundEnabled();
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(NOTIF_PREFS_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const t = setTimeout(() => setNotifications((prev) => ({ ...prev, ...parsed })), 0);
+        return () => clearTimeout(t);
+      }
+    } catch {}
+  }, []);
 
   const toggleNotification = (key) => {
     setNotifications((prev) => {
       const updated = { ...prev, [key]: !prev[key] };
+      try {
+        window.localStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(updated));
+      } catch {}
       showToast("Notification preferences updated.");
       return updated;
     });
@@ -101,14 +128,25 @@ export default function SettingsPage() {
     newPassword: "",
     confirmPassword: "",
   });
-  const [showCurrent, setShowCurrent] = useState(false);
-  const [showNew, setShowNew] = useState(false);
+  const [showPasswords, setShowPasswords] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
 
   const handlePasswordUpdate = async (e) => {
     e.preventDefault();
+    if (!passwords.currentPassword) {
+      showToast("Please enter your current password.");
+      return;
+    }
     if (!passwords.newPassword) {
       showToast("Please enter a new password.");
+      return;
+    }
+    if (passwords.newPassword.length < 8) {
+      showToast("New password must be at least 8 characters.");
+      return;
+    }
+    if (!/[a-zA-Z]/.test(passwords.newPassword) || !/\d/.test(passwords.newPassword)) {
+      showToast("New password must contain at least one letter and one number.");
       return;
     }
     if (passwords.newPassword !== passwords.confirmPassword) {
@@ -116,6 +154,16 @@ export default function SettingsPage() {
       return;
     }
     setSavingPassword(true);
+    // Verify current password by re-authenticating (Supabase has no separate verify endpoint)
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: profile.email,
+      password: passwords.currentPassword,
+    });
+    if (signInError) {
+      setSavingPassword(false);
+      showToast("Current password is incorrect.");
+      return;
+    }
     const { error } = await supabase.auth.updateUser({
       password: passwords.newPassword
     });
@@ -283,67 +331,57 @@ export default function SettingsPage() {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div className="flex flex-col gap-1.5">
                   <label className={labelClass}>Current Password</label>
-                  <div className="relative">
-                    <input
-                      type={showCurrent ? "text" : "password"}
-                      required
-                      value={passwords.currentPassword}
-                      onChange={(e) =>
-                        setPasswords({ ...passwords, currentPassword: e.target.value })
-                      }
-                      placeholder="••••••••"
-                      className={cn(inputClass, "pr-9")}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowCurrent(!showCurrent)}
-                      aria-label={showCurrent ? "Hide current password" : "Show current password"}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
-                    >
-                      {showCurrent ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-                    </button>
-                  </div>
+                  <input
+                    type={showPasswords ? "text" : "password"}
+                    required
+                    value={passwords.currentPassword}
+                    onChange={(e) =>
+                      setPasswords({ ...passwords, currentPassword: e.target.value })
+                    }
+                    placeholder="••••••••"
+                    className="w-full rounded-2xl border border-border/60 bg-card px-3.5 py-3.5 text-[16px] text-foreground placeholder:text-muted-foreground/50 outline-none transition-colors focus:border-zinc-400"
+                  />
                 </div>
 
                 <div className="flex flex-col gap-1.5">
                   <label className={labelClass}>New Password</label>
-                  <div className="relative">
-                    <input
-                      type={showNew ? "text" : "password"}
-                      required
-                      value={passwords.newPassword}
-                      onChange={(e) =>
-                        setPasswords({ ...passwords, newPassword: e.target.value })
-                      }
-                      placeholder="••••••••"
-                      className={cn(inputClass, "pr-9")}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowNew(!showNew)}
-                      aria-label={showNew ? "Hide new password" : "Show new password"}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
-                    >
-                      {showNew ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-                    </button>
-                  </div>
+                  <input
+                    type={showPasswords ? "text" : "password"}
+                    required
+                    value={passwords.newPassword}
+                    onChange={(e) =>
+                      setPasswords({ ...passwords, newPassword: e.target.value })
+                    }
+                    placeholder="••••••••"
+                    className="w-full rounded-2xl border border-border/60 bg-card px-3.5 py-3.5 text-[16px] text-foreground placeholder:text-muted-foreground/50 outline-none transition-colors focus:border-zinc-400"
+                  />
                   <PasswordStrengthHint password={passwords.newPassword} />
                 </div>
 
                 <div className="flex flex-col gap-1.5">
                   <label className={labelClass}>Confirm New Password</label>
                   <input
-                    type="password"
+                    type={showPasswords ? "text" : "password"}
                     required
                     value={passwords.confirmPassword}
                     onChange={(e) =>
                       setPasswords({ ...passwords, confirmPassword: e.target.value })
                     }
                     placeholder="••••••••"
-                    className={inputClass}
+                    className="w-full rounded-2xl border border-border/60 bg-card px-3.5 py-3.5 text-[16px] text-foreground placeholder:text-muted-foreground/50 outline-none transition-colors focus:border-zinc-400"
                   />
                 </div>
               </div>
+
+              <button
+                type="button"
+                onClick={() => setShowPasswords(!showPasswords)}
+                className="flex items-center gap-2 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
+                aria-label={showPasswords ? "Hide passwords" : "Show passwords"}
+              >
+                {showPasswords ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                {showPasswords ? "Hide passwords" : "Show passwords"}
+              </button>
 
               <div className="flex justify-end border-t border-border-subtle pt-4">
                 <Button variant="primary" type="submit" className="h-10 rounded-xl px-4 text-[14px] font-semibold" disabled={savingPassword}>

@@ -73,6 +73,17 @@ textarea:focus-visible {
   outline: none;
 }
 
+/* Hide native password reveal/clear icons so only our custom Eye toggle shows */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+input::-webkit-credentials-auto-fill-button,
+input::-webkit-textfield-decoration-container {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 /* Minimalist Leaflet Overrides */
 .leaflet-container {
   font-family: inherit !important;

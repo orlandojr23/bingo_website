@@ -227,7 +227,7 @@ export default function SignupPage() {
       newErrors.email = "Please enter a valid email address.";
     }
     if (!sitio) {
-      newErrors.sitio = `Please select your sitio — the pilot launch covers ${process.env.NEXT_PUBLIC_BARANGAY_NAME || "your barangay"} only.`;
+      newErrors.sitio = `Please select your sitio. The pilot launch covers ${process.env.NEXT_PUBLIC_BARANGAY_NAME || "your barangay"} only.`;
     }
     if (!password) {
       newErrors.password = "Please create a password.";

@@ -55,24 +55,24 @@ function absoluteDateTimeLabel(iso) {
 
 const typeStyles = {
   Emergency: {
-    icon: <AlertTriangle className="h-4 w-4 text-rose-600" />,
-    pill: "text-rose-600 bg-transparent",
+    icon: <AlertTriangle className="h-4 w-4 text-muted-foreground/60" />,
+    pill: "text-muted-foreground bg-transparent",
     label: "Emergency",
   },
   Dispatch: {
-    icon: <Truck className="h-4 w-4 text-blue-600" />,
-    pill: "text-blue-600 bg-transparent",
+    icon: <Truck className="h-4 w-4 text-muted-foreground/60" />,
+    pill: "text-muted-foreground bg-transparent",
     label: "Dispatch",
   },
   Ticket: {
-    icon: <TicketIcon className="h-4 w-4 text-amber-600" />,
-    pill: "text-amber-600 bg-transparent",
-    label: "Resident Report",
+    icon: <TicketIcon className="h-4 w-4 text-muted-foreground/60" />,
+    pill: "text-muted-foreground bg-transparent",
+    label: "Report",
   },
   System: {
-    icon: <Info className="h-4 w-4 text-zinc-600" />,
-    pill: "text-zinc-600 bg-transparent",
-    label: "System Alert",
+    icon: <Info className="h-4 w-4 text-muted-foreground/60" />,
+    pill: "text-muted-foreground bg-transparent",
+    label: "System",
   },
 };
 
@@ -239,7 +239,7 @@ export default function NotificationsPage() {
                       )}
                       <span
                         className={cn(
-                          "flex shrink-0 items-center gap-1 whitespace-nowrap text-xs font-semibold",
+                          "flex shrink-0 items-center gap-1 whitespace-nowrap text-xs font-medium tracking-tight",
                           typeInfo.pill
                         )}
                       >
@@ -323,7 +323,7 @@ export default function NotificationsPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <span
                       className={cn(
-                        "flex shrink-0 items-center gap-1 whitespace-nowrap text-xs font-semibold",
+                        "flex shrink-0 items-center gap-1.5 whitespace-nowrap text-[13px] font-semibold tracking-tight",
                         getTypeStyle(selectedNotif.type).pill
                       )}
                     >

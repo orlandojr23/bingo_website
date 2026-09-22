@@ -213,7 +213,7 @@ export default function DispatchPage() {
     if (!selectedSchedule || !truckId || !type || !days || !time || stopOrder.length === 0) return;
 
     if (live.scheduleStatus[selectedSchedule.id] === "In Progress" || selectedSchedule.status === "In Progress") {
-      toast("This route is in progress — only the driver can complete it by passing all of its stops.", { variant: "warning" });
+      toast("This route is in progress. Only the driver can complete it by passing all of its stops.", { variant: "warning" });
       return;
     }
 
@@ -337,7 +337,7 @@ export default function DispatchPage() {
 
   const formFields = (
     <>
-      <Field label={`Pickup Stops — Search sitios in ${process.env.NEXT_PUBLIC_BARANGAY_NAME || "Barangay"}`}>
+      <Field label={`Pickup Stops: Search sitios in ${process.env.NEXT_PUBLIC_BARANGAY_NAME || "Barangay"}`}>
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <input
@@ -397,7 +397,7 @@ export default function DispatchPage() {
           )}
         </div>
         <p className="text-[10px] text-muted-foreground">
-          Pick one or more sitios — the route trajectory is traced through them in the order below.
+          Pick one or more sitios. The route trajectory is traced through them in the order below.
         </p>
       </Field>
 

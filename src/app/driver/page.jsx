@@ -756,7 +756,7 @@ export default function DriverPage() {
 
     if (truckState.phase === "enroute") {
       stopByAtPoint(selectedTruckId);
-      toast(`Arrived at ${currentPoint?.name ?? "stop"} — admin notified.`);
+      toast(`Arrived at ${currentPoint?.name ?? "stop"}. Admin notified.`);
       return;
     }
 
@@ -1032,7 +1032,7 @@ export default function DriverPage() {
                   } else {
                     // No GPS fix: fall back to the pilot area (Brgy. Tejero Hall).
                     setMapCenter([10.3025, 123.9095]);
-                    toast("GPS unavailable — showing Brgy. Tejero Hall.");
+                    toast("GPS unavailable. Showing Brgy. Tejero Hall.");
                   }
                   setMapZoom(17);
                   setFlySignal((s) => s + 1);
@@ -1322,7 +1322,7 @@ export default function DriverPage() {
                           )}
                           {(!isOnDuty && assignedSchedule && isAssignmentAccepted && assignedScheduleStatus === "Accepted") && (
                             <p className="text-center text-[13px] font-medium text-emerald-600">
-                              Assignment accepted — go to Route to start.
+                              Assignment accepted. Go to Route to start.
                             </p>
                           )}
                         </div>

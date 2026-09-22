@@ -612,7 +612,7 @@ export default function ResidentMobilePWA() {
       }
       toast(
         emailDirty
-          ? "Verification sent — tap the link in your new inbox to complete the email change."
+          ? "Verification sent. Tap the link in your new inbox to complete the email change."
           : nameDirty ? "Name updated." : digits ? "Mobile number saved." : "Mobile number removed."
       );
       haptic();
@@ -1208,12 +1208,12 @@ export default function ResidentMobilePWA() {
           longitude <= TEJERO_GPS_BOUNDS.east;
         if (!inTejero) {
           toast(
-            `GPS pinned${accNote} outside Brgy. Tejero — double-check your landmark so crews can find it.`,
+            `GPS pinned${accNote} outside Brgy. Tejero. Double-check your landmark so crews can find it.`,
             { variant: "error" }
           );
         } else if (fixAccuracy != null && fixAccuracy > POOR_GPS_ACCURACY_M) {
           toast(
-            `GPS pinned${accNote} — accuracy is low. Step outdoors and tap Retake GPS, and add a specific landmark.`,
+            `GPS pinned${accNote}. Accuracy is low. Step outdoors and tap Retake GPS, and add a specific landmark.`,
             { variant: "error" }
           );
         } else {
@@ -1560,7 +1560,7 @@ export default function ResidentMobilePWA() {
                         setMapCenter([10.3025, 123.9095]);
                         setMapZoom(16);
                         setFlySignal((s) => s + 1);
-                        toast("GPS unavailable — showing Brgy. Tejero Hall.");
+                        toast("GPS unavailable. Showing Brgy. Tejero Hall.");
                       }
                     );
                   }
@@ -1954,7 +1954,7 @@ export default function ResidentMobilePWA() {
                 />
                 <p className="mt-1 text-[12px] text-muted-foreground">
                   {gpsCoords
-                    ? `${gpsAccuracy != null ? `GPS ±${gpsAccuracy}m` : "GPS"}${gpsAddress ? ` ≈ ${gpsAddress}` : " attached"} — still add a landmark.`
+                    ? `${gpsAccuracy != null ? `GPS ±${gpsAccuracy}m` : "GPS"}${gpsAddress ? ` ≈ ${gpsAddress}` : " attached"}. Still add a landmark.`
                     : LOCATION_FORMAT_HINT}
                 </p>
               </div>
@@ -2292,7 +2292,7 @@ export default function ResidentMobilePWA() {
           />
           <ProfileFieldNote message={emailError} />
           <ProfileFieldNote
-            message={pendingEmail ? `Verification sent to ${pendingEmail} — tap the link there to complete the change.` : ""}
+            message={pendingEmail ? `Verification sent to ${pendingEmail}. Tap the link there to complete the change.` : ""}
             tone="emerald"
           />
         </div>
