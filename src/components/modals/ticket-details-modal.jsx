@@ -197,7 +197,7 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
   const modalContent = (
     <AnimatePresence>
       {isOpen && ticket && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-stretch justify-center sm:justify-end pointer-events-none overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-stretch justify-center sm:justify-end pointer-events-none overflow-hidden">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -211,7 +211,7 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="relative z-10 flex h-full w-full min-w-0 flex-col overflow-hidden bg-card pointer-events-auto sm:max-w-md sm:border-l sm:border-border sm:shadow-2xl"
+            className="relative z-10 flex h-full h-dvh w-full min-w-0 flex-col overflow-hidden bg-card pointer-events-auto sm:max-w-md sm:border-l sm:border-border sm:shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mx-auto flex h-full w-full max-w-3xl flex-col justify-between overflow-hidden p-4 sm:p-6">
@@ -307,10 +307,10 @@ export default function TicketDetailsModal({ ticket, isOpen, onClose, onUpdateSt
                 </div>
 
                 <div className="grid grid-cols-2 items-center gap-2 sm:flex">
-                  <Button variant="secondary" size="sm" className="h-10 rounded-xl px-4 text-[14px] font-semibold" onClick={onClose}>
+                  <Button variant="secondary" size="sm" className="h-10 w-full sm:w-auto rounded-xl px-4 text-[14px] font-semibold" onClick={onClose}>
                     Cancel
                   </Button>
-                  <Button variant="primary" size="sm" className="h-10 rounded-xl px-4 text-[14px] font-semibold" onClick={handleSave}>
+                  <Button variant="primary" size="sm" className="h-10 w-full sm:w-auto rounded-xl px-4 text-[14px] font-semibold" onClick={handleSave}>
                     {selectedStatus === "Resolved" && ticket.status !== "Resolved"
                       ? "Mark as Cleaned Up"
                       : "Save Changes"}

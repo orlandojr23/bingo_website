@@ -409,27 +409,27 @@ export default function StaffPage() {
           title="Drivers"
           description="Manage driver accounts and assign them to trucks"
           actions={
-            <Button variant="primary" className="h-10 rounded-xl px-4 text-[14px] font-semibold" onClick={() => setIsAdding(true)}>
+            <Button variant="primary" className="h-10 w-full sm:w-auto rounded-xl px-4 text-[14px] font-semibold" onClick={() => setIsAdding(true)}>
               <Plus className="h-4 w-4" />
               <span>Add New Driver</span>
             </Button>
           }
         />
 
-        <div className="grid shrink-0 grid-cols-1 sm:grid-cols-2 gap-3.5 max-w-sm sm:max-w-md">
+        <div className="grid shrink-0 grid-cols-2 gap-2.5 sm:gap-3.5 max-w-md">
           <PanelStat label="Drivers" value={totalDrivers} hint="Registered accounts" />
           <PanelStat label="Assigned Trucks" value={assignedCompactors} hint="Drivers with a truck" tone="emerald" />
         </div>
 
         <div className="flex shrink-0 items-center">
-          <div className="relative w-full max-w-xs">
-            <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <div className="relative w-full sm:max-w-xs">
+            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <input
               type="text"
               placeholder="Filter by driver or truck..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-[50px] w-full rounded-2xl border border-border/60 bg-card pl-10 pr-4 text-[16px] text-foreground placeholder:text-muted-foreground/60 outline-none transition-colors focus:border-zinc-400"
+              className={cn(inputClass, "pl-9")}
             />
           </div>
         </div>
@@ -534,7 +534,7 @@ export default function StaffPage() {
 
       <AnimatePresence>
         {formOpen && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-stretch justify-center sm:justify-end pointer-events-none overflow-hidden">
+          <div className="fixed inset-0 z-50 flex items-stretch justify-center sm:justify-end pointer-events-none overflow-hidden">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -547,7 +547,7 @@ export default function StaffPage() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="relative z-10 flex h-full w-full min-w-0 flex-col overflow-hidden bg-card pointer-events-auto sm:max-w-md sm:border-l sm:border-border sm:shadow-2xl"
+              className="relative z-10 flex h-full h-dvh w-full min-w-0 flex-col overflow-hidden bg-card pointer-events-auto sm:max-w-md sm:border-l sm:border-border sm:shadow-2xl"
             >
               <form
                 onSubmit={isVerifyingOtp ? handleVerifyOtp : (isAdding ? handleAddDriver : handleUpdateDriver)}
@@ -780,12 +780,12 @@ export default function StaffPage() {
                       </motion.div>
                     )}
                   </AnimatePresence>
-                  <div className="flex items-center justify-end gap-2">
+                  <div className="grid grid-cols-2 gap-2 w-full sm:flex sm:w-auto sm:items-center sm:justify-end">
                     <Button
                       variant="secondary"
                       size="sm"
                       type="button"
-                      className="h-10 rounded-xl px-4 text-[14px] font-semibold"
+                      className="h-10 w-full sm:w-auto rounded-xl px-4 text-[14px] font-semibold"
                       disabled={isSubmitting}
                       onClick={() => (isAdding ? setIsAdding(false) : setSelectedDriver(null))}
                     >
@@ -795,7 +795,7 @@ export default function StaffPage() {
                       variant="primary"
                       type="submit"
                       disabled={isSubmitting || (isVerifyingOtp && otpCode.length !== 6)}
-                      className="h-10 rounded-xl px-4 text-[14px] font-semibold"
+                      className="h-10 w-full sm:w-auto rounded-xl px-4 text-[14px] font-semibold"
                     >
                       {isSubmitting ? (
                         <>

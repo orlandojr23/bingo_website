@@ -8,7 +8,7 @@ import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
 import { PanelStat } from "@/components/ui/panel-stat";
 import { InfoRow } from "@/components/ui/info-row";
-import { inputClass } from "@/components/ui/input";
+import { inputClass, selectClass } from "@/components/ui/input";
 import { cn, formatTicketDateTime } from "@/lib/utils";
 import TicketDetailsModal from "@/components/modals/ticket-details-modal";
 import ConfirmModal from "@/components/ui/confirm-modal";
@@ -32,10 +32,6 @@ export default function TicketsPage() {
   const handleUpdateStatus = async (ticketId, newStatus) => {
     try {
       const result = await updateTicket(ticketId, { status: newStatus });
-      // Only reflect the change locally after the database write succeeds —
-      // otherwise the UI would show a status that was never saved. Guarded
-      // merge: the panel closes on Save, so `prev` is usually null by now —
-      // merging onto null would resurrect a status-only zombie object.
       setSelectedTicket((prev) =>
         prev && prev.id === ticketId ? { ...prev, status: newStatus } : prev
       );
@@ -97,34 +93,34 @@ export default function TicketsPage() {
 
   return (
     <div className="relative flex min-h-full w-full min-w-0 overflow-x-hidden bg-background">
-      <div className="relative z-10 flex flex-1 min-w-0 flex-col gap-5 p-4 [scrollbar-gutter:stable] sm:gap-6 sm:p-6 lg:p-8 pb-6 sm:pb-8 lg:pb-10">
+      <div className="relative z-10 flex flex-1 min-w-0 flex-col gap-4 sm:gap-6 p-3.5 sm:p-6 lg:p-8 pb-6 sm:pb-8 lg:pb-10">
         <PageHeader
           title="Reports"
           description="All waste reports submitted by residents and their current status"
         />
 
-        <div className="grid shrink-0 grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5 max-w-sm sm:max-w-md">
+        <div className="grid shrink-0 grid-cols-2 gap-2.5 sm:gap-3.5 max-w-md">
           <PanelStat label="Total Reports" value={totalReports} hint="All submitted reports" />
           <PanelStat label="Waiting" value={pendingReports} hint="Needs attention" tone="rose" />
         </div>
 
-        <div className="flex shrink-0 flex-col items-center gap-3 sm:flex-row">
+        <div className="flex shrink-0 flex-col items-center gap-2.5 sm:flex-row sm:gap-3">
           <div className="relative w-full flex-1">
             <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <input
               type="text"
-              placeholder="Search reports by ID, location, or reporter..."
+              placeholder="Search ID, location, or reporter..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className={cn(inputClass, "pl-9")}
             />
           </div>
 
-          <div className="grid w-full shrink-0 grid-cols-2 items-center gap-2 sm:flex sm:w-auto">
+          <div className="grid w-full shrink-0 grid-cols-3 items-center gap-1.5 sm:flex sm:w-auto sm:gap-2">
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className={cn(inputClass, "cursor-pointer w-full sm:w-auto sm:flex-none")}
+              className={cn(selectClass, "sm:w-auto sm:flex-none")}
             >
               <option value="All">All Statuses</option>
               <option value="Pending">Waiting</option>
@@ -134,7 +130,7 @@ export default function TicketsPage() {
             <select
               value={urgencyFilter}
               onChange={(e) => setUrgencyFilter(e.target.value)}
-              className={cn(inputClass, "cursor-pointer w-full sm:w-auto sm:flex-none")}
+              className={cn(selectClass, "sm:w-auto sm:flex-none")}
             >
               <option value="All">All Priorities</option>
               <option value="Low">Low</option>
@@ -146,7 +142,7 @@ export default function TicketsPage() {
             <select
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
-              className={cn(inputClass, "cursor-pointer w-full col-span-2 sm:col-span-1 sm:w-auto sm:flex-none")}
+              className={cn(selectClass, "sm:w-auto sm:flex-none")}
             >
               <option value="All">All Time</option>
               <option value="Today">Today</option>

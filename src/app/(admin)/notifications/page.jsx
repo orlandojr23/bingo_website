@@ -173,13 +173,13 @@ export default function NotificationsPage() {
           }
         />
 
-        <div className="grid shrink-0 grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5 max-w-sm sm:max-w-md">
+        <div className="grid shrink-0 grid-cols-2 gap-2.5 sm:gap-3.5 max-w-md">
           <PanelStat label="Alerts" value={totalCount} hint="Total received" />
           <PanelStat label="Unread" value={unreadCount} hint="Awaiting your review" tone="emerald" />
         </div>
 
         <div className="flex shrink-0 items-center">
-          <div className="inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-xl bg-muted p-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+          <div className="inline-flex max-w-full w-fit self-start items-center gap-1 overflow-x-auto rounded-xl bg-muted p-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
             {["All", "Emergency", "System", "Ticket"].map((tab) => {
               const isActive = activeTab === tab;
               let displayLabel = "All Alerts";
@@ -305,7 +305,7 @@ export default function NotificationsPage() {
 
       <AnimatePresence>
         {isSheetOpen && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-stretch justify-center sm:justify-end pointer-events-none overflow-hidden">
+          <div className="fixed inset-0 z-50 flex items-stretch justify-center sm:justify-end pointer-events-none overflow-hidden">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -318,7 +318,7 @@ export default function NotificationsPage() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="relative z-10 flex h-full w-full min-w-0 flex-col overflow-hidden bg-card pointer-events-auto sm:max-w-md sm:border-l sm:border-border sm:shadow-2xl"
+              className="relative z-10 flex h-full h-dvh w-full min-w-0 flex-col overflow-hidden bg-card pointer-events-auto sm:max-w-md sm:border-l sm:border-border sm:shadow-2xl"
             >
               <div className="mx-auto flex h-full w-full max-w-3xl flex-col justify-between overflow-hidden p-4 sm:p-6">
                 <div className="flex shrink-0 touch-none items-start justify-between border-b border-border/60 pb-3">

@@ -67,7 +67,7 @@ export default function AnalyticsPage() {
           description="Performance and cleanup analytics for Barangay Tejero"
         />
 
-        <div className="grid shrink-0 grid-cols-1 gap-3 sm:grid-cols-3 max-w-sm sm:max-w-xl">
+        <div className="grid shrink-0 grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3.5 max-w-xl">
           {kpis.map((kpi) => (
             <PanelStat
               key={kpi.label}

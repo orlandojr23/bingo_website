@@ -577,7 +577,7 @@ export default function DispatchPage() {
           title="Fleet Dispatch"
           description="Manage truck assignments and weekly collection schedules"
           actions={
-            <Button variant="primary" className="h-10 rounded-xl px-4 text-[14px] font-semibold" onClick={() => setIsAdding(true)}>
+            <Button variant="primary" className="h-10 w-full sm:w-auto rounded-xl px-4 text-[14px] font-semibold" onClick={() => setIsAdding(true)}>
               <Plus className="h-4 w-4" />
               <span>Create Assignment</span>
             </Button>
@@ -586,7 +586,7 @@ export default function DispatchPage() {
 
 
 
-        <div className="grid shrink-0 grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5 max-w-sm sm:max-w-md">
+        <div className="grid shrink-0 grid-cols-2 gap-2.5 sm:gap-3.5 max-w-md">
           <PanelStat label="Schedules" value={totalSchedules} hint="Total collection schedules" />
           <PanelStat label="Trucks Out" value={activeDispatches} hint="Currently collecting" tone="emerald" />
         </div>
@@ -597,7 +597,7 @@ export default function DispatchPage() {
               <h2 className="text-sm font-semibold text-foreground">Fleet</h2>
               <span className="text-xs text-muted-foreground whitespace-nowrap">{fleet.length} trucks</span>
             </div>
-            <Button variant="secondary" className="h-10 shrink-0 rounded-xl px-4 text-[14px] font-semibold" onClick={() => openTruckSheet("add")}>
+            <Button variant="secondary" className="h-10 w-full sm:w-auto shrink-0 rounded-xl px-4 text-[14px] font-semibold" onClick={() => openTruckSheet("add")}>
               <Plus className="h-4 w-4" />
               <span>Add Truck</span>
             </Button>
@@ -772,7 +772,7 @@ export default function DispatchPage() {
 
       <AnimatePresence>
         {isSheetOpen && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-stretch justify-center sm:justify-end pointer-events-none overflow-hidden">
+          <div className="fixed inset-0 z-50 flex items-stretch justify-center sm:justify-end pointer-events-none overflow-hidden">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -785,7 +785,7 @@ export default function DispatchPage() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="relative z-10 flex h-full w-full min-w-0 flex-col overflow-hidden bg-card pointer-events-auto sm:max-w-md sm:border-l sm:border-border sm:shadow-2xl"
+              className="relative z-10 flex h-full h-dvh w-full min-w-0 flex-col overflow-hidden bg-card pointer-events-auto sm:max-w-md sm:border-l sm:border-border sm:shadow-2xl"
             >
               <form
                 onSubmit={isAdding ? handleAddSchedule : handleUpdateSchedule}
@@ -814,11 +814,11 @@ export default function DispatchPage() {
                   <div className="mt-1 flex flex-col gap-4">{formFields}</div>
                 </div>
 
-                <div className="mt-auto shrink-0 touch-none flex items-center justify-end gap-2 border-t border-border-subtle pt-4">
+                <div className="mt-auto shrink-0 touch-none grid grid-cols-2 gap-2 w-full sm:flex sm:w-auto sm:items-center sm:justify-end border-t border-border-subtle pt-4">
                   <Button
                     variant="secondary"
                     type="button"
-                    className="h-10 rounded-xl px-4 text-[14px] font-semibold"
+                    className="h-10 w-full sm:w-auto rounded-xl px-4 text-[14px] font-semibold"
                     onClick={() => (isAdding ? setIsAdding(false) : setSelectedSchedule(null))}
                   >
                     Cancel
@@ -826,7 +826,7 @@ export default function DispatchPage() {
                   <Button
                     variant="primary"
                     type="submit"
-                    className="h-10 rounded-xl px-4 text-[14px] font-semibold"
+                    className="h-10 w-full sm:w-auto rounded-xl px-4 text-[14px] font-semibold"
                     disabled={stopOrder.length === 0 || isSubmittingSchedule}
                     title={stopOrder.length === 0 ? "Add at least one sitio stop first" : undefined}
                   >
@@ -848,7 +848,7 @@ export default function DispatchPage() {
 
       <AnimatePresence>
         {truckSheet && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-stretch justify-center sm:justify-end pointer-events-none overflow-hidden">
+          <div className="fixed inset-0 z-50 flex items-stretch justify-center sm:justify-end pointer-events-none overflow-hidden">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -861,7 +861,7 @@ export default function DispatchPage() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="relative z-10 flex h-full w-full min-w-0 flex-col overflow-hidden bg-card pointer-events-auto sm:max-w-md sm:border-l sm:border-border sm:shadow-2xl"
+              className="relative z-10 flex h-full h-dvh w-full min-w-0 flex-col overflow-hidden bg-card pointer-events-auto sm:max-w-md sm:border-l sm:border-border sm:shadow-2xl"
             >
               <form onSubmit={handleTruckSubmit} className="mx-auto flex h-full w-full max-w-3xl flex-col justify-between overflow-hidden p-4 sm:p-6">
                 <div className="flex shrink-0 touch-none items-start justify-between border-b border-border/60 pb-3">

@@ -8,7 +8,7 @@ import { useLiveRoute, getSchedules, restoreSchedule, hardDeleteSchedule, schedu
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
 import { InfoRow } from "@/components/ui/info-row";
-import { inputClass } from "@/components/ui/input";
+import { inputClass, selectClass } from "@/components/ui/input";
 import { cn, formatTicketDateTime } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import ConfirmModal from "@/components/ui/confirm-modal";
@@ -100,7 +100,7 @@ export default function BinPage() {
           description="View and permanently delete or restore archived records."
         />
 
-        <div className="flex shrink-0 flex-col items-center gap-3 sm:flex-row">
+        <div className="flex shrink-0 flex-col items-center gap-2.5 sm:flex-row sm:gap-3">
           <div className="relative w-full flex-1">
             <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <input
@@ -116,7 +116,7 @@ export default function BinPage() {
             <select
               value={viewType}
               onChange={(e) => setViewType(e.target.value)}
-              className={cn(inputClass, "cursor-pointer flex-1 sm:w-auto sm:flex-none")}
+              className={cn(selectClass, "sm:w-auto sm:flex-none")}
             >
               <option value="reports">Waste Reports ({archivedTickets.length})</option>
               <option value="schedules">Fleet Schedules ({archivedSchedules.length})</option>
@@ -262,7 +262,7 @@ export default function BinPage() {
 
       <AnimatePresence>
         {isSheetOpen && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-stretch justify-center sm:justify-end pointer-events-none overflow-hidden">
+          <div className="fixed inset-0 z-50 flex items-stretch justify-center sm:justify-end pointer-events-none overflow-hidden">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -275,7 +275,7 @@ export default function BinPage() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="relative z-10 flex h-full w-full min-w-0 flex-col overflow-hidden bg-card pointer-events-auto sm:max-w-md sm:border-l sm:border-border sm:shadow-2xl"
+              className="relative z-10 flex h-full h-dvh w-full min-w-0 flex-col overflow-hidden bg-card pointer-events-auto sm:max-w-md sm:border-l sm:border-border sm:shadow-2xl"
             >
               <div className="mx-auto flex h-full w-full max-w-3xl flex-col justify-between overflow-hidden p-4 sm:p-6">
                 <div className="flex shrink-0 touch-none items-start justify-between border-b border-border/60 pb-3">

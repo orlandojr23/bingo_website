@@ -112,7 +112,7 @@ export default function DashboardPage() {
           <DashboardSkeleton />
         ) : (
           <>
-        <div className="grid shrink-0 grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3.5 max-w-xl sm:max-w-2xl">
+        <div className="grid shrink-0 grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3.5 max-w-xl sm:max-w-2xl">
           {kpis.map((kpi) => (
             <PanelStat
               key={kpi.label}
@@ -127,7 +127,7 @@ export default function DashboardPage() {
         <div className="flex shrink-0 flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between min-w-0 w-full overflow-hidden">
           <h3 className="text-sm font-semibold text-foreground shrink-0 whitespace-nowrap">Recent Reports</h3>
 
-          <div className="inline-flex max-w-full shrink-0 items-center gap-1 overflow-x-auto rounded-xl bg-muted p-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+          <div className="inline-flex max-w-full w-fit self-start shrink-0 items-center gap-1 overflow-x-auto rounded-xl bg-muted p-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
             {["All", "Pending", "Resolved"].map((status) => {
               const isActive = statusFilter === status;
               let displayLabel = "All";

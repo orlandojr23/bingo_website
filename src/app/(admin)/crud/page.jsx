@@ -144,14 +144,14 @@ export default function CrudPage() {
           title="Data Management"
           description="Create, update, and remove waste reports"
           actions={
-            <Button variant="primary" onClick={handleStartAdd}>
+            <Button variant="primary" className="h-10 w-full sm:w-auto rounded-xl px-4 text-[14px] font-semibold" onClick={handleStartAdd}>
               <Plus className="h-4 w-4" />
               <span>Create New Report</span>
             </Button>
           }
         />
 
-        <div className="flex bg-muted p-1 rounded-xl w-fit">
+        <div className="flex bg-muted p-1 rounded-xl w-fit self-start">
           <button 
             className={cn("flex items-center justify-center gap-2 px-4 py-2 text-[13px] font-medium rounded-lg transition-all cursor-pointer", viewMode === "active" ? "bg-card text-foreground shadow-sm font-semibold" : "text-muted-foreground hover:text-foreground")}
             onClick={() => setViewMode("active")}
@@ -168,7 +168,7 @@ export default function CrudPage() {
           </button>
         </div>
 
-        <div className="grid shrink-0 grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5 max-w-sm sm:max-w-md">
+        <div className="grid shrink-0 grid-cols-2 gap-2.5 sm:gap-3.5 max-w-md">
           <PanelStat label={viewMode === "trash" ? "Archived Reports" : "Total Reports"} value={records.length} hint={viewMode === "trash" ? "Reports in trash" : "All reports on record"} />
           <PanelStat label="Waiting" value={pendingCount} hint="Needs attention" tone="rose" />
         </div>
@@ -218,47 +218,6 @@ export default function CrudPage() {
                     <div className="mt-3 border-t border-border-subtle pt-2 space-y-1">
                       <InfoRow label="Status" value={<StatusBadge status={r.status} showDot={false} />} />
                       <InfoRow label="Barangay" value={r.barangay} />
-                      <InfoRow label="Reported By" value={r.reporter} />
-                      <InfoRow label="Urgency" value={<UrgencyBadge urgency={r.urgency} />} />
-                    </div>
-                    <div className="flex items-center justify-end gap-2 pt-1" onClick={(e) => e.stopPropagation()}>
-                      {viewMode === "trash" ? (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => handleRestore(r.id)}
-                            className="inline-flex cursor-pointer items-center rounded-full bg-emerald-600/10 px-3 py-1 text-[13px] font-semibold text-emerald-700 transition-all hover:bg-emerald-600/20 active:scale-95"
-                          >
-                            Restore
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setRecordToDelete(r)}
-                            className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-rose-600/10 px-3 py-1 text-[13px] font-semibold text-rose-600 transition-all hover:bg-rose-600/20 active:scale-95"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            Delete
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => handleEdit(r)}
-                            className="inline-flex cursor-pointer items-center rounded-full bg-muted px-3 py-1 text-[13px] font-semibold text-foreground transition-all hover:bg-muted/80 active:scale-95"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setRecordToDelete(r)}
-                            className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-rose-600/10 px-3 py-1 text-[13px] font-semibold text-rose-600 transition-all hover:bg-rose-600/20 active:scale-95"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            Delete
-                          </button>
-                        </>
-                      )}
                     </div>
                   </div>
                 );
@@ -266,37 +225,30 @@ export default function CrudPage() {
             )}
           </div>
 
-          {/* Desktop & Tablet Table View (>= sm) */}
-          <div className="hidden overflow-x-auto sm:block">
-            <table className="w-full text-left text-xs">
-              <thead className="border-b border-border bg-muted/50 font-medium text-muted-foreground">
-                <tr>
-                  <th className="p-3.5 pl-5">ID</th>
-                  <th className="p-3.5">Location</th>
-                  <th className="p-3.5">Barangay</th>
-                  <th className="p-3.5">Reporter</th>
-                  <th className="p-3.5">Priority</th>
-                  <th className="p-3.5">Status</th>
-                  <th className="p-3.5 pr-5 text-right">Actions</th>
+          {/* Desktop Table View (>= sm) */}
+          <div className="hidden sm:block overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-border bg-muted/40 font-semibold text-muted-foreground">
+                  <th className="py-3 px-4">Ticket ID</th>
+                  <th className="py-3 px-4">Location</th>
+                  <th className="py-3 px-4">Category</th>
+                  <th className="py-3 px-4">Barangay</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4">Reporter</th>
+                  <th className="py-3 px-4">Urgency</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border-subtle">
+              <tbody className="divide-y divide-border/60">
                 {records.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="p-10">
-                      <div className="flex flex-col items-center text-center">
-                        <FilePlus2 className="mb-2.5 h-8 w-8 text-zinc-300" />
-                        <h3 className="text-sm font-semibold text-foreground">{viewMode === "trash" ? "Trash is Empty" : "No Reports Yet"}</h3>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {viewMode === "trash" ? "Deleted reports will appear here." : "Click \"Create New Report\" to add your first record."}
-                        </p>
-                      </div>
+                    <td colSpan={7} className="py-8 text-center text-muted-foreground">
+                      {viewMode === "trash" ? "No archived reports found." : "No waste reports found."}
                     </td>
                   </tr>
                 ) : (
                   records.map((r) => {
                     const isSelected = editingId === r.id;
-
                     return (
                       <tr
                         key={r.id}
@@ -305,56 +257,16 @@ export default function CrudPage() {
                           isSelected ? "bg-muted/80 font-medium" : "hover:bg-muted/40"
                         }`}
                       >
-                        <td className="p-3.5 pl-5 font-semibold text-foreground tracking-tight tabular-nums">{r.id}</td>
-                        <td className="p-3.5 font-medium text-foreground">{r.location}</td>
-                        <td className="p-3.5 text-muted-foreground">{r.barangay}</td>
-                        <td className="p-3.5 text-muted-foreground">{r.reporter}</td>
-                        <td className="p-3.5">
-                          <UrgencyBadge urgency={r.urgency} />
-                        </td>
-                        <td className="p-3.5">
+                        <td className="py-3 px-4 font-mono font-medium text-foreground">{r.id.slice(0, 8)}...</td>
+                        <td className="py-3 px-4 font-medium text-foreground">{r.location}</td>
+                        <td className="py-3 px-4 text-muted-foreground">{r.category || "Solid Waste"}</td>
+                        <td className="py-3 px-4 text-muted-foreground">{r.barangay}</td>
+                        <td className="py-3 px-4">
                           <StatusBadge status={r.status} showDot={false} />
                         </td>
-                        <td className="p-3.5 pr-5 text-right">
-                          <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                            {viewMode === "trash" ? (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() => handleRestore(r.id)}
-                                  className="inline-flex cursor-pointer items-center rounded-full bg-emerald-600/10 px-3 py-1 text-[13px] font-semibold text-emerald-700 transition-all hover:bg-emerald-600/20 active:scale-95"
-                                >
-                                  Restore
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setRecordToDelete(r)}
-                                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-rose-600/10 px-3 py-1 text-[13px] font-semibold text-rose-600 transition-all hover:bg-rose-600/20 active:scale-95"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                  Delete
-                                </button>
-                              </>
-                            ) : (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() => handleEdit(r)}
-                                  className="inline-flex cursor-pointer items-center rounded-full bg-muted px-3 py-1 text-[13px] font-semibold text-foreground transition-all hover:bg-muted/80 active:scale-95"
-                                >
-                                  Edit
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setRecordToDelete(r)}
-                                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-rose-600/10 px-3 py-1 text-[13px] font-semibold text-rose-600 transition-all hover:bg-rose-600/20 active:scale-95"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                  Delete
-                                </button>
-                              </>
-                            )}
-                          </div>
+                        <td className="py-3 px-4 text-muted-foreground">{r.reporter}</td>
+                        <td className="py-3 px-4">
+                          <UrgencyBadge urgency={r.urgency} />
                         </td>
                       </tr>
                     );
@@ -371,7 +283,7 @@ export default function CrudPage() {
 
       <AnimatePresence>
         {isSheetOpen && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-stretch justify-center sm:justify-end pointer-events-none overflow-hidden">
+          <div className="fixed inset-0 z-50 flex items-stretch justify-center sm:justify-end pointer-events-none overflow-hidden">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -384,7 +296,7 @@ export default function CrudPage() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="relative z-10 flex h-full w-full min-w-0 flex-col overflow-hidden bg-card pointer-events-auto sm:max-w-md sm:border-l sm:border-border sm:shadow-2xl"
+              className="relative z-10 flex h-full h-dvh w-full min-w-0 flex-col overflow-hidden bg-card pointer-events-auto sm:max-w-md sm:border-l sm:border-border sm:shadow-2xl"
             >
               <form onSubmit={handleSave} className="mx-auto flex h-full w-full max-w-3xl flex-col justify-between overflow-hidden p-4 sm:p-6">
                 <div className="flex shrink-0 touch-none items-start justify-between gap-2 border-b border-border/60 pb-3">
@@ -393,88 +305,91 @@ export default function CrudPage() {
                       {editingId ? `Update Report` : "Create New Report"}
                     </h2>
                     {editingId && (
-                      <span className="block truncate text-xs font-semibold text-muted-foreground tracking-tight tabular-nums" title={editingId}>
-                        {editingId}
-                      </span>
+                      <p className="mt-0.5 text-xs text-muted-foreground font-mono">ID: {editingId}</p>
                     )}
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={resetForm}
-                    className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
-                    aria-label="Close panel"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    {editingId && (
+                      <button
+                        type="button"
+                        onClick={handleSoftDelete}
+                        className="rounded-lg p-1.5 text-muted-foreground hover:text-rose-600 transition-colors cursor-pointer"
+                        title="Move to Trash"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={resetForm}
+                      className="rounded-lg p-1.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto overscroll-contain py-3 gap-5 flex flex-col min-h-0">
-                  <div className="flex flex-col gap-4">
+                  <div className="mt-1 flex flex-col gap-4">
                     <div className="flex flex-col gap-1.5">
-                      <label className={labelClass}>Location</label>
+                      <label className={labelClass}>Location / Sitio</label>
                       <input
                         required
                         type="text"
-                        placeholder="e.g. Sitio Vilgon"
+                        placeholder="e.g. Sitio Back Blessed, Tejero"
                         value={form.location}
-                        onChange={(e) => setForm({ ...form, location: formatNameInput(e.target.value) })}
-                        onBlur={() => setForm({ ...form, location: formatNameInput(form.location) })}
+                        onChange={(e) => setForm({ ...form, location: e.target.value })}
                         className={inputClass}
                       />
                     </div>
 
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="grid grid-cols-2 gap-3">
                       <div className="flex flex-col gap-1.5">
                         <label className={labelClass}>Barangay</label>
                         <input
-                          required
                           type="text"
                           value={form.barangay}
-                          onChange={(e) => setForm({ ...form, barangay: formatNameInput(e.target.value) })}
-                          onBlur={() => setForm({ ...form, barangay: formatNameInput(form.barangay) })}
+                          onChange={(e) => setForm({ ...form, barangay: e.target.value })}
                           className={inputClass}
                         />
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <label className={labelClass}>Reporter Name</label>
-                        <input
-                          required
-                          type="text"
-                          placeholder="Resident name"
-                          value={form.reporter}
-                          onChange={(e) => setForm({ ...form, reporter: formatNameInput(e.target.value) })}
-                          onBlur={() => setForm({ ...form, reporter: formatNameInput(form.reporter) })}
-                          className={inputClass}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                      <div className="flex flex-col gap-1.5">
-                        <label className={labelClass}>Waste Category</label>
+                        <label className={labelClass}>Category</label>
                         <select
                           value={form.category}
                           onChange={(e) => setForm({ ...form, category: e.target.value })}
                           className={cn(inputClass, "cursor-pointer")}
                         >
-                          <option value="Malata (Nabubulok)">Malata (Nabubulok)</option>
-                          <option value="Di-Malata (Di-Nabubulok)">Di-Malata (Di-Nabubulok)</option>
-                          <option value="Special Waste / Hazardous">Special / Hazardous</option>
-                          <option value="Recyclable">Recyclable</option>
+                          <option value="Solid Waste">Solid Waste</option>
+                          <option value="Bulky Waste">Bulky Waste</option>
+                          <option value="Hazardous">Hazardous</option>
+                          <option value="Recyclables">Recyclables</option>
                         </select>
                       </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
                       <div className="flex flex-col gap-1.5">
-                        <label className={labelClass}>Urgency Level</label>
+                        <label className={labelClass}>Reporter Name</label>
+                        <input
+                          type="text"
+                          placeholder="Resident name"
+                          value={form.reporter}
+                          onChange={(e) => setForm({ ...form, reporter: e.target.value })}
+                          className={inputClass}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className={labelClass}>Urgency / Priority</label>
                         <select
                           value={form.urgency}
                           onChange={(e) => setForm({ ...form, urgency: e.target.value })}
                           className={cn(inputClass, "cursor-pointer")}
                         >
                           <option value="Low">Low</option>
-                          <option value="Normal">Normal</option>
+                          <option value="Medium">Medium</option>
                           <option value="High">High</option>
-                          <option value="Urgent">Urgent</option>
+                          <option value="Critical">Critical</option>
                         </select>
                       </div>
                     </div>
@@ -504,11 +419,11 @@ export default function CrudPage() {
                   </div>
                 </div>
 
-                <div className="mt-auto shrink-0 touch-none flex items-center justify-end gap-2 border-t border-border-subtle pt-4">
-                  <Button variant="secondary" size="sm" type="button" className="h-10 rounded-xl px-4 text-[14px] font-semibold" onClick={resetForm}>
+                <div className="mt-auto shrink-0 touch-none grid grid-cols-2 gap-2 w-full sm:flex sm:w-auto sm:items-center sm:justify-end border-t border-border-subtle pt-4">
+                  <Button variant="secondary" size="sm" type="button" className="h-10 w-full sm:w-auto rounded-xl px-4 text-[14px] font-semibold" onClick={resetForm}>
                     Cancel
                   </Button>
-                  <Button variant="primary" size="sm" type="submit" className="h-10 rounded-xl px-4 text-[14px] font-semibold">
+                  <Button variant="primary" size="sm" type="submit" className="h-10 w-full sm:w-auto rounded-xl px-4 text-[14px] font-semibold">
                     {editingId ? "Save Changes" : "Create Report"}
                   </Button>
                 </div>
