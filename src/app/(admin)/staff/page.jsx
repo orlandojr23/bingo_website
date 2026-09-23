@@ -45,6 +45,39 @@ const authClient = createClient(
 const formatNameInput = (str) =>
   str ? str.replace(/\s+/g, " ").replace(/(^\w|\s\w)/g, (m) => m.toUpperCase()) : "";
 
+// Writes the driver's `profiles` row — the ONLY source of truth for the admin
+// roster (`fetchStaffRoster` reads role='driver' rows) and driver login.
+// Returns the Supabase error, or null on success, so callers can surface it
+// instead of silently leaving an Auth-only user that never appears.
+async function upsertDriverProfile({ userId, fullName, fName, lName, loginEmail }) {
+  const row = {
+    role: "driver",
+    full_name: fullName,
+    first_name: fName,
+    last_name: lName,
+    email: loginEmail,
+    status: "Active",
+  };
+  // id is the FK to auth.users — include it whenever we have it so the
+  // profile links to the login account. Without it the insert may fail on
+  // NOT NULL / FK, which the caller then reports.
+  const payload = userId ? { ...row, id: userId } : row;
+  const { error } = await supabase.from("profiles").upsert(payload);
+  return error || null;
+}
+
+function profileErrorMessage(action, err) {
+  const detail = err?.message || "unknown error";
+  if (err?.code === "42501" || /row-level security|rls/i.test(detail)) {
+    return (
+      `${action} blocked by database permissions: ${detail}. ` +
+      `Run supabase/migrations/20260924000000_profiles_admin_crud.sql in your ` +
+      `Supabase SQL Editor, then try again.`
+    );
+  }
+  return `${action} failed: ${detail}.`;
+}
+
 function Field({ label, children, hint }) {
   return (
     <div className="flex flex-col gap-1.5">
@@ -206,15 +239,49 @@ export default function StaffPage() {
         return;
       }
 
-      // Transition to OTP verification step
-      setPendingDriver({
-        id: data?.user?.id,
-        newDriverObj,
+      const authUserId = data?.user?.id || null;
+
+      // Write the profiles row NOW (not only after OTP) so the driver shows
+      // in the admin roster / driver login even while verification is pending.
+      // If this fails we still continue to OTP (the Auth user already exists)
+      // but warn — the verify step retries and surfaces the error.
+      const earlyErr = await upsertDriverProfile({
+        userId: authUserId,
         fullName,
         fName,
         lName,
         loginEmail,
       });
+
+      let profileWarning = "";
+      if (earlyErr) {
+        console.warn("Driver profile upsert error:", earlyErr);
+        profileWarning = profileErrorMessage("Profile save", earlyErr);
+      } else {
+        // DB write succeeded — show the driver immediately instead of
+        // waiting for OTP, carrying the auth id for later edit/delete sync.
+        const optimisticDriver = { ...newDriverObj, supabaseId: authUserId || undefined };
+        setStaff((prev) => {
+          if (prev.some((d) => (d.username || "").toLowerCase() === loginEmail.toLowerCase())) {
+            return prev;
+          }
+          const updated = [...prev, optimisticDriver];
+          saveStaffRoster(updated);
+          return updated;
+        });
+      }
+
+      // Transition to OTP verification step
+      setPendingDriver({
+        id: authUserId,
+        newDriverObj,
+        fullName,
+        fName,
+        lName,
+        loginEmail,
+        profileWarning,
+      });
+      if (profileWarning) setFormError(profileWarning);
       setIsVerifyingOtp(true);
       setIsSubmitting(false);
       return; // Stop here and wait for OTP input
@@ -252,37 +319,38 @@ export default function StaffPage() {
       }
 
       const userId = pendingDriver.id || data?.user?.id;
-      
-      // Verification successful, create profile
-      if (userId) {
-        const { error: upsertErr } = await supabase.from("profiles").upsert({
-          id: userId,
-          role: "driver",
-          full_name: pendingDriver.fullName,
-          first_name: pendingDriver.fName,
-          last_name: pendingDriver.lName,
-          email: pendingDriver.loginEmail,
-          status: "Active",
-        });
-        if (upsertErr) console.warn("Upsert error:", upsertErr);
-      } else {
-        const { error: upsertErr } = await supabase.from("profiles").upsert({
-          role: "driver",
-          full_name: pendingDriver.fullName,
-          first_name: pendingDriver.fName,
-          last_name: pendingDriver.lName,
-          email: pendingDriver.loginEmail,
-          status: "Active",
-        });
-        if (upsertErr) console.warn("Upsert error:", upsertErr);
+
+      // Verification successful — (re)write the profile. This retry heals
+      // drivers whose early insert was blocked, and is a no-op otherwise.
+      // A failure here must block success: otherwise fetchStaffRoster() below
+      // would wipe the optimistic row and the driver "disappears".
+      const upsertErr = await upsertDriverProfile({
+        userId,
+        fullName: pendingDriver.fullName,
+        fName: pendingDriver.fName,
+        lName: pendingDriver.lName,
+        loginEmail: pendingDriver.loginEmail,
+      });
+      if (upsertErr) {
+        console.warn("Upsert error:", upsertErr);
+        setFormError(profileErrorMessage("Profile save", upsertErr));
+        setIsSubmitting(false);
+        return;
       }
 
       // Update staff roster state and localStorage
+      const verifiedDriver = { ...pendingDriver.newDriverObj, supabaseId: userId || undefined };
       setStaff((prev) => {
         if (prev.some((d) => (d.username || "").toLowerCase() === pendingDriver.loginEmail.toLowerCase())) {
-          return prev;
+          const updated = prev.map((d) =>
+            (d.username || "").toLowerCase() === pendingDriver.loginEmail.toLowerCase()
+              ? { ...d, ...verifiedDriver }
+              : d
+          );
+          saveStaffRoster(updated);
+          return updated;
         }
-        const updated = [...prev, pendingDriver.newDriverObj];
+        const updated = [...prev, verifiedDriver];
         saveStaffRoster(updated);
         return updated;
       });

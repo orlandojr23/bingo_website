@@ -77,7 +77,7 @@ export default function AdminLayout({ children }) {
           .from('profiles')
           .select('role')
           .eq('id', session.user.id)
-          .single();
+          .maybeSingle();
 
         const role = profile?.role || session.user?.user_metadata?.role;
         

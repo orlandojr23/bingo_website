@@ -56,7 +56,7 @@ export default function DriverLoginPage() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        supabase.from('profiles').select('role').eq('id', session.user.id).single().then(({ data }) => {
+        supabase.from('profiles').select('role').eq('id', session.user.id).maybeSingle().then(({ data }) => {
           if (data?.role === 'driver' || session.user?.user_metadata?.role === 'driver') {
             try { window.localStorage.setItem("driver-active-tab", "map"); } catch {}
             router.replace('/driver');
@@ -123,7 +123,7 @@ export default function DriverLoginPage() {
       .from('profiles')
       .select('role')
       .eq('id', data.user.id)
-      .single();
+      .maybeSingle();
 
     const role = profile?.role || data.user?.user_metadata?.role;
     

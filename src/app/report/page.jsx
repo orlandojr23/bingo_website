@@ -312,7 +312,7 @@ export default function ResidentMobilePWA() {
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) return;
-      supabase.from('profiles').select('role, full_name, sitio, id').eq('id', session.user.id).single().then(({ data }) => {
+      supabase.from('profiles').select('role, full_name, sitio, id').eq('id', session.user.id).maybeSingle().then(({ data }) => {
         const role = data?.role || session.user.user_metadata?.role;
         if (role && role !== 'resident') {
           if (['admin', 'staff', 'dispatch'].includes(role)) {
@@ -340,7 +340,7 @@ export default function ResidentMobilePWA() {
         // (migration not run), this fails quietly and metadata stands.
         // Metadata is the source of truth for display; when it holds a number
         // the column lacks, heal the column so admins/searches can see it.
-        supabase.from('profiles').select('phone').eq('id', session.user.id).single().then(({ data: p, error: pErr }) => {
+        supabase.from('profiles').select('phone').eq('id', session.user.id).maybeSingle().then(({ data: p, error: pErr }) => {
           if (pErr || !p) return;
           const rowPhone = p.phone || null;
           const metaPhone = session.user.user_metadata?.phone || null;

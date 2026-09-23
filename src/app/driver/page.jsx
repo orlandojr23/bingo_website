@@ -168,7 +168,7 @@ export default function DriverPage() {
         return;
       }
 
-      supabase.from('profiles').select('role, full_name, id').eq('id', session.user.id).single().then(({ data: profile }) => {
+      supabase.from('profiles').select('role, full_name, id').eq('id', session.user.id).maybeSingle().then(({ data: profile }) => {
         const role = profile?.role || session.user.user_metadata?.role;
         if (role !== 'driver') {
           router.replace("/driver-login");

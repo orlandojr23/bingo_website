@@ -28,7 +28,7 @@ export function AuthProvider({ children }) {
           .from("profiles")
           .select("*")
           .eq("id", currentUser.id)
-          .single();
+          .maybeSingle();
           
         if (isMounted) {
           if (!error && data) {
@@ -65,7 +65,7 @@ export function AuthProvider({ children }) {
       .from("profiles")
       .select("*")
       .eq("id", currentUser.id)
-      .single();
+      .maybeSingle();
     if (data) {
       setProfile(data);
       if (data.role) setRole(data.role);

@@ -117,7 +117,7 @@ export default function AdminLoginPage() {
       .from('profiles')
       .select('role')
       .eq('id', data.user.id)
-      .single();
+      .maybeSingle();
 
     // Fallback to user_metadata just in case (for the old mock setup)
     const role = profile?.role || data.user?.user_metadata?.role;
