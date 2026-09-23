@@ -168,7 +168,11 @@ export default function DriverPage() {
         return;
       }
 
-      supabase.from('profiles').select('role, full_name, id').eq('id', session.user.id).maybeSingle().then(({ data: profile }) => {
+      supabase.from('profiles').select('role, full_name, id, status').eq('id', session.user.id).maybeSingle().then(({ data: profile }) => {
+        if ((profile?.status || "").toLowerCase() === "suspended") {
+          supabase.auth.signOut().finally(() => router.replace("/driver-login"));
+          return;
+        }
         const role = profile?.role || session.user.user_metadata?.role;
         if (role !== 'driver') {
           router.replace("/driver-login");

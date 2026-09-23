@@ -121,9 +121,16 @@ export default function DriverLoginPage() {
     // Check profiles table for driver role
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role,status')
       .eq('id', data.user.id)
       .maybeSingle();
+
+    if ((profile?.status || "").toLowerCase() === "suspended") {
+      await supabase.auth.signOut();
+      setErrors({ password: "This driver account has been deactivated. Please contact the barangay admin." });
+      setIsLoading(false);
+      return;
+    }
 
     const role = profile?.role || data.user?.user_metadata?.role;
     

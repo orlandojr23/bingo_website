@@ -110,6 +110,12 @@ export default function StaffPage() {
   const [pendingDriver, setPendingDriver] = useState(null);
   const [resendTimer, setResendTimer] = useState(60);
   const [isResending, setIsResending] = useState(false);
+  const [toastMessage, setToastMessage] = useState(null);
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 5000);
+  };
 
   const truckOf = (driverName) =>
     fleet.find((t) => t.driver && t.driver.trim().toLowerCase() === driverName?.trim().toLowerCase()) || null;
@@ -424,26 +430,36 @@ export default function StaffPage() {
     setIsSubmitting(false);
   };
 
-  // Bug 3 fix: soft-delete from Supabase by setting role to 'inactive'.
-  // This prevents the driver from appearing in the roster and blocks driver terminal access.
+  // Deactivate by setting status to 'Suspended' (a valid status value).
+  // NOTE: `role` has a DB check constraint (profiles_role_check) that rejects
+  // values like 'inactive', so never write role here. Suspended drivers stay
+  // visible in the roster with a Suspended badge and are blocked at driver login.
   // Full auth account deletion requires a service-role key and should be done from Supabase dashboard.
   const handleDeleteDriver = async (id) => {
     const person = staff.find((drv) => drv.id === id);
+    let deactivated = true;
     if (person) {
       const held = truckOf(person.name);
       if (held) assignDriver(held.id, null);
       removeDriverAccount(person.username);
 
-      // Soft-delete: mark role as inactive in Supabase so they no longer appear
+      // Suspend in Supabase so the driver can no longer sign in to the terminal
       if (person.supabaseId) {
         const { error } = await supabase
           .from("profiles")
-          .update({ role: "inactive" })
+          .update({ status: "Suspended" })
           .eq("id", person.supabaseId);
-        if (error) console.warn("Profile deactivation error:", error);
+        if (error) {
+          console.warn("Profile deactivation error:", error);
+          showToast(`Could not deactivate ${person.name}: ${error.message}`);
+          deactivated = false;
+        }
       }
     }
-    setStaff(staff.filter((drv) => drv.id !== id));
+    if (deactivated) {
+      setStaff(staff.map((drv) => (drv.id === id ? { ...drv, status: "Suspended" } : drv)));
+      if (person) showToast(`${person.name} deactivated.`);
+    }
     if (selectedDriver?.id === id) {
       setSelectedDriver(null);
     }
@@ -472,6 +488,11 @@ export default function StaffPage() {
 
   return (
     <div className="relative flex min-h-full w-full min-w-0 overflow-x-hidden bg-background">
+      {toastMessage && (
+        <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-6 z-50 flex animate-in-fade items-center justify-center gap-2 rounded-[10px] bg-zinc-900 px-4 py-3 text-[13px] text-white shadow-lg">
+          <span>{toastMessage}</span>
+        </div>
+      )}
       <div className="relative z-10 flex flex-1 min-w-0 flex-col gap-5 p-4 [scrollbar-gutter:stable] sm:gap-6 sm:p-6 lg:p-8 pb-6 sm:pb-8 lg:pb-10">
         <PageHeader
           title="Drivers"
@@ -886,8 +907,8 @@ export default function StaffPage() {
 
       <ConfirmModal
         open={!!driverToDelete}
-        title="Delete Driver"
-        description={`This will permanently remove ${driverToDelete?.name} and unassign their truck. This action cannot be undone.`}
+        title="Deactivate Driver"
+        description={`This will deactivate ${driverToDelete?.name} (status → Suspended) and unassign their truck. They will no longer be able to sign in to the Driver Terminal.`}
         onConfirm={() => handleDeleteDriver(driverToDelete?.id)}
         onCancel={() => setDriverToDelete(null)}
       />
