@@ -246,6 +246,11 @@ export default function StaffPage() {
       }
 
       const authUserId = data?.user?.id || null;
+      if (!authUserId) {
+        setFormError("Could not create account. This email might already be registered.");
+        setIsSubmitting(false);
+        return;
+      }
 
       // Write the profiles row NOW (not only after OTP) so the driver shows
       // in the admin roster / driver login even while verification is pending.

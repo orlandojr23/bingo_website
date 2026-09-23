@@ -19,11 +19,12 @@ function writeAccounts(accounts) {
 }
 
 export function getDriverAccount(email) {
-  if (typeof window === "undefined") return null;
+  if (typeof window === "undefined" || !email) return null;
   return readAccounts()[email.trim().toLowerCase()] || null;
 }
 
 export function saveDriverAccount({ name, email, password }) {
+  if (!email) return null;
   const key = email.trim().toLowerCase();
   const accounts = readAccounts();
   accounts[key] = { name, email: key, password, createdAt: accounts[key]?.createdAt || Date.now() };
@@ -40,6 +41,7 @@ export function verifyDriverPassword(email, password) {
 }
 
 export function changeDriverPassword(email, currentPassword, newPassword) {
+  if (!email) return "no-account";
   const key = email.trim().toLowerCase();
   const accounts = readAccounts();
   const account = accounts[key];
@@ -51,6 +53,7 @@ export function changeDriverPassword(email, currentPassword, newPassword) {
 }
 
 export function removeDriverAccount(email) {
+  if (!email) return false;
   const key = email.trim().toLowerCase();
   const accounts = readAccounts();
   if (!(key in accounts)) return false;
@@ -61,6 +64,7 @@ export function removeDriverAccount(email) {
 
 // Moves an account to a new email key while keeping its password/history
 export function renameDriverAccount(oldEmail, newEmail, name) {
+  if (!oldEmail || !newEmail) return false;
   const oldKey = oldEmail.trim().toLowerCase();
   const newKey = newEmail.trim().toLowerCase();
   if (oldKey === newKey) return true;

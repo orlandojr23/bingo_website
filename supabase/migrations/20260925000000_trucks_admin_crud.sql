@@ -12,63 +12,14 @@
 -- writes go directly from authenticated clients. Permissive policies combine
 -- with OR, so this only ADDS access.
 
-do $$
-begin
-  if not exists (
-    select 1 from pg_policies
-    where schemaname = 'public'
-      and tablename = 'trucks'
-      and policyname = 'trucks_authenticated_select'
-  ) then
-    create policy "trucks_authenticated_select"
-      on public.trucks for select
-      to authenticated
-      using (true);
-  end if;
-end $$;
+DROP POLICY IF EXISTS "trucks_authenticated_select" ON public.trucks;
+CREATE POLICY "trucks_authenticated_select" ON public.trucks FOR SELECT TO authenticated USING (true);
 
-do $$
-begin
-  if not exists (
-    select 1 from pg_policies
-    where schemaname = 'public'
-      and tablename = 'trucks'
-      and policyname = 'trucks_authenticated_insert'
-  ) then
-    create policy "trucks_authenticated_insert"
-      on public.trucks for insert
-      to authenticated
-      with check (true);
-  end if;
-end $$;
+DROP POLICY IF EXISTS "trucks_authenticated_insert" ON public.trucks;
+CREATE POLICY "trucks_authenticated_insert" ON public.trucks FOR INSERT TO authenticated WITH CHECK (true);
 
-do $$
-begin
-  if not exists (
-    select 1 from pg_policies
-    where schemaname = 'public'
-      and tablename = 'trucks'
-      and policyname = 'trucks_authenticated_update'
-  ) then
-    create policy "trucks_authenticated_update"
-      on public.trucks for update
-      to authenticated
-      using (true)
-      with check (true);
-  end if;
-end $$;
+DROP POLICY IF EXISTS "trucks_authenticated_update" ON public.trucks;
+CREATE POLICY "trucks_authenticated_update" ON public.trucks FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
 
-do $$
-begin
-  if not exists (
-    select 1 from pg_policies
-    where schemaname = 'public'
-      and tablename = 'trucks'
-      and policyname = 'trucks_authenticated_delete'
-  ) then
-    create policy "trucks_authenticated_delete"
-      on public.trucks for delete
-      to authenticated
-      using (true);
-  end if;
-end $$;
+DROP POLICY IF EXISTS "trucks_authenticated_delete" ON public.trucks;
+CREATE POLICY "trucks_authenticated_delete" ON public.trucks FOR DELETE TO authenticated USING (true);

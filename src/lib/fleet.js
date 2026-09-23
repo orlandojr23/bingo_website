@@ -47,12 +47,12 @@ if (typeof window !== "undefined") {
 }
 
 export function normalizeCode(code) {
-  return code.trim().toUpperCase();
+  return (code || "").trim().toUpperCase();
 }
 
 export async function addTruck({ id, plate, driver, capacity }) {
   const code = normalizeCode(id);
-  const plateClean = plate.trim().toUpperCase();
+  const plateClean = (plate || "").trim().toUpperCase();
   if (!code || !plateClean) return { error: "Truck code and plate number are required." };
   
   const { error } = await supabase.from('trucks').insert({
