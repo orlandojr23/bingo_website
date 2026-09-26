@@ -131,10 +131,48 @@ export default function NotificationsPage() {
     };
   });
 
-  const selectedNotif = notifications.find((n) => n.id === selectedNotifId) ?? null;
+  // TEMPORARY preview: mock cards so the layout + detail sheet can be
+  // seen before anything arrives. Remove when real notifications exist.
+  const previewNotifs = [
+    {
+      id: "preview-notif-1",
+      type: "Dispatch",
+      title: "Assignment cancelled at Sitio Vilgon & Sitio Mac Arthur",
+      message:
+        "Sitio Vilgon & Sitio Mac Arthur (2026-09-27 · 08:00 AM - 11:00 AM) was cancelled by its driver. Reason: Truck breakdown. It needs a new driver.",
+      barangay: "Tejero",
+      location: "Sitio Vilgon, Brgy. Tejero",
+      timestamp: "2h ago",
+      receivedAt: "Sep 27, 2026 · 07:20 AM",
+      actionUrl: null,
+      actionLabel: null,
+      isRead: false,
+      ticketId: null,
+    },
+    {
+      id: "preview-notif-2",
+      type: "Ticket",
+      title: "New report: Overflowing Bin at Sitio Vilgon",
+      message:
+        "A resident reported Overflowing Bin at Sitio Vilgon, Brgy. Tejero. Priority: High.",
+      barangay: "Tejero",
+      location: "Sitio Vilgon, Brgy. Tejero",
+      timestamp: "26m ago",
+      receivedAt: "Sep 27, 2026 · 09:14 AM",
+      actionUrl: null,
+      actionLabel: null,
+      isRead: false,
+      ticketId: null,
+    },
+  ];
+  const isNotifPreview = notifications.length === 0;
+  const baseNotifs = isNotifPreview ? previewNotifs : notifications;
+  const selectedNotif = baseNotifs.find((n) => n.id === selectedNotifId) ?? null;
+  const isPreviewId = (id) => String(id).startsWith("preview-");
 
   const deleteNotification = (id, e) => {
     if (e) e.stopPropagation();
+    if (isPreviewId(id)) return;
     removeNotification(id);
     if (selectedNotifId === id) {
       setSelectedNotifId(null);
@@ -142,6 +180,7 @@ export default function NotificationsPage() {
   };
 
   const markRead = (id) => {
+    if (isPreviewId(id)) return;
     markNotificationRead(id);
   };
 
@@ -149,7 +188,7 @@ export default function NotificationsPage() {
     markAllNotificationsRead("admin");
   };
 
-  const filteredNotifications = notifications.filter((n) => {
+  const filteredNotifications = baseNotifs.filter((n) => {
     if (activeTab === "Emergency") return n.type === "Emergency";
     if (activeTab === "System") return n.type === "System" || n.type === "Dispatch";
     if (activeTab === "Ticket") return n.type === "Ticket";
@@ -219,6 +258,7 @@ export default function NotificationsPage() {
               </p>
             </div>
           ) : (
+            <>
             <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
               {filteredNotifications.map((n) => {
                 const isSelected = selectedNotif?.id === n.id;
@@ -294,12 +334,18 @@ export default function NotificationsPage() {
                 );
               })}
             </div>
+            {isNotifPreview && (
+              <p className="mt-2.5 text-center text-[13px] text-muted-foreground">
+                Preview. Incoming alerts will appear here.
+              </p>
+            )}
+            </>
           )}
         </div>
 
         <div className="mt-4 flex shrink-0 items-center justify-between border-t border-border pt-4 pb-6">
           <span className="text-xs font-medium text-muted-foreground">
-            Showing {filteredNotifications.length} of {notifications.length} total alerts
+            Showing {filteredNotifications.length} of {baseNotifs.length} total alerts
           </span>
         </div>
 
