@@ -2,6 +2,23 @@
 
 import { useState } from "react";
 import { CheckCircle2, Plus, X, FilePlus2, Trash2, ListTodo } from "lucide-react";
+import dynamic from "next/dynamic";
+import emptyBoxState from "../../../../public/lottie/empty-box.json";
+
+const LottiePlayer = dynamic(
+  () =>
+    import("@lottiefiles/react-lottie-player").then((mod) => {
+      const Player = mod.Player;
+      return function FadeInPlayer(props) {
+        return (
+          <div style={{ animation: "fadeIn 0.5s ease-out forwards" }}>
+            <Player {...props} />
+          </div>
+        );
+      };
+    }),
+  { ssr: false }
+);
 
 // Title-case helper for name-like text inputs (Location, Barangay, Reporter)
 function formatNameInput(val) {
@@ -151,21 +168,15 @@ export default function CrudPage() {
           }
         />
 
-        <div className="flex bg-muted p-1 rounded-xl w-fit self-start">
-          <button 
-            className={cn("flex items-center justify-center gap-2 px-4 py-2 text-[13px] font-medium rounded-lg transition-all cursor-pointer", viewMode === "active" ? "bg-card text-foreground shadow-sm font-semibold" : "text-muted-foreground hover:text-foreground")}
-            onClick={() => setViewMode("active")}
+        <div className="w-fit self-start">
+          <select
+            value={viewMode}
+            onChange={(e) => setViewMode(e.target.value)}
+            className="flex h-9 w-44 items-center justify-between rounded-lg border border-border bg-card px-3 text-[13px] font-medium text-foreground transition-colors hover:border-zinc-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/20 cursor-pointer"
           >
-            <ListTodo className="w-4 h-4" />
-            Active Reports
-          </button>
-          <button 
-            className={cn("flex items-center justify-center gap-2 px-4 py-2 text-[13px] font-medium rounded-lg transition-all cursor-pointer", viewMode === "trash" ? "bg-card text-rose-600 dark:text-rose-400 shadow-sm font-semibold" : "text-muted-foreground hover:text-rose-600 dark:hover:text-rose-400")}
-            onClick={() => setViewMode("trash")}
-          >
-            <Trash2 className="w-4 h-4" />
-            Trash Bin
-          </button>
+            <option value="active">Active Reports</option>
+            <option value="trash">Trash Bin</option>
+          </select>
         </div>
 
         <div className="grid shrink-0 grid-cols-2 gap-2.5 sm:gap-3.5 max-w-md">
@@ -189,10 +200,9 @@ export default function CrudPage() {
           {/* Mobile Cards View (< sm) */}
           <div className="flex flex-col divide-y divide-border-subtle sm:hidden">
             {records.length === 0 ? (
-              <div className="flex flex-col items-center p-8 text-center">
-                <FilePlus2 className="mb-2.5 h-8 w-8 text-zinc-300" />
-                <h3 className="text-sm font-semibold text-foreground">{viewMode === "trash" ? "Trash is Empty" : "No Reports Yet"}</h3>
-                <p className="mt-1 text-xs text-muted-foreground">
+              <div className="flex flex-col items-center justify-center pt-10 pb-14 text-center">
+                <h3 className="text-[17px] font-semibold text-foreground">{viewMode === "trash" ? "Trash is Empty" : "No Reports Yet"}</h3>
+                <p className="mt-1 max-w-[240px] text-[13px] leading-normal text-muted-foreground">
                   {viewMode === "trash" ? "Deleted reports will appear here." : "Click \"Create New Report\" to add your first record."}
                 </p>
               </div>
@@ -242,8 +252,13 @@ export default function CrudPage() {
               <tbody className="divide-y divide-border/60">
                 {records.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-muted-foreground">
-                      {viewMode === "trash" ? "No archived reports found." : "No waste reports found."}
+                    <td colSpan={7} className="py-8 text-center">
+                      <div className="flex flex-col items-center justify-center">
+                        <h3 className="text-[17px] font-semibold text-foreground">{viewMode === "trash" ? "Trash is Empty" : "No Reports Yet"}</h3>
+                        <p className="mt-1 max-w-[240px] text-[13px] leading-normal text-muted-foreground">
+                          {viewMode === "trash" ? "Deleted reports will appear here." : "Click \"Create New Report\" to add your first record."}
+                        </p>
+                      </div>
                     </td>
                   </tr>
                 ) : (

@@ -108,7 +108,7 @@ export default function BinPage() {
               placeholder="Search deleted records..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className={cn(inputClass, "pl-9")}
+              className={cn(inputClass, "pl-9 sm:pl-9")}
             />
           </div>
 
@@ -128,8 +128,7 @@ export default function BinPage() {
           {viewType === "reports" ? (
             filteredTickets.length === 0 ? (
               <div className="flex flex-1 flex-col items-center justify-center px-4 py-14 text-center">
-                <Trash2 className="h-12 w-12 text-muted-foreground/40" strokeWidth={1.5} />
-                <h3 className="mt-4 text-[17px] font-semibold tracking-tight text-foreground">Bin is Empty</h3>
+                <h3 className="text-[17px] font-semibold tracking-tight text-foreground">Bin is Empty</h3>
                 <p className="mt-1 max-w-[240px] text-[13px] leading-normal text-muted-foreground">
                   {search ? "No deleted reports match your search." : "There are no deleted waste reports."}
                 </p>
@@ -188,8 +187,7 @@ export default function BinPage() {
           ) : (
             filteredSchedules.length === 0 ? (
               <div className="flex flex-1 flex-col items-center justify-center px-4 py-14 text-center">
-                <Trash2 className="h-12 w-12 text-muted-foreground/40" strokeWidth={1.5} />
-                <h3 className="mt-4 text-[17px] font-semibold tracking-tight text-foreground">Bin is Empty</h3>
+                <h3 className="text-[17px] font-semibold tracking-tight text-foreground">Bin is Empty</h3>
                 <p className="mt-1 max-w-[240px] text-[13px] leading-normal text-muted-foreground">
                   {search ? "No deleted schedules match your search." : "There are no deleted schedules."}
                 </p>

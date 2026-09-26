@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef, Suspense } from "react";
+import Image from "next/image";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { useTickets, updateTicket } from "@/lib/tickets";
 import { useLiveRoute, getSchedule, dutyStatusOf, selectTruckHeading } from "@/lib/live-route";
-import { useTruckRoutes } from "@/lib/use-route-path";
 import { useFleet } from "@/lib/fleet";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
 import TicketDetailsModal from "@/components/modals/ticket-details-modal";
@@ -14,11 +14,29 @@ import { MapSkeleton } from "@/components/ui/skeletons";
 import { cn, formatTicketDateTime } from "@/lib/utils";
 import { useToast } from "@/components/pwa/Toast";
 import { Search, MapPin, Truck as TruckIcon } from "lucide-react";
+import { motion } from "framer-motion";
 
 const MapCanvas = dynamic(() => import("@/components/map/map-canvas"), {
   ssr: false,
   loading: () => <MapSkeleton />,
 });
+
+import binEmptyState from "../../../../public/lottie/bin-empty-state.json";
+
+const LottiePlayer = dynamic(
+  () =>
+    import("@lottiefiles/react-lottie-player").then((mod) => {
+      const Player = mod.Player;
+      return function FadeInPlayer(props) {
+        return (
+          <div style={{ animation: "fadeIn 0.5s ease-out forwards" }}>
+            <Player {...props} />
+          </div>
+        );
+      };
+    }),
+  { ssr: false }
+);
 
 function LiveMapContent() {
   const searchParams = useSearchParams();
@@ -38,40 +56,27 @@ function LiveMapContent() {
 
   const live = useLiveRoute();
   const fleet = useFleet();
-  const truckRoutes = useTruckRoutes(live, fleet);
 
   // Stable identity: without this, `trucksData` is a new array every render
   // and any effect depending on it re-fires forever.
-  // Marker rides at the same map-matched road point the drawn leg starts at
-  // (route.snappedOrigin) — line and marker share one source, so they can
-  // never separate even when the raw phone fix sits inside a house.
   const trucksData = useMemo(
     () =>
       fleet.map((t) => {
         const ts = live.trucks[t.id];
-        const route = truckRoutes.find((r) => r.id === t.id);
-        let lat = ts?.tracking.lat || 10.3016;
-        let lng = ts?.tracking.lng || 123.9086;
-        let heading = selectTruckHeading(ts, route?.heading);
-        if (route?.snappedOrigin && ts?.tracking?.isActive) {
-          lat = route.snappedOrigin.lat;
-          lng = route.snappedOrigin.lng;
-          if (route.heading != null) heading = route.heading;
-        }
         return {
           id: t.id,
           plate: t.plate,
           driver: live.driverByTruck[t.id] ?? t.driver,
           capacity: t.capacity,
-          lat,
-          lng,
-          heading,
+          lat: ts?.tracking.lat || 10.3016,
+          lng: ts?.tracking.lng || 123.9086,
+          heading: selectTruckHeading(ts, null),
           eta: ts?.tracking.eta,
           isActive: !!ts?.tracking.isActive,
           duty: dutyStatusOf(ts),
         };
       }),
-    [fleet, truckRoutes, live.trucks, live.driverByTruck]
+    [fleet, live.trucks, live.driverByTruck]
   );
 
   // Deep-link (?ticketId= / ?truckId=) effects must be idempotent: they run
@@ -234,7 +239,7 @@ function LiveMapContent() {
         <MapCanvas
           tickets={mapView === "reports" ? filteredTickets : []}
           trucks={mapView === "trucks" ? trucksData : []}
-          routes={mapView === "trucks" ? truckRoutes : []}
+          routes={[]}
           mapMode="pins"
           center={mapCenter}
           zoom={mapZoom}
@@ -252,30 +257,14 @@ function LiveMapContent() {
         </div>
 
         <div className="flex shrink-0 items-center gap-2 border-b border-border-subtle px-4 py-3">
-          <div className="flex flex-1 gap-0.5 rounded-lg bg-muted p-0.5">
-            <button
-              type="button"
-              onClick={() => handleSwitchView("reports")}
-              className={`flex flex-1 items-center justify-center rounded-lg py-1.5 text-[13px] font-medium transition-colors cursor-pointer ${
-                mapView === "reports"
-                  ? "bg-card text-foreground shadow-sm font-semibold"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Reports ({filteredTickets.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSwitchView("trucks")}
-              className={`flex flex-1 items-center justify-center rounded-lg py-1.5 text-[13px] font-medium transition-colors cursor-pointer ${
-                mapView === "trucks"
-                  ? "bg-card text-foreground shadow-sm font-semibold"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Trucks ({trucksData.length})
-            </button>
-          </div>
+          <select
+            value={mapView}
+            onChange={(e) => handleSwitchView(e.target.value)}
+            className="flex h-9 w-full items-center justify-between rounded-lg border border-border bg-card px-3 text-[13px] font-medium text-foreground transition-colors hover:border-zinc-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/20 cursor-pointer"
+          >
+            <option value="reports">Reports ({filteredTickets.length})</option>
+            <option value="trucks">Trucks ({trucksData.length})</option>
+          </select>
         </div>
 
         {mapView === "reports" &&
@@ -298,7 +287,7 @@ function LiveMapContent() {
                     placeholder="Search by ID, address, reporter..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className={cn(inputClass, "pl-9")}
+                    className={cn(inputClass, "pl-9 sm:pl-9")}
                   />
                 </div>
               </div>
@@ -353,9 +342,8 @@ function LiveMapContent() {
               <div className="flex flex-1 flex-col gap-2 overflow-y-auto px-4 pb-3">
                 {filteredTickets.length === 0 ? (
                   <div className="flex flex-1 flex-col items-center justify-center px-4 py-14 text-center m-2">
-                    <MapPin className="h-12 w-12 text-muted-foreground/40" strokeWidth={1.5} />
-                    <h3 className="mt-4 text-[17px] font-semibold tracking-tight text-foreground">No Reports Match</h3>
-                    <span className="mt-1 text-[13px] text-muted-foreground">Try adjusting your filters or keywords.</span>
+                    <h3 className="text-[17px] font-semibold tracking-tight text-foreground">No Reports Match</h3>
+                    <span className="mt-1 max-w-[240px] text-[13px] leading-normal text-muted-foreground">Try adjusting your filters or keywords.</span>
                   </div>
                 ) : (
                   filteredTickets.map((t) => (
@@ -427,8 +415,7 @@ function LiveMapContent() {
             <div className="flex flex-1 flex-col gap-2 overflow-y-auto px-4 pb-3">
               {trucksData.length === 0 ? (
                 <div className="flex flex-1 flex-col items-center justify-center px-4 py-14 text-center">
-                  <TruckIcon className="h-12 w-12 text-muted-foreground/40" strokeWidth={1.5} />
-                  <span className="mt-4 text-[17px] font-semibold tracking-tight text-foreground">No Trucks in Fleet</span>
+                  <span className="text-[17px] font-semibold tracking-tight text-foreground">No Trucks in Fleet</span>
                   <span className="mt-1 max-w-[220px] text-[13px] leading-normal text-muted-foreground">
                     Add trucks in Fleet Dispatch to start tracking them on the map.
                   </span>

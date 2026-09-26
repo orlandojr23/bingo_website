@@ -39,7 +39,7 @@ export default function CrudDeleteModal({ isOpen, onClose, onConfirm, record, mo
             type="button"
             onClick={onClose}
             disabled={isBusy}
-            className="h-11 flex-1 text-[17px] text-zinc-800 transition-colors active:bg-black/5 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+            className="h-11 flex-1 text-[17px] text-zinc-800 transition-colors hover:bg-black/5 active:bg-black/10 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
           >
             Cancel
           </button>
@@ -47,7 +47,7 @@ export default function CrudDeleteModal({ isOpen, onClose, onConfirm, record, mo
             type="button"
             onClick={onConfirm}
             disabled={isBusy}
-            className="flex h-11 flex-1 items-center justify-center text-[17px] font-semibold text-rose-600 transition-colors active:bg-black/5 cursor-pointer disabled:pointer-events-none"
+            className="flex h-11 flex-1 items-center justify-center text-[17px] font-semibold text-rose-600 transition-colors hover:bg-black/5 active:bg-black/10 cursor-pointer disabled:pointer-events-none"
           >
             {isBusy ? (
               <Loader2 className="h-5 w-5 animate-spin" />

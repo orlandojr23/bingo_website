@@ -349,7 +349,7 @@ export default function RegisterSheet({ isOpen, onClose }) {
                               value={sitio}
                               onChange={(e) => setSitio(e.target.value)}
                               disabled={isSubmitting}
-                              className={cn(inputClass, "cursor-pointer")}
+                              className={cn(inputClass, "cursor-pointer", sitio === "" && "text-muted-foreground/60")}
                             >
                               <option value="Sitio Vilgon">Sitio Vilgon</option>
                               <option value="Sitio ICM">Sitio ICM</option>

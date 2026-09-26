@@ -1,12 +1,26 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import dynamic from "next/dynamic";
+const LottiePlayer = dynamic(
+  () =>
+    import("@lottiefiles/react-lottie-player").then((mod) => {
+      const Player = mod.Player;
+      return function FadeInPlayer(props) {
+        return (
+          <div style={{ animation: "fadeIn 0.5s ease-out forwards" }}>
+            <Player {...props} />
+          </div>
+        );
+      };
+    }),
+  { ssr: false }
+);
 import { Calendar, Plus, Minus, X, Search, Truck, Shuffle, MapPin, Trash2, ListTodo, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TEJERO_SITOS } from "@/lib/mock-data";
-import { useLiveRoute, getSchedules, addSchedule, updateSchedule, removeSchedule, assignDriver, estimateStopTime, retimeRoutePoints, scheduleLabel, dutyStatusOf } from "@/lib/live-route";
-import { useRoutePath } from "@/lib/use-route-path";
+import { useLiveRoute, getSchedules, addSchedule, updateSchedule, removeSchedule, assignDriver, estimateStopTime, retimeRoutePoints, scheduleLabel, dutyStatusOf, cancelAssignment } from "@/lib/live-route";
 import { useFleet, addTruck, updateTruck, removeTruck } from "@/lib/fleet";
 import { useStaffRoster } from "@/lib/staff";
 import ConfirmModal from "@/components/ui/confirm-modal";
@@ -35,6 +49,29 @@ function formatDaysFinal(val) {
     .join(", ");
 }
 
+// Local YYYY-MM-DD for date-only comparisons (no timezone shift).
+function todayLocalISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function shiftLocalISO(iso, deltaDays) {
+  const [y, m, d] = iso.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + deltaDays);
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+}
+// "2026-09-27" → "Today", "Tomorrow", or "Mon, Sep 28". Empty → "—".
+function formatAssignmentDay(iso) {
+  if (!iso) return "—";
+  const today = todayLocalISO();
+  if (iso === today) return "Today";
+  if (iso === shiftLocalISO(today, 1)) return "Tomorrow";
+  const [y, m, d] = iso.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  if (Number.isNaN(dt.getTime())) return iso;
+  return dt.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+}
+
 const MapCanvas = dynamic(() => import("@/components/map/map-canvas"), {
   ssr: false,
   loading: () => <MapSkeleton />,
@@ -59,6 +96,7 @@ export default function DispatchPage() {
   const [truckError, setTruckError] = useState("");
   const [stopOrder, setStopOrder] = useState([]);
   const [scheduleToDelete, setScheduleToDelete] = useState(null);
+  const [scheduleToCancel, setScheduleToCancel] = useState(null);
   const [truckToRemove, setTruckToRemove] = useState(null);
   const [driverRoster] = useStaffRoster();
 
@@ -78,6 +116,7 @@ export default function DispatchPage() {
   const [type, setType] = useState("");
   const [days, setDays] = useState("");
   const [time, setTime] = useState("");
+  const [date, setDate] = useState("");
   const [status, setStatus] = useState("");
   const [isSubmittingSchedule, setIsSubmittingSchedule] = useState(false);
   const [isSubmittingTruck, setIsSubmittingTruck] = useState(false);
@@ -87,6 +126,7 @@ export default function DispatchPage() {
     setType("");
     setDays("");
     setTime("");
+    setDate("");
     setStatus("");
     setStopOrder([]);
     setSitioQuery("");
@@ -96,10 +136,11 @@ export default function DispatchPage() {
   useEffect(() => {
     if (isAdding) {
       setSelectedSchedule(null);
-      setTruckId(fleet[0]?.id || "");
+      setTruckId("");
       setType("Malata (Nabubulok)");
       setDays("Monday, Wednesday, Friday");
       setTime("08:00 AM - 11:00 AM");
+      setDate(todayLocalISO());
       setStatus("Scheduled");
       setStopOrder([]);
       setSitioQuery("");
@@ -119,6 +160,7 @@ export default function DispatchPage() {
           : selectedSchedule.collectionDays || ""
       );
       setTime(selectedSchedule.time);
+      setDate(selectedSchedule.assignmentDate || "");
       setStatus(live.scheduleStatus[selectedSchedule.id] ?? selectedSchedule.status);
       setStopOrder(selectedSchedule.routePoints ?? []);
       setSitioQuery("");
@@ -128,16 +170,6 @@ export default function DispatchPage() {
     }
   }, [selectedSchedule]);
 
-  const shuffleStops = () => {
-    setStopOrder((prev) => {
-      const next = [...prev];
-      for (let i = next.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [next[i], next[j]] = [next[j], next[i]];
-      }
-      return retimeRoutePoints(next, time);
-    });
-  };
 
   // Search-picked sitios become the ordered pickup stops; the store's router
   // traces the street-following green trajectory through them in this order.
@@ -183,6 +215,7 @@ export default function DispatchPage() {
     collectionType: type,
     collectionDays: days.split(",").map((d) => d.trim()).filter(Boolean),
     time,
+    assignmentDate: date || null,
     status,
   });
 
@@ -232,6 +265,19 @@ export default function DispatchPage() {
     setIsSubmittingSchedule(false);
     setSelectedSchedule(null);
     resetForm();
+  };
+
+  const handleCancelSchedule = async () => {
+    const id = scheduleToCancel;
+    if (!id) return;
+    const sch = getSchedules().find((s) => s.id === id);
+    await cancelAssignment({ scheduleId: id, truckId: sch?.truckId, cancelledBy: "admin" });
+    setScheduleToCancel(null);
+    if (selectedSchedule?.id === id) {
+      setSelectedSchedule(null);
+    }
+    resetForm();
+    toast("Assignment cancelled. Driver and residents notified.");
   };
 
   const handleDeleteSchedule = async (id) => {
@@ -323,18 +369,6 @@ export default function DispatchPage() {
   const totalSchedules = schedules.filter(s => !s.isArchived).length;
   const activeDispatches = schedules.filter((s) => effStatus(s) === "In Progress" && !s.isArchived).length;
 
-  // Live preview of the trajectory through the picked stops, reusing the same
-  // MapCanvas + router the driver/resident maps use. Stop names are folded
-  // into the scheduleId so the route-cache key changes with the sequence — the
-  // key alone only tracks stop COUNT and would serve stale geometry.
-  const previewPath = useRoutePath({
-    scheduleId: `preview|${stopOrder.map((s) => s.name).join(">")}`,
-    stopIndex: 0,
-    origin: null,
-    points: stopOrder,
-    enabled: (isAdding || selectedSchedule !== null) && stopOrder.length >= 2,
-  });
-
   const formFields = (
     <>
       <Field label={`Pickup Stops: Search sitios in ${process.env.NEXT_PUBLIC_BARANGAY_NAME || "Barangay"}`}>
@@ -356,8 +390,8 @@ export default function DispatchPage() {
                 setSitioDropdownOpen(false);
               }
             }}
-            placeholder="Search a sitio or area (e.g. Vilgon, Riverside)..."
-            className={cn(inputClass, "pl-9")}
+            placeholder="Search a sitio or area..."
+            className={cn(inputClass, "pl-9 sm:pl-9")}
           />
           {sitioDropdownOpen && (
             <>
@@ -427,7 +461,7 @@ export default function DispatchPage() {
                     <button
                       type="button"
                       onClick={() => removeStop(i)}
-                      className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-rose-600/10 hover:text-rose-600 active:scale-95 cursor-pointer"
+                      className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-rose-600 active:scale-95 cursor-pointer"
                       aria-label={`Remove ${stop.name} from route`}
                     >
                       <X className="h-4 w-4" />
@@ -437,21 +471,7 @@ export default function DispatchPage() {
               ))}
             </ul>
           )}
-          {stopOrder.length >= 2 && (
-            <div className="flex items-center justify-between gap-2 border-t border-border-subtle px-3 py-2">
-              <p className="text-[10px] text-muted-foreground">
-                Shuffle to change which sitio the truck starts by.
-              </p>
-              <button
-                type="button"
-                onClick={shuffleStops}
-                className="flex h-9 shrink-0 items-center gap-1.5 rounded-xl border border-border/60 bg-card px-3 text-[13px] font-semibold text-foreground transition-all hover:bg-muted active:scale-[0.98] cursor-pointer"
-              >
-                <Shuffle className="h-3.5 w-3.5" />
-                Shuffle Order
-              </button>
-            </div>
-          )}
+
         </div>
       </Field>
 
@@ -461,11 +481,6 @@ export default function DispatchPage() {
             <MapCanvas
               tickets={[]}
               trucks={[]}
-              routes={
-                previewPath.positions.length >= 2
-                  ? [{ id: "assignment-preview", positions: previewPath.positions }]
-                  : []
-              }
               mapMode="pins"
               currentStop={{ ...stopOrder[0], index: 0 }}
               upcomingStops={stopOrder.slice(1).map((s, i) => ({ ...s, index: i + 1 }))}
@@ -501,12 +516,19 @@ export default function DispatchPage() {
 
       <Field label="Assigned Truck">
         <select
+          required
+          disabled={fleet.length === 0}
           value={truckId}
           onChange={(e) => setTruckId(e.target.value)}
-          className={cn(inputClass, "cursor-pointer")}
+          className={cn(inputClass, fleet.length > 0 && "cursor-pointer", truckId === "" && "text-muted-foreground/60")}
         >
+          {fleet.length === 0 ? (
+            <option value="" disabled hidden>No trucks available</option>
+          ) : (
+            <option value="" disabled hidden>Select a truck...</option>
+          )}
           {fleet.map((t) => (
-            <option key={t.id} value={t.id}>{t.id} ({t.plate}) - {driverOf(t.id) || "Unassigned"}</option>
+            <option key={t.id} value={t.id} className="text-foreground">{t.id} ({t.plate}) - {driverOf(t.id) || "Unassigned"}</option>
           ))}
         </select>
       </Field>
@@ -547,6 +569,18 @@ export default function DispatchPage() {
         />
       </Field>
 
+      <Field label="Assignment Day">
+        <input
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          className={cn(inputClass, "cursor-pointer", date === "" && "text-muted-foreground/60")}
+        />
+        <p className="text-[10px] text-muted-foreground">
+          Which day this task is for — today, tomorrow, and so on. A driver can hold several tasks for different days at once.
+        </p>
+      </Field>
+
       <Field label="Status">
         <select
           value={status}
@@ -557,6 +591,7 @@ export default function DispatchPage() {
           <option value="Assigned">Assigned</option>
           <option value="Accepted">Accepted</option>
           <option value="In Progress">In Progress</option>
+          <option value="Cancelled" disabled>Cancelled (via Cancel Assignment)</option>
           <option value="Completed" disabled>Completed (driver only)</option>
         </select>
       </Field>
@@ -605,8 +640,7 @@ export default function DispatchPage() {
           <div className="w-full">
             {fleet.length === 0 ? (
               <div className="flex flex-col items-center justify-center px-4 py-14 text-center">
-                <Truck className="h-12 w-12 text-muted-foreground/40" strokeWidth={1.5} />
-                <h3 className="mt-4 text-[17px] font-semibold tracking-tight text-foreground">No Trucks in Fleet</h3>
+                <h3 className="text-[17px] font-semibold tracking-tight text-foreground">No Trucks in Fleet</h3>
                 <p className="mt-1 max-w-[240px] text-[13px] leading-normal text-muted-foreground">
                   Click &quot;Add Truck&quot; to register your first collection truck.
                 </p>
@@ -669,7 +703,7 @@ export default function DispatchPage() {
               placeholder="Search schedule, sitio, or truck..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className={cn(inputClass, "pl-9")}
+              className={cn(inputClass, "pl-9 sm:pl-9")}
             />
           </div>
         </div>
@@ -677,8 +711,7 @@ export default function DispatchPage() {
         <div>
           {filteredSchedules.length === 0 ? (
             <div className="flex flex-col items-center justify-center px-4 py-14 text-center">
-              <Calendar className="h-12 w-12 text-muted-foreground/40" strokeWidth={1.5} />
-              <h3 className="mt-4 text-[17px] font-semibold tracking-tight text-foreground">
+              <h3 className="text-[17px] font-semibold tracking-tight text-foreground">
                 {searchQuery ? "No Schedules Found" : "No Schedules Yet"}
               </h3>
               <p className="mt-1 max-w-[240px] text-[13px] leading-normal text-muted-foreground">
@@ -721,6 +754,7 @@ export default function DispatchPage() {
                           }
                         />
                         <InfoRow label="Collection Time" value={sch.time} />
+                        <InfoRow label="Assignment Day" value={formatAssignmentDay(sch.assignmentDate)} />
                         <InfoRow
                           label="Assigned Truck"
                           value={`${truck?.id || sch.truckId} (${driverOf(sch.truckId) || "Driver"})`}
@@ -740,6 +774,7 @@ export default function DispatchPage() {
                           setType(sch.collectionType);
                           setDays(sch.collectionDays.join(", "));
                           setTime(sch.time);
+                          setDate(sch.assignmentDate || "");
                           setStatus(sch.status);
                           setStopOrder(sch.routePoints || []);
                         }}
@@ -814,6 +849,18 @@ export default function DispatchPage() {
                   <div className="mt-1 flex flex-col gap-4">{formFields}</div>
                 </div>
 
+                {!isAdding && selectedSchedule && ["Scheduled", "Assigned", "Accepted", "In Progress"].includes(effStatus(selectedSchedule)) && (
+                  <div className="shrink-0 touch-none pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setScheduleToCancel(selectedSchedule.id)}
+                      className="flex h-10 w-full cursor-pointer items-center justify-center rounded-xl text-[14px] font-semibold text-rose-600 transition-colors hover:bg-rose-600/10 active:bg-rose-600/15"
+                    >
+                      Cancel Assignment
+                    </button>
+                  </div>
+                )}
+
                 <div className="mt-auto shrink-0 touch-none grid grid-cols-2 gap-2 w-full sm:flex sm:w-auto sm:items-center sm:justify-end border-t border-border-subtle pt-4">
                   <Button
                     variant="secondary"
@@ -886,7 +933,7 @@ export default function DispatchPage() {
                         value={truckForm.id}
                         onChange={(e) => setTruckForm({ ...truckForm, id: e.target.value })}
                         placeholder="e.g. TRK-05"
-                        className={cn(inputClass, "font-mono")}
+                        className={inputClass}
                         required
                       />
                     </Field>
@@ -896,28 +943,33 @@ export default function DispatchPage() {
                         value={truckForm.plate}
                         onChange={(e) => setTruckForm({ ...truckForm, plate: e.target.value })}
                         placeholder="e.g. GW-1234"
-                        className={cn(inputClass, "font-mono")}
+                        className={inputClass}
                         required
                       />
                     </Field>
                     <Field label="Assign Driver">
                       <select
                         required
+                        disabled={driverRoster.filter((p) => p.status === "Active").length === 0 && !truckForm.driver}
                         value={truckForm.driver}
                         onChange={(e) => setTruckForm({ ...truckForm, driver: e.target.value })}
-                        className={cn(inputClass, "cursor-pointer")}
+                        className={cn(inputClass, (driverRoster.filter((p) => p.status === "Active").length > 0 || truckForm.driver) && "cursor-pointer", truckForm.driver === "" && "text-muted-foreground/60")}
                       >
-                        <option value="">Select a driver...</option>
+                        {driverRoster.filter((p) => p.status === "Active").length === 0 && !truckForm.driver ? (
+                          <option value="" disabled hidden>No drivers available</option>
+                        ) : (
+                          <option value="" disabled hidden>Select a driver...</option>
+                        )}
                         {driverRoster
                           .filter((p) => p.status === "Active")
                           .map((p) => (
-                            <option key={p.id} value={p.name}>
+                            <option key={p.id} value={p.name} className="text-foreground">
                               {p.name}
                             </option>
                           ))}
                         {truckForm.driver &&
                           !driverRoster.some((p) => p.name === truckForm.driver) && (
-                            <option value={truckForm.driver}>{truckForm.driver}</option>
+                            <option value={truckForm.driver} className="text-foreground">{truckForm.driver}</option>
                           )}
                       </select>
                     </Field>
@@ -986,6 +1038,15 @@ export default function DispatchPage() {
         title="Move to Bin"
         description="Are you sure you want to move this schedule to the bin? It will be archived and can be restored later."
         confirmLabel="Yes, delete"
+      />
+
+      <ConfirmModal
+        open={!!scheduleToCancel}
+        onCancel={() => setScheduleToCancel(null)}
+        onConfirm={handleCancelSchedule}
+        title="Cancel Assignment"
+        description="The driver and residents will be notified, and the truck will be freed. The admin can reassign it afterwards. Are you sure?"
+        confirmLabel="Yes, cancel it"
       />
 
       <ConfirmModal

@@ -34,19 +34,17 @@ import {
   getSchedules,
   scheduleLabel,
   acceptAssignment,
-  removeSchedule,
+  cancelAssignment,
   reinitSupabaseSync,
   dutyStatusOf,
 } from "@/lib/live-route";
 import { cn, haptic } from "@/lib/utils";
 import { playDing, useSoundEnabled, setSoundEnabled } from "@/lib/sounds";
 import { Button } from "@/components/ui/button";
-import { useRoutePath } from "@/lib/use-route-path";
 import { useFleet } from "@/lib/fleet";
 import { getDriverSession, clearDriverSession } from "@/lib/driver-session";
 import { changeDriverPassword } from "@/lib/driver-accounts";
 import { MapSkeleton, DriverShellSkeleton } from "@/components/ui/skeletons";
-import PasswordStrengthHint from "@/components/ui/password-strength-hint";
 import { useToast } from "@/components/pwa/Toast";
 import { supabase } from "@/lib/supabase";
 
@@ -66,6 +64,29 @@ function assignedAreaTagline(schedule, zone) {
   }
   if (names.length === 1) return names[0];
   return `${names[0]} +${names.length - 1} stops`;
+}
+
+// "2026-09-27" → "Today", "Tomorrow", or "Mon, Sep 28". Null → null.
+function assignmentDayLabel(iso) {
+  if (!iso) return null;
+  const now = new Date();
+  const toISO = (d) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  if (iso === toISO(now)) return "Today";
+  if (iso === toISO(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1))) return "Tomorrow";
+  const [y, m, d] = iso.split("-").map(Number);
+  const dt = new Date(y, (m || 1) - 1, d || 1);
+  if (Number.isNaN(dt.getTime())) return iso;
+  return dt.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+}
+
+// Full date with year for History rows, e.g. "Sep 28, 2026". Null → null.
+function formatHistoryDate(iso) {
+  if (!iso) return null;
+  const [y, m, d] = iso.split("-").map(Number);
+  const dt = new Date(y, (m || 1) - 1, d || 1);
+  if (Number.isNaN(dt.getTime())) return iso;
+  return dt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
 // Bottom-nav tab: the active tab gets a duotone (tinted-fill + bold-stroke)
@@ -136,6 +157,40 @@ export default function DriverPage() {
 
   // Change Password (profile sub-screen)
   const [profileView, setProfileView] = useState("main"); // "main" | "password"
+  // Tasks sub-screen: the list drills into one assignment's details.
+  const [assignmentDetailId, setAssignmentDetailId] = useState(null);
+  // Task ids already seen in the Tasks tab (persisted per truck) — drives
+  // the tab badge so it clears once viewed and only returns for new work.
+  const [seenByTruck, setSeenByTruck] = useState(() => {
+    if (typeof window === "undefined") return {};
+    try {
+      const parsed = JSON.parse(window.localStorage.getItem("driver-tasks-seen") || "{}");
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch {
+      return {};
+    }
+  });
+  const markTasksSeen = (truckId, ids) => {
+    if (!truckId || ids.length === 0) return;
+    setSeenByTruck((prev) => {
+      const have = prev[truckId] || [];
+      const fresh = ids.filter((id) => !have.includes(id));
+      if (fresh.length === 0) return prev;
+      const next = { ...prev, [truckId]: [...have, ...fresh].slice(-100) };
+      try {
+        window.localStorage.setItem("driver-tasks-seen", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+  // Cancel-assignment confirm modal (task details screen).
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState("Truck breakdown");
+  const [isCancelling, setIsCancelling] = useState(false);
+  // History sub-screen: same drill-in for completed routes.
+  const [historyDetailId, setHistoryDetailId] = useState(null);
+  // History order: newest or oldest first (undated last in both).
+  const [historySort, setHistorySort] = useState("newest");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
@@ -373,6 +428,133 @@ export default function DriverPage() {
     : null;
   const assignedAreaName = assignedAreaTagline(assignedSchedule, assignedZone);
 
+  // Tasks list: every queued assignment for this truck, most actionable first.
+  const myAssignments = (() => {
+    if (!selectedTruckId) return [];
+    const status = live.scheduleStatus;
+    const eff = (s) => status[s.id] ?? s.status;
+    const mine = getSchedules().filter(
+      (s) =>
+        s.truckId === selectedTruckId &&
+        !s.isArchived &&
+        (eff(s) === "In Progress" ||
+          eff(s) === "Accepted" ||
+          eff(s) === "Scheduled" ||
+          eff(s) === "Assigned")
+    );
+    const rank = (s) =>
+      eff(s) === "In Progress" ? 0 : eff(s) === "Accepted" ? 1 : 2;
+    // Same rank → earliest day first; undated last.
+    const dayKey = (s) => s.assignmentDate || "9999-99-99";
+    return [...mine].sort((a, b) => rank(a) - rank(b) || (dayKey(a) < dayKey(b) ? -1 : dayKey(a) > dayKey(b) ? 1 : 0));
+  })();
+  // Grouped by the day the admin set: Today, Tomorrow, dates, then unscheduled.
+  const assignmentGroups = (() => {
+    const byDay = new Map();
+    for (const s of myAssignments) {
+      const key = s.assignmentDate || "unscheduled";
+      if (!byDay.has(key)) byDay.set(key, []);
+      byDay.get(key).push(s);
+    }
+    const dated = [...byDay.entries()]
+      .filter(([key]) => key !== "unscheduled")
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+    if (byDay.has("unscheduled")) dated.push(["unscheduled", byDay.get("unscheduled")]);
+    return dated.map(([key, items]) => ({
+      key,
+      label: key === "unscheduled" ? "Unscheduled" : (assignmentDayLabel(key) ?? key),
+      items,
+    }));
+  })();
+  const detailSchedule = assignmentDetailId
+    ? (getSchedules().find((s) => s.id === assignmentDetailId && !s.isArchived) ?? null)
+    : null;
+  const detailStatus = detailSchedule
+    ? (live.scheduleStatus[detailSchedule.id] ?? detailSchedule.status)
+    : null;
+  const isDetailAccepted =
+    detailStatus === "Accepted" || detailStatus === "In Progress";
+  const detailZone = detailSchedule
+    ? mockPilotData.zones.find((z) => z.id === detailSchedule.zoneId)
+    : null;
+  const detailAreaName = assignedAreaTagline(detailSchedule, detailZone);
+
+  // Unseen queued tasks = tab badge. Opening Tasks marks everything seen
+  // (nothing is unseen while looking at the list); deletes, completions
+  // and archives leave the queue so the badge drops.
+  const seenTaskIds = seenByTruck[selectedTruckId] ?? [];
+  const unseenTasks =
+    activeTab === "assignment"
+      ? 0
+      : myAssignments.filter((s) => !seenTaskIds.includes(s.id)).length;
+
+  // Completed routes for this truck — the permanent record. Never
+  // dismissed from here; only the admin Bin can remove records.
+  const completedHistory = getSchedules().filter(
+    (s) =>
+      s.truckId === selectedTruckId &&
+      live.scheduleStatus[s.id] === "Completed" &&
+      !s.isArchived
+  );
+  const compareHistory = (a, b) => {
+    const ka = a.assignmentDate || "";
+    const kb = b.assignmentDate || "";
+    if (ka && kb) {
+      if (ka === kb) return 0;
+      const newerFirst = historySort !== "oldest";
+      return (ka < kb) === newerFirst ? 1 : -1;
+    }
+    if (ka) return -1;
+    if (kb) return 1;
+    return 0;
+  };
+  const sortedHistory = [...completedHistory].sort(compareHistory);
+  // TEMPORARY preview: two mock rows so the filter can be seen and tried
+  // before any route is completed. Remove when real history exists.
+  const previewHistoryRows = [
+    {
+      id: "preview",
+      label: mockPilotData.zones[0]?.name ?? "Sitio Vilgon & Sitio Mac Arthur",
+      time: "08:00 AM - 11:00 AM",
+      assignmentDate: "2026-09-27",
+    },
+    {
+      id: "preview-2",
+      label: mockPilotData.zones[1]?.name ?? "Sitio Silangan & Sitio Daclan",
+      time: "01:00 PM - 04:00 PM",
+      assignmentDate: "2026-09-26",
+    },
+  ];
+  const isHistoryPreview = sortedHistory.length === 0;
+  const displayHistory = (isHistoryPreview ? previewHistoryRows : sortedHistory).slice().sort(compareHistory);
+  // Completed route shown in the History details sub-screen.
+  // "preview" rows are the temporary mock cards shown when history is
+  // empty, so tapping them previews the details screen with sample data.
+  const previewSchedules = {
+    preview: { sched: mockPilotData.schedules[0], date: "2026-09-27" },
+    "preview-2": { sched: mockPilotData.schedules[1], date: "2026-09-26" },
+  };
+  const historyDetail = historyDetailId
+    ? (getSchedules().find((s) => s.id === historyDetailId && !s.isArchived) ??
+       (previewSchedules[historyDetailId]
+        ? {
+            id: historyDetailId,
+            zoneId: previewSchedules[historyDetailId].sched?.zoneId ?? null,
+            truckId: selectedTruckId,
+            status: "Completed",
+            collectionType: previewSchedules[historyDetailId].sched?.type ?? "—",
+            collectionDays: previewSchedules[historyDetailId].sched?.days ?? [],
+            time: previewSchedules[historyDetailId].sched?.time ?? "—",
+            routePoints: previewSchedules[historyDetailId].sched?.routePoints ?? [],
+            assignmentDate: previewSchedules[historyDetailId].date,
+          }
+        : null))
+    : null;
+  const historyDetailZone = historyDetail
+    ? mockPilotData.zones.find((z) => z.id === historyDetail.zoneId)
+    : null;
+  const historyDetailArea = assignedAreaTagline(historyDetail, historyDetailZone);
+
   const activeSchedule = truckState?.scheduleId
     ? getSchedule(truckState.scheduleId)
     : null;
@@ -381,59 +563,6 @@ export default function DriverPage() {
   const isLastPoint = truckState
     ? truckState.stopIndex >= routePoints.length - 1
     : false;
-
-  const routeScheduleId = activeSchedule?.id ?? assignedSchedule?.id ?? null;
-  const routeStops = activeSchedule
-    ? routePoints.slice(truckState?.stopIndex ?? 0, (truckState?.stopIndex ?? 0) + 1)
-    : (assignedSchedule?.routePoints?.slice(0, 1) ?? []);
-  const driverRoute = useRoutePath({
-    scheduleId: routeScheduleId,
-    stopIndex: truckState?.stopIndex ?? 0,
-    origin:
-      isOnDuty && truckState?.phase !== "completed"
-        ? { lat: truckState.tracking.lat, lng: truckState.tracking.lng }
-        : null,
-    points: truckState?.phase === "completed" ? [] : routeStops,
-    autoReroute: true,
-    // The drawn leg starts at the map-matched road point; the marker below
-    // uses driverRoute.snappedOrigin so line and marker share one source.
-    pinToRoad: true,
-  });
-
-  const driverRouteRef = useRef(driverRoute);
-  useEffect(() => { driverRouteRef.current = driverRoute; }, [driverRoute]);
-
-  // Single "current stop" pin: shown only once the driver has started the
-  // route (an active schedule exists); hidden once the route is completed.
-  const driverStopPoint =
-    !activeSchedule || truckState?.phase === "completed" ? null : currentPoint;
-  const driverCurrentStop = driverStopPoint
-    ? { ...driverStopPoint, index: truckState?.stopIndex ?? 0 }
-    : null;
-
-  // Compact numbered pins for every stop after the current one — likewise gated
-  // on the route having started, so the map stays pin-free until Start Route.
-  const dStopIdx = truckState?.stopIndex ?? 0;
-  const driverUpcomingStops =
-    !activeSchedule || truckState?.phase === "completed"
-      ? []
-      : routePoints.slice(dStopIdx + 1).map((p, i) => ({ ...p, index: dStopIdx + 1 + i }));
-
-  // Road-accurate path for the legs AFTER the current stop. The origin is the fixed
-  // current-stop vertex (not the moving truck), so this is fetched once per stop
-  // advance instead of every sim tick; stopIndex+1 keeps its cache key distinct from
-  // the sim's current-leg key.
-  const driverOnDuty = isOnDuty && truckState?.phase !== "completed" && !!activeSchedule;
-  const driverFuturePath = useRoutePath({
-    scheduleId: routeScheduleId,
-    stopIndex: dStopIdx + 1,
-    origin:
-      driverOnDuty && routePoints[dStopIdx]
-        ? { lat: routePoints[dStopIdx].lat, lng: routePoints[dStopIdx].lng }
-        : null,
-    points: driverOnDuty ? routePoints.slice(dStopIdx + 1) : [],
-    enabled: driverOnDuty,
-  });
 
   const driverName = (driverSession?.name || "Driver").split(" ")[0];
   const greetingTitle = useMemo(() => {
@@ -526,6 +655,9 @@ export default function DriverPage() {
 
   const switchTab = (id) => {
     haptic();
+    if (id === "assignment") {
+      markTasksSeen(selectedTruckId, myAssignments.map((s) => s.id));
+    }
     setActiveTab(id);
     window.history.replaceState(null, "", `?tab=${id}`);
   };
@@ -806,56 +938,37 @@ export default function DriverPage() {
     toast("Route ended.");
   };
 
-  // The truck-anchored leg (truck position → current stop) is drawn as the 
-  // active green line so the driver sees their immediate destination (Waze-style).
-  // Future legs between stops are drawn as dashed lines.
-  const mapRoutes = useMemo(() => [
-    driverRoute.positions.length >= 2 && { id: `${routeScheduleId ?? "driver-route"}-current-${dStopIdx}`, ...driverRoute },
-    driverFuturePath.positions.length >= 2 && { id: `${routeScheduleId ?? "driver-route"}-future-${dStopIdx}`, ...driverFuturePath },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  ].filter(Boolean), [
-    routeScheduleId, dStopIdx,
-    driverRoute.positions, driverRoute.heading, driverRoute.source, driverRoute.ready,
-    driverFuturePath.positions, driverFuturePath.heading, driverFuturePath.source, driverFuturePath.ready,
-  ]);
+  // Single "current stop" pin: shown only once the driver has started the route.
+  const driverCurrentStop = (!activeSchedule || truckState?.phase === "completed")
+    ? null
+    : currentPoint ? { ...currentPoint, index: truckState?.stopIndex ?? 0 } : null;
 
-  // Marker rides at the same map-matched road point the trajectory starts at
-  // (driverRoute.snappedOrigin) — line and marker can never separate, even
-  // when the raw phone fix sits inside a house. Null = draw raw GPS.
-  const snappedTruck = driverRoute.snappedOrigin;
+  // Compact numbered pins for every stop after the current one.
+  const dStopIdx = truckState?.stopIndex ?? 0;
+  const driverUpcomingStops = (!activeSchedule || truckState?.phase === "completed")
+    ? []
+    : routePoints.slice(dStopIdx + 1).map((p, i) => ({ ...p, index: dStopIdx + 1 + i }));
 
-  // Waze-style heading: snap to the road direction to keep the truck perfectly 
-  // aligned with the route, BUT if the driver deviates and points more than 90° away 
-  // from the route (e.g. going the wrong way, making a U-turn), prioritize the actual 
-  // device heading so the truck icon and map camera spin around immediately.
-  const bestHeading = useMemo(() => {
-    if (!truckState) return 0;
-    const deviceHeading = truckState.tracking.heading;
-    if (snappedTruck && driverRoute.heading != null) {
-      const diff = Math.abs(((driverRoute.heading - deviceHeading + 540) % 360) - 180);
-      if (diff <= 90) return driverRoute.heading;
-    }
-    return deviceHeading;
-  }, [truckState, snappedTruck, driverRoute.heading]);
+  // Use raw device GPS heading directly (no road-snapping).
+  const bestHeading = truckState?.tracking.heading ?? 0;
 
   const trucksForMap = useMemo(() => {
     if (!currentTruck || !truckState) return [];
-    const s = snappedTruck;
     return [
       {
         id: currentTruck.id,
         plate: currentTruck.plate,
         driver: liveDriver,
         capacity: currentTruck.capacity,
-        lat: s ? s.lat : truckState.tracking.lat,
-        lng: s ? s.lng : truckState.tracking.lng,
+        lat: truckState.tracking.lat,
+        lng: truckState.tracking.lng,
         heading: bestHeading,
         eta: isOnDuty ? "Active On Route" : "Standby",
         isActive: truckState.tracking.isActive,
         phase: truckState.phase,
       },
     ];
-  }, [currentTruck, truckState, isOnDuty, liveDriver, snappedTruck, bestHeading]);
+  }, [currentTruck, truckState, isOnDuty, liveDriver, bestHeading]);
 
   // Waze-style course-up camera while driving: heading up, auto-follow truck.
   const navBearing = isOnDuty ? Math.round(bestHeading ?? 0) : null;
@@ -869,30 +982,23 @@ export default function DriverPage() {
         requestWakeLock();
         startGpsWatch();
       }
-      const s = snappedTruck;
-      if (s) {
-        setMapCenter([s.lat, s.lng]);
-      } else if (truckState?.tracking?.lat != null && truckState?.tracking?.lng != null) {
+      if (truckState?.tracking?.lat != null && truckState?.tracking?.lng != null) {
         setMapCenter([truckState.tracking.lat, truckState.tracking.lng]);
       }
     } else {
       stopGpsWatch();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOnDuty, snappedTruck]);
+  }, [isOnDuty]);
 
   const trackLat = truckState?.tracking.lat;
   const trackLng = truckState?.tracking.lng;
   useEffect(() => {
-    if (isOnDuty && truckFocused) {
-      if (snappedTruck) {
-        setMapCenter([snappedTruck.lat, snappedTruck.lng]);
-      } else if (trackLat != null && trackLng != null) {
-        setMapCenter([trackLat, trackLng]);
-      }
+    if (isOnDuty && truckFocused && trackLat != null && trackLng != null) {
+      setMapCenter([trackLat, trackLng]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trackLat, trackLng, snappedTruck]);
+  }, [trackLat, trackLng]);
 
   if (!sessionReady) {
     return <DriverShellSkeleton />;
@@ -908,7 +1014,6 @@ export default function DriverPage() {
           <MapCanvas
             tickets={[]}
             trucks={trucksForMap}
-            routes={mapRoutes}
             mapMode="pins"
             currentStop={driverCurrentStop}
             upcomingStops={driverUpcomingStops}
@@ -948,18 +1053,7 @@ export default function DriverPage() {
                 className="flex items-center gap-2.5 min-w-0 w-full"
               >
                 {currentBanner.live && (
-                  <span className="relative flex h-2 w-2 shrink-0">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-60" />
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-600" />
-                  </span>
-                )}
-                {currentBanner.icon && (
-                  <currentBanner.icon
-                    className={`h-6 w-6 shrink-0 ${currentBanner.tone ?? "text-foreground"}`}
-                    strokeWidth={2.25}
-                    fill="currentColor"
-                    fillOpacity={0.18}
-                  />
+                  <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-600" />
                 )}
 
                 <div className="min-w-0 flex-1">
@@ -1076,7 +1170,7 @@ export default function DriverPage() {
               icon={ClipboardList}
               activeTab={activeTab}
               onSelect={() => { switchTab("assignment"); }}
-              badge={pendingAssignments}
+              badge={unseenTasks}
             />
             <DriverTab
               id="history"
@@ -1112,7 +1206,7 @@ export default function DriverPage() {
                   <button
                     type="button"
                     onClick={() => { switchTab("map"); }}
-                    className="absolute left-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-all hover:bg-muted active:scale-95 active:bg-muted cursor-pointer"
+                    className="absolute left-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-all active:scale-95 cursor-pointer"
                     aria-label="Back to map"
                   >
                     <ChevronLeft className="h-6 w-6" strokeWidth={2} />
@@ -1123,19 +1217,34 @@ export default function DriverPage() {
               <div className="flex flex-1 flex-col overflow-y-auto bg-muted/40 pb-10">
                 <div className="flex flex-1 flex-col space-y-2.5 p-4">
 
-                    {/* Tab 1: Route & Telemetry Controls */}
+                    {/* Tab 1: Route — native grouped style (matches Tasks tab) */}
                     {activeTab === "route" && (
-                      <div className="space-y-2.5">
-                        {/* Main Route Workflow Control */}
-                        <div className="rounded-2xl border border-border/60 bg-card p-4 space-y-2.5">
-                          <div className="space-y-2.5">
+                      <div className="flex flex-1 flex-col">
+                          {/* Centered header */}
+                          <div className="flex flex-col items-center px-4 pb-2 pt-6 text-center">
+                            <h2 className="text-[20px] font-semibold tracking-tight text-foreground">
+                              {activeSchedule
+                                ? scheduleLabel(activeSchedule)
+                                : assignedSchedule
+                                  ? scheduleLabel(assignedSchedule)
+                                  : "No Route"}
+                            </h2>
+                            {(activeSchedule?.time ?? assignedSchedule?.time) && (
+                              <p className="mt-0.5 text-[13px] text-muted-foreground">
+                                {activeSchedule?.time ?? assignedSchedule?.time}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Action */}
+                          <div className="mt-5 px-4 space-y-2.5">
                               <button
                                 type="button"
                                 onClick={handlePrimaryAction}
-                                disabled={!isOnDuty && !hasAvailableAssignment}
+                                disabled={!isOnDuty && (!hasAvailableAssignment || needsAcceptance)}
                                 className={cn(
                                   "flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-[15px] font-semibold transition-all active:scale-[0.99]",
-                                  !isOnDuty && !hasAvailableAssignment
+                                  !isOnDuty && (!hasAvailableAssignment || needsAcceptance)
                                     ? "bg-zinc-200 text-zinc-400 cursor-not-allowed dark:bg-zinc-800 dark:text-zinc-500 opacity-80"
                                     : isOnDuty && truckState?.phase === "enroute"
                                       ? "bg-amber-600 text-white active:bg-amber-700 cursor-pointer"
@@ -1149,7 +1258,7 @@ export default function DriverPage() {
                                     </>
                                   ) : needsAcceptance ? (
                                     <>
-                                      <Play className="h-4 w-4 fill-white" /> Accept Assignment to Start
+                                      <Play className="h-4 w-4 fill-zinc-400 dark:fill-zinc-500" /> Accept in Tasks to Start
                                     </>
                                   ) : (
                                     <>
@@ -1195,15 +1304,14 @@ export default function DriverPage() {
                                 End Route
                               </button>
                             )}
+                          </div>
 
+                          {/* Details — single card, no section labels */}
+                          <div className="mt-5 px-4">
                             <div className="divide-y divide-border/60 overflow-hidden rounded-2xl border border-border/60 bg-card">
                               <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
-                                <span className="shrink-0 text-[15px] text-muted-foreground">Active Route</span>
-                                <span className="text-right text-[15px] leading-snug break-words text-foreground">{activeSchedule ? scheduleLabel(activeSchedule) : "No Active Route"}</span>
-                              </div>
-                              <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
-                                <span className="shrink-0 text-[15px] text-muted-foreground">Next Stop</span>
-                                <span className="text-right text-[15px] leading-snug break-words text-foreground">
+                                <span className="shrink-0 text-[15px] text-foreground">Next Stop</span>
+                                <span className="text-right text-[15px] leading-snug break-words text-muted-foreground">
                                   {truckState?.phase === "completed"
                                     ? "Route Completed"
                                     : truckState?.onsite
@@ -1214,8 +1322,8 @@ export default function DriverPage() {
                                 </span>
                               </div>
                               <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
-                                <span className="shrink-0 text-[15px] text-muted-foreground">Stops Served</span>
-                                <span className="text-right text-[15px] tabular-nums text-foreground">
+                                <span className="shrink-0 text-[15px] text-foreground">Stops</span>
+                                <span className="text-right text-[15px] tabular-nums text-muted-foreground">
                                   {routePoints.length
                                     ? `${
                                         truckState?.phase === "completed"
@@ -1226,13 +1334,9 @@ export default function DriverPage() {
                                       } of ${routePoints.length}`
                                     : "—"}
                                 </span>
-          </div>
-        </div>
-
-
-
+                              </div>
+                            </div>
                           </div>
-                        </div>
                       </div>
                     )}
                 </div>
@@ -1253,83 +1357,131 @@ export default function DriverPage() {
                 <div className="relative flex h-[52px] items-center justify-center px-2">
                   <button
                     type="button"
-                    onClick={() => { switchTab("map"); }}
-                    className="absolute left-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-all hover:bg-muted active:scale-95 active:bg-muted cursor-pointer"
-                    aria-label="Back to map"
+                    onClick={() => { detailSchedule ? setAssignmentDetailId(null) : switchTab("map"); }}
+                    className="absolute left-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-all active:scale-95 cursor-pointer"
+                    aria-label={detailSchedule ? "Back to assignments" : "Back to map"}
                   >
                     <ChevronLeft className="h-6 w-6" strokeWidth={2} />
                   </button>
-                  <h1 className="text-[17px] font-semibold tracking-tight text-foreground">Assignment</h1>
+                  <h1 className="text-[17px] font-semibold tracking-tight text-foreground">{detailSchedule ? "Details" : "Assignment"}</h1>
                 </div>
               </div>
               <div className="flex flex-1 flex-col overflow-y-auto bg-muted/40 pb-10">
-                <div className="flex flex-1 flex-col space-y-2.5 p-4">
-                    {/* Tab 2: Assignment & Compactor Info */}
+                <div className="flex flex-1 flex-col">
+                    {/* Tab 2: Tasks — tappable cards like History, details on tap */}
                     {activeTab === "assignment" && (
-                      <div className="space-y-2.5">
-                        <div className="rounded-2xl border border-border/60 bg-card p-4 space-y-3">
-                          <div className="border-b border-border/60 pb-2.5">
-                            <h3 className="text-[16px] font-semibold tracking-tight text-foreground">
-                              {assignedSchedule
-                                ? `${scheduleLabel(assignedSchedule)} Route`
-                                : "No Route Assigned"}
-                            </h3>
+                      <div className="flex flex-1 flex-col">
+                        {!detailSchedule ? (
+                          myAssignments.length > 0 ? (
+                            <div className="flex flex-1 flex-col">
+                              {assignmentGroups.map((group) => (
+                                <div key={group.key} className="mt-5 px-4">
+                                  <p className="px-1 pb-1.5 text-[13px] text-muted-foreground">{group.label}</p>
+                                  <div className="divide-y divide-border/60 overflow-hidden rounded-2xl border border-border/60 bg-card">
+                                    {group.items.map((s) => (
+                                      <button
+                                        key={s.id}
+                                        type="button"
+                                        onClick={() => { haptic(); setAssignmentDetailId(s.id); }}
+                                        className="flex w-full cursor-pointer items-center justify-between gap-3 px-4 py-2.5 text-left transition-colors active:bg-muted"
+                                      >
+                                        <RouteIcon className="h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+                                        <div className="min-w-0 flex-1">
+                                          <p className="text-[15px] leading-snug break-words text-foreground">{scheduleLabel(s)}</p>
+                                          <p className="mt-0.5 text-[13px] text-muted-foreground">{s.time || "No time specified"}</p>
+                                        </div>
+                                        <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground/50" />
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
+                              <h3 className="mt-4 text-[17px] font-semibold tracking-tight text-foreground">No Route Assigned</h3>
+                              <p className="mt-1 max-w-[240px] text-[13px] leading-normal text-muted-foreground">
+                                New routes from dispatch will appear here.
+                              </p>
+                            </div>
+                          )
+                        ) : (
+                        <>
+                          {/* Centered header */}
+                          <div className="flex flex-col items-center px-4 pb-2 pt-6 text-center">
+                            <h2 className="text-[20px] font-semibold tracking-tight text-foreground">{scheduleLabel(detailSchedule)}</h2>
+                            {([assignmentDayLabel(detailSchedule?.assignmentDate), detailSchedule?.time].filter(Boolean).join(" · ") || detailAreaName) && (
+                              <p className="mt-0.5 text-[13px] text-muted-foreground">
+                                {[assignmentDayLabel(detailSchedule?.assignmentDate), detailSchedule?.time].filter(Boolean).join(" · ") || detailAreaName}
+                              </p>
+                            )}
                           </div>
 
-                          <div className="divide-y divide-border/60 overflow-hidden rounded-2xl border border-border/60 bg-card">
-                            <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
-                              <span className="shrink-0 text-[15px] text-muted-foreground">Assigned Unit</span>
-                              <span className="text-right text-[15px] leading-snug break-words text-foreground">{`${currentTruck.id} (${currentTruck.plate})`}</span>
-                            </div>
-                            <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
-                              <span className="shrink-0 text-[15px] text-muted-foreground">Driver Operator</span>
-                              <span className="text-right text-[15px] leading-snug break-words text-foreground">{liveDriver || "—"}</span>
-                            </div>
-                            <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
-                              <span className="shrink-0 text-[15px] text-muted-foreground">Payload Capacity</span>
-                              <span className="text-right text-[15px] leading-snug break-words text-foreground">{currentTruck.capacity}</span>
-                            </div>
-                            <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
-                              <span className="shrink-0 text-[15px] text-muted-foreground">Waste Collection</span>
-                              <span className="text-right text-[15px] leading-snug break-words text-foreground">{assignedSchedule?.collectionType ?? "—"}</span>
-                            </div>
-                            <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
-                              <span className="shrink-0 text-[15px] text-muted-foreground">Scheduled Days</span>
-                              <span className="text-right text-[15px] leading-snug break-words text-foreground">
-                                {Array.isArray(assignedSchedule?.collectionDays)
-                                  ? assignedSchedule.collectionDays.join(", ")
-                                  : (assignedSchedule?.collectionDays ?? "—")}
-                              </span>
-                            </div>
-                            <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
-                              <span className="shrink-0 text-[15px] text-muted-foreground">Scheduled Hours</span>
-                              <span className="text-right text-[15px] tabular-nums leading-snug break-words text-foreground">{assignedSchedule?.time ?? "—"}</span>
+                          {/* Details — single card, no section labels */}
+                          <div className="mt-5 px-4">
+                            <div className="divide-y divide-border/60 overflow-hidden rounded-2xl border border-border/60 bg-card">
+                              <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
+                                <span className="shrink-0 text-[15px] text-foreground">Unit</span>
+                                <span className="text-right text-[15px] leading-snug break-words text-muted-foreground">{`${currentTruck.id} (${currentTruck.plate})`}</span>
+                              </div>
+                              <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
+                                <span className="shrink-0 text-[15px] text-foreground">Capacity</span>
+                                <span className="text-right text-[15px] leading-snug break-words text-muted-foreground">{currentTruck.capacity}</span>
+                              </div>
+                              <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
+                                <span className="shrink-0 text-[15px] text-foreground">Collection</span>
+                                <span className="text-right text-[15px] leading-snug break-words text-muted-foreground">{detailSchedule?.collectionType ?? "—"}</span>
+                              </div>
+                              <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
+                                <span className="shrink-0 text-[15px] text-foreground">Days</span>
+                                <span className="text-right text-[15px] leading-snug break-words text-muted-foreground">
+                                  {Array.isArray(detailSchedule?.collectionDays)
+                                    ? detailSchedule.collectionDays.join(", ")
+                                    : (detailSchedule?.collectionDays ?? "—")}
+                                </span>
+                              </div>
                             </div>
                           </div>
-                          
-                          {(!isOnDuty && assignedSchedule && !isAssignmentAccepted) && (
+
+                          {/* Action */}
+                          <div className="mt-5 px-4 space-y-2.5">
+                            {(!isOnDuty && !isDetailAccepted) && (
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  haptic(15);
+                                  try {
+                                    await acceptAssignment(detailSchedule.id);
+                                    toast("Assignment accepted. You can now start the route.");
+                                  } catch {
+                                    toast("Could not accept the assignment. Please try again.", { variant: "error" });
+                                  }
+                                }}
+                                className="flex h-12 w-full items-center justify-center rounded-2xl bg-emerald-600 text-[15px] font-semibold text-white transition-all active:scale-[0.99] active:bg-emerald-700 cursor-pointer"
+                              >
+                                Accept Assignment
+                              </button>
+                            )}
+                            {(!isOnDuty && isDetailAccepted && detailStatus === "Accepted") && (
+                              <p className="text-center text-[13px] text-muted-foreground">
+                                Assignment accepted. Start it from Route.
+                              </p>
+                            )}
+                            {detailStatus === "In Progress" && (
+                              <p className="text-center text-[13px] text-muted-foreground">
+                                In progress. Manage it from Route.
+                              </p>
+                            )}
                             <button
                               type="button"
-                              onClick={async () => {
-                                haptic(15);
-                                try {
-                                  await acceptAssignment(assignedSchedule.id);
-                                  toast("Assignment accepted. You can now start the route.");
-                                } catch {
-                                  toast("Could not accept the assignment. Please try again.", { variant: "error" });
-                                }
-                              }}
-                              className="mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-[15px] font-semibold transition-all active:scale-[0.99] cursor-pointer bg-emerald-600 text-white active:bg-emerald-700"
+                              onClick={() => { setCancelReason("Truck breakdown"); setShowCancelModal(true); haptic(); }}
+                              className="flex h-12 w-full cursor-pointer items-center justify-center rounded-2xl bg-rose-600 text-[15px] font-semibold text-white transition-all active:scale-[0.99] active:bg-rose-700"
                             >
-                              Accept Assignment
+                              Cancel Assignment
                             </button>
-                          )}
-                          {(!isOnDuty && assignedSchedule && isAssignmentAccepted && assignedScheduleStatus === "Accepted") && (
-                            <p className="text-center text-[13px] font-medium text-emerald-600">
-                              Assignment accepted. Go to Route to start.
-                            </p>
-                          )}
-                        </div>
+                          </div>
+                        </>
+                        )}
                       </div>
                     )}
                 </div>
@@ -1350,58 +1502,111 @@ export default function DriverPage() {
                 <div className="relative flex h-[52px] items-center justify-center px-2">
                   <button
                     type="button"
-                    onClick={() => { switchTab("map"); }}
-                    className="absolute left-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-all hover:bg-muted active:scale-95 active:bg-muted cursor-pointer"
-                    aria-label="Back to map"
+                    onClick={() => { historyDetail ? setHistoryDetailId(null) : switchTab("map"); }}
+                    className="absolute left-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-all active:scale-95 cursor-pointer"
+                    aria-label={historyDetail ? "Back to history" : "Back to map"}
                   >
                     <ChevronLeft className="h-6 w-6" strokeWidth={2} />
                   </button>
-                  <h1 className="text-[17px] font-semibold tracking-tight text-foreground">History</h1>
+                  <h1 className="text-[17px] font-semibold tracking-tight text-foreground">{historyDetail ? "Details" : "History"}</h1>
                 </div>
               </div>
               <div className="flex flex-1 flex-col overflow-y-auto bg-muted/40 pb-10">
-                <div className="flex flex-1 flex-col space-y-2.5 p-4">
-                    {/* Tab 3: History */}
+                <div className="flex flex-1 flex-col">
+                    {/* Tab 3: History — permanent record with newest/oldest order */}
                     {activeTab === "history" && (
-                      <div className="flex flex-1 flex-col space-y-2.5">
-                        {(() => {
-                          const history = getSchedules().filter(
-                            (s) =>
-                              s.truckId === selectedTruckId &&
-                              live.scheduleStatus[s.id] === "Completed" &&
-                              !s.isArchived
-                          );
-                          if (history.length === 0) {
-                            return (
-                              <div className="flex flex-1 flex-col items-center justify-center px-6 py-16 text-center">
-                                <CheckCircle2 className="h-12 w-12 text-muted-foreground/40" strokeWidth={1.5} />
-                                <h3 className="mt-4 text-[17px] font-semibold tracking-tight text-foreground">No completed routes</h3>
-                                <p className="mt-1 max-w-[240px] text-[13px] leading-normal text-muted-foreground">
-                                  Routes you finish today will appear here.
-                                </p>
+                      <div className="flex flex-1 flex-col">
+                        {!historyDetail ? (
+                          <>
+                            {displayHistory.length > 1 && (
+                              <div className="mt-5 px-4">
+                                <div className="flex rounded-full bg-muted p-1">
+                                  {[
+                                    { id: "newest", label: "Newest" },
+                                    { id: "oldest", label: "Oldest" },
+                                  ].map((opt) => (
+                                    <button
+                                      key={opt.id}
+                                      type="button"
+                                      onClick={() => { setHistorySort(opt.id); haptic(); }}
+                                      className={`h-8 flex-1 cursor-pointer rounded-full text-[13px] transition-all active:scale-[0.98] ${
+                                        historySort === opt.id
+                                          ? "bg-card font-semibold text-foreground shadow-sm"
+                                          : "font-medium text-muted-foreground"
+                                      }`}
+                                    >
+                                      {opt.label}
+                                    </button>
+                                  ))}
+                                </div>
                               </div>
-                            );
-                          }
-                          return history.map((s) => (
-                            <div key={s.id} className="rounded-2xl border border-border/60 bg-card p-4 flex items-center justify-between gap-3">
-                              <div className="min-w-0 flex-1">
-                                <h3 className="text-[16px] font-semibold tracking-tight text-foreground leading-snug break-words">{scheduleLabel(s)}</h3>
-                                <p className="mt-0.5 text-[13px] text-muted-foreground">{s.time || "No time specified"}</p>
+                            )}
+                            <div className={displayHistory.length > 1 ? "mt-3 px-4" : "mt-5 px-4"}>
+                              <div className="divide-y divide-border/60 overflow-hidden rounded-2xl border border-border/60 bg-card">
+                                {displayHistory.map((s) => (
+                                  <button
+                                    key={s.id}
+                                    type="button"
+                                    onClick={() => { haptic(); setHistoryDetailId(s.id); }}
+                                    className="flex w-full cursor-pointer items-center justify-between gap-3 px-4 py-2.5 text-left transition-opacity active:opacity-60"
+                                  >
+                                    <History className="h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+                                    <span className="min-w-0 flex-1">
+                                      <p className="text-[15px] leading-snug break-words text-foreground">{s.label ?? scheduleLabel(s)}</p>
+                                      <p className="mt-0.5 text-[13px] text-muted-foreground">
+                                        {[formatHistoryDate(s.assignmentDate), s.time].filter(Boolean).join(" · ") || "No time specified"}
+                                      </p>
+                                    </span>
+                                    <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground/50" />
+                                  </button>
+                                ))}
                               </div>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  haptic();
-                                  removeSchedule(s.id);
-                                  toast("Route archived from history.");
-                                }}
-                                className="shrink-0 rounded-full bg-rose-600/10 px-3.5 py-1.5 text-[13px] font-semibold text-rose-600 transition-all hover:bg-rose-600/20 active:scale-95 cursor-pointer"
-                              >
-                                Archive
-                              </button>
                             </div>
-                          ));
-                        })()}
+                            {isHistoryPreview && (
+                              <p className="mt-2.5 text-center text-[13px] text-muted-foreground">
+                                Preview. Routes you finish will appear here.
+                              </p>
+                            )}
+                          </>
+                        ) : (
+                        <>
+                          {/* Centered header */}
+                          <div className="flex flex-col items-center px-4 pb-2 pt-6 text-center">
+                            <h2 className="text-[20px] font-semibold tracking-tight text-foreground">{scheduleLabel(historyDetail)}</h2>
+                            {([formatHistoryDate(historyDetail?.assignmentDate), historyDetail?.time].filter(Boolean).join(" · ") || historyDetailArea) && (
+                              <p className="mt-0.5 text-[13px] text-muted-foreground">
+                                {[formatHistoryDate(historyDetail?.assignmentDate), historyDetail?.time].filter(Boolean).join(" · ") || historyDetailArea}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Details — single card, no section labels */}
+                          <div className="mt-5 px-4">
+                            <div className="divide-y divide-border/60 overflow-hidden rounded-2xl border border-border/60 bg-card">
+                              <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
+                                <span className="shrink-0 text-[15px] text-foreground">Unit</span>
+                                <span className="text-right text-[15px] leading-snug break-words text-muted-foreground">{`${currentTruck.id} (${currentTruck.plate})`}</span>
+                              </div>
+                              <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
+                                <span className="shrink-0 text-[15px] text-foreground">Capacity</span>
+                                <span className="text-right text-[15px] leading-snug break-words text-muted-foreground">{currentTruck.capacity}</span>
+                              </div>
+                              <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
+                                <span className="shrink-0 text-[15px] text-foreground">Collection</span>
+                                <span className="text-right text-[15px] leading-snug break-words text-muted-foreground">{historyDetail?.collectionType ?? "—"}</span>
+                              </div>
+                              <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
+                                <span className="shrink-0 text-[15px] text-foreground">Days</span>
+                                <span className="text-right text-[15px] leading-snug break-words text-muted-foreground">
+                                  {Array.isArray(historyDetail?.collectionDays)
+                                    ? historyDetail.collectionDays.join(", ")
+                                    : (historyDetail?.collectionDays ?? "—")}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </>
+                        )}
                       </div>
                     )}
                 </div>
@@ -1423,7 +1628,7 @@ export default function DriverPage() {
                   <button
                     type="button"
                     onClick={() => { profileView === "password" ? setProfileView("main") : switchTab("map"); }}
-                    className="absolute left-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-all hover:bg-muted active:scale-95 active:bg-muted cursor-pointer"
+                    className="absolute left-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-all active:scale-95 cursor-pointer"
                     aria-label={profileView === "password" ? "Back to profile" : "Back to map"}
                   >
                     <ChevronLeft className="h-6 w-6" strokeWidth={2} />
@@ -1481,7 +1686,11 @@ export default function DriverPage() {
                     placeholder={f.placeholder}
                   />
                 </div>
-                {f.field === "newPassword" && <PasswordStrengthHint password={f.value} />}
+                {f.field === "newPassword" && (
+                  <p className="mt-1.5 text-[12px] font-medium text-muted-foreground/80">
+                    Must be at least 8 characters with 1 letter and 1 number.
+                  </p>
+                )}
                 <AnimatePresence initial={false}>
                   {pwErrors[f.field] && (
                     <motion.p
@@ -1642,6 +1851,90 @@ export default function DriverPage() {
       </AnimatePresence>
     </div>
 
+      {/* Cancel-assignment confirmation with reason */}
+      {showCancelModal && detailSchedule && (
+        <div
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 p-4"
+          onClick={() => { if (!isCancelling) setShowCancelModal(false); }}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 1.1 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.1 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+            className="w-full max-w-[300px] overflow-hidden rounded-[14px] bg-white text-center shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-4 pb-3 pt-5">
+              <h3 className="text-[17px] font-semibold tracking-tight text-zinc-900">Cancel Assignment?</h3>
+              <p className="mt-1 text-[13px] leading-normal text-zinc-600">
+                The admin will be notified and can give this task to another driver.
+              </p>
+              <div className="mt-3 grid grid-cols-2 gap-1.5">
+                {["Truck breakdown", "Emergency", "Road blocked", "Other"].map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    disabled={isCancelling}
+                    onClick={() => { setCancelReason(r); haptic(); }}
+                    className={`rounded-full border px-2 py-1.5 text-[12px] transition-all active:scale-95 cursor-pointer disabled:opacity-50 ${
+                      cancelReason === r
+                        ? "border-emerald-600 bg-emerald-600/10 font-semibold text-emerald-700"
+                        : "border-black/10 text-zinc-600"
+                    }`}
+                  >
+                    {r}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex divide-x divide-black/10 border-t border-black/10">
+              <button
+                type="button"
+                onClick={() => setShowCancelModal(false)}
+                disabled={isCancelling}
+                className="h-11 flex-1 text-[17px] text-zinc-800 transition-colors hover:bg-black/5 active:bg-black/10 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!detailSchedule || isCancelling) return;
+                  setIsCancelling(true);
+                  try {
+                    if (truckState?.scheduleId === detailSchedule.id) {
+                      await stopGpsWatch();
+                    }
+                    await cancelAssignment({
+                      scheduleId: detailSchedule.id,
+                      truckId: selectedTruckId,
+                      cancelledBy: "driver",
+                      reason: cancelReason,
+                    });
+                    setShowCancelModal(false);
+                    setAssignmentDetailId(null);
+                    toast("Assignment cancelled. Admin notified.");
+                  } catch {
+                    toast("Could not cancel the assignment. Please try again.", { variant: "error" });
+                  } finally {
+                    setIsCancelling(false);
+                  }
+                }}
+                disabled={isCancelling}
+                className="flex h-11 flex-1 items-center justify-center text-[17px] font-semibold text-rose-600 transition-colors hover:bg-black/5 active:bg-black/10 cursor-pointer disabled:pointer-events-none"
+              >
+                {isCancelling ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  "Cancel Task"
+                )}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
       {/* Native iOS-style Sign Out Confirmation Alert */}
       {showSignOutModal && (
         <div
@@ -1667,7 +1960,7 @@ export default function DriverPage() {
                 type="button"
                 onClick={() => setShowSignOutModal(false)}
                 disabled={isSigningOut}
-                className="h-11 flex-1 text-[17px] text-zinc-800 transition-colors active:bg-black/5 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+                className="h-11 flex-1 text-[17px] text-zinc-800 transition-colors hover:bg-black/5 active:bg-black/10 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
               >
                 Cancel
               </button>
@@ -1685,7 +1978,7 @@ export default function DriverPage() {
                   }
                 }}
                 disabled={isSigningOut}
-                className="flex h-11 flex-1 items-center justify-center text-[17px] font-semibold text-rose-600 transition-colors active:bg-black/5 cursor-pointer disabled:pointer-events-none"
+                className="flex h-11 flex-1 items-center justify-center text-[17px] font-semibold text-rose-600 transition-colors hover:bg-black/5 active:bg-black/10 cursor-pointer disabled:pointer-events-none"
               >
                 {isSigningOut ? (
                   <Loader2 className="h-5 w-5 animate-spin" />

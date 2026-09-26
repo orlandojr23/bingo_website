@@ -14,6 +14,7 @@ const statusConfig = {
   "Off Duty": { color: "text-zinc-500" },
   Assigned: { color: "text-blue-700" },
   Accepted: { color: "text-blue-700" },
+  Cancelled: { color: "text-rose-700" },
   Unassigned: { color: "text-zinc-500" },
 };
 

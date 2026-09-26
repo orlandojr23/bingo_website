@@ -7,11 +7,14 @@ import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronLeft,
+  ChevronDown,
   LocateFixed,
   Camera,
   Map as MapIcon,
   MapPin,
   CheckCircle2,
+  XCircle,
+  Check,
   Trash2,
   Calendar,
   Ticket,
@@ -28,22 +31,19 @@ import {
   User,
   Loader2,
 } from "lucide-react";
-import { TEJERO_SITOS } from "@/lib/mock-data";
+import { TEJERO_SITOS, mockPilotData } from "@/lib/mock-data";
 import { useTickets, addTicket, updateTicket, removeTicket } from "@/lib/tickets";
 import { useAuth } from "@/context/AuthContext";
 import { useLiveRoute, getSchedule, getSchedules, scheduleLabel, selectTruckHeading } from "@/lib/live-route";
 import { playDing, playTrumpet, useSoundEnabled, setSoundEnabled } from "@/lib/sounds";
-import { useRoutePath } from "@/lib/use-route-path";
 import { useFleet } from "@/lib/fleet";
 import { clearResidentSession } from "@/lib/resident-session";
 import { reverseGeocode } from "@/lib/geocode";
 import { useSwipeToggle } from "@/lib/use-swipe-toggle";
 import { cn, haptic, formatTicketDateTime, formatTicketDateLong, formatTicketTime } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
-import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MapSkeleton, ResidentShellSkeleton } from "@/components/ui/skeletons";
-import PasswordStrengthHint from "@/components/ui/password-strength-hint";
 import { InfoRow } from "@/components/ui/info-row";
 import { useToast } from "@/components/pwa/Toast";
 import {
@@ -60,6 +60,36 @@ const MapCanvas = dynamic(() => import("@/components/map/map-canvas"), {
 });
 
 const TAB_IDS = ["schedule", "map", "report", "tickets"];
+
+// Relative time for notification rows ("2h ago", "Yesterday").
+function timeAgo(iso, nowMs) {
+  const t = new Date(iso).getTime();
+  if (!Number.isFinite(t)) return "—";
+  const s = Math.max(0, Math.floor((nowMs - t) / 1000));
+  if (s < 60) return "Just now";
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (d === 1) return "Yesterday";
+  if (d < 7) return `${d}d ago`;
+  return new Date(t).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+// "2026-09-27" → "Today", "Tomorrow", or "Mon, Sep 28". Null → null.
+function schedDayLabel(iso) {
+  if (!iso) return null;
+  const now = new Date();
+  const toISO = (d) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  if (iso === toISO(now)) return "Today";
+  if (iso === toISO(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1))) return "Tomorrow";
+  const [y, m, d] = iso.split("-").map(Number);
+  const dt = new Date(y, (m || 1) - 1, d || 1);
+  if (Number.isNaN(dt.getTime())) return iso;
+  return dt.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+}
 
 // Map banner is text-only (native style); status glyphs use Lucide icons.
 
@@ -169,67 +199,37 @@ const formatNameInput = (value) =>
     .toLowerCase()
     .replace(/(^|[\s\-.'])([a-zà-ÿñ])/g, (m, sep, c) => sep + c.toUpperCase());
 
-// Glossy 3D-style waste-category icons for the Schedule cards — same
-// gradient + highlight + ground-shadow language as the map truck marker.
-function MalataIcon() {
-  return (
-    <svg width="30" height="30" viewBox="0 0 48 48" fill="none" style={{ filter: "drop-shadow(0 3px 4px rgba(0,0,0,0.20))" }}>
-      <defs>
-        <linearGradient id="waste-malata" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#34d399" />
-          <stop offset="1" stopColor="#059669" />
-        </linearGradient>
-      </defs>
-      <ellipse cx="24" cy="41" rx="10" ry="2.5" fill="#000" opacity="0.12" />
-      <path d="M24 5 C36 13 38.5 29 24 42.5 C9.5 29 12 13 24 5 Z" fill="url(#waste-malata)" />
-      <path d="M24 10 L24 37" stroke="#065f46" strokeWidth="1.6" strokeLinecap="round" opacity="0.55" />
-      <path d="M24 17 L18.5 21 M24 17 L29.5 21 M24 25 L18 29.5 M24 25 L30 29.5" stroke="#065f46" strokeWidth="1.3" strokeLinecap="round" opacity="0.45" />
-      <path d="M19 12 C15 18 14.5 26 18 33 C14.5 26 15.5 17 20.5 11 Z" fill="#fff" opacity="0.35" />
-      <rect x="22.6" y="40" width="2.8" height="4" rx="1.4" fill="#065f46" />
-    </svg>
-  );
-}
-
-function RecyclableIcon() {
-  return (
-    <svg width="30" height="30" viewBox="0 0 48 48" fill="none" style={{ filter: "drop-shadow(0 3px 4px rgba(0,0,0,0.20))" }}>
-      <defs>
-        <linearGradient id="waste-recycle" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#60a5fa" />
-          <stop offset="1" stopColor="#2563eb" />
-        </linearGradient>
-        <g id="waste-rc-arrow">
-          <path d="M25.7,12.2 A10,10 0 0 1 33.4,25.4" fill="none" stroke="url(#waste-recycle)" strokeWidth="4.5" strokeLinecap="round" />
-          <polygon points="32.2,28.7 36.3,24.9 31.5,23.1" fill="#2563eb" />
-        </g>
-      </defs>
-      <ellipse cx="24" cy="41" rx="10" ry="2.5" fill="#000" opacity="0.12" />
-      <use href="#waste-rc-arrow" />
-      <use href="#waste-rc-arrow" transform="rotate(120 24 22)" />
-      <use href="#waste-rc-arrow" transform="rotate(240 24 22)" />
-      <path d="M14 12 A13,13 0 0 1 22 6.5" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" opacity="0.5" />
-    </svg>
-  );
-}
-
-function ResidualIcon() {
-  return (
-    <svg width="30" height="30" viewBox="0 0 48 48" fill="none" style={{ filter: "drop-shadow(0 3px 4px rgba(0,0,0,0.20))" }}>
-      <defs>
-        <linearGradient id="waste-residual" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#fbbf24" />
-          <stop offset="1" stopColor="#b45309" />
-        </linearGradient>
-      </defs>
-      <ellipse cx="24" cy="41" rx="10" ry="2.5" fill="#000" opacity="0.12" />
-      <path d="M20 6 L28 6 L26.5 11 L21.5 11 Z" fill="#92400e" />
-      <rect x="19" y="10" width="10" height="2.6" rx="1.3" fill="#78350f" />
-      <path d="M15 15 L33 15 L30.8 36.5 A4.5,4.5 0 0 1 26.3,41 L21.7,41 A4.5,4.5 0 0 1 17.2,36.5 Z" fill="url(#waste-residual)" />
-      <path d="M19.5 18 L21.5 18 L20.2 36 L18.6 35.4 Z" fill="#fff" opacity="0.35" />
-      <path d="M16.5 24 L31.5 24" stroke="#92400e" strokeWidth="1.2" opacity="0.4" />
-      <path d="M17.2 30 L30.8 30" stroke="#92400e" strokeWidth="1.2" opacity="0.4" />
-    </svg>
-  );
+// Accepted-item guide per collection type for the Schedule details screen.
+function wasteItemsFor(type) {
+  const t = type || "";
+  if (t.includes("Recyclable")) {
+    return [
+      "Plastic (PET) bottles",
+      "Glass bottles and jars",
+      "Tin and aluminum cans",
+      "Cardboard and paper",
+      "Clean metal scraps",
+    ];
+  }
+  if (t.includes("Dili Malata")) {
+    return [
+      "Dirty plastic sachets and wrappers",
+      "Styrofoam containers",
+      "Diapers and sanitary products",
+      "Used tissue and napkins",
+      "Broken ceramics and glass",
+    ];
+  }
+  if (t.includes("Malata")) {
+    return [
+      "Leftover food and rice",
+      "Fruit and vegetable peelings",
+      "Eggshells",
+      "Coffee grounds and tea bags",
+      "Leaves and yard trimmings",
+    ];
+  }
+  return null;
 }
 
 // Animated field note for the profile screens: expands/collapses with
@@ -268,7 +268,6 @@ export default function ResidentMobilePWA() {
     } catch {}
   }, [activeTab]);
   const tickets = useTickets();
-  const [ticketFilter, setTicketFilter] = useState("all");
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTicket, setSelectedTicket] = useState(null);
@@ -696,61 +695,27 @@ export default function ResidentMobilePWA() {
   const stopPoint = !activeTs || routeCompleted ? null : routePoints[stopIndex];
   const currentStop = stopPoint ? { ...stopPoint, index: stopIndex } : null;
 
-  const routePath = useRoutePath({
-    scheduleId: displaySchedule.id,
-    stopIndex,
-    origin:
-      activeTs && !routeCompleted
-        ? { lat: activeTs.tracking.lat, lng: activeTs.tracking.lng }
-        : null,
-    points: routeCompleted ? [] : routePoints.slice(stopIndex, stopIndex + 1),
-    autoReroute: true,
-    // The drawn leg starts at the map-matched road point; the marker below
-    // uses routePath.snappedOrigin so line and marker share one source.
-    pinToRoad: true,
-  });
-
-  // Compact numbered pins for every stop after the current one — likewise only
-  // shown once the driver has started the route.
-  const upcomingStops =
-    !activeTs || routeCompleted
-      ? []
-      : routePoints.slice(stopIndex + 1).map((p, i) => ({ ...p, index: stopIndex + 1 + i }));
-
-  // Road-accurate path for the legs AFTER the current stop. The origin is the fixed
-  // current-stop vertex (not the moving truck), so this is fetched once per stop
-  // advance instead of every sim tick; stopIndex+1 keeps its cache key distinct
-  // from the sim's current-leg key.
-  const onDuty = !!activeTs && !routeCompleted && !!activeTs.tracking?.isActive;
-  const futurePath = useRoutePath({
-    scheduleId: displaySchedule.id,
-    stopIndex: stopIndex + 1,
-    origin:
-      onDuty && routePoints[stopIndex]
-        ? { lat: routePoints[stopIndex].lat, lng: routePoints[stopIndex].lng }
-        : null,
-    points: onDuty ? routePoints.slice(stopIndex + 1) : [],
-    enabled: onDuty,
-  });
-
-  // Truthful countdown ETA for the banner: meters remaining along the drawn
-  // route leg (live truck position → current stop) at the fleet's ~9 m/s
-  // working pace — replaces the store's static "5 mins" placeholder, so the
-  // banner counts down for real as the truck approaches.
+  // Truthful countdown ETA: straight-line meters from truck to current stop
+  // at the fleet's ~9 m/s working pace.
   const liveEta = useMemo(() => {
     if (!activeTs || routeCompleted || activeTs.onsite) return null;
-    let meters = pathMeters(routePath.positions ?? []);
-    if (meters <= 0 && stopPoint && activeTs.tracking?.lat != null) {
-      meters = pathMeters([
-        [activeTs.tracking.lat, activeTs.tracking.lng],
-        [stopPoint.lat, stopPoint.lng],
-      ]);
-    }
+    if (!stopPoint || activeTs.tracking?.lat == null) return null;
+    const R = 6371000;
+    const dLat = (stopPoint.lat - activeTs.tracking.lat) * Math.PI / 180;
+    const dLng = (stopPoint.lng - activeTs.tracking.lng) * Math.PI / 180;
+    const a = Math.sin(dLat/2)**2 + Math.cos(activeTs.tracking.lat*Math.PI/180)*Math.cos(stopPoint.lat*Math.PI/180)*Math.sin(dLng/2)**2;
+    const meters = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     if (meters <= 0) return null;
     if (meters < 120) return "Arriving now";
     const mins = Math.max(1, Math.round(meters / 9 / 60));
     return `${mins} min${mins === 1 ? "" : "s"}`;
-  }, [activeTs, routeCompleted, activeTs?.onsite, routePath, stopPoint]);
+  }, [activeTs, routeCompleted, stopPoint]);
+
+  // Compact numbered pins for every stop after the current one.
+  const upcomingStops =
+    !activeTs || routeCompleted
+      ? []
+      : routePoints.slice(stopIndex + 1).map((p, i) => ({ ...p, index: stopIndex + 1 + i }));
 
   // Live truck banner entry derived from the shared route store
   const liveBanner = useMemo(() => {
@@ -822,17 +787,49 @@ export default function ResidentMobilePWA() {
   // render anyway, and the arrival effect below is ref-guarded, so identity
   // churn here is harmless.
   const residentAudiences = [
+    "residents",
     ...(residentSession?.id ? [residentSession.id] : []),
     ...(residentSession?.name ? [`resident:${residentSession.name}`] : []),
   ];
   const residentNotifs = useNotifications(residentAudiences);
-  const residentUnread = residentNotifs.filter((n) => !n.isRead).length;
+  // Broadcast announcements (audience "residents") share one DB row, so the
+  // server-side is_read flag can't track per-resident reads — one reader
+  // would clear it for everyone. Track dismissed broadcast ids per device.
+  const [dismissedBroadcasts, setDismissedBroadcasts] = useState(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const parsed = JSON.parse(window.localStorage.getItem("bingo-dismissed-broadcasts") || "[]");
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
+  const dismissBroadcast = (id) => {
+    setDismissedBroadcasts((prev) => {
+      if (prev.includes(id)) return prev;
+      const next = [...prev, id].slice(-50);
+      try {
+        window.localStorage.setItem("bingo-dismissed-broadcasts", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+  const isUpdateUnread = (n) =>
+    n.audience === "residents" ? !dismissedBroadcasts.includes(n.id) : !n.isRead;
+  const residentUnread = residentNotifs.filter(isUpdateUnread).length;
+  // "Now" for relative notification timestamps (same render-time clock the
+  // pickup banner already uses).
+  const notifNow = new Date().getTime();
 
   // Open reports filed by this resident — drives the Tickets tab badge.
   const myOpenTickets = useMemo(
     () => tickets.filter((t) => t.reporter === residentSession?.name && t.status !== "Resolved").length,
     [tickets, residentSession?.name]
   );
+
+  // Tickets list order, controlled by the native dropdown menu.
+  const [ticketSort, setTicketSort] = useState("newest"); // "newest" | "oldest"
+  const [ticketFilterOpen, setTicketFilterOpen] = useState(false);
 
   // Single truthful status message derived from real schedules: pickup today,
   // or no pickup today with the next collection day.
@@ -841,7 +838,8 @@ export default function ResidentMobilePWA() {
     const now = new Date();
     const dayName = now.toLocaleDateString("en-US", { weekday: "long" });
     const open = getSchedules().filter(
-      (s) => (live.scheduleStatus?.[s.id] ?? s.status) !== "Completed"
+      (s) => (live.scheduleStatus?.[s.id] ?? s.status) !== "Completed" &&
+        (live.scheduleStatus?.[s.id] ?? s.status) !== "Cancelled"
     );
     const today = open.find((s) => s.days?.includes(dayName));
     if (today) {
@@ -883,8 +881,29 @@ export default function ResidentMobilePWA() {
   // Dynamic banner onboarding sequence: Step 0 (Greeting, 4s) -> Step 1 (Spotted Waste?, 4s) -> Step 2 (Schedule Status, Fixed)
   const [bannerStep, setBannerStep] = useState(0);
 
+  // Short cancelled notice: today's task was called off. Details live in
+  // Updates — tapping the banner opens them.
+  const cancelledBanner = useMemo(() => {
+    if (liveBanner) return null;
+    const now = new Date();
+    const todayISO = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    const hit = getSchedules().find(
+      (s) =>
+        (live.scheduleStatus?.[s.id] ?? s.status) === "Cancelled" &&
+        (s.assignmentDate || "") === todayISO
+    );
+    if (!hit) return null;
+    return {
+      id: "pickup-cancelled",
+      icon: XCircle,
+      tone: "text-rose-600",
+      title: "Collection cancelled",
+      subtitle: "See Updates for details",
+    };
+  }, [liveBanner, live]);
+
   useEffect(() => {
-    if (liveBanner || showOnboarding || runProductTour) {
+    if (liveBanner || cancelledBanner || showOnboarding || runProductTour) {
       setBannerStep(0);
       return;
     }
@@ -898,7 +917,7 @@ export default function ResidentMobilePWA() {
       clearTimeout(timer1);
       clearTimeout(timer2);
     };
-  }, [liveBanner, showOnboarding, runProductTour]);
+  }, [liveBanner, cancelledBanner, showOnboarding, runProductTour]);
 
   const idleBanners = useMemo(() => {
     const list = [
@@ -931,11 +950,16 @@ export default function ResidentMobilePWA() {
 
   const currentBanner = useMemo(() => {
     if (liveBanner) return liveBanner;
+    if (cancelledBanner) return cancelledBanner;
     if (runProductTour && pickupStatus) return pickupStatus;
     return idleBanners[bannerStep % idleBanners.length] || idleBanners[0];
-  }, [liveBanner, idleBanners, bannerStep, runProductTour, pickupStatus]);
+  }, [liveBanner, cancelledBanner, idleBanners, bannerStep, runProductTour, pickupStatus]);
 
   const handleHeaderClick = () => {
+    if (currentBanner?.id === "pickup-cancelled") {
+      openUpdates();
+      return;
+    }
     if (liveBanner || showOnboarding || runProductTour) return;
     setBannerStep((prev) => (prev + 1) % idleBanners.length);
     haptic();
@@ -1084,7 +1108,11 @@ export default function ResidentMobilePWA() {
   }, [residentNotifs, soundEnabled, toast, residentSession?.id]);
 
   const openUpdate = (notif) => {
-    markNotificationRead(notif.id);
+    if (notif.audience === "residents") {
+      dismissBroadcast(notif.id);
+    } else {
+      markNotificationRead(notif.id);
+    }
     const target = notif.ticketId
       ? tickets.find((t) => String(t.id) === String(notif.ticketId))
       : null;
@@ -1094,6 +1122,17 @@ export default function ResidentMobilePWA() {
       setMapFocusTicket(null);
       haptic();
     }
+  };
+
+  // Opening Updates clears the bell badge — personal items are marked read
+  // in the DB, broadcasts are dismissed on this device only.
+  const openUpdates = () => {
+    markAllNotificationsRead(residentAudiences.filter((a) => a !== "residents"));
+    residentNotifs.forEach((n) => {
+      if (n.audience === "residents") dismissBroadcast(n.id);
+    });
+    setShowUpdates(true);
+    haptic();
   };
 
   useEffect(() => {
@@ -1115,31 +1154,20 @@ export default function ResidentMobilePWA() {
       .map((t) => {
         const ts = (live.trucks || {})[t.id];
         if (!ts || !ts.tracking.isActive) return null;
-        let lat = ts.tracking.lat || 10.3025;
-        let lng = ts.tracking.lng || 123.9095;
-        let heading =
-          t.id === activeTs?.truckId
-            ? selectTruckHeading(ts, routePath.heading)
-            : selectTruckHeading(ts, null);
-        if (t.id === activeTs?.truckId && routePath.snappedOrigin) {
-          lat = routePath.snappedOrigin.lat;
-          lng = routePath.snappedOrigin.lng;
-          if (routePath.heading != null) heading = routePath.heading;
-        }
         return {
           id: t.id,
           plate: t.plate,
           driver: t.driver,
           capacity: t.capacity,
-          lat,
-          lng,
-          heading,
+          lat: ts.tracking.lat || 10.3025,
+          lng: ts.tracking.lng || 123.9095,
+          heading: selectTruckHeading(ts, null),
           eta: ts.tracking.eta || "5 mins",
           isActive: true,
         };
       })
       .filter(Boolean);
-  }, [live, routePath, activeTs, fleet]);
+  }, [live, activeTs, fleet]);
 
   const handlePhotoChange = (e) => {
     const file = e.target.files?.[0];
@@ -1332,6 +1360,9 @@ export default function ResidentMobilePWA() {
   };
 
   const filteredSchedules = getSchedules().filter((s) => {
+    // Cancelled and archived schedules never list as upcoming.
+    if (s.isArchived) return false;
+    if ((live.scheduleStatus?.[s.id] ?? s.status) === "Cancelled") return false;
     // No zone filter UI on this tab — match the search box only. Field
     // lookups are guarded: the store uses collectionType/collectionDays
     // while older shapes used type/days.
@@ -1350,6 +1381,207 @@ export default function ResidentMobilePWA() {
     return matchesQuery;
   });
 
+  // Schedule details sub-screen, mirroring the driver Tasks tab.
+  const [scheduleDetailId, setScheduleDetailId] = useState(null);
+  // TEMPORARY preview: mock schedules so upcoming + Past sections can be
+  // seen before anything is posted. Remove when real schedules exist.
+  const previewScheduleList = [
+    {
+      id: "preview-sch-1",
+      zoneId: mockPilotData.zones[0]?.id ?? null,
+      assignmentDate: "2026-09-27",
+      time: "08:00 AM - 11:00 AM",
+      collectionType: "Malata (Nabubulok)",
+      collectionDays: ["Monday", "Wednesday", "Friday"],
+      routePoints: [],
+      status: "Scheduled",
+    },
+    {
+      id: "preview-sch-2",
+      zoneId: mockPilotData.zones[1]?.id ?? null,
+      assignmentDate: "2026-09-20",
+      time: "01:00 PM - 04:00 PM",
+      collectionType: "Dili Malata (Di-Nabubulok)",
+      collectionDays: ["Tuesday", "Thursday"],
+      routePoints: [],
+      status: "Completed",
+    },
+    {
+      id: "preview-sch-3",
+      zoneId: mockPilotData.zones[2]?.id ?? null,
+      assignmentDate: "2026-09-13",
+      time: "09:00 AM - 12:00 PM",
+      collectionType: "Recyclable",
+      collectionDays: ["Saturday"],
+      routePoints: [],
+      status: "Completed",
+    },
+  ];
+  const scheduleDetail = scheduleDetailId
+    ? (getSchedules().find(
+        (s) =>
+          s.id === scheduleDetailId &&
+          !s.isArchived &&
+          (live.scheduleStatus?.[s.id] ?? s.status) !== "Cancelled"
+      ) ?? previewScheduleList.find((s) => s.id === scheduleDetailId) ?? null)
+    : null;
+
+  // Day grouping for the Schedule list: Today, Tomorrow, dates, unscheduled.
+  // Finished collections sit in a "Past" section at the bottom.
+  const schedStatusOf = (s) => live.scheduleStatus?.[s.id] ?? s.status;
+  const isSchedulePreview = filteredSchedules.length === 0;
+  const scheduleSource = isSchedulePreview ? previewScheduleList : filteredSchedules;
+  const upcomingSchedules = scheduleSource.filter((s) => schedStatusOf(s) !== "Completed");
+  // TEMPORARY: show mock past rows until a real route is completed.
+  const realPastSchedules = scheduleSource.filter((s) => schedStatusOf(s) === "Completed");
+  const showingPastPreview = realPastSchedules.length === 0;
+  const pastSchedules = (showingPastPreview
+    ? previewScheduleList.filter((s) => s.status === "Completed")
+    : realPastSchedules
+  ).sort((a, b) => {
+      const ka = a.assignmentDate || "";
+      const kb = b.assignmentDate || "";
+      if (ka && kb) return ka < kb ? 1 : ka > kb ? -1 : 0;
+      if (ka) return -1;
+      if (kb) return 1;
+      return 0;
+    });
+  const scheduleGroups = (() => {
+    const byDay = new Map();
+    for (const s of upcomingSchedules) {
+      const key = s.assignmentDate || "unscheduled";
+      if (!byDay.has(key)) byDay.set(key, []);
+      byDay.get(key).push(s);
+    }
+    const dated = [...byDay.entries()]
+      .filter(([key]) => key !== "unscheduled")
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+    if (byDay.has("unscheduled")) dated.push(["unscheduled", byDay.get("unscheduled")]);
+    return dated.map(([key, items]) => ({
+      key,
+      label: key === "unscheduled" ? "Unscheduled" : (schedDayLabel(key) ?? key),
+      items,
+    }));
+  })();
+
+  // One schedule row (upcoming + Past sections share it).
+  const renderScheduleRow = (sch) => {
+    // Category truth: the store uses collectionType while older shapes
+    // used type.
+    const t = sch.type ?? sch.collectionType ?? "";
+    const isRecyclable = t.includes("Recyclable");
+    const categoryShortLabel = isRecyclable
+      ? "Recyclable"
+      : (!isRecyclable && t.includes("Dili Malata"))
+        ? "Dili Malata"
+        : "Malata";
+    return (
+      <button
+        key={sch.id}
+        type="button"
+        onClick={() => { setScheduleDetailId(sch.id); haptic(); }}
+        className="flex w-full cursor-pointer items-center justify-between gap-3 px-4 py-2.5 text-left transition-colors active:bg-muted"
+      >
+        <Calendar className="h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+        <span className="min-w-0 flex-1">
+          <p className="text-[15px] leading-snug break-words text-foreground">{scheduleLabel(sch)}</p>
+          <p className="mt-0.5 text-[13px] text-muted-foreground">
+            {[sch.time, categoryShortLabel].filter(Boolean).join(" · ") || "—"}
+          </p>
+        </span>
+        <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground/50" />
+      </button>
+    );
+  };
+
+  // TEMPORARY preview: mock rows so the ticket cards + details can be
+  // seen before any report is filed. Remove when real tickets exist.
+  // Fixed timestamps keep render pure (no Date.now in the body).
+  const previewTickets = [
+    {
+      id: "preview-tkt-1",
+      location: "Sitio Vilgon",
+      category: "Overflowing Bin",
+            status: "In Progress",
+            urgency: "High",
+            timestamp: "2026-09-27T06:00:00+08:00",
+      barangay: "Tejero",
+      city: "Cebu City",
+      description: "Overflowing garbage bin near the community center, spilling onto the sidewalk.",
+      lat: 10.30125,
+      lng: 123.9081,
+      photo: null,
+    },
+    {
+      id: "preview-tkt-2",
+      location: "Sitio ICM",
+      category: "Uncollected Waste",
+      status: "Pending",
+      urgency: "Medium",
+      timestamp: "2026-09-26T14:00:00+08:00",
+      barangay: "Tejero",
+      city: "Cebu City",
+      description: "Trash bags waiting for pickup for two days.",
+      lat: 10.3039,
+      lng: 123.90795,
+      photo: null,
+    },
+    {
+      id: "preview-tkt-3",
+      location: "Sitio Daclan",
+      category: "Illegal Dumping",
+      status: "Resolved",
+      urgency: "High",
+      timestamp: "2026-08-12T09:30:00+08:00",
+      barangay: "Tejero",
+      city: "Cebu City",
+      description: "Cleared the dumped pile blocking the pathway.",
+      lat: 10.30545,
+      lng: 123.90885,
+      photo: null,
+    },
+  ];
+  const myTickets = tickets.filter((t) => t.reporter === residentSession?.name);
+  const compareTickets = (a, b) => {
+    const ta = new Date(a.timestamp).getTime();
+    const tb = new Date(b.timestamp).getTime();
+    const aValid = Number.isFinite(ta);
+    const bValid = Number.isFinite(tb);
+    if (aValid && bValid) return ticketSort === "oldest" ? ta - tb : tb - ta;
+    if (aValid) return -1;
+    if (bValid) return 1;
+    return 0;
+  };
+  const sortedTickets = [...myTickets].sort(compareTickets);
+  // TEMPORARY preview uses the same ordering (remove with previewTickets).
+  const sortedPreview = [...previewTickets].sort(compareTickets);
+  const visibleTickets = myTickets.length > 0 ? sortedTickets : sortedPreview;
+
+  // TEMPORARY preview: mock updates so the notification cards can be
+  // seen before anything arrives. Remove when real updates exist.
+  const previewNotifs = [
+    {
+      id: "preview-notif-1",
+      audience: "residents",
+      type: "Cancelled",
+      title: "Collection cancelled",
+      message: "Sitio Vilgon & Sitio Mac Arthur (08:00 AM - 11:00 AM) was cancelled: Truck breakdown. Please check back for the new schedule.",
+      at: "2026-09-27T07:15:00+08:00",
+      isRead: false,
+      ticketId: null,
+    },
+    {
+      id: "preview-notif-2",
+      audience: "resident:Preview",
+      type: "Resolved",
+      title: "Your report was cleaned up",
+      message: "Your report at Sitio Daclan was cleaned up. Thank you!",
+      at: "2026-09-26T15:40:00+08:00",
+      isRead: false,
+      ticketId: null,
+    },
+  ];
+
   if (!sessionReady) {
     return <ResidentShellSkeleton />;
   }
@@ -1367,9 +1599,6 @@ export default function ResidentMobilePWA() {
           <MapCanvas
             tickets={mapFocusTicket ? [mapFocusTicket] : []}
             trucks={activeTrucks}
-            routes={[
-              futurePath.positions.length >= 2 && { id: `${displaySchedule.id}-future-${stopIndex}`, ...futurePath },
-            ].filter(Boolean)}
             mapMode="pins"
             currentStop={currentStop}
             upcomingStops={upcomingStops}
@@ -1384,10 +1613,15 @@ export default function ResidentMobilePWA() {
             onSelectTicket={(t) => {
               closeAllSheets();
               setSelectedTicket(t);
-              setMapFocusTicket(t);
-              setFocusSignal((s) => s + 1);
-              setMapZoom(17);
               haptic();
+              // Let the details overlay paint first — the map refocus
+              // (animated setView + marker rebuild) runs on the next frame
+              // so the two animations never fight over the same frame.
+              requestAnimationFrame(() => {
+                setMapFocusTicket(t);
+                setFocusSignal((s) => s + 1);
+                setMapZoom(17);
+              });
             }}
             onMapDrag={() => {
               if (selectedTicket) {
@@ -1444,18 +1678,7 @@ export default function ResidentMobilePWA() {
                   className="flex items-center gap-2.5 min-w-0 w-full"
                 >
                   {currentBanner.live && (
-                    <span className="relative flex h-2 w-2 shrink-0">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-60" />
-                      <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-600" />
-                    </span>
-                  )}
-                  {currentBanner.icon && (
-                    <currentBanner.icon
-                      className={`h-6 w-6 shrink-0 ${currentBanner.tone ?? "text-foreground"}`}
-                      strokeWidth={2.25}
-                      fill="currentColor"
-                      fillOpacity={0.18}
-                    />
+                    <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-600" />
                   )}
 
                   <div className="min-w-0 flex-1">
@@ -1475,8 +1698,8 @@ export default function ResidentMobilePWA() {
           {/* Right: Report updates bell */}
           <button
             type="button"
-            onClick={() => { setShowUpdates(true); haptic(); }}
-            className="relative ml-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-foreground transition-all hover:bg-muted active:scale-95 cursor-pointer"
+            onClick={openUpdates}
+            className="relative ml-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-foreground transition-all active:scale-95 cursor-pointer"
             aria-label="Report updates"
           >
             <Bell
@@ -1512,8 +1735,7 @@ export default function ResidentMobilePWA() {
                   setIsMapSheetExpanded(false);
                   setTruckFocused(true);
                   if (activeTs?.tracking) {
-                    const s = routePath.snappedOrigin;
-                    setMapCenter(s ? [s.lat, s.lng] : [activeTs.tracking.lat, activeTs.tracking.lng]);
+                    setMapCenter([activeTs.tracking.lat, activeTs.tracking.lng]);
                     setMapZoom(17);
                     setFlySignal((s) => s + 1);
                   }
@@ -1647,116 +1869,118 @@ export default function ResidentMobilePWA() {
                 <div className="relative flex h-[52px] items-center justify-center px-2">
                   <button
                     type="button"
-                    onClick={() => { setActiveTab("map"); haptic(); }}
-                    className="absolute left-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-all hover:bg-muted active:scale-95 active:bg-muted cursor-pointer"
-                    aria-label="Back to map"
+                    onClick={() => { scheduleDetail ? setScheduleDetailId(null) : setActiveTab("map"); haptic(); }}
+                    className="absolute left-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-all active:scale-95 cursor-pointer"
+                    aria-label={scheduleDetail ? "Back to schedules" : "Back to map"}
                   >
                     <ChevronLeft className="h-6 w-6" strokeWidth={2} />
                   </button>
-                  <h1 className="text-[17px] font-semibold tracking-tight text-foreground">Schedule</h1>
+                  <h1 className="text-[17px] font-semibold tracking-tight text-foreground">{scheduleDetail ? "Details" : "Schedule"}</h1>
                 </div>
               </div>
               <div className="flex flex-1 flex-col overflow-y-auto bg-muted/40 pb-10">
                 {/* Schedule List */}
-                <div className="flex flex-1 flex-col space-y-2.5 p-4">
-                  {filteredSchedules.length === 0 ? (
-                    <div className="flex flex-1 flex-col items-center justify-center min-h-[50vh] px-6 py-16 text-center">
-                      <Calendar className="h-12 w-12 text-muted-foreground/40" strokeWidth={1.5} />
-                      <h3 className="mt-4 text-[17px] font-semibold tracking-tight text-foreground">No schedules found</h3>
-                      <p className="mt-1 max-w-[240px] text-[13px] leading-normal text-muted-foreground">
-                        There are no schedules matching your search.
-                      </p>
-                    </div>
-                  ) : filteredSchedules.map((sch) => {
-                    // Category truth: the store uses collectionType while older
-                    // shapes used type — icon and badge read both so they agree.
-                    const wasteKind = (() => {
-                      const t = sch.type ?? sch.collectionType ?? "";
-                      if (t.includes("Recyclable")) return "recyclable";
-                      if (t.includes("Dili Malata")) return "residual";
-                      return "malata";
-                    })();
-                    const isRecyclable = wasteKind === "recyclable";
-                    const isDiliMalata = wasteKind === "residual";
-                    const isBiodegradable = wasteKind === "malata";
-
-                    const areaTitle = scheduleLabel(sch);
-
-                    const DAY_ABBR = {
-                      Monday: "Mon",
-                      Tuesday: "Tue",
-                      Wednesday: "Wed",
-                      Thursday: "Thu",
-                      Friday: "Fri",
-                      Saturday: "Sat",
-                      Sunday: "Sun",
-                    };
-                    const formattedDaysSource = sch.days ?? sch.collectionDays ?? [];
-                    const daysList = (Array.isArray(formattedDaysSource) ? formattedDaysSource : String(formattedDaysSource).split(","))
-                      .map((d) => d.trim())
-                      .filter(Boolean);
-                    const formattedDays = daysList.map((d) => DAY_ABBR[d] || d).join(", ");
-                    // Subtle "today" signal from the device weekday — no
-                    // timestamps stored or shown, just a highlight when this
-                    // card collects today.
-                    const todayName = new Date().toLocaleDateString("en-US", { weekday: "long" });
-                    const isToday = daysList.includes(todayName);
-
-                    const categoryBadgeLabel = isBiodegradable
-                      ? "Malata"
-                      : isRecyclable
-                        ? "Recyclable"
-                        : "Dili Malata";
-
-                    return (
-                      <div
-                        key={sch.id}
-                        className="rounded-2xl border border-border/60 bg-card p-4"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span
-                            className={cn(
-                              "flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl",
-                              isBiodegradable
-                                ? "bg-emerald-600/10"
-                                : isRecyclable
-                                  ? "bg-blue-600/10"
-                                  : "bg-amber-600/10"
+                <div className="flex flex-1 flex-col">
+                  {!scheduleDetail ? (
+                    scheduleSource.length === 0 ? (
+                      <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
+                        <h3 className="mt-4 text-[17px] font-semibold tracking-tight text-foreground">No schedules found</h3>
+                        <p className="mt-1 max-w-[240px] text-[13px] leading-normal text-muted-foreground">
+                          There are no schedules matching your search.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="flex flex-1 flex-col">
+                        {scheduleGroups.map((group) => (
+                          <div key={group.key} className="mt-5 px-4">
+                            <p className="px-1 pb-1.5 text-[13px] text-muted-foreground">{group.label}</p>
+                            <div className="divide-y divide-border/60 overflow-hidden rounded-2xl border border-border/60 bg-card">
+                              {group.items.map((sch) => renderScheduleRow(sch))}
+                            </div>
+                          </div>
+                        ))}
+                        {pastSchedules.length > 0 && (
+                          <div className="mt-5 px-4">
+                            <p className="px-1 pb-1.5 text-[13px] text-muted-foreground">Past</p>
+                            <div className="divide-y divide-border/60 overflow-hidden rounded-2xl border border-border/60 bg-card">
+                              {pastSchedules.map((sch) => renderScheduleRow(sch))}
+                            </div>
+                            {showingPastPreview && (
+                              <p className="mt-2.5 text-center text-[13px] text-muted-foreground">
+                                Preview. Finished collections will appear here.
+                              </p>
                             )}
-                          >
-                            {isBiodegradable ? <MalataIcon /> : isRecyclable ? <RecyclableIcon /> : <ResidualIcon />}
-                          </span>
-                          <h3 className="min-w-0 flex-1 text-[16px] font-semibold leading-snug tracking-tight text-foreground">
-                            {areaTitle}
-                          </h3>
-                          <span
-                            className={cn(
-                              "shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold",
-                              isBiodegradable
-                                ? "bg-emerald-600/10 text-emerald-700"
-                                : isRecyclable
-                                  ? "bg-blue-600/10 text-blue-700"
-                                  : "bg-amber-600/10 text-amber-700"
-                            )}
-                          >
-                            {categoryBadgeLabel}
-                          </span>
-                        </div>
+                          </div>
+                        )}
+                        {isSchedulePreview && (
+                          <p className="mt-2.5 text-center text-[13px] text-muted-foreground">
+                            Preview. Posted schedules will appear here.
+                          </p>
+                        )}
+                      </div>
+                    )
+                  ) : (
+                    <>
+                      {/* Centered header */}
+                      <div className="flex flex-col items-center px-4 pb-2 pt-6 text-center">
+                        <h2 className="text-[20px] font-semibold tracking-tight text-foreground">{scheduleLabel(scheduleDetail)}</h2>
+                        {([schedDayLabel(scheduleDetail?.assignmentDate), scheduleDetail?.time].filter(Boolean).join(" · ")) && (
+                          <p className="mt-0.5 text-[13px] text-muted-foreground">
+                            {[schedDayLabel(scheduleDetail?.assignmentDate), scheduleDetail?.time].filter(Boolean).join(" · ")}
+                          </p>
+                        )}
+                      </div>
 
-                        <div className="mt-3 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 border-t border-border/60 pt-2.5">
-                          <span className="text-[13px] text-muted-foreground">
-                            {isToday && (
-                              <span className="mr-1.5 inline-flex items-center rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
-                                Today
-                              </span>
-                            )}
-                            {formattedDays}
-                          </span>
-                          <span className="ml-auto whitespace-nowrap text-[13px] font-semibold tabular-nums text-foreground">{sch.time}</span>
+                      {/* Details — single card, no section labels */}
+                      <div className="mt-5 px-4">
+                        <div className="divide-y divide-border/60 overflow-hidden rounded-2xl border border-border/60 bg-card">
+                          <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
+                            <span className="shrink-0 text-[15px] text-foreground">Collection</span>
+                            <span className="text-right text-[15px] leading-snug break-words text-muted-foreground">{scheduleDetail?.type ?? scheduleDetail?.collectionType ?? "—"}</span>
+                          </div>
+                          <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
+                            <span className="shrink-0 text-[15px] text-foreground">Days</span>
+                            <span className="text-right text-[15px] leading-snug break-words text-muted-foreground">
+                              {(() => {
+                                const DAY_ABBR = {
+                                  Monday: "Mon",
+                                  Tuesday: "Tue",
+                                  Wednesday: "Wed",
+                                  Thursday: "Thu",
+                                  Friday: "Fri",
+                                  Saturday: "Sat",
+                                  Sunday: "Sun",
+                                };
+                                const src = scheduleDetail?.days ?? scheduleDetail?.collectionDays ?? [];
+                                const list = (Array.isArray(src) ? src : String(src).split(","))
+                                  .map((d) => d.trim())
+                                  .filter(Boolean);
+                                return list.length ? list.map((d) => DAY_ABBR[d] || d).join(", ") : "—";
+                              })()}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    );
-                  })}
+
+                      {(() => {
+                        const items = wasteItemsFor(scheduleDetail?.type ?? scheduleDetail?.collectionType);
+                        if (!items) return null;
+                        return (
+                          <div className="mt-5 px-4">
+                            <p className="px-1 pb-1.5 text-[13px] text-muted-foreground">What to put out</p>
+                            <div className="divide-y divide-border/60 overflow-hidden rounded-2xl border border-border/60 bg-card">
+                              {items.map((item) => (
+                                <div key={item} className="flex items-center gap-3 px-4 py-2.5">
+                                  <Check className="h-4 w-4 shrink-0 text-emerald-600" strokeWidth={2.5} />
+                                  <span className="text-[15px] text-foreground">{item}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </>
+                  )}
                 </div>
               </div>
             </motion.div>
@@ -1777,7 +2001,7 @@ export default function ResidentMobilePWA() {
           <button
             type="button"
             onClick={() => { setActiveTab("map"); haptic(); }}
-            className="absolute left-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-all hover:bg-muted active:scale-95 active:bg-muted cursor-pointer"
+            className="absolute left-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-all active:scale-95 cursor-pointer"
             aria-label="Back to map"
           >
             <ChevronLeft className="h-6 w-6" strokeWidth={2} />
@@ -1785,9 +2009,9 @@ export default function ResidentMobilePWA() {
           <h1 className="text-[17px] font-semibold tracking-tight text-foreground">New Report</h1>
         </div>
       </div>
-      <div className="flex flex-1 flex-col overflow-y-auto p-4 pb-10">
+      <div className={cn("flex flex-1 flex-col overflow-y-auto p-4", !submittedTicket && "pb-10")}>
         {submittedTicket ? (
-        <div className="flex flex-1 flex-col items-center justify-center px-6 py-12 text-center">
+        <div className="flex flex-1 flex-col items-center justify-center px-6 py-12 text-center mt-[-10%]">
           <CheckCircle2 className="h-12 w-12 text-emerald-600" strokeWidth={1.5} />
           <h2 className="mt-4 text-[17px] font-semibold tracking-tight text-foreground">
             Report Dispatched
@@ -1899,7 +2123,7 @@ export default function ResidentMobilePWA() {
                 <label className="mb-1.5 block text-[13px] text-muted-foreground">
                   Priority Level
                 </label>
-                <div className="grid grid-cols-4 gap-1.5">
+                <div className="flex rounded-full bg-muted p-1">
                   {["Low", "Medium", "High", "Critical"].map((lvl) => (
                     <button
                       key={lvl}
@@ -1909,10 +2133,10 @@ export default function ResidentMobilePWA() {
                         haptic();
                       }}
                       className={cn(
-                        "h-12 rounded-2xl text-[15px] font-semibold transition-colors cursor-pointer",
+                        "h-9 flex-1 cursor-pointer rounded-full text-[13px] transition-all active:scale-[0.98]",
                         urgency === lvl
-                          ? "bg-emerald-600 text-white"
-                          : "border border-border/60 bg-card text-muted-foreground active:bg-muted"
+                          ? "bg-card font-semibold text-foreground shadow-sm"
+                          : "font-medium text-muted-foreground"
                       )}
                     >
                       {lvl}
@@ -2041,7 +2265,7 @@ export default function ResidentMobilePWA() {
           <button
             type="button"
             onClick={() => { setActiveTab("map"); haptic(); }}
-            className="absolute left-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-all hover:bg-muted active:scale-95 active:bg-muted cursor-pointer"
+            className="absolute left-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-all active:scale-95 cursor-pointer"
             aria-label="Back to map"
           >
             <ChevronLeft className="h-6 w-6" strokeWidth={2} />
@@ -2049,8 +2273,8 @@ export default function ResidentMobilePWA() {
           <h1 className="text-[17px] font-semibold tracking-tight text-foreground">My Tickets</h1>
           <button
             type="button"
-            onClick={() => { setShowUpdates(true); haptic(); }}
-            className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-all hover:bg-muted active:scale-95 active:bg-muted cursor-pointer"
+            onClick={openUpdates}
+            className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-all active:scale-95 cursor-pointer"
             aria-label="Report updates"
           >
             <Bell
@@ -2068,52 +2292,99 @@ export default function ResidentMobilePWA() {
         </div>
       </div>
       <div className="flex flex-1 flex-col overflow-y-auto bg-muted/40 pb-10">
-        {tickets.filter((t) => t.reporter === residentSession?.name).length === 0 ? (
-          <div className="flex flex-1 flex-col items-center justify-center min-h-[50vh] px-6 py-16 text-center">
-            <Ticket className="h-12 w-12 text-muted-foreground/40" strokeWidth={1.5} />
+        {myTickets.length === 0 && sortedPreview.length === 0 ? (
+          <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
             <h3 className="mt-4 text-[17px] font-semibold tracking-tight text-foreground">No Tickets Yet</h3>
             <p className="mt-1 max-w-[240px] text-[13px] leading-normal text-muted-foreground">When you submit a report, you can track its progress here.</p>
           </div>
         ) : (
-          <div className="space-y-2.5 p-4">
-            {tickets
-              .filter((t) => t.reporter === residentSession?.name)
-              .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-              .map((ticket) => (
-                <div
-                  key={ticket.id}
-                  onClick={() => { setSelectedTicket(ticket); haptic(); }}
-                  className="rounded-2xl border border-border/60 bg-card p-4 cursor-pointer active:scale-[0.99] transition-transform"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">
-                        {ticket.category || "Waste Report"}
-                      </p>
-                      <p className="text-[16px] font-semibold tracking-tight leading-snug break-words text-foreground">
+          <>
+            {visibleTickets.length > 1 && (
+              <div className="mt-5 px-4 flex justify-end">
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => { setTicketFilterOpen((v) => !v); haptic(); }}
+                    aria-haspopup="menu"
+                    aria-expanded={ticketFilterOpen}
+                    className="inline-flex cursor-pointer items-center gap-1 text-[13px] font-semibold text-emerald-600 active:opacity-70"
+                  >
+                    {ticketSort === "newest" ? "Newest" : "Oldest"}
+                    <ChevronDown className="h-4 w-4" strokeWidth={2} />
+                  </button>
+                  <AnimatePresence>
+                    {ticketFilterOpen && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-30 cursor-default"
+                          onClick={() => setTicketFilterOpen(false)}
+                        />
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.96, y: -4 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.96, y: -4 }}
+                          transition={{ duration: 0.15, ease: "easeOut" }}
+                          role="menu"
+                          className="absolute right-0 z-40 mt-1 w-44 overflow-hidden rounded-2xl border border-border/60 bg-card p-1 shadow-lg"
+                        >
+                          {[
+                            { id: "newest", label: "Newest first" },
+                            { id: "oldest", label: "Oldest first" },
+                          ].map((opt) => (
+                            <button
+                              key={opt.id}
+                              type="button"
+                              role="menuitemradio"
+                              aria-checked={ticketSort === opt.id}
+                              onClick={() => { setTicketFilterOpen(false); haptic(); setTimeout(() => setTicketSort(opt.id), 160); }}
+                              className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-xl px-3 py-2 text-left text-[15px] transition-colors active:bg-muted"
+                            >
+                              <span className={ticketSort === opt.id ? "font-semibold text-foreground" : "text-muted-foreground"}>
+                                {opt.label}
+                              </span>
+                              {ticketSort === opt.id && (
+                                <Check className="h-4 w-4 shrink-0 text-emerald-600" strokeWidth={2.5} />
+                              )}
+                            </button>
+                          ))}
+                        </motion.div>
+                      </>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
+            )}
+            <div className={visibleTickets.length > 1 ? "mt-3 px-4" : "mt-5 px-4"}>
+              <div className="overflow-hidden rounded-2xl border border-border/60 bg-card">
+                {visibleTickets.map((ticket) => (
+                  <button
+                    key={ticket.id}
+                    type="button"
+                    onClick={() => { setSelectedTicket(ticket); haptic(); }}
+                    className="flex w-full cursor-pointer items-center justify-between gap-3 px-4 py-2.5 border-b border-border/60 last:border-b-0 text-left transition-colors active:bg-muted"
+                  >
+                    <Ticket className="h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+                    <span className="min-w-0 flex-1">
+                      <p className="text-[15px] leading-snug break-words text-foreground">
                         {ticket.location}
                       </p>
-                      {ticket.description || ticket.notes ? (
-                        <p className="mt-0.5 line-clamp-1 text-[13px] leading-normal text-muted-foreground">
-                          {ticket.description || ticket.notes}
-                        </p>
-                      ) : null}
-                    </div>
-                    <StatusBadge status={ticket.status} />
-                  </div>
-                  <div className="mt-3 flex items-center justify-between border-t border-border/60 pt-2.5">
-                    <span className="text-[12px] tabular-nums text-muted-foreground">
-                      {ticket.timestamp
-                        ? formatTicketDateTime(ticket.timestamp)
-                        : `${ticket.date || "—"}${ticket.time ? ` · ${ticket.time}` : ""}`}
+                      <p className="mt-0.5 text-[13px] text-muted-foreground">
+                        {[ticket.status, ticket.timestamp
+                          ? formatTicketDateTime(ticket.timestamp)
+                          : `${ticket.date || "—"}${ticket.time ? ` · ${ticket.time}` : ""}`].filter(Boolean).join(" · ")}
+                      </p>
                     </span>
-                    <span className="text-[12px] font-medium capitalize text-muted-foreground">
-                      {ticket.urgency} Priority
-                    </span>
-                  </div>
-                </div>
-              ))}
-          </div>
+                    <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground/50" />
+                  </button>
+                ))}
+              </div>
+            </div>
+            {myTickets.length === 0 && (
+              <p className="mt-2.5 text-center text-[13px] text-muted-foreground">
+                Preview. Reports you submit will appear here.
+              </p>
+            )}
+          </>
         )}
       </div>
     </motion.div>
@@ -2134,7 +2405,7 @@ export default function ResidentMobilePWA() {
           <button
             type="button"
             onClick={() => { residentProfileView === "password" ? setResidentProfileView("main") : setActiveTab("map"); haptic(); }}
-            className="absolute left-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-all hover:bg-muted active:scale-95 active:bg-muted cursor-pointer"
+            className="absolute left-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-all active:scale-95 cursor-pointer"
             aria-label={residentProfileView === "password" ? "Back to profile" : "Back to map"}
           >
             <ChevronLeft className="h-6 w-6" strokeWidth={2} />
@@ -2173,7 +2444,11 @@ export default function ResidentMobilePWA() {
                         : "border-border/60 focus:border-zinc-400"
                     }`}
                   />
-                  {f.field === "newPassword" && <PasswordStrengthHint password={f.value} />}
+                  {f.field === "newPassword" && (
+                    <p className="mt-1.5 text-[12px] font-medium text-muted-foreground/80">
+                      Must be at least 8 characters with 1 letter and 1 number.
+                    </p>
+                  )}
                   <ProfileFieldNote message={pwErrors[f.field]} />
                 </div>
               ))}
@@ -2400,7 +2675,7 @@ export default function ResidentMobilePWA() {
               clearMapFocus();
               haptic();
             }}
-            className="absolute left-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-all hover:bg-muted active:scale-95 active:bg-muted cursor-pointer"
+            className="absolute left-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-all active:scale-95 cursor-pointer"
             aria-label="Back"
           >
             <ChevronLeft className="h-6 w-6" strokeWidth={2} />
@@ -2409,81 +2684,86 @@ export default function ResidentMobilePWA() {
         </div>
       </div>
       <div className="flex-1 overflow-y-auto bg-muted/40 pb-10 select-text">
-        <div className="p-4 space-y-2.5">
-          {selectedTicket.photo ? (
-            <img
-              src={selectedTicket.photo}
-              alt={`Waste report ${selectedTicket.id}`}
-              className="h-52 w-full rounded-2xl border border-border/60 object-cover"
-            />
-          ) : (
-            <div className="flex h-28 w-full items-center justify-center rounded-2xl border border-border/60 bg-card">
-              <Camera className="h-8 w-8 text-muted-foreground/40" strokeWidth={1.5} />
-            </div>
-          )}
-
-          <div className="rounded-2xl border border-border/60 bg-card p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <h2 className="text-[16px] font-semibold tracking-tight text-foreground">{selectedTicket.location}</h2>
-                <p className="mt-0.5 text-[13px] text-muted-foreground">{selectedTicket.category || "Waste Report"}</p>
-              </div>
-              <div className="flex shrink-0 items-center gap-1.5">
-                <UrgencyBadge urgency={selectedTicket.urgency} />
-                <StatusBadge status={selectedTicket.status} />
-              </div>
-            </div>
-            {selectedTicket.description || selectedTicket.notes ? (
-              <p className="mt-2 text-[13px] leading-normal text-muted-foreground">
-                {selectedTicket.description || selectedTicket.notes}
+        <div className="flex flex-1 flex-col">
+          {/* Centered header */}
+          <div className="flex flex-col items-center px-4 pb-2 pt-6 text-center">
+            <h2 className="text-[20px] font-semibold tracking-tight text-foreground">{selectedTicket.location}</h2>
+            {(selectedTicket.category || selectedTicket.status) && (
+              <p className="mt-0.5 text-[13px] text-muted-foreground">
+                {[selectedTicket.category, selectedTicket.status].filter(Boolean).join(" · ")}
               </p>
-            ) : null}
+            )}
           </div>
 
-          <div className="divide-y divide-border/60 overflow-hidden rounded-2xl border border-border/60 bg-card px-4 py-1">
-            <div className="flex min-h-[48px] items-center justify-between gap-3 py-2.5">
-              <span className="shrink-0 text-[15px] text-muted-foreground">Category</span>
-              <span className="text-right text-[15px] leading-snug break-words text-foreground">{selectedTicket.category}</span>
+          {selectedTicket.photo ? (
+            <div className="mt-5 px-4">
+              <img
+                src={selectedTicket.photo}
+                alt={`Waste report ${selectedTicket.id}`}
+                decoding="async"
+                className="h-52 w-full rounded-2xl border border-border/60 object-cover"
+              />
             </div>
-            <div className="flex min-h-[48px] items-center justify-between gap-3 py-2.5">
-              <span className="shrink-0 text-[15px] text-muted-foreground">Barangay</span>
-              <span className="text-right text-[15px] leading-snug break-words text-foreground">{`${selectedTicket.barangay}, ${selectedTicket.city || "Cebu City"}`}</span>
+          ) : null}
+
+          {selectedTicket.description || selectedTicket.notes ? (
+            <div className="mt-5 px-4">
+              <div className="rounded-2xl border border-border/60 bg-card px-4 py-3">
+                <p className="text-[14px] leading-normal text-muted-foreground">
+                  {selectedTicket.description || selectedTicket.notes}
+                </p>
+              </div>
             </div>
-            <div className="flex min-h-[48px] items-center justify-between gap-3 py-2.5">
-              <span className="shrink-0 text-[15px] text-muted-foreground">Date submitted</span>
-              <span className="text-right text-[15px] tabular-nums text-foreground">
-                {selectedTicket.timestamp
-                  ? formatTicketDateLong(selectedTicket.timestamp)
-                  : selectedTicket.date || "—"}
-              </span>
-            </div>
-            <div className="flex min-h-[48px] items-center justify-between gap-3 py-2.5">
-              <span className="shrink-0 text-[15px] text-muted-foreground">Time submitted</span>
-              <span className="text-right text-[15px] tabular-nums text-foreground">
-                {selectedTicket.timestamp
-                  ? formatTicketTime(selectedTicket.timestamp)
-                  : selectedTicket.time || "—"}
-              </span>
-            </div>
-            <div className="flex min-h-[48px] items-center justify-between gap-3 py-2.5">
-              <span className="shrink-0 text-[15px] text-muted-foreground">Address</span>
-              <span className="text-right text-[15px] text-foreground">{ticketAddress || "—"}</span>
+          ) : null}
+
+          <div className="mt-5 px-4">
+            <div className="divide-y divide-border/60 overflow-hidden rounded-2xl border border-border/60 bg-card">
+              <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
+                <span className="shrink-0 text-[15px] text-foreground">Status</span>
+                <span className="text-right text-[15px] leading-snug break-words text-muted-foreground">{selectedTicket.status || "—"}</span>
+              </div>
+              <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
+                <span className="shrink-0 text-[15px] text-foreground">Priority</span>
+                <span className="text-right text-[15px] leading-snug break-words text-muted-foreground">{selectedTicket.urgency || "—"}</span>
+              </div>
+              <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
+                <span className="shrink-0 text-[15px] text-foreground">Date</span>
+                <span className="text-right text-[15px] tabular-nums leading-snug break-words text-muted-foreground">
+                  {selectedTicket.timestamp
+                    ? formatTicketDateLong(selectedTicket.timestamp)
+                    : selectedTicket.date || "—"}
+                </span>
+              </div>
+              <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
+                <span className="shrink-0 text-[15px] text-foreground">Time</span>
+                <span className="text-right text-[15px] tabular-nums leading-snug break-words text-muted-foreground">
+                  {selectedTicket.timestamp
+                    ? formatTicketTime(selectedTicket.timestamp)
+                    : selectedTicket.time || "—"}
+                </span>
+              </div>
+              <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
+                <span className="shrink-0 text-[15px] text-foreground">Address</span>
+                <span className="text-right text-[15px] leading-snug break-words text-muted-foreground">{ticketAddress || "—"}</span>
+              </div>
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              setMapFocusTicket(selectedTicket);
-              setFocusSignal((s) => s + 1);
-              setSelectedTicket(null);
-              setMapZoom(17);
-              switchTab("map");
-            }}
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-6 text-[15px] font-semibold text-white transition-all hover:bg-emerald-700 active:scale-[0.99] cursor-pointer"
-          >
-            View on Map
-          </button>
+          <div className="mt-5 px-4">
+            <button
+              type="button"
+              onClick={() => {
+                setMapFocusTicket(selectedTicket);
+                setFocusSignal((s) => s + 1);
+                setSelectedTicket(null);
+                setMapZoom(17);
+                switchTab("map");
+              }}
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-6 text-[15px] font-semibold text-white transition-all hover:bg-emerald-700 active:scale-[0.99] cursor-pointer"
+            >
+              View on Map
+            </button>
+          </div>
         </div>
       </div>
     </motion.div>
@@ -2506,7 +2786,7 @@ export default function ResidentMobilePWA() {
           <button
             type="button"
             onClick={() => { setShowUpdates(false); haptic(); }}
-            className="absolute left-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-all hover:bg-muted active:scale-95 active:bg-muted cursor-pointer"
+            className="absolute left-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-all active:scale-95 cursor-pointer"
             aria-label="Back"
           >
             <ChevronLeft className="h-6 w-6" strokeWidth={2} />
@@ -2515,7 +2795,7 @@ export default function ResidentMobilePWA() {
           {residentUnread > 0 && (
             <button
               type="button"
-              onClick={() => { markAllNotificationsRead(residentAudiences); haptic(); }}
+              onClick={() => { markAllNotificationsRead(residentAudiences.filter((a) => a !== "residents")); residentNotifs.forEach((n) => { if (n.audience === "residents") dismissBroadcast(n.id); }); haptic(); }}
               className="absolute right-2 top-1/2 -translate-y-1/2 text-[13px] font-semibold text-emerald-600 active:text-emerald-700 cursor-pointer"
             >
               Mark all read
@@ -2525,43 +2805,77 @@ export default function ResidentMobilePWA() {
       </div>
       <div className="flex flex-1 flex-col overflow-y-auto bg-muted/40 pb-10">
         {residentNotifs.length === 0 ? (
-          <div className="flex flex-1 flex-col items-center justify-center min-h-[50vh] px-6 py-16 text-center">
-            <Bell className="h-12 w-12 text-muted-foreground/40" strokeWidth={1.5} />
-            <h3 className="mt-4 text-[17px] font-semibold tracking-tight text-foreground">No Updates Yet</h3>
-            <p className="mt-1 max-w-[240px] text-[13px] leading-normal text-muted-foreground">When the crew acts on your reports, you&apos;ll see it here.</p>
-          </div>
+          <>
+            <div className="mt-5 px-4">
+              <div className="divide-y divide-border/60 overflow-hidden rounded-2xl border border-border/60 bg-card">
+                {previewNotifs.map((notif) => (
+                  <button
+                    key={notif.id}
+                    type="button"
+                    onClick={() => { toast("This is a preview."); haptic(); }}
+                    className="flex w-full cursor-pointer items-start gap-3 px-4 py-3 text-left transition-colors active:bg-muted"
+                  >
+                    {notif.type === "Resolved" ? (
+                      <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" strokeWidth={2} />
+                    ) : notif.type === "Cancelled" ? (
+                      <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-600" strokeWidth={2} />
+                    ) : (
+                      <Ticket className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" strokeWidth={2} />
+                    )}
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-baseline justify-between gap-2">
+                        <span className="text-[15px] font-semibold tracking-tight text-foreground">
+                          {notif.title}
+                        </span>
+                        <span className="shrink-0 text-[12px] tabular-nums text-muted-foreground">
+                          {notif.at ? timeAgo(notif.at, notifNow) : "—"}
+                        </span>
+                      </span>
+                      <span className="mt-0.5 line-clamp-2 block text-[13px] leading-normal text-muted-foreground">
+                        {notif.message}
+                      </span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <p className="mt-2.5 text-center text-[13px] text-muted-foreground">
+              Preview. Updates on your reports will appear here.
+            </p>
+          </>
         ) : (
-          <div className="space-y-2.5 p-4">
-            {residentNotifs.map((notif) => (
-              <button
-                key={notif.id}
-                type="button"
-                onClick={() => openUpdate(notif)}
-                className="w-full rounded-2xl border border-border/60 bg-card p-4 text-left cursor-pointer active:scale-[0.99] transition-transform"
-              >
-                <div className="flex items-start gap-3">
+          <div className="mt-5 px-4">
+            <div className="divide-y divide-border/60 overflow-hidden rounded-2xl border border-border/60 bg-card">
+              {residentNotifs.map((notif) => (
+                <button
+                  key={notif.id}
+                  type="button"
+                  onClick={() => openUpdate(notif)}
+                  className="flex w-full cursor-pointer items-start gap-3 px-4 py-3 text-left transition-colors active:bg-muted"
+                >
                   {notif.type === "Resolved" ? (
                     <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" strokeWidth={2} />
+                  ) : notif.type === "Cancelled" ? (
+                    <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-600" strokeWidth={2} />
                   ) : (
                     <Ticket className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" strokeWidth={2} />
                   )}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className={cn("text-[15px] tracking-tight text-foreground", !notif.isRead ? "font-semibold" : "font-medium")}>
-                        {notif.title}
-                      </p>
-                      {!notif.isRead && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-emerald-500" />}
-                    </div>
-                    <p className="mt-0.5 line-clamp-3 text-[13px] leading-normal text-muted-foreground">
-                      {notif.message}
-                    </p>
-                    <p className="mt-2 text-[12px] tabular-nums text-muted-foreground">
-                      {notif.at ? formatTicketDateTime(notif.at) : "—"}
-                    </p>
-                  </div>
-                </div>
-              </button>
-            ))}
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-baseline justify-between gap-2">
+                        <span className={cn("text-[15px] tracking-tight text-foreground", isUpdateUnread(notif) ? "font-semibold" : "font-normal")}>
+                          {notif.title}
+                        </span>
+                        <span className="shrink-0 text-[12px] tabular-nums text-muted-foreground">
+                          {notif.at ? timeAgo(notif.at, notifNow) : "—"}
+                        </span>
+                      </span>
+                      <span className="mt-0.5 line-clamp-2 block text-[13px] leading-normal text-muted-foreground">
+                        {notif.message}
+                      </span>
+                    </span>
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -2597,7 +2911,7 @@ export default function ResidentMobilePWA() {
             type="button"
             onClick={() => setShowSignOutModal(false)}
             disabled={isSigningOut}
-            className="h-11 flex-1 text-[17px] text-zinc-800 transition-colors active:bg-black/5 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+            className="h-11 flex-1 text-[17px] text-zinc-800 transition-colors hover:bg-black/5 active:bg-black/10 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
           >
             Cancel
           </button>
@@ -2615,7 +2929,7 @@ export default function ResidentMobilePWA() {
               }
             }}
             disabled={isSigningOut}
-            className="flex h-11 flex-1 items-center justify-center text-[17px] font-semibold text-rose-600 transition-colors active:bg-black/5 cursor-pointer disabled:pointer-events-none"
+            className="flex h-11 flex-1 items-center justify-center text-[17px] font-semibold text-rose-600 transition-colors hover:bg-black/5 active:bg-black/10 cursor-pointer disabled:pointer-events-none"
           >
             {isSigningOut ? (
               <Loader2 className="h-5 w-5 animate-spin" />

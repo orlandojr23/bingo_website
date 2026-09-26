@@ -25,32 +25,38 @@ function PulseCard({ bars }) {
 
 export function DashboardSkeleton() {
   return (
-    <div className="flex flex-1 flex-col gap-6" aria-hidden="true">
-      <div className="grid shrink-0 grid-cols-2 gap-3 lg:grid-cols-4">
-        {[0, 1, 2, 3].map((i) => (
-          <PulseCard key={i} bars={["h-2.5 w-1/2", "h-6 w-1/3", "h-2.5 w-2/3"]} />
+    <div className="flex flex-1 flex-col gap-5 sm:gap-6" aria-hidden="true">
+      <div className="h-8 w-64 max-w-full rounded-lg bg-foreground/10 animate-pulse" />
+      <div className="h-5 w-48 max-w-full rounded-lg bg-foreground/5 animate-pulse -mt-2" />
+
+      <div className="mt-4 grid shrink-0 grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3.5 max-w-xl sm:max-w-2xl">
+        {[0, 1, 2].map((i) => (
+          <PulseCard key={i} bars={["h-3 w-1/2", "h-7 w-1/3", "h-3 w-2/3"]} />
         ))}
       </div>
 
-      <div className="flex shrink-0 items-center justify-between">
-        <div className="h-3.5 w-28 rounded-full bg-foreground/10 animate-pulse" />
-        <div className="h-7 w-64 max-w-full rounded-lg bg-foreground/10 animate-pulse" />
+      <div className="mt-2 flex shrink-0 flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between min-w-0 w-full">
+        <div className="h-5 w-32 rounded-lg bg-foreground/10 animate-pulse" />
+        <div className="h-8 w-64 rounded-xl bg-muted animate-pulse" />
       </div>
 
-      <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 mt-2">
         {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
           <div
             key={i}
-            className="flex flex-col gap-2.5 rounded-xl border border-border bg-card p-4"
+            className="flex flex-col gap-2.5 rounded-2xl border border-border/60 bg-card p-4"
           >
             <div className="flex items-center justify-between">
-              <div className="h-2.5 w-16 rounded-full bg-foreground/10 animate-pulse" />
-              <div className="h-4 w-14 rounded-full bg-foreground/10 animate-pulse" />
+              <div className="h-3 w-20 rounded-full bg-foreground/10 animate-pulse" />
+              <div className="h-5 w-16 rounded-full bg-foreground/10 animate-pulse" />
             </div>
-            <div className="h-3.5 w-4/5 rounded-full bg-foreground/10 animate-pulse" />
-            <div className="h-2.5 w-3/5 rounded-full bg-foreground/10 animate-pulse" />
-            <div className="mt-2 h-2.5 w-full rounded-full bg-foreground/5 animate-pulse" />
-            <div className="h-2.5 w-2/3 rounded-full bg-foreground/5 animate-pulse" />
+            <div className="mt-2 h-4 w-4/5 rounded-full bg-foreground/10 animate-pulse" />
+            <div className="h-3 w-3/5 rounded-full bg-foreground/10 animate-pulse" />
+            <div className="mt-3 border-t border-border-subtle pt-3 space-y-2">
+              <div className="flex justify-between"><div className="h-3 w-12 rounded bg-foreground/5"/><div className="h-3 w-16 rounded bg-foreground/5"/></div>
+              <div className="flex justify-between"><div className="h-3 w-14 rounded bg-foreground/5"/><div className="h-3 w-20 rounded bg-foreground/5"/></div>
+              <div className="flex justify-between"><div className="h-3 w-16 rounded bg-foreground/5"/><div className="h-3 w-24 rounded bg-foreground/5"/></div>
+            </div>
           </div>
         ))}
       </div>
@@ -60,18 +66,43 @@ export function DashboardSkeleton() {
 
 export function AdminShellSkeleton() {
   return (
-    <div className="flex min-h-screen bg-background" aria-hidden="true">
-      <div className="hidden w-60 shrink-0 flex-col gap-3 border-r border-border bg-card p-4 lg:flex">
-        <div className="mb-2 h-8 w-2/3 rounded-lg bg-foreground/10 animate-pulse" />
-        {[0, 1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="h-7 rounded-lg bg-foreground/5 animate-pulse" />
-        ))}
-      </div>
-      <div className="flex min-w-0 flex-1 flex-col gap-6 overflow-hidden p-6 lg:p-8">
-        <div className="h-8 w-32 rounded-lg bg-foreground/10 animate-pulse lg:hidden" />
-        <div className="flex flex-1 flex-col gap-6 overflow-hidden">
-          <DashboardSkeleton />
+    <div className="flex min-h-[100dvh] w-full bg-background text-foreground lg:h-screen lg:overflow-hidden" aria-hidden="true">
+      <aside className="sticky top-0 z-30 hidden h-screen lg:flex">
+        <div className="flex h-full w-[280px] sm:w-64 shrink-0 flex-col border-r border-border-subtle bg-card lg:w-72">
+          <div className="flex h-16 shrink-0 items-center border-b border-border-subtle px-5">
+            <div className="h-8 w-32 rounded-lg bg-foreground/10 animate-pulse" />
+          </div>
+          <div className="flex flex-1 flex-col gap-2 px-3 py-4">
+            {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+              <div key={i} className="h-9 w-full rounded-lg bg-foreground/5 animate-pulse" />
+            ))}
+          </div>
+          <div className="mt-auto flex shrink-0 flex-col gap-3 border-t border-border-subtle px-3 pb-4 pt-3">
+            <div className="flex items-center gap-3 px-2 py-1">
+              <div className="h-9 w-9 rounded-full bg-foreground/10 animate-pulse" />
+              <div className="flex flex-col gap-1.5 flex-1">
+                <div className="h-3 w-20 rounded bg-foreground/10 animate-pulse" />
+                <div className="h-2 w-24 rounded bg-foreground/5 animate-pulse" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="h-10 rounded-xl bg-foreground/5 animate-pulse" />
+              <div className="h-10 rounded-xl bg-foreground/5 animate-pulse" />
+            </div>
+          </div>
         </div>
+      </aside>
+
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <div className="sticky top-0 z-20 flex p-3 pb-0 lg:hidden">
+          <div className="h-9 w-9 rounded-lg bg-foreground/10 animate-pulse" />
+        </div>
+
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden">
+          <div className="p-4 sm:p-6 lg:p-8">
+            <DashboardSkeleton />
+          </div>
+        </main>
       </div>
     </div>
   );
@@ -79,29 +110,47 @@ export function AdminShellSkeleton() {
 
 export function ResidentShellSkeleton() {
   return (
-    <div className="relative h-[100dvh] w-full overflow-hidden bg-slate-50 flex flex-col" aria-hidden="true">
+    <div className="flex h-dvh w-full flex-col bg-background overflow-hidden" aria-hidden="true">
       {/* Background Map Skeleton */}
-      <div className="absolute inset-0 z-0">
-        <MapSkeleton />
-      </div>
+      <div className="relative flex-1 w-full overflow-hidden">
+        <div className="absolute inset-0 h-full w-full z-0">
+          <MapSkeleton />
+        </div>
 
-      {/* Top Floating Search/Filter Bar */}
-      <div className="absolute top-4 left-4 right-4 z-10 flex gap-2">
-        <div className="flex-1 h-12 rounded-2xl bg-white/80 backdrop-blur-md shadow-sm border border-slate-200 animate-pulse" />
-        <div className="w-12 h-12 rounded-2xl bg-white/80 backdrop-blur-md shadow-sm border border-slate-200 animate-pulse flex-shrink-0" />
-      </div>
+        {/* Top Status Banner Skeleton */}
+        <div className="pointer-events-auto absolute top-0 inset-x-0 z-20 w-full border-b border-border/60 bg-background/80 backdrop-blur-md flex items-center overflow-hidden px-4 pt-[calc(env(safe-area-inset-top)+12px)] pb-3">
+          <div className="flex items-center gap-2.5 min-w-0 w-full">
+            <div className="h-6 w-6 shrink-0 rounded bg-foreground/10 animate-pulse" />
+            <div className="min-w-0 flex-1 flex flex-col gap-1.5">
+              <div className="h-4 w-32 rounded bg-foreground/10 animate-pulse" />
+              <div className="h-3 w-48 rounded bg-foreground/5 animate-pulse" />
+            </div>
+          </div>
+          <div className="ml-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-foreground/5 animate-pulse" />
+        </div>
 
-      {/* Bottom Sheet Skeleton */}
-      <div className="absolute bottom-0 left-0 right-0 z-10 bg-white rounded-t-3xl shadow-[0_-8px_30px_-15px_rgba(0,0,0,0.1)] border-t border-slate-100 p-6 pt-3 flex flex-col gap-4">
-        {/* Drag handle */}
-        <div className="w-12 h-1.5 rounded-full bg-slate-200 mx-auto mb-2 animate-pulse" />
-        
-        {/* Main action area */}
-        <div className="h-24 w-full rounded-2xl bg-slate-100 animate-pulse" />
-        
-        <div className="flex justify-between items-center px-2 mt-2">
-          <div className="h-10 w-28 rounded-full bg-slate-100 animate-pulse" />
-          <div className="h-10 w-10 rounded-full bg-slate-100 animate-pulse" />
+        {/* Floating Map Action Buttons Skeleton */}
+        <div className="absolute bottom-[calc(5.5rem+env(safe-area-inset-bottom))] left-3 z-20">
+          <div className="h-11 w-11 rounded-full bg-white shadow-md animate-pulse border border-black/10" />
+        </div>
+        <div className="absolute bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-3 z-20">
+          <div className="h-11 w-11 rounded-full bg-white shadow-md animate-pulse border border-black/10" />
+        </div>
+
+        {/* Bottom Nav Bar Skeleton */}
+        <div className="fixed bottom-0 inset-x-0 z-[100] border-t border-black/10 bg-background/85 backdrop-blur-xl shadow-[0_-4px_16px_rgba(0,0,0,0.06)] pb-[env(safe-area-inset-bottom)]">
+          <div className="grid grid-cols-5 h-[64px] max-w-md mx-auto px-2">
+            {[0, 1, 2, 3, 4].map((i) => (
+              <div key={i} className={`flex flex-col items-center justify-center ${i === 2 ? '-mt-5 gap-1.5' : 'gap-1'}`}>
+                {i === 2 ? (
+                  <div className="h-[42px] w-[42px] rounded-[18px] bg-emerald-600/30 animate-pulse" />
+                ) : (
+                  <div className="h-6 w-6 rounded bg-foreground/10 animate-pulse" />
+                )}
+                <div className={`h-2 rounded animate-pulse ${i === 2 ? 'w-8 bg-emerald-600/20' : 'w-8 bg-foreground/5'}`} />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
@@ -110,30 +159,43 @@ export function ResidentShellSkeleton() {
 
 export function DriverShellSkeleton() {
   return (
-    <div className="relative h-[100dvh] w-full overflow-hidden bg-slate-50 flex flex-col" aria-hidden="true">
+    <div className="flex h-dvh w-full flex-col bg-background overflow-hidden" aria-hidden="true">
       {/* Background Map Skeleton */}
-      <div className="absolute inset-0 z-0">
-        <MapSkeleton />
-      </div>
+      <div className="relative flex-1 w-full overflow-hidden">
+        <div className="absolute inset-0 h-full w-full z-0">
+          <MapSkeleton />
+        </div>
 
-      {/* Top Status Pill */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
-        <div className="h-10 w-32 rounded-full bg-white/90 backdrop-blur-md shadow-sm border border-slate-200 animate-pulse" />
-      </div>
-      
-      {/* Floating Side Buttons */}
-      <div className="absolute top-16 right-4 z-10 flex flex-col gap-2">
-        <div className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-md shadow-sm border border-slate-200 animate-pulse" />
-        <div className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-md shadow-sm border border-slate-200 animate-pulse" />
-      </div>
+        {/* Top Status Banner Skeleton */}
+        <div className="pointer-events-auto absolute top-0 inset-x-0 z-20 w-full border-b border-border/60 bg-background/80 backdrop-blur-md flex items-center overflow-hidden px-4 pt-[calc(env(safe-area-inset-top)+12px)] pb-3">
+          <div className="flex items-center gap-2.5 min-w-0 w-full">
+            <div className="h-6 w-6 shrink-0 rounded bg-foreground/10 animate-pulse" />
+            <div className="min-w-0 flex-1 flex flex-col gap-1.5">
+              <div className="h-4 w-32 rounded bg-foreground/10 animate-pulse" />
+              <div className="h-3 w-48 rounded bg-foreground/5 animate-pulse" />
+            </div>
+          </div>
+        </div>
 
-      {/* Bottom Action Panel Skeleton */}
-      <div className="absolute bottom-4 left-4 right-4 z-10 flex flex-col gap-2">
-        {/* Swipe button area */}
-        <div className="h-16 w-full rounded-2xl bg-white shadow-lg border border-slate-100 animate-pulse" />
-        
-        {/* Info row */}
-        <div className="h-20 w-full rounded-2xl bg-white/90 backdrop-blur-md shadow-sm border border-slate-100 animate-pulse" />
+        {/* Floating Map Action Buttons Skeleton */}
+        <div className="absolute bottom-[calc(5.5rem+env(safe-area-inset-bottom))] left-3 z-20">
+          <div className="h-11 w-11 rounded-full bg-white shadow-md animate-pulse border border-black/10" />
+        </div>
+        <div className="absolute bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-3 z-20">
+          <div className="h-11 w-11 rounded-full bg-white shadow-md animate-pulse border border-black/10" />
+        </div>
+
+        {/* Bottom Nav Bar Skeleton */}
+        <div className="fixed bottom-0 inset-x-0 z-[100] border-t border-black/10 bg-background/85 backdrop-blur-xl shadow-[0_-4px_16px_rgba(0,0,0,0.06)] pb-[env(safe-area-inset-bottom)]">
+          <div className="grid grid-cols-5 h-[64px] max-w-md mx-auto px-2">
+            {[0, 1, 2, 3, 4].map((i) => (
+              <div key={i} className="flex flex-col items-center justify-center gap-1">
+                <div className="h-6 w-6 rounded bg-foreground/10 animate-pulse" />
+                <div className="h-2 w-8 rounded bg-foreground/5 animate-pulse" />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

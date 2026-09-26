@@ -10,7 +10,6 @@ import { InfoRow } from "@/components/ui/info-row";
 import { Button } from "@/components/ui/button";
 import { inputClass, labelClass } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import PasswordStrengthHint from "@/components/ui/password-strength-hint";
 import OtpInput from "@/components/ui/otp-input";
 import { useFleet } from "@/lib/fleet";
 import { useLiveRoute, assignDriver } from "@/lib/live-route";
@@ -25,6 +24,23 @@ import ConfirmModal from "@/components/ui/confirm-modal";
 import { useLockBodyScroll } from "@/lib/use-lock-body-scroll";
 import { supabase } from "@/lib/supabase";
 import { createClient } from "@supabase/supabase-js";
+import dynamic from "next/dynamic";
+import emptyGhostState from "../../../../public/lottie/empty-ghost.json";
+
+const LottiePlayer = dynamic(
+  () =>
+    import("@lottiefiles/react-lottie-player").then((mod) => {
+      const Player = mod.Player;
+      return function FadeInPlayer(props) {
+        return (
+          <div style={{ animation: "fadeIn 0.5s ease-out forwards" }}>
+            <Player {...props} />
+          </div>
+        );
+      };
+    }),
+  { ssr: false }
+);
 
 // Helper client to prevent auth operations from altering the current admin's session.
 // A unique storageKey keeps it from colliding with the main client's session
@@ -442,28 +458,28 @@ export default function StaffPage() {
   // Full auth account deletion requires a service-role key and should be done from Supabase dashboard.
   const handleDeleteDriver = async (id) => {
     const person = staff.find((drv) => drv.id === id);
-    let deactivated = true;
+    let deleted = true;
     if (person) {
       const held = truckOf(person.name);
       if (held) assignDriver(held.id, null);
       removeDriverAccount(person.username);
 
-      // Suspend in Supabase so the driver can no longer sign in to the terminal
+      // Permanently delete the profile from Supabase
       if (person.supabaseId) {
         const { error } = await supabase
           .from("profiles")
-          .update({ status: "Suspended" })
+          .delete()
           .eq("id", person.supabaseId);
         if (error) {
-          console.warn("Profile deactivation error:", error);
-          showToast(`Could not deactivate ${person.name}: ${error.message}`);
-          deactivated = false;
+          console.warn("Profile deletion error:", error);
+          showToast(`Could not remove ${person.name}: They likely have historical records linked to them. Please suspend them instead.`);
+          deleted = false;
         }
       }
     }
-    if (deactivated) {
-      setStaff(staff.map((drv) => (drv.id === id ? { ...drv, status: "Suspended" } : drv)));
-      if (person) showToast(`${person.name} deactivated.`);
+    if (deleted) {
+      setStaff(staff.filter((drv) => drv.id !== id));
+      if (person) showToast(`${person.name} permanently removed.`);
     }
     if (selectedDriver?.id === id) {
       setSelectedDriver(null);
@@ -523,12 +539,12 @@ export default function StaffPage() {
               placeholder="Filter by driver or truck..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className={cn(inputClass, "pl-9")}
+              className={cn(inputClass, "pl-9 sm:pl-9")}
             />
           </div>
         </div>
 
-        <div className="flex-1 min-w-0 rounded-2xl border border-border bg-card/95 shadow-sm overflow-hidden flex flex-col">
+        <div className="flex-1 min-w-0 rounded-2xl border border-border bg-card/95 shadow-sm overflow-hidden flex flex-col relative">
           <div className="flex-1 overflow-x-auto min-h-0">
             <table className="w-full min-w-[720px] text-left text-xs border-collapse">
               <thead>
@@ -544,15 +560,7 @@ export default function StaffPage() {
               <tbody className="divide-y divide-border/60">
                 {filteredStaff.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="p-4">
-                      <div className="flex flex-col items-center justify-center px-4 py-14 text-center">
-                        <Users className="h-12 w-12 text-muted-foreground/40" strokeWidth={1.5} />
-                        <h3 className="mt-4 text-[17px] font-semibold tracking-tight text-foreground">No Staff Found</h3>
-                        <p className="mt-1 max-w-[240px] text-[13px] leading-normal text-muted-foreground">
-                          No drivers match your search filter.
-                        </p>
-                      </div>
-                    </td>
+                    <td colSpan={6} className="h-40 border-b-0"></td>
                   </tr>
                 ) : (
                   filteredStaff.map((person) => {
@@ -571,7 +579,7 @@ export default function StaffPage() {
                         <td className="py-3 px-4 font-bold text-foreground whitespace-nowrap">
                           {person.name}
                         </td>
-                        <td className="py-3 px-4 font-mono text-muted-foreground whitespace-nowrap hidden md:table-cell">
+                        <td className="py-3 px-4 text-muted-foreground whitespace-nowrap hidden md:table-cell">
                           {person.username}
                         </td>
                         <td className="py-3 px-4 font-medium text-foreground whitespace-nowrap">
@@ -620,6 +628,14 @@ export default function StaffPage() {
               </tbody>
             </table>
           </div>
+          {filteredStaff.length === 0 && (
+            <div className="absolute inset-0 top-[45px] pointer-events-none flex flex-col items-center justify-center px-4 text-center">
+              <h3 className="text-[17px] font-semibold tracking-tight text-foreground">No Staff Found</h3>
+              <p className="mt-1 max-w-[240px] text-[13px] leading-normal text-muted-foreground">
+                No drivers match your search filter.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Guaranteed bottom spacer element */}
@@ -763,21 +779,34 @@ export default function StaffPage() {
                       </Field>
 
                       {!isAdding && (
-                        <Field label="Assigned Truck">
-                          <select
-                            value={truck}
-                            onChange={(e) => setTruck(e.target.value)}
-                            className={cn(inputClass, "cursor-pointer")}
-                          >
-                            <option value="">Unassigned</option>
-                            {fleet.map((t) => (
-                              <option key={t.id} value={t.id}>
-                                {truckLabel(t)}
-                                {live.driverByTruck[t.id] ? ` — ${live.driverByTruck[t.id]}` : ""}
-                              </option>
-                            ))}
-                          </select>
-                        </Field>
+                        <>
+                          <Field label="Assigned Truck">
+                            <select
+                              value={truck}
+                              onChange={(e) => setTruck(e.target.value)}
+                              className={cn(inputClass, "cursor-pointer")}
+                            >
+                              <option value="">Unassigned</option>
+                              {fleet.map((t) => (
+                                <option key={t.id} value={t.id}>
+                                  {truckLabel(t)}
+                                  {live.driverByTruck[t.id] ? ` — ${live.driverByTruck[t.id]}` : ""}
+                                </option>
+                              ))}
+                            </select>
+                          </Field>
+                          
+                          <Field label="Account Status">
+                            <select
+                              value={status}
+                              onChange={(e) => setStatus(e.target.value)}
+                              className={cn(inputClass, "cursor-pointer")}
+                            >
+                              <option value="Active">Active</option>
+                              <option value="Suspended">Suspended</option>
+                            </select>
+                          </Field>
+                        </>
                       )}
 
                       <div className={cn("flex flex-col gap-4", isAdding && "border-t border-border-subtle pt-4")}>
@@ -788,11 +817,11 @@ export default function StaffPage() {
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
                             placeholder={isAdding ? "driver@bingo.com" : undefined}
-                            className={cn(inputClass, "font-mono")}
+                            className={inputClass}
                           />
                         </Field>
 
-                        {isAdding ? (
+                        {isAdding && (
                           <Field
                             label="Temporary Password"
                             hint="Share this temporary password with the driver to log in"
@@ -804,7 +833,7 @@ export default function StaffPage() {
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value.replace(/\s/g, ""))}
                                 placeholder="Set temp password..."
-                                className={cn(inputClass, "font-mono pr-10")}
+                                className={cn(inputClass, "pr-10")}
                               />
                               <button
                                 type="button"
@@ -815,43 +844,7 @@ export default function StaffPage() {
                                 {showPassword ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                               </button>
                             </div>
-                            <PasswordStrengthHint password={password} />
-                            {password && (
-                              <div className="flex flex-wrap gap-x-3 gap-y-1 pt-0.5 text-[11px] font-medium text-muted-foreground/70">
-                                <span className={password.length >= 6 ? "text-emerald-600 dark:text-emerald-400 font-semibold" : ""}>
-                                  {password.length >= 6 ? "✓" : "•"} 6+ characters
-                                </span>
-                                <span className={/[a-zA-Z]/.test(password) ? "text-emerald-600 dark:text-emerald-400 font-semibold" : ""}>
-                                  {/[a-zA-Z]/.test(password) ? "✓" : "•"} 1 letter
-                                </span>
-                                <span className={/\d/.test(password) ? "text-emerald-600 dark:text-emerald-400 font-semibold" : ""}>
-                                  {/\d/.test(password) ? "✓" : "•"} 1 number
-                                </span>
-                              </div>
-                            )}
                           </Field>
-                        ) : (
-                          <div className="flex shrink-0 flex-col gap-2">
-                            <span className={labelClass}>Account Status</span>
-                            <div className="grid grid-cols-2 gap-0.5 rounded-xl bg-muted p-1">
-                              {["Active", "Suspended"].map((option) => (
-                                <button
-                                  key={option}
-                                  type="button"
-                                  onClick={() => setStatus(option)}
-                                  className={`rounded-lg py-1.5 text-[13px] font-medium transition-colors cursor-pointer ${
-                                    status === option
-                                      ? option === "Active"
-                                        ? "bg-emerald-600 text-white font-semibold"
-                                        : "bg-rose-600 text-white font-semibold"
-                                      : "text-muted-foreground hover:text-foreground"
-                                  }`}
-                                >
-                                  {option}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
                         )}
                       </div>
                     </div>
@@ -912,8 +905,9 @@ export default function StaffPage() {
 
       <ConfirmModal
         open={!!driverToDelete}
-        title="Deactivate Driver"
-        description={`This will deactivate ${driverToDelete?.name} (status → Suspended) and unassign their truck. They will no longer be able to sign in to the Driver Terminal.`}
+        title="Remove Driver"
+        description={`This will permanently delete ${driverToDelete?.name}'s account and unassign their truck. This action cannot be undone.`}
+        confirmLabel="Remove"
         onConfirm={() => handleDeleteDriver(driverToDelete?.id)}
         onCancel={() => setDriverToDelete(null)}
       />

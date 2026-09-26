@@ -140,18 +140,18 @@ export default function Sidebar({ isOpen, onClose }) {
             href="/settings"
             onClick={() => onClose && onClose()}
             className={cn(
-              "flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border border-border/60 bg-card px-3 text-[13px] font-semibold transition-all active:scale-[0.99]",
+              "group flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border border-border/60 bg-card px-3 text-[13px] font-semibold transition-all hover:bg-muted/60 active:scale-[0.99]",
               pathname === "/settings"
                 ? "text-foreground"
-                : "text-zinc-700"
+                : "text-zinc-700 hover:text-foreground"
             )}
           >
             <Settings
               className={cn(
-                "h-4 w-4",
+                "h-4 w-4 transition-colors",
                 pathname === "/settings"
                   ? "text-emerald-600"
-                  : "text-muted-foreground"
+                  : "text-muted-foreground group-hover:text-foreground"
               )}
               strokeWidth={2}
             />
@@ -161,9 +161,9 @@ export default function Sidebar({ isOpen, onClose }) {
           <button
             type="button"
             onClick={() => setShowSignOutModal(true)}
-            className="flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border border-border/60 bg-card px-3 text-[13px] font-semibold text-zinc-700 transition-all active:scale-[0.99]"
+            className="group flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border border-border/60 bg-card px-3 text-[13px] font-semibold text-zinc-700 transition-all hover:bg-muted/60 hover:text-rose-600 active:scale-[0.99]"
           >
-            <LogOut className="h-4 w-4 text-muted-foreground" strokeWidth={2} />
+            <LogOut className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-rose-500" strokeWidth={2} />
             <span>Sign Out</span>
           </button>
         </div>
@@ -189,7 +189,7 @@ export default function Sidebar({ isOpen, onClose }) {
                 type="button"
                 onClick={() => setShowSignOutModal(false)}
                 disabled={isSigningOut}
-                className="h-11 flex-1 text-[17px] text-zinc-800 transition-colors active:bg-black/5 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+                className="h-11 flex-1 text-[17px] text-zinc-800 transition-colors hover:bg-black/5 active:bg-black/10 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
               >
                 Cancel
               </button>
@@ -197,7 +197,7 @@ export default function Sidebar({ isOpen, onClose }) {
                 type="button"
                 onClick={handleSignOut}
                 disabled={isSigningOut}
-                className="flex h-11 flex-1 items-center justify-center text-[17px] font-semibold text-rose-600 transition-colors active:bg-black/5 cursor-pointer disabled:pointer-events-none"
+                className="flex h-11 flex-1 items-center justify-center text-[17px] font-semibold text-rose-600 transition-colors hover:bg-black/5 active:bg-black/10 cursor-pointer disabled:pointer-events-none"
               >
                 {isSigningOut ? (
                   <Loader2 className="h-5 w-5 animate-spin" />

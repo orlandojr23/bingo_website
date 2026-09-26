@@ -13,6 +13,21 @@ import { PanelStat } from "@/components/ui/panel-stat";
 import { useTickets, updateTicket, removeTicket } from "@/lib/tickets";
 import { formatTicketDateTime } from "@/lib/utils";
 import { useToast } from "@/components/pwa/Toast";
+import dynamic from "next/dynamic";
+const LottiePlayer = dynamic(
+  () =>
+    import("@lottiefiles/react-lottie-player").then((mod) => {
+      const Player = mod.Player;
+      return function FadeInPlayer(props) {
+        return (
+          <div style={{ animation: "fadeIn 0.5s ease-out forwards" }}>
+            <Player {...props} />
+          </div>
+        );
+      };
+    }),
+  { ssr: false }
+);
 import TicketDetailsModal from "@/components/modals/ticket-details-modal";
 import ConfirmModal from "@/components/ui/confirm-modal";
 import { useAuth } from "@/context/AuthContext";
@@ -127,36 +142,23 @@ export default function DashboardPage() {
         <div className="flex shrink-0 flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between min-w-0 w-full overflow-hidden">
           <h3 className="text-sm font-semibold text-foreground shrink-0 whitespace-nowrap">Recent Reports</h3>
 
-          <div className="inline-flex max-w-full w-fit self-start shrink-0 items-center gap-1 overflow-x-auto rounded-xl bg-muted p-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-            {["All", "Pending", "Resolved"].map((status) => {
-              const isActive = statusFilter === status;
-              let displayLabel = "All";
-              if (status === "Pending") displayLabel = "Waiting";
-              if (status === "Resolved") displayLabel = "Cleaned Up";
-
-              return (
-                <button
-                  key={status}
-                  type="button"
-                  onClick={() => setStatusFilter(status)}
-                  className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-[13px] font-medium transition-colors cursor-pointer ${
-                    isActive
-                      ? "bg-card text-foreground shadow-sm font-semibold"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {displayLabel}
-                </button>
-              );
-            })}
+          <div className="w-fit shrink-0">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="flex h-9 min-w-[120px] items-center justify-between rounded-lg border border-border bg-card px-3 text-[13px] font-medium text-foreground transition-colors hover:border-zinc-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/20 cursor-pointer"
+            >
+              <option value="All">All</option>
+              <option value="Pending">Waiting</option>
+              <option value="Resolved">Cleaned Up</option>
+            </select>
           </div>
         </div>
 
         <div>
           {filteredTickets.length === 0 ? (
             <div className="flex flex-col items-center justify-center px-4 py-14 text-center">
-              <Inbox className="h-12 w-12 text-muted-foreground/40" strokeWidth={1.5} />
-              <h3 className="mt-4 text-[17px] font-semibold tracking-tight text-foreground">No Recent Reports</h3>
+              <h3 className="text-[17px] font-semibold tracking-tight text-foreground">No Recent Reports</h3>
               <p className="mt-1 max-w-[240px] text-[13px] leading-normal text-muted-foreground">
                 {statusFilter === "All"
                   ? "New waste reports from residents will appear here."

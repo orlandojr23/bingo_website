@@ -25,6 +25,23 @@ import {
   removeNotification,
 } from "@/lib/notifications";
 import { useTickets, useArchivedTickets } from "@/lib/tickets";
+import dynamic from "next/dynamic";
+import binEmptyState from "../../../../public/lottie/bin-empty-state.json";
+
+const LottiePlayer = dynamic(
+  () =>
+    import("@lottiefiles/react-lottie-player").then((mod) => {
+      const Player = mod.Player;
+      return function FadeInPlayer(props) {
+        return (
+          <div style={{ animation: "fadeIn 0.5s ease-out forwards" }}>
+            <Player {...props} />
+          </div>
+        );
+      };
+    }),
+  { ssr: false }
+);
 
 function timeAgoLabel(iso) {
   const t = new Date(iso).getTime();
@@ -179,37 +196,24 @@ export default function NotificationsPage() {
         </div>
 
         <div className="flex shrink-0 items-center">
-          <div className="inline-flex max-w-full w-fit self-start items-center gap-1 overflow-x-auto rounded-xl bg-muted p-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-            {["All", "Emergency", "System", "Ticket"].map((tab) => {
-              const isActive = activeTab === tab;
-              let displayLabel = "All Alerts";
-              if (tab === "Emergency") displayLabel = "Emergency";
-              if (tab === "System") displayLabel = "Truck & System";
-              if (tab === "Ticket") displayLabel = "Reports";
-
-              return (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => setActiveTab(tab)}
-                  className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-[13px] font-medium transition-colors cursor-pointer ${
-                    isActive
-                      ? "bg-card text-foreground shadow-sm font-semibold"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {displayLabel}
-                </button>
-              );
-            })}
+          <div className="w-fit">
+            <select
+              value={activeTab}
+              onChange={(e) => setActiveTab(e.target.value)}
+              className="flex h-9 min-w-[140px] items-center justify-between rounded-lg border border-border bg-card px-3 text-[13px] font-medium text-foreground transition-colors hover:border-zinc-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/20 cursor-pointer"
+            >
+              <option value="All">All Alerts</option>
+              <option value="Emergency">Emergency</option>
+              <option value="System">Truck & System</option>
+              <option value="Ticket">Reports</option>
+            </select>
           </div>
         </div>
 
         <div>
           {filteredNotifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center px-4 py-14 text-center">
-              <Bell className="h-12 w-12 text-muted-foreground/40" strokeWidth={1.5} />
-              <h3 className="mt-4 text-[17px] font-semibold tracking-tight text-foreground">No Alerts Found</h3>
+              <h3 className="text-[17px] font-semibold tracking-tight text-foreground">No Notifications Yet</h3>
               <p className="mt-1 max-w-[240px] text-[13px] leading-normal text-muted-foreground">
                 You&apos;re all caught up. No new notifications.
               </p>

@@ -13,6 +13,23 @@ import { cn, formatTicketDateTime } from "@/lib/utils";
 import TicketDetailsModal from "@/components/modals/ticket-details-modal";
 import ConfirmModal from "@/components/ui/confirm-modal";
 import { useToast } from "@/components/pwa/Toast";
+import { motion } from "framer-motion";
+import dynamic from "next/dynamic";
+
+const LottiePlayer = dynamic(
+  () =>
+    import("@lottiefiles/react-lottie-player").then((mod) => {
+      const Player = mod.Player;
+      return function FadeInPlayer(props) {
+        return (
+          <div style={{ animation: "fadeIn 0.5s ease-out forwards" }}>
+            <Player {...props} />
+          </div>
+        );
+      };
+    }),
+  { ssr: false }
+);
 
 /** Short human-readable ticket ID, e.g. #A3F298 */
 const shortId = (id) => (id ? "#" + id.replace(/-/g, "").slice(0, 6).toUpperCase() : "—");
@@ -112,7 +129,7 @@ export default function TicketsPage() {
               placeholder="Search ID, location, or reporter..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className={cn(inputClass, "pl-9")}
+              className={cn(inputClass, "pl-9 sm:pl-9")}
             />
           </div>
 
@@ -156,8 +173,7 @@ export default function TicketsPage() {
         <div>
           {filteredTickets.length === 0 ? (
             <div className="flex flex-col items-center justify-center px-4 py-14 text-center">
-              <Inbox className="h-12 w-12 text-muted-foreground/40" strokeWidth={1.5} />
-              <h3 className="mt-4 text-[17px] font-semibold tracking-tight text-foreground">No Reports Found</h3>
+              <h3 className="text-[17px] font-semibold tracking-tight text-foreground">No Reports Found</h3>
               <p className="mt-1 max-w-[240px] text-[13px] leading-normal text-muted-foreground">
                 {search || statusFilter !== "All" || urgencyFilter !== "All"
                   ? "Try different search keywords or filters."

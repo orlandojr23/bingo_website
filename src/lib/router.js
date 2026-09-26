@@ -57,7 +57,7 @@ for (let r = 0; r < ROWS; r++) {
 }
 
 export function snapToNode(lat, lng) {
-  let best = 0;
+  let best = -1;
   let bestDist = Infinity;
   for (let i = 0; i < nodes.length; i++) {
     const d = distanceMeters(lat, lng, nodes[i].lat, nodes[i].lng);
@@ -66,6 +66,7 @@ export function snapToNode(lat, lng) {
       best = i;
     }
   }
+  if (bestDist > 500) return null;
   return nodes[best];
 }
 
@@ -176,10 +177,15 @@ export function computeRoute(waypoints, blockedEdgeKeys = []) {
   for (let i = 0; i < waypoints.length - 1; i++) {
     const a = waypoints[i];
     const b = waypoints[i + 1];
-    const fromIdx = nodeIndex.get(snapToNode(a.lat, a.lng).id);
-    const toIdx = nodeIndex.get(snapToNode(b.lat, b.lng).id);
-    const leg =
-      fromIdx === toIdx ? blockedSameNodeDetour(fromIdx, blocked) : shortestLeg(fromIdx, toIdx, blocked);
+    const startNode = snapToNode(a.lat, a.lng);
+    const endNode = snapToNode(b.lat, b.lng);
+    
+    let leg = null;
+    if (startNode && endNode) {
+      const fromIdx = nodeIndex.get(startNode.id);
+      const toIdx = nodeIndex.get(endNode.id);
+      leg = fromIdx === toIdx ? blockedSameNodeDetour(fromIdx, blocked) : shortestLeg(fromIdx, toIdx, blocked);
+    }
     const legPositions = leg
       ? leg.map((n) => [n.lat, n.lng])
       : [[a.lat, a.lng], [b.lat, b.lng]];

@@ -68,6 +68,10 @@ export async function reinitSupabaseSync() {
           collectionType: s.collection_type,
           collectionDays: days,
           time: s.collection_time,
+          // Concrete day the admin assigned this task for (YYYY-MM-DD).
+          // Null = recurring schedule with no fixed day (rows created before
+          // the assignment-date feature, or admin left the day empty).
+          assignmentDate: s.scheduled_date ?? null,
           isArchived: s.is_archived,
           routePoints: s.route_points || [],
           status: s.status || "Scheduled",
@@ -135,6 +139,7 @@ async function initSupabaseSync() {
               collectionType: s.collection_type,
               collectionDays: days,
               time: s.collection_time,
+              assignmentDate: s.scheduled_date ?? null,
               isArchived: s.is_archived,
               routePoints: s.route_points || [],
               status: s.status || "Scheduled",
@@ -282,6 +287,14 @@ export function scheduleLabel(schedule) {
   return names.join(", ");
 }
 
+// True when a Supabase error is about an unknown/missing column — lets
+// writes degrade gracefully when the scheduled_date migration hasn't been
+// applied to the database yet.
+function mentionsColumn(error, column) {
+  const msg = String(error?.message || error?.details || error || "");
+  return new RegExp(column, "i").test(msg);
+}
+
 export async function addSchedule(fields) {
   const id = nextScheduleId();
   const routePoints = fields.routePoints?.length
@@ -293,7 +306,7 @@ export async function addSchedule(fields) {
     ? fields.collectionDays.join(", ")
     : (fields.collectionDays || "");
 
-  const { error } = await supabase.from('schedules').insert({
+  const row = {
     id,
     truck_id: fields.truckId,
     driver_id: fields.driverId || null,
@@ -303,7 +316,16 @@ export async function addSchedule(fields) {
     is_archived: false,
     route_points: routePoints,
     status: fields.status || "Scheduled",
-  });
+  };
+  if (fields.assignmentDate) row.scheduled_date = fields.assignmentDate;
+
+  let { error } = await supabase.from('schedules').insert(row);
+  if (error && row.scheduled_date !== undefined && mentionsColumn(error, "scheduled_date")) {
+    // scheduled_date column missing (migration not applied yet) — save
+    // without the day instead of failing the whole assignment.
+    delete row.scheduled_date;
+    ({ error } = await supabase.from('schedules').insert(row));
+  }
 
   if (error) throw error;
 
@@ -331,11 +353,18 @@ export async function updateSchedule(id, patch) {
       : patch.collectionDays;
   }
   if (patch.time !== undefined) dbPatch.collection_time = patch.time;
+  if (patch.assignmentDate !== undefined) dbPatch.scheduled_date = patch.assignmentDate || null;
   if (patch.isArchived !== undefined) dbPatch.is_archived = patch.isArchived;
   if (patch.status !== undefined) dbPatch.status = patch.status;
   if (patch.routePoints !== undefined) dbPatch.route_points = patch.routePoints;
 
-  const { error } = await supabase.from('schedules').update(dbPatch).eq('id', id);
+  let { error } = await supabase.from('schedules').update(dbPatch).eq('id', id);
+  if (error && dbPatch.scheduled_date !== undefined && mentionsColumn(error, "scheduled_date")) {
+    // scheduled_date column missing (migration not applied yet) — save the
+    // rest instead of failing the whole update.
+    delete dbPatch.scheduled_date;
+    ({ error } = await supabase.from('schedules').update(dbPatch).eq('id', id));
+  }
   if (error) throw error;
 
   return write((next) => {
@@ -426,8 +455,9 @@ export async function startRoute(truckId, coords = null) {
   if (
     ts.phase !== "idle" &&
     ts.scheduleId &&
-    status[ts.scheduleId] !== "Completed"
+    (status[ts.scheduleId] === "In Progress" || status[ts.scheduleId] === "Accepted")
   ) {
+    // Resume a paused route — but never a Cancelled or Completed one.
     startedId = ts.scheduleId;
     newPhase = ts.phase;
     newTracking = {
@@ -694,6 +724,83 @@ export async function endRoute(truckId) {
       },
     };
   });
+}
+
+// Cancel an assignment (driver or admin): the schedule is marked Cancelled
+// so it leaves every driver queue, and the truck running it is freed back to
+// idle with its GPS broadcast stopped. Admin and residents are notified.
+export async function cancelAssignment({ scheduleId, truckId = null, cancelledBy = "driver", reason = null }) {
+  const schedule = getSchedule(scheduleId);
+  if (!schedule) return false;
+  const label = scheduleLabel(schedule);
+  const when = [schedule.assignmentDate, schedule.time].filter(Boolean).join(" · ");
+
+  await supabase.from('schedules').update({ status: 'Cancelled' }).eq('id', scheduleId);
+
+  const activeTruckId = truckId || schedule.truckId;
+  const ts = activeTruckId ? getSnapshot().trucks[activeTruckId] : null;
+  const wasRunning = !!ts && ts.scheduleId === scheduleId && ts.phase !== "idle";
+  if (wasRunning) {
+    await supabase.from('live_tracking').update({
+      schedule_id: null,
+      phase: 'idle',
+      stop_index: 0,
+      onsite: false,
+      is_active: false,
+      eta: 'Standby',
+    }).eq('truck_id', activeTruckId);
+  }
+
+  write((next) => {
+    if (next.schedules?.[scheduleId]) {
+      next.schedules = {
+        ...next.schedules,
+        [scheduleId]: { ...next.schedules[scheduleId], status: "Cancelled" },
+      };
+      next.scheduleStatus = { ...next.scheduleStatus, [scheduleId]: "Cancelled" };
+    }
+    if (wasRunning && next.trucks?.[activeTruckId]) {
+      const cur = next.trucks[activeTruckId];
+      next.trucks = {
+        ...next.trucks,
+        [activeTruckId]: {
+          ...cur,
+          scheduleId: null,
+          phase: "idle",
+          stopIndex: 0,
+          onsite: false,
+          tracking: { ...cur.tracking, isActive: false, eta: "Standby" },
+        },
+      };
+    }
+  });
+
+  const reasonText = reason ? ` Reason: ${reason}.` : "";
+  const byText = cancelledBy === "admin" ? "cancelled by dispatch" : "cancelled by its driver";
+  // Timestamped dedupe keys: a task can be cancelled, re-queued and
+  // cancelled again, and each cancellation must notify anew. Double-submit
+  // is prevented by the callers disabling their confirm buttons in flight.
+  const cancelKey = `${scheduleId}:cancelled:${Date.now()}`;
+  pushNotification({
+    audience: "admin",
+    type: "Dispatch",
+    title: `Assignment cancelled — ${label}`,
+    message: `${label}${when ? ` (${when})` : ""} was ${byText}.${reasonText} It needs a new driver.`,
+    truckId: activeTruckId || undefined,
+    actionUrl: "/dispatch",
+    actionLabel: "Open Dispatch",
+    at: new Date().toISOString(),
+    dedupeKey: cancelKey,
+  });
+  pushNotification({
+    audience: "residents",
+    type: "Cancelled",
+    title: "Collection cancelled",
+    message: `${label}${when ? ` (${when})` : ""} was cancelled${reason ? `: ${reason}` : ""}. Please check back for the new schedule.`,
+    at: new Date().toISOString(),
+    dedupeKey: cancelKey,
+  });
+  return true;
 }
 
 export async function updateTracking(truckId, patch) {

@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { inputClass, labelClass } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import PasswordStrengthHint from "@/components/ui/password-strength-hint";
 import { useSoundEnabled, setSoundEnabled } from "@/lib/sounds";
 import { useAuth } from "@/context/AuthContext";
 
@@ -355,7 +354,9 @@ export default function SettingsPage() {
                     placeholder="••••••••"
                     className="w-full rounded-2xl border border-border/60 bg-card px-3.5 py-3.5 text-[16px] text-foreground placeholder:text-muted-foreground/50 outline-none transition-colors focus:border-zinc-400"
                   />
-                  <PasswordStrengthHint password={passwords.newPassword} />
+                  <p className="mt-1.5 text-[12px] font-medium text-muted-foreground/80">
+                    Must be at least 8 characters with 1 letter and 1 number.
+                  </p>
                 </div>
 
                 <div className="flex flex-col gap-1.5">

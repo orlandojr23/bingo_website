@@ -120,7 +120,7 @@ export default function ForgotPasswordPage() {
           <Link
             href="/login"
             aria-label="Back to Sign In"
-            className="flex h-10 w-10 items-center justify-center rounded-full text-foreground transition-all hover:bg-muted active:scale-95 active:bg-muted"
+            className="flex h-10 w-10 items-center justify-center rounded-full text-foreground transition-all active:scale-95"
           >
             <ChevronLeft className="h-6 w-6" strokeWidth={2} />
           </Link>

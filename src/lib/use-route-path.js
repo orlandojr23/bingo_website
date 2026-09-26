@@ -1,436 +1,77 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { getSchedule } from "@/lib/live-route";
-import { computeRoute } from "@/lib/router";
-import {
-  routeCache,
-  inflight,
-  round3,
-  round4,
-  buildWaypoints,
-  blocksSignature,
-  cacheKeyFor,
-} from "@/lib/route-cache";
+import { useMemo } from "react";
+import { getSchedule } from "./live-route";
 
-const ORS_URL = "https://api.openrouteservice.org/v2/directions/driving-car/geojson";
-const ORS_KEY = process.env.NEXT_PUBLIC_ORS_API_KEY || "";
+// Hardcoded collection route loop for Barangay Tejero.
+// This replaces the complex OpenRouteService dynamic routing, ensuring
+// a visually clean, instantly loading, and operationally accurate path.
+export const SCHEDULE_ROUTES = {
+  "SCH-001": [[10.301952,123.907552],[10.301958,123.907323],[10.301521,123.907186],[10.301276,123.907167],[10.301251,123.9081],[10.301276,123.907167],[10.301521,123.907186],[10.301958,123.907323],[10.30193,123.908327],[10.30193,123.908465],[10.301929,123.908545],[10.301926,123.908613],[10.301929,123.908545],[10.30193,123.908465],[10.30193,123.908327],[10.301958,123.907323],[10.301923,123.906568],[10.302205,123.906541],[10.302843,123.906451],[10.303436,123.906358],[10.303691,123.906318],[10.304087,123.906255],[10.304653,123.906165],[10.304893,123.906153],[10.305604,123.906118],[10.305688,123.906114],[10.305936,123.906102],[10.306169,123.906171],[10.306342,123.906163],[10.306424,123.906127],[10.306602,123.905862]],
+  "SCH-002": [[10.302851,123.90972],[10.302729,123.909714],[10.302762,123.909543],[10.302875,123.909191],[10.303289,123.909338],[10.303506,123.909415],[10.30448,123.909738],[10.304841,123.909179],[10.305305,123.909334],[10.305326,123.909276],[10.305339,123.909245],[10.305369,123.909161],[10.305339,123.909245],[10.305326,123.909276],[10.305305,123.909334],[10.304841,123.909179],[10.304746,123.909152],[10.30443,123.90905],[10.303976,123.908904],[10.303064,123.908563],[10.302481,123.908375],[10.302322,123.908348],[10.302255,123.90835],[10.301929,123.908545],[10.30193,123.908465],[10.30193,123.908327],[10.301958,123.907323],[10.301923,123.906568],[10.302205,123.906541],[10.302843,123.906451],[10.303436,123.906358],[10.303691,123.906318],[10.304087,123.906255],[10.304653,123.906165],[10.304893,123.906153],[10.304957,123.906642],[10.304893,123.906153],[10.305604,123.906118],[10.305688,123.906114],[10.305936,123.906102],[10.306169,123.906171],[10.306342,123.906163],[10.306424,123.906127],[10.306602,123.905862]],
+  "SCH-003": [[10.303737,123.901816],[10.303406,123.90185],[10.303011,123.901865],[10.302611,123.901926],[10.302277,123.902027],[10.30211,123.902084],[10.302017,123.90214],[10.302414,123.902476],[10.303025,123.902914],[10.303388,123.903175],[10.30349,123.903247],[10.303881,123.903523],[10.304079,123.903668],[10.304419,123.903931],[10.304436,123.904129],[10.304482,123.904553],[10.304512,123.904869],[10.304543,123.905187],[10.304568,123.905384],[10.304616,123.905782],[10.304653,123.906165],[10.304087,123.906255],[10.303691,123.906318],[10.303436,123.906358],[10.30357,123.907165],[10.303585,123.907284],[10.303577,123.907509],[10.303496,123.907731],[10.303453,123.907797],[10.303897,123.907958],[10.303453,123.907797],[10.303496,123.907731],[10.303577,123.907509],[10.303585,123.907284],[10.30357,123.907165],[10.303436,123.906358],[10.303691,123.906318],[10.304087,123.906255],[10.304653,123.906165],[10.304893,123.906153],[10.305604,123.906118],[10.305688,123.906114],[10.305936,123.906102],[10.306169,123.906171],[10.306342,123.906163],[10.306424,123.906127],[10.306602,123.905862]]
+};
 
-let backoffUntil = 0;
+export function useRoutePath({ scheduleId, enabled = true }) {
+  const positions = useMemo(() => {
+    if (!enabled || !scheduleId) return [];
+    
+    // In production/Supabase, scheduleId is a UUID.
+    // We inspect the schedule's routePoints to map it to our hardcoded routes.
+    const schedule = getSchedule(scheduleId);
+    if (!schedule || !schedule.routePoints?.length) return [];
+    
+    const firstStopName = schedule.routePoints[0].name;
+    if (firstStopName === "Sitio Mac Arthur") return SCHEDULE_ROUTES["SCH-001"];
+    if (firstStopName === "Sitio Silangan") return SCHEDULE_ROUTES["SCH-002"];
+    if (firstStopName === "Sitio Zapanta") return SCHEDULE_ROUTES["SCH-003"];
+    
+    return [];
+  }, [enabled, scheduleId]);
 
-const METERS_PER_DEG_LAT = 111320;
-
-function distanceMeters(a, b) {
-  const dy = (b.lat - a.lat) * METERS_PER_DEG_LAT;
-  const dx = (b.lng - a.lng) * METERS_PER_DEG_LAT * Math.cos((a.lat * Math.PI) / 180);
-  return Math.hypot(dx, dy);
-}
-
-function bearingDeg(a, b) {
-  const dx = (b.lng - a.lng) * Math.cos((a.lat * Math.PI) / 180);
-  const dy = b.lat - a.lat;
-  return ((Math.atan2(dx, dy) * 180) / Math.PI + 360) % 360;
-}
-
-// Shortest distance (meters) from an origin to a route polyline. Segment 0 is
-// the pinned origin→first-vertex stub (see headingAlong), so it is ignored
-// when real geometry follows — otherwise the distance would always read ~0.
-function distToPathM(origin, positions) {
-  if (!origin || positions.length < 2) return 0;
-  const mLat = 111320;
-  const mLng = 111320 * Math.cos((origin.lat * Math.PI) / 180);
-  const startSeg = positions.length > 2 ? 1 : 0;
-  let best = Infinity;
-  for (let i = startSeg; i < positions.length - 1; i++) {
-    const ax = (positions[i][1] - origin.lng) * mLng;
-    const ay = (positions[i][0] - origin.lat) * mLat;
-    const bx = (positions[i + 1][1] - origin.lng) * mLng;
-    const by = (positions[i + 1][0] - origin.lat) * mLat;
-    const dx = bx - ax;
-    const dy = by - ay;
-    const len2 = dx * dx + dy * dy;
-    const t = len2 > 0 ? Math.max(0, Math.min(1, -(ax * dx + ay * dy) / len2)) : 0;
-    best = Math.min(best, Math.hypot(ax + dx * t, ay + dy * t));
-  }
-  return best === Infinity ? 0 : best;
-}
-
-// Waze-style auto-reroute tuning: past this distance off the drawn trajectory
-// the driver is treated as having left the route and a fresh path is computed
-// from their current position to the same next stop. The threshold sits well
-// above phone GPS noise (~10-20m) so normal wobble never triggers a reroute.
-const REROUTE_AFTER_M = 50;
-// Minimum gap between auto-reroutes so a long off-route stretch recomputes at
-// most this often instead of on every GPS fix.
-const REROUTE_COOLDOWN_MS = 15000;
-
-// Snap a raw GPS point to the nearest point on the road polyline
-// (Waze-style: marker stays on the road even when the phone is a few meters
-// off-road at a house/garage). Segment 0 is the pinned origin→first-vertex
-// stub and is ignored while the truck is off that stub. Returns null when
-// there is no usable geometry — or the fix is further than maxDistM from the
-// line (beyond that the raw fix is more truthful than a teleport, and the
-// heading falls back to the device's direction of travel).
-export function snapToRoute(origin, positions, maxDistM = 100) {
-  if (!origin || !Array.isArray(positions) || positions.length < 2) return null;
-  const lat0 = typeof origin.lat === "number" ? origin.lat : origin[0];
-  const lng0 = typeof origin.lng === "number" ? origin.lng : origin[1];
-  if (typeof lat0 !== "number" || typeof lng0 !== "number" || isNaN(lat0) || isNaN(lng0)) return null;
-  const mLat = 111320;
-  const mLng = 111320 * Math.cos((lat0 * Math.PI) / 180);
-  let best = null;
-  let bestDist = Infinity;
-  for (let i = 0; i < positions.length - 1; i++) {
-    const aLat = Array.isArray(positions[i]) ? positions[i][0] : positions[i].lat;
-    const aLng = Array.isArray(positions[i]) ? positions[i][1] : positions[i].lng;
-    const bLat = Array.isArray(positions[i + 1]) ? positions[i + 1][0] : positions[i + 1].lat;
-    const bLng = Array.isArray(positions[i + 1]) ? positions[i + 1][1] : positions[i + 1].lng;
-    if (typeof aLat !== "number" || typeof aLng !== "number" || typeof bLat !== "number" || typeof bLng !== "number") continue;
-    const ax = (aLng - lng0) * mLng;
-    const ay = (aLat - lat0) * mLat;
-    const bx = (bLng - lng0) * mLng;
-    const by = (bLat - lat0) * mLat;
-    const dx = bx - ax;
-    const dy = by - ay;
-    const len2 = dx * dx + dy * dy;
-    const t = len2 > 0 ? Math.max(0, Math.min(1, -(ax * dx + ay * dy) / len2)) : 0;
-    const projLat = aLat + (bLat - aLat) * t;
-    const projLng = aLng + (bLng - aLng) * t;
-    const dist = Math.hypot(ax + dx * t, ay + dy * t);
-    if (dist < bestDist) {
-      bestDist = dist;
-      best = { lat: projLat, lng: projLng, i, t };
-    }
-  }
-  if (!best || bestDist > maxDistM) return null;
-  return best;
-}
-
-// The truck icon faces north at rotation 0 and rotates clockwise by
-// (heading - 90), so heading = compass bearing + 90. Project the origin onto
-// the nearest route segment, then sample the bearing lookaheadM meters AHEAD
-// of that projection along the path so the marker starts rotating into a
-// corner just before reaching it (Waze-style turn anticipation).
-function headingAlong(positions, lookaheadM = 15) {
-  if (positions.length < 2) return null;
-  const origin = { lat: positions[0][0], lng: positions[0][1] };
-  const mLat = 111320;
-  const mLng = 111320 * Math.cos((origin.lat * Math.PI) / 180);
-
-  // Cumulative path distance (meters) at each vertex.
-  const cum = [0];
-  for (let i = 0; i < positions.length - 1; i++) {
-    const dx = (positions[i + 1][1] - positions[i][1]) * mLng;
-    const dy = (positions[i + 1][0] - positions[i][0]) * mLat;
-    cum.push(cum[i] + Math.hypot(dx, dy));
-  }
-
-  // Nearest segment to the origin + the along-path distance of the projection.
-  let best = null;
-  for (let i = 0; i < positions.length - 1; i++) {
-    const a = { lat: positions[i][0], lng: positions[i][1] };
-    const b = { lat: positions[i + 1][0], lng: positions[i + 1][1] };
-    const ax = (a.lng - origin.lng) * mLng;
-    const ay = (a.lat - origin.lat) * mLat;
-    const bx = (b.lng - origin.lng) * mLng;
-    const by = (b.lat - origin.lat) * mLat;
-    const dx = bx - ax;
-    const dy = by - ay;
-    const len2 = dx * dx + dy * dy;
-    const t = len2 > 0 ? Math.max(0, Math.min(1, -(ax * dx + ay * dy) / len2)) : 0;
-    const dist = Math.hypot(ax + dx * t, ay + dy * t);
-    if (!best || dist < best.dist) best = { i, t, dist };
-  }
-
-  const total = cum[cum.length - 1];
-  const segLen = cum[best.i + 1] - cum[best.i];
-  const target = Math.min(cum[best.i] + segLen * best.t + lookaheadM, total);
-
-  let i = 0;
-  while (i < positions.length - 2 && cum[i + 1] < target) i++;
-  const a = { lat: positions[i][0], lng: positions[i][1] };
-  const b = { lat: positions[i + 1][0], lng: positions[i + 1][1] };
-  return Math.round((bearingDeg(a, b) + 90) % 360);
-}
-
-async function fetchOrs(waypoints) {
-  const res = await fetch(ORS_URL, {
-    method: "POST",
-    headers: {
-      Authorization: ORS_KEY,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ coordinates: waypoints.map((p) => [p.lng, p.lat]) }),
-  });
-  if (!res.ok) {
-    const err = new Error(`ORS directions failed: ${res.status}`);
-    err.status = res.status;
-    throw err;
-  }
-  const json = await res.json();
-  const coords = json?.features?.[0]?.geometry?.coordinates;
-  if (!coords || coords.length < 2) throw new Error("ORS directions returned empty geometry");
-  return coords.map(([lng, lat]) => [lat, lng]);
-}
-
-export function useRoutePath({ scheduleId, stopIndex = 0, origin = null, points = [], blocks = [], enabled = true, autoReroute = false, pinToRoad = false }) {
-  const waypoints = enabled ? buildWaypoints(origin, points) : [];
-  const blockSig = blocksSignature(blocks);
-  const baseKey = cacheKeyFor(scheduleId, stopIndex, origin, waypoints.length, blockSig);
-
-  // Waze-style auto-reroute: each deviation event gets its own cache key so
-  // the fetch effect below recomputes a fresh path from the driver's current
-  // position to the same next stop. The nonce only ever grows; every key
-  // holds finished geometry, so nothing ever snaps back to a stale path.
-  const [rerouteNonce, setRerouteNonce] = useState(0);
-  const lastRerouteAt = useRef(0);
-  const cacheKey = rerouteNonce ? `${baseKey}#r${rerouteNonce}` : baseKey;
-  const isRerouteKey = rerouteNonce > 0;
-
-  const [state, setState] = useState(() => {
-    const cached = routeCache.get(cacheKey);
-    return {
-      positions: waypoints.length >= 2 ? (cached ?? waypoints.map((p) => [p.lat, p.lng])) : [],
-      source: cached ? (blockSig ? "reroute" : "ors") : "straight",
-      ready: waypoints.length >= 2,
-    };
-  });
-
-  const lastKeyRef = useRef(cacheKey);
-  if (lastKeyRef.current !== cacheKey) {
-    lastKeyRef.current = cacheKey;
-    const cached = routeCache.get(cacheKey);
-    setState({
-      positions: waypoints.length >= 2 ? (cached ?? waypoints.map((p) => [p.lat, p.lng])) : [],
-      source: cached ? (blockSig ? "reroute" : "ors") : "straight",
-      ready: waypoints.length >= 2,
-    });
-  }
-
-  // Deviation detector: when the live origin drifts off the drawn trajectory
-  // (state.positions is the unpinned geometry — the pinned stub in segment 0
-  // is skipped inside distToPathM), request a reroute. Cooldown-gated so a
-  // long off-route stretch recomputes periodically instead of per GPS fix.
-  useEffect(() => {
-    if (!autoReroute || !enabled || !origin || state.positions.length < 2) return;
-    if (distToPathM(origin, state.positions) <= REROUTE_AFTER_M) return;
-    const now = Date.now();
-    if (now - lastRerouteAt.current < REROUTE_COOLDOWN_MS) return;
-    lastRerouteAt.current = now;
-    setRerouteNonce((n) => n + 1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoReroute, enabled, origin?.lat, origin?.lng, state.positions]);
-
-  useEffect(() => {
-    if (!enabled || waypoints.length < 2) return;
-
-    // Blocked streets force the local street router so the trajectory
-    // re-routes around the block in realtime; ORS has no live closures.
-    if (blockSig) {
-      const cached = routeCache.get(cacheKey);
-      const positions = cached ?? computeRoute(waypoints, blocks.map((b) => b.edge));
-      if (!cached) routeCache.set(cacheKey, positions);
-      setState({ positions, source: "reroute", ready: true });
-      return;
-    }
-
-
-
-    if (!ORS_KEY || Date.now() < backoffUntil) {
-      const cached = routeCache.get(cacheKey);
-      const positions = cached ?? computeRoute(waypoints, blocks.map((b) => b.edge));
-      if (!cached) routeCache.set(cacheKey, positions);
-      setState({ positions, source: "local", ready: true });
-      return;
-    }
-    const cached = routeCache.get(cacheKey);
-    if (cached) {
-      setState({ positions: cached, source: "ors", ready: true });
-      return;
-    }
-
-    let cancelled = false;
-    let job = inflight.get(cacheKey);
-    if (!job) {
-      job = fetchOrs(waypoints)
-        .then((positions) => {
-          routeCache.set(cacheKey, positions);
-          return positions;
-        })
-        .finally(() => inflight.delete(cacheKey));
-      inflight.set(cacheKey, job);
-    }
-    job
-      .then((positions) => {
-        if (!cancelled) setState({ positions, source: "ors", ready: true });
-      })
-      .catch((err) => {
-        const now = Date.now();
-        if (err.status === 401 || err.status === 403) backoffUntil = now + 5 * 60 * 1000;
-        else if (err.status === 429) backoffUntil = now + 60 * 1000;
-        else backoffUntil = now + 30 * 1000;
-
-        if (!cancelled) {
-          const cached = routeCache.get(cacheKey);
-          const positions = cached ?? computeRoute(waypoints, blocks.map((b) => b.edge));
-          if (!cached) routeCache.set(cacheKey, positions);
-          setState({ positions, source: "local", ready: true });
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cacheKey, enabled]);
-
-  // Keep the line's first vertex pinned to the live truck position so the
-  // trajectory always connects to the marker between refetches, and face
-  // the marker along the road direction it is about to travel. The pinned
-  // origin is quantized to ~11m and the result memoized: parents re-render on
-  // every GPS echo / sim tick / bounds change, and without this each render
-  // hands react-leaflet a fresh array identity, redrawing the whole green
-  // trajectory every couple of seconds — the visible "dancing", worst while
-  // dragging or zooming. Now the path only rebuilds when it really moved.
-  const qLat = origin ? round4(origin.lat) : null;
-  const qLng = origin ? round4(origin.lng) : null;
-  // Road-pinned first vertex: when pinToRoad is on, the drawn line starts at
-  // the map-matched road point instead of the raw phone fix — the same point
-  // the truck marker is drawn at, so line and marker can never separate
-  // (e.g. line starting inside the driver's house). Snapping runs on the
-  // quantized origin so GPS wobble doesn't rebuild the array (see below).
-  // Detection, keys, and fetches still use the raw origin.
-  const roadPin = useMemo(
-    () =>
-      pinToRoad && origin && state.positions.length >= 2
-        ? snapToRoute({ lat: qLat, lng: qLng }, state.positions)
-        : null,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [pinToRoad, qLat, qLng, state.positions]
-  );
-  const positions = useMemo(
-    () => {
-      if (!origin || state.positions.length < 2) return state.positions;
-      const head = roadPin ? [roadPin.lat, roadPin.lng] : [qLat, qLng];
-      const sliceIdx = roadPin && roadPin.i !== undefined ? roadPin.i + 1 : 1;
-      return [head, ...state.positions.slice(sliceIdx)];
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [qLat, qLng, state.positions, roadPin]
-  );
-  // True while the origin sits off the drawn trajectory — drives the
-  // "Rerouting…" indicator and clears on its own once fresh geometry lands.
-  const rerouting =
-    !!autoReroute &&
-    !!enabled &&
-    !!origin &&
-    state.positions.length >= 2 &&
-    distToPathM(origin, state.positions) > REROUTE_AFTER_M;
   return {
-    ...state,
     positions,
-    heading: origin && positions.length >= 2 ? headingAlong(positions) : null,
-    rerouting,
-    // The road point the line is pinned to (null = raw origin is drawn).
-    // Marker builders should draw the truck here so marker and line coincide.
-    snappedOrigin: roadPin,
+    source: "static",
+    ready: true,
+    heading: 0,
+    rerouting: false,
+    snappedOrigin: null,
   };
 }
 
+// Helper to provide the fixed route for all active trucks on the admin map.
 export function useTruckRoutes(live, fleet) {
-  const [routes, setRoutes] = useState([]);
+  const routes = useMemo(() => {
+    const results = [];
+    for (const t of fleet || []) {
+      const ts = live?.trucks?.[t.id];
+      const active = !!ts && (ts.phase === "enroute" || ts.phase === "onsite") && !!ts.tracking?.isActive;
+      if (!active) continue;
+      
+      if (ts?.scheduleId) {
+        const schedule = getSchedule(ts.scheduleId);
+        const firstStopName = schedule?.routePoints?.[0]?.name;
+        
+        let positions = [];
+        if (firstStopName === "Sitio Mac Arthur") positions = SCHEDULE_ROUTES["SCH-001"];
+        else if (firstStopName === "Sitio Silangan") positions = SCHEDULE_ROUTES["SCH-002"];
+        else if (firstStopName === "Sitio Zapanta") positions = SCHEDULE_ROUTES["SCH-003"];
 
-  const blocks = live.roadBlocks || [];
-  const blockSig = blocksSignature(blocks);
-
-  const fleetKey = (fleet || []).map((t) => t.id).join(",");
-  const liveKey = Object.entries(live.trucks || {})
-    .map(([id, ts]) => [
-      id,
-      ts?.phase,
-      ts?.stopIndex,
-      ts?.tracking?.isActive ? 1 : 0,
-      round4(ts?.tracking?.lat || 0),
-      round4(ts?.tracking?.lng || 0),
-    ].join(":"))
-    .join("|");
-
-  useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
-      const results = [];
-      for (const t of fleet || []) {
-        const ts = live.trucks[t.id];
-        const sched = ts?.scheduleId ? getSchedule(ts.scheduleId) : null;
-        const active = !!ts && (ts.phase === "enroute" || ts.phase === "onsite") && !!ts.tracking?.isActive;
-        if (!active || !sched) continue;
-
-        const origin = { lat: ts.tracking.lat, lng: ts.tracking.lng };
-        const waypoints = buildWaypoints(origin, (sched.routePoints || []).slice(ts.stopIndex, ts.stopIndex + 1));
-        if (waypoints.length < 2) continue;
-
-        const cacheKey = cacheKeyFor(sched.id, ts.stopIndex, origin, waypoints.length, blockSig);
-        let positions = routeCache.get(cacheKey);
-        let source = routeCache.has(cacheKey) ? (blockSig ? "reroute" : "ors") : "straight";
-
-        if (!positions) {
-          if (blockSig) {
-            // Blocked streets re-route through the local street graph.
-            positions = computeRoute(waypoints, blocks.map((b) => b.edge));
-            source = "reroute";
-          } else {
-            positions = waypoints.map((p) => [p.lat, p.lng]);
-            if (ORS_KEY && Date.now() >= backoffUntil) {
-              let job = inflight.get(cacheKey);
-              if (!job) {
-                job = fetchOrs(waypoints)
-                  .then((orsPositions) => {
-                    routeCache.set(cacheKey, orsPositions);
-                    return orsPositions;
-                  })
-                  .finally(() => inflight.delete(cacheKey));
-                inflight.set(cacheKey, job);
-              }
-              try {
-                positions = await job;
-                source = "ors";
-              } catch (err) {
-                const now = Date.now();
-                if (err.status === 401 || err.status === 403) backoffUntil = now + 5 * 60 * 1000;
-                else if (err.status === 429) backoffUntil = now + 60 * 1000;
-                else backoffUntil = now + 30 * 1000;
-              }
-            }
-          }
-          if (source !== "straight" && positions && positions.length >= 2) routeCache.set(cacheKey, positions);
-        }
-
-        // Pin the drawn leg to the map-matched road point — the same point
-        // admin markers use — so the line starts at the truck marker, never
-        // at the raw phone fix.
-        const roadPin = snapToRoute(
-          { lat: round4(origin.lat), lng: round4(origin.lng) },
-          positions
-        );
-        const sliceIdx = roadPin && roadPin.i !== undefined ? roadPin.i + 1 : 1;
-        const withOrigin = [
-          roadPin ? [roadPin.lat, roadPin.lng] : [origin.lat, origin.lng],
-          ...positions.slice(sliceIdx)
-        ];
         results.push({
           id: t.id,
-          positions: withOrigin,
-          source,
-          heading: headingAlong(withOrigin),
-          snappedOrigin: roadPin,
+          positions,
+          source: "static",
+          heading: 0,
+          snappedOrigin: null,
         });
       }
-      if (!cancelled) setRoutes(results);
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fleetKey, liveKey, blockSig]);
+    }
+    return results;
+  }, [live, fleet]);
 
   return routes;
+}
+
+// Snap a raw GPS point to the nearest point on the road polyline
+// (Stubbed out since we no longer snap to a dynamic route)
+export function snapToRoute(origin, positions, maxDistM = 100) {
+  return null;
 }

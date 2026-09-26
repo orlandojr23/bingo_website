@@ -10,7 +10,6 @@ import { useAuth } from "@/context/AuthContext";
 import { TEJERO_SITOS, PILOT_AREA } from "@/lib/mock-data";
 import { Button } from "@/components/ui/button";
 import OtpInput from "@/components/ui/otp-input";
-import PasswordStrengthHint from "@/components/ui/password-strength-hint";
 
 // Pilot launch covers Barangay Tejero only, so new accounts pick their home
 // area from this fixed sitio list instead of typing a free-form address.
@@ -328,7 +327,7 @@ export default function SignupPage() {
           <Link
             href="/login"
             aria-label="Back to Sign In"
-            className="flex h-10 w-10 items-center justify-center rounded-full text-foreground transition-all hover:bg-muted active:scale-95 active:bg-muted"
+            className="flex h-10 w-10 items-center justify-center rounded-full text-foreground transition-all active:scale-95"
           >
             <ChevronLeft className="h-6 w-6" strokeWidth={2} />
           </Link>
@@ -629,20 +628,9 @@ export default function SignupPage() {
                 {showPassword ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
               </button>
             </div>
-            <PasswordStrengthHint password={password} />
-            {password && (
-              <div className="flex flex-wrap gap-x-3 gap-y-1 pt-0.5 text-[11px] font-medium text-muted-foreground/70">
-                <span className={password.length >= 8 ? "text-emerald-600 dark:text-emerald-400 font-semibold" : ""}>
-                  {password.length >= 8 ? "✓" : "•"} 8+ characters
-                </span>
-                <span className={/[a-zA-Z]/.test(password) ? "text-emerald-600 dark:text-emerald-400 font-semibold" : ""}>
-                  {/[a-zA-Z]/.test(password) ? "✓" : "•"} 1 letter
-                </span>
-                <span className={/\d/.test(password) ? "text-emerald-600 dark:text-emerald-400 font-semibold" : ""}>
-                  {/\d/.test(password) ? "✓" : "•"} 1 number
-                </span>
-              </div>
-            )}
+            <p className="mt-1.5 text-[12px] font-medium text-muted-foreground/80">
+              Must be at least 8 characters with 1 letter and 1 number.
+            </p>
             <ErrorLine message={errors.password} />
           </div>
 

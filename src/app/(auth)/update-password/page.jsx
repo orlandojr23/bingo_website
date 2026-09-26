@@ -6,7 +6,6 @@ import { Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
-import PasswordStrengthHint from "@/components/ui/password-strength-hint";
 
 const fieldClass = (hasError) =>
   `w-full rounded-2xl border bg-card pl-10 pr-11 py-3.5 text-[16px] text-foreground placeholder:text-muted-foreground/50 outline-none transition-colors ${
@@ -158,7 +157,9 @@ export default function UpdatePasswordPage() {
                 {showPassword ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
               </button>
             </div>
-            <PasswordStrengthHint password={password} />
+            <p className="mt-1.5 text-[12px] font-medium text-muted-foreground/80">
+              Must be at least 8 characters with 1 letter and 1 number.
+            </p>
             <ErrorLine message={errors.password} />
           </div>
 

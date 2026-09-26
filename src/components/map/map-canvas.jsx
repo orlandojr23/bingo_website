@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
-import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline, useMap, ZoomControl } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Circle, useMap, ZoomControl } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import "leaflet-rotate";
@@ -312,6 +312,7 @@ function TicketMarker({ ticket: t, fading, highlighted, showTicketPopup, onSelec
 
 
 function TruckMarker({ trk, fading, bearing = 0 }) {
+  const map = useMap();
   const markerRef = useRef(null);
   const [view, setView] = useState({ lat: trk.lat, lng: trk.lng, rot: trk.heading ?? 90 });
   const viewRef = useRef(view);
@@ -360,7 +361,7 @@ function TruckMarker({ trk, fading, bearing = 0 }) {
     const loop = (now) => {
       const a = animRef.current;
       if (a) {
-        const pk = Math.min(1, (now - a.start) / 4600);
+        const pk = Math.min(1, (now - a.start) / 1000);
         const rk = Math.min(1, (now - a.start) / 900);
         const dRot = ((a.toRot - a.fromRot + 540) % 360) - 180;
         const next = {
@@ -396,19 +397,22 @@ function TruckMarker({ trk, fading, bearing = 0 }) {
       inner.style.animation = "truckPopIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)";
       wasFading.current = false;
     }
-    // Update: SVG is now rotated directly in the new logic, but wait, this is the old animation loop!
-    // We should apply the rotation to the SVG to avoid conflicting with the pop-in scale animation.
     const svg = inner.querySelector('svg');
-    if (svg) {
+    if (!svg) return;
+
+    const updateRotation = () => {
+      // The map's actual physical bearing (whether auto-rotated or manually rotated)
+      const currentMapBearing = typeof map.getBearing === "function" ? map.getBearing() : (bearing || 0);
       // App heading convention is compass + 90 and the icon faces north at
       // rotation 0, so the drawn rotation is (heading - 90) minus whatever
-      // the map itself is rotated by (course-up camera). Marker icons stay
-      // upright when the map rotates (leaflet-rotate rotateWithView is off),
-      // so on a north-up map this equals the compass bearing, and on the
-      // course-up driver map it nets to 0 = nose-up, Waze-style.
-      svg.style.transform = `rotate(${view.rot - bearing - 90}deg)`;
-    }
-  }, [view.rot, bearing, fading]);
+      // the map itself is rotated by (so it stays aligned to the roads on screen).
+      svg.style.transform = `rotate(${view.rot - currentMapBearing - 90}deg)`;
+    };
+
+    updateRotation();
+    map.on("rotate", updateRotation);
+    return () => map.off("rotate", updateRotation);
+  }, [view.rot, map, fading, bearing]);
 
   return (
     <Marker
@@ -445,109 +449,6 @@ function TruckMarker({ trk, fading, bearing = 0 }) {
   );
 }
 
-function AnimatedRoute({ route, fading }) {
-  const shadowRef = useRef(null);
-  const outerGlowRef = useRef(null);
-  const whiteCasingRef = useRef(null);
-  const lineRef = useRef(null);
-  const highlightRef = useRef(null);
-
-  const cleanPositions = useMemo(() => sanitizePositions(route.positions), [route.positions]);
-
-  useEffect(() => {
-    const els = [
-      shadowRef.current?.getElement(),
-      outerGlowRef.current?.getElement(),
-      whiteCasingRef.current?.getElement(),
-      lineRef.current?.getElement(),
-      highlightRef.current?.getElement(),
-    ].filter(Boolean);
-    if (!els.length) return;
-    if (fading) {
-      els.forEach((el) => {
-        el.style.transition = "opacity 0.45s ease-in";
-        el.style.opacity = "0";
-      });
-      return;
-    }
-    els.forEach((el) => {
-      el.style.opacity = "0";
-    });
-    const raf = requestAnimationFrame(() => {
-      els.forEach((el) => {
-        el.style.transition = "opacity 0.5s ease-out";
-        el.style.opacity = "1";
-      });
-    });
-    return () => cancelAnimationFrame(raf);
-  }, [fading]);
-
-  if (cleanPositions.length < 2) return null;
-
-  const isFuture = !!route.future || String(route.id || "").includes("future");
-
-  if (isFuture) {
-    return (
-      <>
-        {/* Soft Casing for Future Leg */}
-        <Polyline
-          ref={whiteCasingRef}
-          positions={cleanPositions}
-          pathOptions={{ color: "#ffffff", weight: 6, opacity: 0.7, lineCap: "round", lineJoin: "round", interactive: false }}
-        />
-        {/* Sleek Dashed Emerald Trajectory */}
-        <Polyline
-          ref={lineRef}
-          positions={cleanPositions}
-          pathOptions={{
-            color: "#059669",
-            weight: 3.5,
-            opacity: 0.75,
-            dashArray: "6, 9",
-            lineCap: "round",
-            lineJoin: "round",
-            interactive: false,
-          }}
-        />
-      </>
-    );
-  }
-
-  return (
-      <>
-      {/* Layer 1: Ambient Drop Shadow for 3D Elevation */}
-      <Polyline
-        ref={shadowRef}
-        positions={cleanPositions}
-        pathOptions={{ color: "#022c22", weight: 12, opacity: 0.22, lineCap: "round", lineJoin: "round", interactive: false }}
-      />
-      {/* Layer 2: Deep Emerald Outer Casing */}
-      <Polyline
-        ref={outerGlowRef}
-        positions={cleanPositions}
-        pathOptions={{ color: "#047857", weight: 9, opacity: 0.65, lineCap: "round", lineJoin: "round", interactive: false }}
-      />
-      {/* Layer 3: Crisp White Border Casing */}
-      <Polyline
-        ref={whiteCasingRef}
-        positions={cleanPositions}
-        pathOptions={{ color: "#ffffff", weight: 7, opacity: 0.95, lineCap: "round", lineJoin: "round", interactive: false }}
-      />
-      {/* Layer 4: Main Vibrant Emerald Core Line */}
-      <Polyline
-        ref={lineRef}
-        positions={cleanPositions}
-        pathOptions={{ color: "#10b981", weight: 4.5, opacity: 1, lineCap: "round", lineJoin: "round", interactive: false }}
-      />
-      {/* Layer 5: Ultra-sleek Inner Glass / Neon Core Highlight */}
-      <Polyline
-        ref={highlightRef}
-        positions={cleanPositions}
-        pathOptions={{ color: "#a7f3d0", weight: 1.8, opacity: 0.9, lineCap: "round", lineJoin: "round", interactive: false }}
-      />
-      </>
-  );
-}
 
 function MapCameraController({ center, zoom, onMapDrag, onBoundsChange, flySignal, bearing, onUserRotate, perspective3D }) {
   const map = useMap();
@@ -792,7 +693,7 @@ function BearingWatcher({ onBearing }) {
   return null;
 }
 
-export default function MapCanvas({ tickets = [], trucks = [], routes = [], mapMode = "pins", center, zoom, highlightedTicketId, currentStop, upcomingStops = [], onSelectTicket, onMapDrag, onBoundsChange, flySignal, onMapReady, showZoomControl = false, showTicketPopup = true, rotatable = false, bearing = null, perspective3D = false, hidePausedTrucks = false }) {
+export default function MapCanvas({ tickets = [], trucks = [], mapMode = "pins", center, zoom, highlightedTicketId, currentStop, upcomingStops = [], onSelectTicket, onMapDrag, onBoundsChange, flySignal, onMapReady, showZoomControl = false, showTicketPopup = true, rotatable = false, bearing = null, perspective3D = false, hidePausedTrucks = false }) {
   const [mounted, setMounted] = useState(false);
   const tileRef = useRef(null);
   const tejeroCenter = [10.3016, 123.9086];
@@ -852,38 +753,6 @@ export default function MapCanvas({ tickets = [], trucks = [], routes = [], mapM
     const t = setTimeout(() => setFadingStop(null), 500);
     return () => clearTimeout(t);
   }, [stopKey]);
-
-  // Route line hand-off: keyed by destination vertex, so advancing to the
-  // next stop fades the old leg out while the new leg fades in; GPS wobble
-  // on the origin vertex does not trigger a hand-off.
-  const routeSig = (r) => {
-    if (!r) return "-";
-    const last = r.positions?.[r.positions.length - 1];
-    if (!last) return `${r.id || "route"}|-`;
-    const lat = Array.isArray(last) ? last[0] : (last.lat ?? last.latitude);
-    const lng = Array.isArray(last) ? last[1] : (last.lng ?? last.longitude);
-    const latStr = typeof lat === "number" ? lat.toFixed(4) : "-";
-    const lngStr = typeof lng === "number" ? lng.toFixed(4) : "-";
-    return `${r.id || "route"}|${latStr},${lngStr}`;
-  };
-  const [fadingRoutes, setFadingRoutes] = useState([]);
-  const prevRoutesRef = useRef(routes || []);
-
-  useEffect(() => {
-    const prev = prevRoutesRef.current;
-    prevRoutesRef.current = routes || [];
-    const nextSigs = new Map((routes || []).map((r) => [r.id, routeSig(r)]));
-    const outgoing = prev.filter((r) => nextSigs.get(r.id) !== routeSig(r));
-    if (!outgoing.length) return;
-    setFadingRoutes((f) => [
-      ...f.filter((x) => !outgoing.some((r) => r.id === x.id)),
-      ...outgoing,
-    ]);
-    setTimeout(() => {
-      setFadingRoutes((f) => f.filter((x) => !outgoing.some((r) => r.id === x.id)));
-    }, 500);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [routes]);
 
   const activeIds = new Set(activeTrucks.map((t) => t.id));
   const fadingOnly = fadingTrucks.filter((t) => !activeIds.has(t.id));
@@ -1024,22 +893,6 @@ export default function MapCanvas({ tickets = [], trucks = [], routes = [], mapM
             );
           })}
 
-        {/* Route Trajectories (only the current leg up to the stop pin;
-            old legs fade out while new ones fade in on stop changes) */}
-        {fadingRoutes.map((r) => r.positions.length >= 2 && (
-          <AnimatedRoute
-            key={`route-fading-${routeSig(r)}`}
-            route={r}
-            fading
-          />
-        ))}
-        {(routes || []).map((r) => r.positions.length >= 2 && (
-          <AnimatedRoute
-            key={`route-${routeSig(r)}`}
-            route={r}
-            fading={false}
-          />
-        ))}
 
         {/* Point Markers (removed pins finish their fade-out before unmount) */}
         {(mapMode === "pins" || mapMode === "combined") &&
