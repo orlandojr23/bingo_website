@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronLeft,
   ChevronDown,
+  MessageCircle,
   LocateFixed,
   Camera,
   Map as MapIcon,
@@ -51,6 +52,7 @@ import {
   markNotificationRead,
   markAllNotificationsRead,
 } from "@/lib/notifications";
+import AiAssistant from "@/components/chat/AiAssistant";
 import OnboardingModal from "@/components/pwa/OnboardingModal";
 import ProductTour from "@/components/pwa/ProductTour";
 
@@ -154,12 +156,12 @@ function ResidentTab({ id, label, icon: Icon, active, onSelect, badge = 0, tourI
       data-tour={tourId}
       onClick={onSelect}
       aria-label={label}
-      className={`flex flex-col items-center justify-center gap-1 transition-all active:scale-90 cursor-pointer ${active ? "text-emerald-600" : "text-zinc-400"}`}
+      className={`flex flex-col items-center justify-center gap-1 transition-all active:scale-90 cursor-pointer ${active ? "text-emerald-600" : "text-zinc-500"}`}
     >
       <span className="relative flex h-8 items-center justify-center px-4">
         <Icon
           className="relative h-6 w-6"
-          strokeWidth={active ? 2.25 : 1.75}
+          strokeWidth={active ? 2.25 : 2}
           fill={active ? "currentColor" : "none"}
           fillOpacity={active ? 0.18 : 0}
         />
@@ -783,6 +785,8 @@ export default function ResidentMobilePWA() {
   // Subscribed by user id + display-name key so reports filed under either
   // identity still reach them.
   const [showUpdates, setShowUpdates] = useState(false);
+  // Assistant chat, opened from the Profile support row (no floating button).
+  const [chatOpen, setChatOpen] = useState(false);
   // Plain array (not memoized): useNotifications derives a new list each
   // render anyway, and the arrival effect below is ref-guarded, so identity
   // churn here is harmless.
@@ -1695,21 +1699,35 @@ export default function ResidentMobilePWA() {
               </AnimatePresence>
             )}
           </div>
-          {/* Right: Report updates bell */}
+          {/* Right: Assistant + Report updates */}
+          <button
+            type="button"
+            onClick={() => { setChatOpen(true); haptic(); }}
+            data-tour="binny-btn"
+            className="ml-1 flex w-11 shrink-0 cursor-pointer flex-col items-center justify-center gap-[2px] transition-all active:scale-95"
+            aria-label="Binny"
+          >
+            <MessageCircle
+              className="h-5 w-5 text-foreground"
+              strokeWidth={2}
+            />
+            <span className="text-[9px] font-semibold leading-none text-foreground">Binny</span>
+          </button>
           <button
             type="button"
             onClick={openUpdates}
-            className="relative ml-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-foreground transition-all active:scale-95 cursor-pointer"
-            aria-label="Report updates"
+            className="relative ml-1 flex w-11 shrink-0 cursor-pointer flex-col items-center justify-center gap-[2px] transition-all active:scale-95"
+            aria-label="Notifications"
           >
             <Bell
-              className={`h-5 w-5 ${residentUnread > 0 ? "text-emerald-600" : ""}`}
+              className={`h-5 w-5 ${residentUnread > 0 ? "text-emerald-600" : "text-foreground"}`}
               strokeWidth={2}
               fill={residentUnread > 0 ? "currentColor" : "none"}
               fillOpacity={residentUnread > 0 ? 0.18 : 0}
             />
+            <span className={`text-[9px] font-semibold leading-none ${residentUnread > 0 ? "text-emerald-600" : "text-foreground"}`}>Notif</span>
             {residentUnread > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-bold leading-none text-white">
+              <span className="absolute right-1 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[9px] font-bold leading-none text-white">
                 {residentUnread > 9 ? "9+" : residentUnread}
               </span>
             )}
@@ -1802,7 +1820,7 @@ export default function ResidentMobilePWA() {
         {/* Bottom Navigation Bar - native tab bar with center action, only visible
             on map and hidden beneath full-screen overlays (Updates, Details),
             which sit below its z-index */}
-        {activeTab === "map" && !showUpdates && !selectedTicket && (
+        {activeTab === "map" && !showUpdates && !selectedTicket && !chatOpen && (
         <div className="fixed bottom-0 inset-x-0 z-[100] border-t border-black/10 bg-background/85 backdrop-blur-xl shadow-[0_-4px_16px_rgba(0,0,0,0.06)] pb-[env(safe-area-inset-bottom)]">
           <div className="grid grid-cols-5 h-[64px] max-w-md mx-auto px-2">
             <ResidentTab
@@ -2271,24 +2289,6 @@ export default function ResidentMobilePWA() {
             <ChevronLeft className="h-6 w-6" strokeWidth={2} />
           </button>
           <h1 className="text-[17px] font-semibold tracking-tight text-foreground">My Tickets</h1>
-          <button
-            type="button"
-            onClick={openUpdates}
-            className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-all active:scale-95 cursor-pointer"
-            aria-label="Report updates"
-          >
-            <Bell
-              className={`h-5 w-5 ${residentUnread > 0 ? "text-emerald-600" : ""}`}
-              strokeWidth={2}
-              fill={residentUnread > 0 ? "currentColor" : "none"}
-              fillOpacity={residentUnread > 0 ? 0.18 : 0}
-            />
-            {residentUnread > 0 && (
-              <span className="absolute top-0.5 right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-bold leading-none text-white">
-                {residentUnread > 9 ? "9+" : residentUnread}
-              </span>
-            )}
-          </button>
         </div>
       </div>
       <div className="flex flex-1 flex-col overflow-y-auto bg-muted/40 pb-10">
@@ -2955,6 +2955,7 @@ export default function ResidentMobilePWA() {
   activeTab={activeTab}
 />
 
+<AiAssistant isOpen={chatOpen} onOpenChange={setChatOpen} />
 { ToastViewport }
     </div >
   );

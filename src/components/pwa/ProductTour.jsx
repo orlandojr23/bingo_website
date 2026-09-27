@@ -38,6 +38,16 @@ export default function ProductTour({
         },
       },
       {
+        element: '[data-tour="binny-btn"]',
+        popover: {
+          title: "Ask Binny",
+          description:
+            "Chat with Binny for waste segregation help, collection days, truck tracking, and reporting guidance.",
+          side: "bottom",
+          align: "end",
+        },
+      },
+      {
         element: '[data-tour="nav-tab-schedule"]',
         popover: {
           title: "Collection Schedule",

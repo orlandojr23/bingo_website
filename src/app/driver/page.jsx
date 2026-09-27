@@ -98,12 +98,12 @@ function DriverTab({ id, label, icon: Icon, activeTab, onSelect, badge = 0 }) {
       type="button"
       onClick={onSelect}
       aria-label={label}
-      className={`relative flex flex-col items-center justify-center gap-1 transition-all active:scale-90 cursor-pointer ${active ? "text-emerald-600" : "text-zinc-400"}`}
+      className={`relative flex flex-col items-center justify-center gap-1 transition-all active:scale-90 cursor-pointer ${active ? "text-emerald-600" : "text-zinc-500"}`}
     >
       <span className="relative flex h-8 items-center justify-center px-4">
         <Icon
           className="relative h-6 w-6"
-          strokeWidth={active ? 2.25 : 1.75}
+          strokeWidth={active ? 2.25 : 2}
           fill={active ? "currentColor" : "none"}
           fillOpacity={active ? 0.18 : 0}
         />

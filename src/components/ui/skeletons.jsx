@@ -126,7 +126,14 @@ export function ResidentShellSkeleton() {
               <div className="h-3 w-48 rounded bg-foreground/5 animate-pulse" />
             </div>
           </div>
-          <div className="ml-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-foreground/5 animate-pulse" />
+          <div className="ml-1 flex w-11 shrink-0 flex-col items-center justify-center gap-[2px]">
+            <div className="h-5 w-5 rounded bg-foreground/10 animate-pulse" />
+            <div className="h-2 w-7 rounded bg-foreground/10 animate-pulse" />
+          </div>
+          <div className="ml-1 flex w-11 shrink-0 flex-col items-center justify-center gap-[2px]">
+            <div className="h-5 w-5 rounded bg-foreground/10 animate-pulse" />
+            <div className="h-2 w-7 rounded bg-foreground/10 animate-pulse" />
+          </div>
         </div>
 
         {/* Floating Map Action Buttons Skeleton */}
@@ -201,8 +208,35 @@ export function DriverShellSkeleton() {
   );
 }
 
-export function ListSkeleton() {
+export function ChatReplySkeleton() {
   return (
+    <div className="flex w-full justify-start" aria-hidden="true">
+      <div className="flex w-full flex-row items-end gap-2">
+        <img
+          src="/mascot/arms-open-pose-clean.webp"
+          alt=""
+          className="h-24 w-auto shrink-0 sm:h-28"
+        />
+        <div className="relative min-w-0 flex-1 rounded-2xl border border-border/60 bg-card px-4 py-2.5 shadow-sm">
+          <span
+            aria-hidden="true"
+            className="absolute -left-[7px] bottom-12 h-3.5 w-3.5 rotate-45 border-b border-l border-border/60 bg-card"
+          />
+          <span
+            aria-hidden="true"
+            className="absolute -left-[3px] bottom-12 h-[18px] w-[6px] bg-card"
+          />
+          <div className="relative flex flex-col gap-2 py-1">
+            <div className="h-3 w-11/12 rounded-full bg-foreground/10 animate-pulse" />
+            <div className="h-3 w-2/3 rounded-full bg-foreground/10 animate-pulse" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function ListSkeleton() {  return (
     <div className="flex flex-col gap-3 w-full animate-in fade-in duration-300">
       {[1, 2, 3, 4, 5].map(i => (
         <div key={i} className="h-[90px] w-full rounded-2xl bg-muted/40 animate-pulse border border-border/50" />
