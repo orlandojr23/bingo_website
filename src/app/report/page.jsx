@@ -1717,7 +1717,7 @@ export default function ResidentMobilePWA() {
             type="button"
             onClick={openUpdates}
             className="relative ml-1 flex w-11 shrink-0 cursor-pointer flex-col items-center justify-center gap-[2px] transition-all active:scale-95"
-            aria-label="Notifications"
+            aria-label="Updates"
           >
             <Bell
               className={`h-5 w-5 ${residentUnread > 0 ? "text-emerald-600" : "text-foreground"}`}
@@ -1725,7 +1725,7 @@ export default function ResidentMobilePWA() {
               fill={residentUnread > 0 ? "currentColor" : "none"}
               fillOpacity={residentUnread > 0 ? 0.18 : 0}
             />
-            <span className={`text-[9px] font-semibold leading-none ${residentUnread > 0 ? "text-emerald-600" : "text-foreground"}`}>Notif</span>
+            <span className={`text-[9px] font-semibold leading-none ${residentUnread > 0 ? "text-emerald-600" : "text-foreground"}`}>Updates</span>
             {residentUnread > 0 && (
               <span className="absolute right-1 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[9px] font-bold leading-none text-white">
                 {residentUnread > 9 ? "9+" : residentUnread}
