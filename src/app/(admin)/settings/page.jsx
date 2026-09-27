@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { inputClass, labelClass } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useSoundEnabled, setSoundEnabled } from "@/lib/sounds";
+import AppearanceSection from "./appearance-section";
 import { useAuth } from "@/context/AuthContext";
 
 function Toggle({ checked, onChange }) {
@@ -391,6 +392,12 @@ export default function SettingsPage() {
               </div>
             </form>
           </section>
+
+          <AppearanceSection
+            sectionCard={sectionCard}
+            sectionHeader={sectionHeader}
+            notify={showToast}
+          />
 
           {/* Guaranteed bottom spacer element */}
           <div className="h-6 sm:h-8 lg:h-10 w-full shrink-0 pointer-events-none" aria-hidden="true" />

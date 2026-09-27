@@ -230,3 +230,49 @@ select {
     background-position: right 0.5rem center;
   }
 }
+
+/* Admin display density (spacing only). Set via data-density on the admin
+   layout root (see src/lib/density.js). "default" has no overrides — it
+   renders today's styles. These rules are unlayered so they win over the
+   layered Tailwind padding utilities at every breakpoint; text sizes are
+   never touched. The attribute is only ever set inside admin, so nothing
+   below can leak into the resident, driver, or landing surfaces. */
+
+/* Table row density (staff roster and any future admin tables). */
+[data-density="comfortable"] table :is(th, td) {
+  padding-block: 1rem;
+  padding-inline: 1.25rem;
+}
+
+/* Card density: rounded-2xl cards carrying a base padding (report, dispatch,
+   notification cards and stat cards). Inputs and alert boxes use px-/py-
+   utilities, so the p-4/p-3 substring keeps them untouched. */
+[data-density="comfortable"] div.rounded-2xl[class*="p-4"],
+[data-density="comfortable"] div.rounded-2xl[class*="p-3"] {
+  padding: 1.5rem;
+}
+
+/* Settings-style section cards (<section> is only used for cards in admin). */
+[data-density="comfortable"] section[class*="rounded-"] {
+  padding: 1.5rem;
+}
+
+/* Page container rhythm: every admin page shares the
+   "relative z-10 flex flex-1 ..." inner wrapper. */
+[data-density="comfortable"] div[class*="relative z-10 flex flex-1"] {
+  padding: 2rem;
+  row-gap: 1.5rem;
+}
+
+/* Stacked info rows: label above, value below, both left-aligned. Used by
+   cards whose values are too long to sit inline (dispatch schedule card),
+   where InfoRow's wrapping justify-between layout looks inconsistent.
+   Unlayered so it wins over InfoRow's Tailwind utilities. */
+.info-stack > div {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.125rem;
+}
+.info-stack > div > span:last-child {
+  text-align: left;
+}

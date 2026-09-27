@@ -434,7 +434,7 @@ function LiveMapContent() {
                   <div className="mb-2 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <TruckIcon
-                        className={`h-4 w-4 ${trk.duty === "On Duty" ? "text-emerald-600" : trk.duty === "Paused" ? "text-amber-500" : "text-zinc-400"}`}
+                        className={`h-6 w-6 shrink-0 ${trk.duty === "On Duty" ? "text-emerald-600" : trk.duty === "Paused" ? "text-amber-500" : "text-zinc-600"}`}
                       />
                       <div className="flex min-w-0 flex-col">
                         <span className="whitespace-nowrap text-xs font-semibold tabular-nums tracking-tight text-foreground">{trk.id}</span>
@@ -445,7 +445,7 @@ function LiveMapContent() {
                     </div>
                     <StatusBadge status={trk.duty} className="p-0 text-xs font-medium" />
                   </div>
-                  <div className="ml-6 flex flex-col gap-0.5 text-xs text-zinc-600">
+                  <div className="ml-8 flex flex-col gap-0.5 text-xs text-zinc-600">
                     <div>
                       <span className="font-semibold text-zinc-700">Driver:</span> {trk.driver}
                     </div>

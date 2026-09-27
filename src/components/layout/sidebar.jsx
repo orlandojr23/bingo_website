@@ -94,19 +94,19 @@ export default function Sidebar({ isOpen, onClose }) {
               className={cn(
                 "group flex items-center justify-between rounded-lg px-3.5 py-2.5 text-sm font-medium transition-colors sm:py-2",
                 isActive
-                  ? "bg-muted text-foreground"
-                  : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                  ? "bg-emerald-600/10 font-semibold text-foreground"
+                  : "text-zinc-600 hover:bg-muted/60 hover:text-foreground"
               )}
             >
               <div className="flex items-center gap-3">
                 <item.icon
                   className={cn(
-                    "h-4 w-4 shrink-0 transition-colors",
+                    "h-[18px] w-[18px] shrink-0 transition-colors",
                     isActive
                       ? "text-accent-emerald"
-                      : "text-muted-foreground/70 group-hover:text-muted-foreground"
+                      : "text-zinc-500 group-hover:text-emerald-600"
                   )}
-                  strokeWidth={1.75}
+                  strokeWidth={2}
                 />
                 <span>{item.name}</span>
               </div>

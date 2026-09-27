@@ -196,12 +196,12 @@ export default function DashboardPage() {
                       </div>
                     </div>
 
-                    <div className="mt-4 border-t border-border-subtle pt-2">
-                      <InfoRow label="Status" value={<StatusBadge status={t.status} showDot={false} className="p-0" />} />
+                    <div className="mt-4 border-t border-border-subtle pt-2 info-stack">
+                      <InfoRow label="Status" value={<StatusBadge status={t.status} showDot={false} className="p-0 text-sm" />} />
                       <InfoRow
                         label="Reported"
                         value={
-                          <span className="text-xs font-medium tracking-tight text-muted-foreground tabular-nums">
+                          <span className="text-sm font-medium tracking-tight text-muted-foreground tabular-nums">
                             {t.timestamp ? formatTicketDateTime(t.timestamp) : `${t.date || "—"}${t.time ? ` · ${t.time}` : ""}`}
                           </span>
                         }

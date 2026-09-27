@@ -7,6 +7,7 @@ import Sidebar from "@/components/layout/sidebar";
 import { AdminShellSkeleton } from "@/components/ui/skeletons";
 import { supabase } from "@/lib/supabase";
 import { useNotifications } from "@/lib/notifications";
+import { useDensity } from "@/lib/density";
 import { playDing } from "@/lib/sounds";
 import { useToast } from "@/components/pwa/Toast";
 import { reinitSupabaseSync } from "@/lib/live-route";
@@ -56,6 +57,7 @@ export default function AdminLayout({ children }) {
   const [checking, setChecking] = useState(true);
   const [authorized, setAuthorized] = useState(false);
   const { toast, ToastViewport } = useToast();
+  const density = useDensity();
   useAdminNotificationSound(toast);
 
   useEffect(() => {
@@ -124,7 +126,7 @@ export default function AdminLayout({ children }) {
   }
 
   return (
-    <div className="flex min-h-[100dvh] w-full bg-background text-foreground lg:h-screen lg:overflow-hidden">
+    <div data-density={density} className="flex min-h-[100dvh] w-full bg-background text-foreground lg:h-screen lg:overflow-hidden">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <div className="sticky top-0 z-20 flex p-3 pb-0 lg:hidden">

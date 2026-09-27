@@ -306,12 +306,12 @@ export default function NotificationsPage() {
                       </p>
                     </div>
 
-                    <div className="mt-3.5 border-t border-border-subtle pt-2">
+                    <div className="mt-3.5 border-t border-border-subtle pt-2 info-stack">
                       <InfoRow label="Location" value={n.location || "System"} />
                       <InfoRow
                         label="Received"
                         value={
-                          <span className="text-xs font-medium tracking-tight text-muted-foreground tabular-nums">
+                          <span className="text-sm font-medium tracking-tight text-muted-foreground tabular-nums">
                             {n.receivedAt || "—"}
                             {n.timestamp ? ` (${n.timestamp})` : ""}
                           </span>

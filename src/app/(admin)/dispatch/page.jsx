@@ -584,14 +584,14 @@ export default function DispatchPage() {
       <Field label="Status">
         <select
           value={status}
-          onChange={(e) => setStatus(e.target.value)}
+          onChange={(e) => { const v = e.target.value; if (v === "Cancelled" && status !== "Cancelled" && !isAdding && selectedSchedule) { setScheduleToCancel(selectedSchedule.id); return; } if (v === "Cancelled") { toast("Save the assignment first before cancelling it."); return; } setStatus(v); }}
           className={cn(inputClass, "cursor-pointer")}
         >
           <option value="Scheduled">Scheduled</option>
           <option value="Assigned">Assigned</option>
           <option value="Accepted">Accepted</option>
           <option value="In Progress">In Progress</option>
-          <option value="Cancelled" disabled>Cancelled (via Cancel Assignment)</option>
+          <option value="Cancelled">Cancelled (notifies everyone)</option>
           <option value="Completed" disabled>Completed (driver only)</option>
         </select>
       </Field>
@@ -650,7 +650,7 @@ export default function DispatchPage() {
                 {fleet.map((t) => {
                   const duty = dutyStatusOf(live.trucks[t.id]);
                   const dutyColor =
-                    duty === "On Duty" ? "text-emerald-600" : duty === "Paused" ? "text-amber-500" : "text-zinc-400";
+                    duty === "On Duty" ? "text-emerald-600" : duty === "Paused" ? "text-amber-500" : "text-zinc-600";
                   return (
                     <div
                       key={t.id}
@@ -659,7 +659,7 @@ export default function DispatchPage() {
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <Truck className={`h-4.5 w-4.5 shrink-0 mt-0.5 ${dutyColor}`} />
+                          <Truck className={`h-6 w-6 shrink-0 ${dutyColor}`} strokeWidth={2} />
                           <div className="flex min-w-0 flex-col">
                             <span className="text-xs font-semibold text-foreground whitespace-nowrap tracking-tight tabular-nums">{t.id}</span>
                             <span className="text-[11px] font-medium text-muted-foreground whitespace-nowrap truncate">{t.plate}</span>
@@ -743,8 +743,8 @@ export default function DispatchPage() {
                         {scheduleLabel(sch)}
                       </div>
 
-                      <div className="mt-3 border-t border-border-subtle pt-2">
-                        <InfoRow label="Status" value={<StatusBadge status={effStatus(sch)} showDot={false} />} />
+                      <div className="mt-3 border-t border-border-subtle pt-2 info-stack">
+                        <InfoRow label="Status" value={<StatusBadge status={effStatus(sch)} showDot={false} className="p-0 text-sm" />} />
                         <InfoRow
                           label="Collection Days"
                           value={
@@ -849,26 +849,15 @@ export default function DispatchPage() {
                   <div className="mt-1 flex flex-col gap-4">{formFields}</div>
                 </div>
 
-                {!isAdding && selectedSchedule && ["Scheduled", "Assigned", "Accepted", "In Progress"].includes(effStatus(selectedSchedule)) && (
-                  <div className="shrink-0 touch-none pt-1">
-                    <button
-                      type="button"
-                      onClick={() => setScheduleToCancel(selectedSchedule.id)}
-                      className="flex h-10 w-full cursor-pointer items-center justify-center rounded-xl text-[14px] font-semibold text-rose-600 transition-colors hover:bg-rose-600/10 active:bg-rose-600/15"
-                    >
-                      Cancel Assignment
-                    </button>
-                  </div>
-                )}
-
-                <div className="mt-auto shrink-0 touch-none grid grid-cols-2 gap-2 w-full sm:flex sm:w-auto sm:items-center sm:justify-end border-t border-border-subtle pt-4">
+                <div className="mt-auto shrink-0 touch-none flex flex-col-reverse gap-2 border-t border-border-subtle pt-4 sm:flex-row sm:items-center sm:justify-end">
+                  <div className="grid grid-cols-2 items-center gap-2 sm:flex">
                   <Button
                     variant="secondary"
                     type="button"
                     className="h-10 w-full sm:w-auto rounded-xl px-4 text-[14px] font-semibold"
                     onClick={() => (isAdding ? setIsAdding(false) : setSelectedSchedule(null))}
                   >
-                    Cancel
+                    Close
                   </Button>
                   <Button
                     variant="primary"
@@ -886,6 +875,7 @@ export default function DispatchPage() {
                       isAdding ? "Create Schedule" : "Save Changes"
                     )}
                   </Button>
+                  </div>
                 </div>
               </form>
             </motion.div>
@@ -1011,7 +1001,7 @@ export default function DispatchPage() {
                   </div>
                   <div className="grid grid-cols-2 items-center gap-2 sm:flex">
                     <Button variant="secondary" type="button" className="h-10 rounded-xl px-4 text-[14px] font-semibold" onClick={() => setTruckSheet(null)}>
-                      Cancel
+                      Close
                     </Button>
                     <Button variant="primary" type="submit" className="h-10 rounded-xl px-4 text-[14px] font-semibold" disabled={isSubmittingTruck}>
                       {isSubmittingTruck ? (
