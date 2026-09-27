@@ -172,7 +172,10 @@ export default function AiAssistant({ isOpen, onOpenChange }) {
                     <img
                       src="/mascot/arms-open-pose-clean.webp"
                       alt="Binny waving hello"
-                      className="h-24 w-auto shrink-0 sm:h-28"
+                      draggable={false}
+                      onContextMenu={(e) => e.preventDefault()}
+                      className="h-24 w-auto shrink-0 select-none pointer-events-none sm:h-28"
+                      style={{ WebkitTouchCallout: "none" }}
                     />
                     <div className="relative min-w-0 flex-1 rounded-2xl border border-border/60 bg-card px-4 py-2.5 text-[14px] leading-relaxed text-foreground shadow-sm sm:text-[15px]">
                       <span
@@ -217,7 +220,10 @@ export default function AiAssistant({ isOpen, onOpenChange }) {
                         <img
                           src="/mascot/arms-open-pose-clean.webp"
                           alt="Binny"
-                          className="h-24 w-auto shrink-0 sm:h-28"
+                          draggable={false}
+                          onContextMenu={(e) => e.preventDefault()}
+                          className="h-24 w-auto shrink-0 select-none pointer-events-none sm:h-28"
+                          style={{ WebkitTouchCallout: "none" }}
                         />
                         <div className="relative min-w-0 flex-1 rounded-2xl border border-border/60 bg-card px-4 py-2.5 text-[14px] leading-relaxed text-foreground shadow-sm sm:text-[15px]">
                           <span

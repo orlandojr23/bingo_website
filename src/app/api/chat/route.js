@@ -16,9 +16,10 @@ If the user asks something off-topic or outside this scope (homework, coding, ge
 
 Facts you know (never contradict these):
 - Malata (biodegradable): leftover food and rice, fruit and vegetable peelings, eggshells, coffee grounds and tea bags, leaves and yard trimmings.
-- Recyclable: plastic (PET) bottles, glass bottles and jars, tin and aluminum cans, cardboard and paper, clean metal scraps.
+- Recyclable: plastic (PET) bottles, glass bottles and jars, tin and aluminum cans, cardboard and paper, clean metal scraps. Items must be empty, clean, and dry.
 - Dili Malata (residual): dirty plastic sachets and wrappers, styrofoam containers, diapers and sanitary products, used tissue and napkins, broken ceramics and glass.
 - Special/Hazardous: batteries, electronics, bulbs — require special drop-off, do not mix with regular waste.
+- Item rules: water and PET bottles, clean plastics, clean paper and cardboard, clean cans and metals, clean glass Go to Recyclable. Always pour out all liquids first and never throw liquid-filled containers. Dirty or oily plastics and paper Go to Dili Malata. Cooking oil should be kept in a sealed container for special drop-off, never poured in bins or drains.
 - Users track the garbage truck live in the Map tab.
 - Users report uncollected waste or overflowing bins in the Report tab.
 - Users see their collection days in the Schedule tab.
@@ -74,6 +75,33 @@ function faqReply(text) {
   const t = String(text || '').toLowerCase();
   const has = (...words) => words.some((w) => t.includes(w));
 
+  if (has('bottle', 'pet bottle', 'water bottle', 'plastic bottle')) {
+    return 'Water and PET bottles Go to Recyclable. Please empty the bottle first, rinse if dirty, then throw only the empty bottle.';
+  }
+  if (has('cooking oil', 'used oil', 'oil')) {
+    return 'Cooking oil needs special handling. Keep it in a sealed container for special drop-off and never pour it in bins or drains.';
+  }
+  if (has('liquid', 'water', 'juice', 'softdrink', 'soda', 'drink')) {
+    return 'Please pour out all liquids first and never throw liquid-filled containers. Then sort the empty container as Recyclable if clean, or Dili Malata if dirty.';
+  }
+  if (has('plastic', 'sachet', 'wrapper', 'styro', 'cellophane')) {
+    return 'Clean hard plastics Go to Recyclable. Dirty sachets, wrappers, and styrofoam Go to Dili Malata.';
+  }
+  if (has('paper plate', 'paper cup', 'paper bowl', 'disposable plate', 'pizza box')) {
+    return 'For paper plates and food packaging, please scrape leftover food into Malata first. If the plate is clean and dry it Goes to Recyclable, but if greasy or food-stained it Goes to Dili Malata.';
+  }
+  if (has('paper', 'newspaper', 'cardboard', 'carton', 'magazine', 'notebook')) {
+    return 'Clean and dry paper and cardboard Go to Recyclable. Dirty, oily, or wet paper and used tissue Go to Dili Malata.';
+  }
+  if (has('metal', 'can', 'cans', 'aluminum', 'aluminium', 'tin', 'steel', 'iron')) {
+    return 'Clean cans and metals Go to Recyclable. Please empty and rinse them first, then throw only the clean container.';
+  }
+  if (has('glass', 'bote', 'botelya', 'jar')) {
+    return 'Glass bottles and jars Go to Recyclable if whole and empty. Broken glass Goes to Dili Malata, please wrap it safely.';
+  }
+  if (has('food', 'leftovers', 'kan-on', 'rice', 'peel', 'panit')) {
+    return 'Leftover food, rice, peelings, and yard trimmings Go to Malata. Please drain liquids first and keep plastics out.';
+  }
   if (has('malata') && !has('dili', 'di malata', 'residual')) {
     return 'Malata means biodegradable. Put leftover food and rice, fruit and vegetable peelings, eggshells, coffee grounds and tea bags, plus leaves and yard trimmings.';
   }
@@ -87,10 +115,10 @@ function faqReply(text) {
     return 'Special waste needs special drop-off. Keep batteries, electronics, and bulbs separate and never mix them with regular waste.';
   }
   if (has('collection day', 'pickup', 'pick up', 'schedule', 'when will', 'what day', 'what time', 'arrival', 'truck')) {
-    return 'I cannot give an exact time. Please check your day in the Schedule tab and watch the live truck in the Map tab.';
+    return 'I cannot give an exact time since pickup depends on your sitio. Please check your day in the Schedule tab and watch the live truck in the Map tab.';
   }
-  if (has('report', 'overflowing', 'overflow', 'missed', 'uncollected', 'not collected', 'complaint')) {
-    return 'To report, open the Report tab, describe the problem and location, then submit so the crew sees it.';
+  if (has('report', 'overflowing', 'overflow', 'missed', 'uncollected', 'not collected', 'complaint', 'ticket')) {
+    return 'To report, open the Report tab, add a specific landmark and photo, pin the location, then submit. You can track progress in the Tickets tab.';
   }
   if (has('where', 'how to use', 'how do i use', 'navigate', 'map tab', 'schedule tab', 'report tab')) {
     return 'Use the Map tab to track the truck, the Schedule tab for your day, and the Report tab to report a problem.';
