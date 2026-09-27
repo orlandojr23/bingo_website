@@ -2955,7 +2955,16 @@ export default function ResidentMobilePWA() {
   activeTab={activeTab}
 />
 
-<AiAssistant isOpen={chatOpen} onOpenChange={setChatOpen} />
+<AiAssistant
+  isOpen={chatOpen}
+  onOpenChange={setChatOpen}
+  context={{
+    sitio: residentSession?.sitio,
+    pickupTitle: pickupStatus?.title,
+    pickupSubtitle: pickupStatus?.subtitle,
+    activeTab,
+  }}
+/>
 { ToastViewport }
     </div >
   );

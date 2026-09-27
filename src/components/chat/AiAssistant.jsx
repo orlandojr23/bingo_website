@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Send, Trash2, ChevronLeft, MoreHorizontal, Plus } from "lucide-react";
+import { Send, ChevronLeft, MoreHorizontal, Plus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { haptic } from "@/lib/utils";
 import { ChatReplySkeleton } from "@/components/ui/skeletons";
@@ -9,13 +9,45 @@ import { ChatReplySkeleton } from "@/components/ui/skeletons";
 let nextId = 0;
 const makeId = () => `msg-${Date.now()}-${(nextId += 1)}`;
 
-export default function AiAssistant({ isOpen, onOpenChange }) {
-  const [messages, setMessages] = useState([]);
+const STORAGE_KEY = "binny-chat-v1";
+const STORAGE_MAX = 30;
+
+function loadStoredMessages() {
+  try {
+    if (typeof window === "undefined") return [];
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((m) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string" && m.content.trim())
+      .slice(-STORAGE_MAX)
+      .map((m) => ({ id: makeId(), role: m.role, content: m.content.slice(0, 2000) }));
+  } catch {
+    return [];
+  }
+}
+
+export default function AiAssistant({ isOpen, onOpenChange, context }) {
+  // Messages render only when the sheet is open, so lazy-loading stored
+  // history here is hydration-safe (server and first paint both closed).
+  const [messages, setMessages] = useState(() => loadStoredMessages());
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(messages.slice(-STORAGE_MAX).map(({ role, content }) => ({ role, content })))
+      );
+    } catch {
+      // storage full or unavailable — chat still works in memory
+    }
+  }, [messages]);
 
   // Opened externally (e.g. the Profile support row) — no floating button.
 
@@ -49,6 +81,7 @@ export default function AiAssistant({ isOpen, onOpenChange }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: nextMessages.map(({ role, content: c }) => ({ role, content: c })),
+          context: context && typeof context === "object" ? context : undefined,
         }),
       });
 
@@ -81,6 +114,11 @@ export default function AiAssistant({ isOpen, onOpenChange }) {
     setMessages([]);
     setError(null);
     setInput("");
+    try {
+      window.localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // ignore
+    }
     haptic();
   };
 
@@ -142,15 +180,6 @@ export default function AiAssistant({ isOpen, onOpenChange }) {
                           >
                             <Plus className="h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={2} />
                             New chat
-                          </button>
-                          <button
-                            type="button"
-                            role="menuitem"
-                            onClick={() => { clearChat(); setMenuOpen(false); onOpenChange(false); }}
-                            className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[15px] text-rose-600 transition-colors active:bg-muted"
-                          >
-                            <Trash2 className="h-4 w-4 shrink-0" strokeWidth={2} />
-                            Delete conversation
                           </button>
                         </motion.div>
                       </>
