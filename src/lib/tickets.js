@@ -188,7 +188,7 @@ export async function addTicket(ticket) {
       title: isEmergency
         ? `Emergency: ${ticket.category || "Waste report"} at ${ticket.location}`
         : `New report: ${ticket.category || "Waste report"} at ${ticket.location}`,
-      message: `${ticket.reporter || "A resident"} reported ${ticket.category || "waste"} at ${ticket.location}, Brgy. ${ticket.barangay || "Tejero"}. Priority: ${ticket.urgency || "High"}.`,
+      message: `${ticket.category || "Waste report"} at ${ticket.location}. Priority: ${ticket.urgency || "High"}.`,
       location: `${ticket.location}, Brgy. ${ticket.barangay || "Tejero"}`,
       actionUrl: newId ? `/live-map?ticketId=${newId}` : "/tickets",
       actionLabel: "View Report",

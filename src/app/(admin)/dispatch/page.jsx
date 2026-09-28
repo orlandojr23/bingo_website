@@ -271,13 +271,19 @@ export default function DispatchPage() {
     const id = scheduleToCancel;
     if (!id) return;
     const sch = getSchedules().find((s) => s.id === id);
-    await cancelAssignment({ scheduleId: id, truckId: sch?.truckId, cancelledBy: "admin" });
+    const result = await cancelAssignment({ scheduleId: id, truckId: sch?.truckId, cancelledBy: "admin" });
     setScheduleToCancel(null);
     if (selectedSchedule?.id === id) {
       setSelectedSchedule(null);
     }
     resetForm();
-    toast("Assignment cancelled. Driver and residents notified.");
+    if (!result?.scheduleSaved) {
+      toast("Assignment cancelled locally, but the status could not be saved. Check the console and Supabase RLS.", { variant: "error" });
+    } else if (!result?.residentsNotified) {
+      toast("Assignment cancelled, but residents could NOT be notified (check console and Supabase RLS).", { variant: "warning" });
+    } else {
+      toast("Assignment cancelled. Driver and residents notified.");
+    }
   };
 
   const handleDeleteSchedule = async (id) => {

@@ -319,8 +319,7 @@ export async function addSchedule(fields) {
   };
   if (fields.assignmentDate) row.scheduled_date = fields.assignmentDate;
 
-  let { error } = await supabase.from('schedules').insert(row);
-  if (error && row.scheduled_date !== undefined && mentionsColumn(error, "scheduled_date")) {
+  let { error } = await supabase.from('schedules').insert(row);  if (error && row.scheduled_date !== undefined && mentionsColumn(error, "scheduled_date")) {
     // scheduled_date column missing (migration not applied yet) — save
     // without the day instead of failing the whole assignment.
     delete row.scheduled_date;
@@ -328,6 +327,21 @@ export async function addSchedule(fields) {
   }
 
   if (error) throw error;
+
+  if (fields.truckId) {
+    const label = scheduleLabel({ ...fields, id });
+    const when = [fields.assignmentDate, fields.time].filter(Boolean).join(" · ");
+    pushNotification({
+      audience: `driver:${fields.truckId}`,
+      type: "Dispatch",
+      title: "New assignment",
+      message: `${label}${when ? ` (${when})` : ""}. See Tasks.`,
+      at: new Date().toISOString(),
+      dedupeKey: `${id}:assigned:${Date.now()}`,
+    }).then((r) => {
+      if (!r.remote) console.warn("New assignment: driver notification stayed local-only (not delivered).");
+    });
+  }
 
   return write((next) => {
     const schedule = {
@@ -366,6 +380,38 @@ export async function updateSchedule(id, patch) {
     ({ error } = await supabase.from('schedules').update(dbPatch).eq('id', id));
   }
   if (error) throw error;
+
+  if (patch.truckId !== undefined) {
+    const prevTruckId = getSchedule(id)?.truckId ?? null;
+    if (patch.truckId && patch.truckId !== prevTruckId) {
+      const after = { ...(getSchedule(id) || {}), ...patch };
+      const label = scheduleLabel({ ...after, id });
+      pushNotification({
+        audience: `driver:${patch.truckId}`,
+        type: "Dispatch",
+        title: "New assignment",
+        message: `${label}. See Tasks.`,
+        at: new Date().toISOString(),
+        dedupeKey: `${id}:assigned:${Date.now()}`,
+      }).then((r) => {
+        if (!r.remote) console.warn("Reassignment: new-driver notification stayed local-only (not delivered).");
+      });
+    }
+    if (prevTruckId && prevTruckId !== patch.truckId) {
+      const before = getSchedule(id) || {};
+      const label = scheduleLabel({ ...before, id });
+      pushNotification({
+        audience: `driver:${prevTruckId}`,
+        type: "Dispatch",
+        title: "Assignment moved",
+        message: `${label} was moved to another truck. Check Tasks.`,
+        at: new Date().toISOString(),
+        dedupeKey: `${id}:unassigned:${Date.now()}`,
+      }).then((r) => {
+        if (!r.remote) console.warn("Reassignment: old-driver notification stayed local-only (not delivered).");
+      });
+    }
+  }
 
   return write((next) => {
     const cur = next.schedules?.[id];
@@ -551,7 +597,7 @@ export async function startRoute(truckId, coords = null) {
       audience: "admin",
       type: "Dispatch",
       title: `Truck ${truckId} started its route`,
-      message: `Truck ${truckId} is now en route, heading to the ${first?.name ?? "first"} pickup pin point.`,
+      message: `Truck ${truckId} en route to ${first?.name ?? "first stop"}.`,
       location: first ? `${first.name}, Brgy. Tejero` : undefined,
       truckId,
       actionUrl: `/live-map?truckId=${truckId}`,
@@ -602,8 +648,8 @@ export async function stopByAtPoint(truckId) {
   pushNotification({
     audience: "admin",
     type: "Dispatch",
-    title: `Truck ${truckId} arrived at ${stopName}`,
-    message: `Truck ${truckId} is now on site at the ${stopName} pickup pin point you scheduled.`,
+      title: `Truck ${truckId} arrived at ${stopName}`,
+      message: `Truck ${truckId} on site at ${stopName}.`,
     location: `${stopName}, Brgy. Tejero`,
     truckId,
     actionUrl: `/live-map?truckId=${truckId}`,
@@ -731,11 +777,14 @@ export async function endRoute(truckId) {
 // idle with its GPS broadcast stopped. Admin and residents are notified.
 export async function cancelAssignment({ scheduleId, truckId = null, cancelledBy = "driver", reason = null }) {
   const schedule = getSchedule(scheduleId);
-  if (!schedule) return false;
+  if (!schedule) return { ok: false, scheduleSaved: false, adminNotified: false, residentsNotified: false };
   const label = scheduleLabel(schedule);
-  const when = [schedule.assignmentDate, schedule.time].filter(Boolean).join(" · ");
 
-  await supabase.from('schedules').update({ status: 'Cancelled' }).eq('id', scheduleId);
+  const { error: scheduleError } = await supabase.from('schedules').update({ status: 'Cancelled' }).eq('id', scheduleId);
+  const scheduleSaved = !scheduleError;
+  if (scheduleError) {
+    console.error("Cancel assignment: could not save Cancelled status to Supabase:", scheduleError.message || scheduleError);
+  }
 
   const activeTruckId = truckId || schedule.truckId;
   const ts = activeTruckId ? getSnapshot().trucks[activeTruckId] : null;
@@ -776,31 +825,53 @@ export async function cancelAssignment({ scheduleId, truckId = null, cancelledBy
   });
 
   const reasonText = reason ? ` Reason: ${reason}.` : "";
-  const byText = cancelledBy === "admin" ? "cancelled by dispatch" : "cancelled by its driver";
-  // Timestamped dedupe keys: a task can be cancelled, re-queued and
+  const byText = cancelledBy === "admin" ? "cancelled by dispatch" : "cancelled by its driver";  // Timestamped dedupe keys: a task can be cancelled, re-queued and
   // cancelled again, and each cancellation must notify anew. Double-submit
   // is prevented by the callers disabling their confirm buttons in flight.
   const cancelKey = `${scheduleId}:cancelled:${Date.now()}`;
-  pushNotification({
+  const adminPush = await pushNotification({
     audience: "admin",
     type: "Dispatch",
     title: `Assignment cancelled — ${label}`,
-    message: `${label}${when ? ` (${when})` : ""} was ${byText}.${reasonText} It needs a new driver.`,
+    message: `${label} was ${byText}.${reasonText} Assign a new driver.`,
     truckId: activeTruckId || undefined,
     actionUrl: "/dispatch",
     actionLabel: "Open Dispatch",
     at: new Date().toISOString(),
     dedupeKey: cancelKey,
   });
-  pushNotification({
+  const residentPush = await pushNotification({
     audience: "residents",
     type: "Cancelled",
     title: "Collection cancelled",
-    message: `${label}${when ? ` (${when})` : ""} was cancelled${reason ? `: ${reason}` : ""}. Please check back for the new schedule.`,
+    message: `${label} was cancelled${reason ? `: ${reason}` : ""}. New schedule will be posted soon.`,
     at: new Date().toISOString(),
     dedupeKey: cancelKey,
   });
-  return true;
+  // The assigned driver has no other inbox: tell their truck directly when
+  // dispatch pulls the assignment. No self-notify when the driver cancels.
+  let driverNotified = false;
+  if (cancelledBy === "admin" && activeTruckId) {
+    const driverPush = await pushNotification({
+      audience: `driver:${activeTruckId}`,
+      type: "Cancelled",
+      title: "Assignment cancelled",
+      message: `${label} was cancelled by dispatch${reason ? `: ${reason}` : ""}. Check Tasks for updates.`,
+      at: new Date().toISOString(),
+      dedupeKey: `${cancelKey}:driver`,
+    });
+    driverNotified = driverPush.remote;
+    if (!driverNotified) {
+      console.warn("Cancel assignment: DRIVER notification stayed local-only (not delivered). See earlier Supabase error above.");
+    }
+  }
+  if (!adminPush.remote) {
+    console.warn("Cancel assignment: admin notification stayed local-only (not delivered). See earlier Supabase error above.");
+  }
+  if (!residentPush.remote) {
+    console.warn("Cancel assignment: RESIDENT notification stayed local-only (not delivered). Residents will NOT see it. See earlier Supabase error above.");
+  }
+  return { ok: scheduleSaved, scheduleSaved, adminNotified: adminPush.remote, residentsNotified: residentPush.remote, driverNotified };
 }
 
 export async function updateTracking(truckId, patch) {

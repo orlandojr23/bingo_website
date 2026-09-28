@@ -26,11 +26,11 @@ import {
   ChevronRight,
   LogOut,
   ShieldCheck,
-  X,
   Search,
   Plus,
   User,
   Loader2,
+  ArrowUpDown,
 } from "lucide-react";
 import { TEJERO_SITOS, mockPilotData } from "@/lib/mock-data";
 import { useTickets, addTicket, updateTicket, removeTicket } from "@/lib/tickets";
@@ -833,7 +833,20 @@ export default function ResidentMobilePWA() {
 
   // Tickets list order, controlled by the native dropdown menu.
   const [ticketSort, setTicketSort] = useState("newest"); // "newest" | "oldest"
-  const [ticketFilterOpen, setTicketFilterOpen] = useState(false);
+  // Tickets date filter: preset range chips + native date picker.
+  const [ticketDateRange, setTicketDateRange] = useState("all"); // "all" | "today" | "week" | "month" | "custom"
+  const [ticketCustomDate, setTicketCustomDate] = useState(""); // "YYYY-MM-DD"
+  const [ticketRangeOpen, setTicketRangeOpen] = useState(false);
+  const ticketDateInputRef = useRef(null);
+  const openTicketDayPicker = () => {
+    haptic();
+    const el = ticketDateInputRef.current;
+    if (!el) return;
+    if (typeof el.showPicker === "function") {
+      try { el.showPicker(); return; } catch { /* fallback below */ }
+    }
+    el.click();
+  };
 
   // Single truthful status message derived from real schedules: pickup today,
   // or no pickup today with the next collection day.
@@ -1387,6 +1400,52 @@ export default function ResidentMobilePWA() {
 
   // Schedule details sub-screen, mirroring the driver Tasks tab.
   const [scheduleDetailId, setScheduleDetailId] = useState(null);
+  // Schedule day filter: presets + native day picker. Recurring schedules
+  // match by weekday, dated assignments match the exact date.
+  const [schedDateRange, setSchedDateRange] = useState("all"); // "all" | "today" | "week" | "custom"
+  const [schedCustomDate, setSchedCustomDate] = useState(""); // "YYYY-MM-DD"
+  const [schedRangeOpen, setSchedRangeOpen] = useState(false);
+  const [schedSort, setSchedSort] = useState("newest"); // "newest" | "oldest"
+  const schedDateInputRef = useRef(null);
+  // Manila day key ("YYYY-MM-DD") shared by the schedule + tickets filters,
+  // defined before both so neither hits the temporal dead zone.
+  const manilaDayKey = (d = new Date()) =>
+    new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila", year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
+  const openSchedDayPicker = () => {
+    haptic();
+    const el = schedDateInputRef.current;
+    if (!el) return;
+    if (typeof el.showPicker === "function") {
+      try { el.showPicker(); return; } catch { /* fallback below */ }
+    }
+    el.click();
+  };
+  const schedWeekdayOf = (ymd) =>
+    new Date(`${ymd}T00:00:00+08:00`).toLocaleDateString("en-US", { weekday: "long", timeZone: "Asia/Manila" });
+  const schedDaysOf = (s) => {
+    const raw = s.days ?? s.collectionDays ?? [];
+    return Array.isArray(raw) ? raw : String(raw).split(",").map((d) => d.trim());
+  };
+  const schedOccursOn = (s, ymd) => {
+    if (s.assignmentDate) return s.assignmentDate === ymd;
+    const wd = schedWeekdayOf(ymd).toLowerCase();
+    return schedDaysOf(s).some((d) => String(d).toLowerCase() === wd);
+  };
+  const schedInRange = (s) => {
+    if (schedDateRange === "all") return true;
+    if (schedDateRange === "custom") return schedCustomDate ? schedOccursOn(s, schedCustomDate) : true;
+    const today = manilaDayKey();
+    if (schedDateRange === "today") return schedOccursOn(s, today);
+    if (schedDateRange === "week") {
+      const base = new Date(`${today}T00:00:00+08:00`).getTime();
+      for (let i = 0; i < 7; i++) {
+        if (schedOccursOn(s, manilaDayKey(new Date(base + i * 86400000)))) return true;
+      }
+      return false;
+    }
+    return true;
+  };
+  const schedFilterActive = schedDateRange !== "all";
   // TEMPORARY preview: mock schedules so upcoming + Past sections can be
   // seen before anything is posted. Remove when real schedules exist.
   const previewScheduleList = [
@@ -1435,7 +1494,7 @@ export default function ResidentMobilePWA() {
   const schedStatusOf = (s) => live.scheduleStatus?.[s.id] ?? s.status;
   const isSchedulePreview = filteredSchedules.length === 0;
   const scheduleSource = isSchedulePreview ? previewScheduleList : filteredSchedules;
-  const upcomingSchedules = scheduleSource.filter((s) => schedStatusOf(s) !== "Completed");
+  const upcomingSchedules = scheduleSource.filter((s) => schedStatusOf(s) !== "Completed" && schedInRange(s));
   // TEMPORARY: show mock past rows until a real route is completed.
   const realPastSchedules = scheduleSource.filter((s) => schedStatusOf(s) === "Completed");
   const showingPastPreview = realPastSchedules.length === 0;
@@ -1450,6 +1509,7 @@ export default function ResidentMobilePWA() {
       if (kb) return 1;
       return 0;
     });
+  if (schedSort === "oldest") pastSchedules.reverse();
   const scheduleGroups = (() => {
     const byDay = new Map();
     for (const s of upcomingSchedules) {
@@ -1460,6 +1520,7 @@ export default function ResidentMobilePWA() {
     const dated = [...byDay.entries()]
       .filter(([key]) => key !== "unscheduled")
       .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+    if (schedSort === "oldest") dated.reverse();
     if (byDay.has("unscheduled")) dated.push(["unscheduled", byDay.get("unscheduled")]);
     return dated.map(([key, items]) => ({
       key,
@@ -1559,7 +1620,34 @@ export default function ResidentMobilePWA() {
   const sortedTickets = [...myTickets].sort(compareTickets);
   // TEMPORARY preview uses the same ordering (remove with previewTickets).
   const sortedPreview = [...previewTickets].sort(compareTickets);
-  const visibleTickets = myTickets.length > 0 ? sortedTickets : sortedPreview;
+  const ticketDayKey = (t) => {
+    const ts = t.timestamp ? new Date(t.timestamp).getTime() : NaN;
+    if (Number.isFinite(ts)) return manilaDayKey(new Date(ts));
+    if (t.date) {
+      const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(t.date).trim());
+      if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+      const parsed = new Date(t.date).getTime();
+      if (Number.isFinite(parsed)) return manilaDayKey(new Date(parsed));
+    }
+    return null;
+  };
+  const ticketInRange = (t) => {
+    if (ticketDateRange === "all") return true;
+    if (ticketDateRange === "custom") {
+      if (!ticketCustomDate) return true;
+      const key = ticketDayKey(t);
+      return key ? key === ticketCustomDate : false;
+    }
+    const key = ticketDayKey(t);
+    if (!key) return false;
+    const toDays = (k) => Math.round(new Date(`${k}T00:00:00+08:00`).getTime() / 86400000);
+    const diff = toDays(manilaDayKey()) - toDays(key);
+    if (ticketDateRange === "today") return diff === 0;
+    if (ticketDateRange === "week") return diff >= 0 && diff < 7;
+    if (ticketDateRange === "month") return diff >= 0 && diff < 30;
+    return true;
+  };
+  const visibleTickets = (myTickets.length > 0 ? sortedTickets : sortedPreview).filter(ticketInRange);
 
   // TEMPORARY preview: mock updates so the notification cards can be
   // seen before anything arrives. Remove when real updates exist.
@@ -1569,7 +1657,7 @@ export default function ResidentMobilePWA() {
       audience: "residents",
       type: "Cancelled",
       title: "Collection cancelled",
-      message: "Sitio Vilgon & Sitio Mac Arthur (08:00 AM - 11:00 AM) was cancelled: Truck breakdown. Please check back for the new schedule.",
+      message: "Sitio Vilgon & Sitio Mac Arthur was cancelled: Truck breakdown. New schedule will be posted soon.",
       at: "2026-09-27T07:15:00+08:00",
       isRead: false,
       ticketId: null,
@@ -1704,19 +1792,18 @@ export default function ResidentMobilePWA() {
             type="button"
             onClick={() => { setChatOpen(true); haptic(); }}
             data-tour="binny-btn"
-            className="ml-1 flex w-11 shrink-0 cursor-pointer flex-col items-center justify-center gap-[2px] transition-all active:scale-95"
+            className="ml-1 flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-foreground transition-all active:scale-95"
             aria-label="Binny"
           >
             <MessageCircle
               className="h-5 w-5 text-foreground"
               strokeWidth={2}
             />
-            <span className="text-[9px] font-semibold leading-none text-foreground">Binny</span>
           </button>
           <button
             type="button"
             onClick={openUpdates}
-            className="relative ml-1 flex w-11 shrink-0 cursor-pointer flex-col items-center justify-center gap-[2px] transition-all active:scale-95"
+            className="relative ml-1 flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-foreground transition-all active:scale-95"
             aria-label="Updates"
           >
             <Bell
@@ -1725,9 +1812,8 @@ export default function ResidentMobilePWA() {
               fill={residentUnread > 0 ? "currentColor" : "none"}
               fillOpacity={residentUnread > 0 ? 0.18 : 0}
             />
-            <span className={`text-[9px] font-semibold leading-none ${residentUnread > 0 ? "text-emerald-600" : "text-foreground"}`}>Updates</span>
             {residentUnread > 0 && (
-              <span className="absolute right-1 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[9px] font-bold leading-none text-white">
+              <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[9px] font-bold leading-none text-white">
                 {residentUnread > 9 ? "9+" : residentUnread}
               </span>
             )}
@@ -1909,6 +1995,124 @@ export default function ResidentMobilePWA() {
                       </div>
                     ) : (
                       <div className="flex flex-1 flex-col">
+                        {/* Day filter + sort: filters left, sort pinned right */}
+                        <div className="mt-5 flex items-center justify-between gap-2 px-4 pb-0.5">
+                          <div className="flex min-w-0 flex-wrap items-center gap-2">
+                          <div className="relative shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => { setSchedRangeOpen((v) => !v); haptic(); }}
+                              aria-haspopup="menu"
+                              aria-expanded={schedRangeOpen}
+                  className="flex min-w-[8rem] cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-border/60 bg-card px-3.5 py-1.5 text-[13px] transition-colors active:scale-95"
+                >
+                  <Calendar className="h-4 w-4 shrink-0 text-emerald-600" strokeWidth={2} />
+                  <span className="flex-1 text-left font-medium text-foreground">
+                    {schedDateRange === "custom"
+                      ? "Custom"
+                      : { all: "All", today: "Today", week: "This week" }[schedDateRange]}
+                  </span>
+                  <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={2} />
+                </button>
+                <AnimatePresence>
+                  {schedRangeOpen && (
+                                <>
+                                  <div
+                                    className="fixed inset-0 z-30 cursor-default"
+                                    onClick={() => setSchedRangeOpen(false)}
+                                  />
+                                  <motion.div
+                                    initial={{ opacity: 0, scale: 0.96, y: -4 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.96, y: -4 }}
+                                    transition={{ duration: 0.15, ease: "easeOut" }}
+                                    role="menu"
+                                    className="absolute left-0 z-40 mt-1 w-44 overflow-hidden rounded-2xl border border-border/60 bg-card p-1 shadow-lg"
+                                  >
+                                    {[
+                                      { id: "all", label: "All" },
+                                      { id: "today", label: "Today" },
+                                      { id: "week", label: "This week" },
+                                    ].map((opt) => (
+                                      <button
+                                        key={opt.id}
+                                        type="button"
+                                        role="menuitemradio"
+                                        aria-checked={schedDateRange === opt.id}
+                                        onClick={() => { setSchedRangeOpen(false); setSchedDateRange(opt.id); setSchedCustomDate(""); haptic(); }}
+                                        className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-xl px-3 py-2 text-left text-[15px] transition-colors active:bg-muted"
+                                      >
+                                        <span className={schedDateRange === opt.id ? "font-semibold text-foreground" : "text-muted-foreground"}>
+                                          {opt.label}
+                                        </span>
+                                        {schedDateRange === opt.id && (
+                                          <Check className="h-4 w-4 shrink-0 text-emerald-600" strokeWidth={2.5} />
+                                        )}
+                                      </button>
+                                    ))}
+                                    <button
+                                      type="button"
+                                      role="menuitem"
+                                      onClick={() => { setSchedRangeOpen(false); openSchedDayPicker(); }}
+                                      className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-xl px-3 py-2 text-left text-[15px] transition-colors active:bg-muted"
+                                    >
+                                      <span className={schedDateRange === "custom" ? "font-semibold text-foreground" : "text-muted-foreground"}>
+                                        Pick a day…
+                                      </span>
+                                      <Calendar className="h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={2} />
+                                    </button>
+                                  </motion.div>
+                                </>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                          {schedDateRange === "custom" && schedCustomDate ? (
+                            <button
+                              type="button"
+                              onClick={openSchedDayPicker}
+                              aria-label="Change custom day"
+                              className="flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full bg-emerald-600 px-3.5 py-1.5 text-[13px] font-semibold text-white transition-colors active:scale-95"
+                            >
+                              <Calendar className="h-4 w-4" strokeWidth={2} />
+                              {new Date(`${schedCustomDate}T00:00:00+08:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                            </button>
+                          ) : null}
+                          <input
+                            ref={schedDateInputRef}
+                            type="date"
+                            aria-label="Filter schedules by day"
+                            className="sr-only"
+                            value={schedCustomDate}
+                            onChange={(e) => { if (!e.target.value) return; setSchedCustomDate(e.target.value); setSchedDateRange("custom"); haptic(); }}
+                          />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => { setSchedSort((s) => (s === "newest" ? "oldest" : "newest")); haptic(); }}
+                            aria-label={schedSort === "newest" ? "Sort oldest first" : "Sort newest first"}
+                            title={schedSort === "newest" ? "Sort oldest first" : "Sort newest first"}
+                            className="flex min-w-[6.75rem] shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-border/60 bg-card px-3.5 py-1.5 text-[13px] font-medium text-foreground transition-colors active:scale-95"
+                          >
+                            <ArrowUpDown className="h-4 w-4 text-emerald-600" strokeWidth={2} />
+                            {schedSort === "newest" ? "Newest" : "Oldest"}
+                          </button>
+                        </div>
+                        {schedFilterActive && upcomingSchedules.length === 0 ? (
+                          <div className="flex flex-1 flex-col items-center justify-center px-6 py-10 text-center">
+                            <h3 className="text-[15px] font-semibold tracking-tight text-foreground">No collections in this period</h3>
+                            <p className="mt-1 max-w-[240px] text-[13px] leading-normal text-muted-foreground">
+                              Try another day, or show everything.
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => { setSchedDateRange("all"); setSchedCustomDate(""); haptic(); }}
+                              className="mt-3 shrink-0 cursor-pointer rounded-full bg-emerald-600 px-4 py-2 text-[13px] font-semibold text-white transition-all active:scale-95"
+                            >
+                              Show all
+                            </button>
+                          </div>
+                        ) : (
+                        <>
                         {scheduleGroups.map((group) => (
                           <div key={group.key} className="mt-5 px-4">
                             <p className="px-1 pb-1.5 text-[13px] text-muted-foreground">{group.label}</p>
@@ -1917,7 +2121,7 @@ export default function ResidentMobilePWA() {
                             </div>
                           </div>
                         ))}
-                        {pastSchedules.length > 0 && (
+                        {(!schedFilterActive && pastSchedules.length > 0) && (
                           <div className="mt-5 px-4">
                             <p className="px-1 pb-1.5 text-[13px] text-muted-foreground">Past</p>
                             <div className="divide-y divide-border/60 overflow-hidden rounded-2xl border border-border/60 bg-card">
@@ -1934,6 +2138,8 @@ export default function ResidentMobilePWA() {
                           <p className="mt-2.5 text-center text-[13px] text-muted-foreground">
                             Preview. Posted schedules will appear here.
                           </p>
+                        )}
+                        </>
                         )}
                       </div>
                     )
@@ -2299,62 +2505,126 @@ export default function ResidentMobilePWA() {
           </div>
         ) : (
           <>
-            {visibleTickets.length > 1 && (
-              <div className="mt-5 px-4 flex justify-end">
-                <div className="relative">
+            {/* Date filter + sort: filters left, sort pinned right */}
+            <div className="mt-5 flex items-center justify-between gap-2 px-4 pb-0.5">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <div className="relative shrink-0">
+                <button
+                  type="button"
+                  onClick={() => { setTicketRangeOpen((v) => !v); haptic(); }}
+                  aria-haspopup="menu"
+                  aria-expanded={ticketRangeOpen}
+                  className="flex min-w-[8rem] cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-border/60 bg-card px-3.5 py-1.5 text-[13px] transition-colors active:scale-95"
+                >
+                  <Calendar className="h-4 w-4 shrink-0 text-emerald-600" strokeWidth={2} />
+                  <span className="flex-1 text-left font-medium text-foreground">
+                    {ticketDateRange === "custom"
+                      ? "Custom"
+                      : { all: "All", today: "Today", week: "This week", month: "This month" }[ticketDateRange]}
+                  </span>
+                  <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={2} />
+                </button>
+                <AnimatePresence>
+                  {ticketRangeOpen && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-30 cursor-default"
+                        onClick={() => setTicketRangeOpen(false)}
+                      />
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.96, y: -4 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.96, y: -4 }}
+                        transition={{ duration: 0.15, ease: "easeOut" }}
+                        role="menu"
+                        className="absolute left-0 z-40 mt-1 w-44 overflow-hidden rounded-2xl border border-border/60 bg-card p-1 shadow-lg"
+                      >
+                        {[
+                          { id: "all", label: "All" },
+                          { id: "today", label: "Today" },
+                          { id: "week", label: "This week" },
+                          { id: "month", label: "This month" },
+                        ].map((opt) => (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            role="menuitemradio"
+                            aria-checked={ticketDateRange === opt.id}
+                            onClick={() => { setTicketRangeOpen(false); setTicketDateRange(opt.id); setTicketCustomDate(""); haptic(); }}
+                            className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-xl px-3 py-2 text-left text-[15px] transition-colors active:bg-muted"
+                          >
+                            <span className={ticketDateRange === opt.id ? "font-semibold text-foreground" : "text-muted-foreground"}>
+                              {opt.label}
+                            </span>
+                            {ticketDateRange === opt.id && (
+                              <Check className="h-4 w-4 shrink-0 text-emerald-600" strokeWidth={2.5} />
+                            )}
+                          </button>
+                        ))}
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => { setTicketRangeOpen(false); openTicketDayPicker(); }}
+                          className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-xl px-3 py-2 text-left text-[15px] transition-colors active:bg-muted"
+                        >
+                          <span className={ticketDateRange === "custom" ? "font-semibold text-foreground" : "text-muted-foreground"}>
+                            Pick a day…
+                          </span>
+                          <Calendar className="h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={2} />
+                        </button>
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
+              </div>
+              {ticketDateRange === "custom" && ticketCustomDate ? (
+                <button
+                  type="button"
+                  onClick={openTicketDayPicker}
+                  aria-label="Change custom day"
+                  className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-emerald-600 px-3.5 py-1.5 text-[13px] font-semibold text-white transition-all active:scale-95"
+                >
+                  <Calendar className="h-4 w-4" strokeWidth={2} />
+                  {new Date(`${ticketCustomDate}T00:00:00+08:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                </button>
+              ) : null}
+              <input
+                ref={ticketDateInputRef}
+                type="date"
+                aria-label="Filter tickets by day"
+                className="sr-only"
+                value={ticketCustomDate}
+                max={manilaDayKey()}
+                onChange={(e) => { if (!e.target.value) return; setTicketCustomDate(e.target.value); setTicketDateRange("custom"); haptic(); }}
+              />
+              </div>
+              <button
+                type="button"
+                onClick={() => { setTicketSort((s) => (s === "newest" ? "oldest" : "newest")); haptic(); }}
+                aria-label={ticketSort === "newest" ? "Sort oldest first" : "Sort newest first"}
+                title={ticketSort === "newest" ? "Sort oldest first" : "Sort newest first"}
+                className="flex min-w-[6.75rem] shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-border/60 bg-card px-3.5 py-1.5 text-[13px] font-medium text-foreground transition-colors active:scale-95"
+              >
+                <ArrowUpDown className="h-4 w-4 text-emerald-600" strokeWidth={2} />
+                {ticketSort === "newest" ? "Newest" : "Oldest"}
+              </button>
+            </div>
+            <div className="mt-3 flex flex-1 flex-col px-4">
+              {visibleTickets.length === 0 ? (
+                <div className="flex flex-1 flex-col items-center justify-center px-6 py-10 text-center">
+                  <h3 className="text-[15px] font-semibold tracking-tight text-foreground">No tickets in this period</h3>
+                  <p className="mt-1 max-w-[240px] text-[13px] leading-normal text-muted-foreground">
+                    Try another day, or clear the filter to see everything.
+                  </p>
                   <button
                     type="button"
-                    onClick={() => { setTicketFilterOpen((v) => !v); haptic(); }}
-                    aria-haspopup="menu"
-                    aria-expanded={ticketFilterOpen}
-                    className="inline-flex cursor-pointer items-center gap-1 text-[13px] font-semibold text-emerald-600 active:opacity-70"
+                    onClick={() => { setTicketDateRange("all"); setTicketCustomDate(""); haptic(); }}
+                    className="mt-3 shrink-0 cursor-pointer rounded-full bg-emerald-600 px-4 py-2 text-[13px] font-semibold text-white transition-all active:scale-95"
                   >
-                    {ticketSort === "newest" ? "Newest" : "Oldest"}
-                    <ChevronDown className="h-4 w-4" strokeWidth={2} />
+                    Clear filter
                   </button>
-                  <AnimatePresence>
-                    {ticketFilterOpen && (
-                      <>
-                        <div
-                          className="fixed inset-0 z-30 cursor-default"
-                          onClick={() => setTicketFilterOpen(false)}
-                        />
-                        <motion.div
-                          initial={{ opacity: 0, scale: 0.96, y: -4 }}
-                          animate={{ opacity: 1, scale: 1, y: 0 }}
-                          exit={{ opacity: 0, scale: 0.96, y: -4 }}
-                          transition={{ duration: 0.15, ease: "easeOut" }}
-                          role="menu"
-                          className="absolute right-0 z-40 mt-1 w-44 overflow-hidden rounded-2xl border border-border/60 bg-card p-1 shadow-lg"
-                        >
-                          {[
-                            { id: "newest", label: "Newest first" },
-                            { id: "oldest", label: "Oldest first" },
-                          ].map((opt) => (
-                            <button
-                              key={opt.id}
-                              type="button"
-                              role="menuitemradio"
-                              aria-checked={ticketSort === opt.id}
-                              onClick={() => { setTicketFilterOpen(false); haptic(); setTimeout(() => setTicketSort(opt.id), 160); }}
-                              className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-xl px-3 py-2 text-left text-[15px] transition-colors active:bg-muted"
-                            >
-                              <span className={ticketSort === opt.id ? "font-semibold text-foreground" : "text-muted-foreground"}>
-                                {opt.label}
-                              </span>
-                              {ticketSort === opt.id && (
-                                <Check className="h-4 w-4 shrink-0 text-emerald-600" strokeWidth={2.5} />
-                              )}
-                            </button>
-                          ))}
-                        </motion.div>
-                      </>
-                    )}
-                  </AnimatePresence>
                 </div>
-              </div>
-            )}
-            <div className={visibleTickets.length > 1 ? "mt-3 px-4" : "mt-5 px-4"}>
+              ) : (
               <div className="overflow-hidden rounded-2xl border border-border/60 bg-card">
                 {visibleTickets.map((ticket) => (
                   <button
@@ -2378,6 +2648,7 @@ export default function ResidentMobilePWA() {
                   </button>
                 ))}
               </div>
+              )}
             </div>
             {myTickets.length === 0 && (
               <p className="mt-2.5 text-center text-[13px] text-muted-foreground">

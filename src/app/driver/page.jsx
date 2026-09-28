@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   Play,
   CheckCircle2,
+  XCircle,
   Eye,
   EyeOff,
   Loader2,
@@ -16,9 +17,14 @@ import {
   Route as RouteIcon,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   LocateFixed,
   Truck,
   User,
+  Calendar,
+  Check,
+  ArrowUpDown,
+  Bell,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { mockPilotData } from "@/lib/mock-data";
@@ -39,6 +45,11 @@ import {
   dutyStatusOf,
 } from "@/lib/live-route";
 import { cn, haptic } from "@/lib/utils";
+import {
+  useNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
+} from "@/lib/notifications";
 import { playDing, useSoundEnabled, setSoundEnabled } from "@/lib/sounds";
 import { Button } from "@/components/ui/button";
 import { useFleet } from "@/lib/fleet";
@@ -87,6 +98,27 @@ function formatHistoryDate(iso) {
   const dt = new Date(y, (m || 1) - 1, d || 1);
   if (Number.isNaN(dt.getTime())) return iso;
   return dt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+// Relative time for driver inbox rows ("2h ago", "Yesterday").
+function driverTimeAgo(iso, nowMs) {
+  const t = new Date(iso).getTime();
+  if (!Number.isFinite(t)) return "";
+  const mins = Math.max(0, Math.round((nowMs - t) / 60000));
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days}d ago`;
+  return new Date(t).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function driverNotifIcon(type) {
+  if (type === "Cancelled") return <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-600" strokeWidth={2} />;
+  if (type === "Dispatch") return <Truck className="mt-0.5 h-5 w-5 shrink-0 text-sky-600" strokeWidth={2} />;
+  return <Bell className="mt-0.5 h-5 w-5 shrink-0 text-zinc-500" strokeWidth={2} />;
 }
 
 // Bottom-nav tab: the active tab gets a duotone (tinted-fill + bold-stroke)
@@ -191,6 +223,45 @@ export default function DriverPage() {
   const [historyDetailId, setHistoryDetailId] = useState(null);
   // History order: newest or oldest first (undated last in both).
   const [historySort, setHistorySort] = useState("newest");
+  // Driver inbox: dispatch + broadcast notices for this truck.
+  const [showDriverUpdates, setShowDriverUpdates] = useState(false);
+  const driverAudiences = useMemo(
+    () => ["drivers", ...(selectedTruckId ? [`driver:${selectedTruckId}`] : [])],
+    [selectedTruckId]
+  );
+  const driverNotifs = useNotifications(driverAudiences);
+  const driverUnread = driverNotifs.filter((n) => !n.isRead).length;
+  // Render-time clock for relative timestamps (same discipline as the
+  // resident Updates screen).
+  const [driverNotifNow] = useState(() => Date.now());
+  // History date filter: presets + native day picker (Manila day keys).
+  const [histDateRange, setHistDateRange] = useState("all"); // "all" | "today" | "week" | "month" | "custom"
+  const [histCustomDate, setHistCustomDate] = useState(""); // "YYYY-MM-DD"
+  const [histRangeOpen, setHistRangeOpen] = useState(false);
+  const histDateInputRef = useRef(null);
+  const openHistDayPicker = () => {
+    haptic();
+    const el = histDateInputRef.current;
+    if (!el) return;
+    if (typeof el.showPicker === "function") {
+      try { el.showPicker(); return; } catch { /* fallback below */ }
+    }
+    el.click();
+  };
+  const histManilaDayKey = (d = new Date()) =>
+    new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila", year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
+  const histInRange = (s) => {
+    if (histDateRange === "all") return true;
+    const key = (s.assignmentDate || "").slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return false;
+    if (histDateRange === "custom") return histCustomDate ? key === histCustomDate : true;
+    const toDays = (k) => Math.round(new Date(`${k}T00:00:00+08:00`).getTime() / 86400000);
+    const diff = toDays(histManilaDayKey()) - toDays(key);
+    if (histDateRange === "today") return diff === 0;
+    if (histDateRange === "week") return diff >= 0 && diff < 7;
+    if (histDateRange === "month") return diff >= 0 && diff < 30;
+    return true;
+  };
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
@@ -526,7 +597,7 @@ export default function DriverPage() {
     },
   ];
   const isHistoryPreview = sortedHistory.length === 0;
-  const displayHistory = (isHistoryPreview ? previewHistoryRows : sortedHistory).slice().sort(compareHistory);
+  const displayHistory = (isHistoryPreview ? previewHistoryRows : sortedHistory).filter(histInRange).slice().sort(compareHistory);
   // Completed route shown in the History details sub-screen.
   // "preview" rows are the temporary mock cards shown when history is
   // empty, so tapping them previews the details screen with sample data.
@@ -1070,6 +1141,25 @@ export default function DriverPage() {
             </AnimatePresence>
             )}
           </div>
+          {/* Right: Updates inbox */}
+          <button
+            type="button"
+            onClick={() => { setShowDriverUpdates(true); haptic(); }}
+            className="relative ml-1 flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-foreground transition-all active:scale-95"
+            aria-label="Notifications"
+          >
+            <Bell
+              className={`h-5 w-5 ${driverUnread > 0 ? "text-emerald-600" : "text-foreground"}`}
+              strokeWidth={2}
+              fill={driverUnread > 0 ? "currentColor" : "none"}
+              fillOpacity={driverUnread > 0 ? 0.18 : 0}
+            />
+            {driverUnread > 0 && (
+              <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[9px] font-bold leading-none text-white">
+                {driverUnread > 9 ? "9+" : driverUnread}
+              </span>
+            )}
+          </button>
         </div>
 
         {/* Floating native map action buttons, just above bottom nav */}
@@ -1518,30 +1608,126 @@ export default function DriverPage() {
                       <div className="flex flex-1 flex-col">
                         {!historyDetail ? (
                           <>
-                            {displayHistory.length > 1 && (
-                              <div className="mt-5 px-4">
-                                <div className="flex rounded-full bg-muted p-1">
-                                  {[
-                                    { id: "newest", label: "Newest" },
-                                    { id: "oldest", label: "Oldest" },
-                                  ].map((opt) => (
-                                    <button
-                                      key={opt.id}
-                                      type="button"
-                                      onClick={() => { setHistorySort(opt.id); haptic(); }}
-                                      className={`h-8 flex-1 cursor-pointer rounded-full text-[13px] transition-all active:scale-[0.98] ${
-                                        historySort === opt.id
-                                          ? "bg-card font-semibold text-foreground shadow-sm"
-                                          : "font-medium text-muted-foreground"
-                                      }`}
-                                    >
-                                      {opt.label}
-                                    </button>
-                                  ))}
+                            {/* Date filter + sort: filters left, sort pinned right */}
+                            <div className="mt-5 flex items-center justify-between gap-2 px-4 pb-0.5">
+                              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                                <div className="relative shrink-0">
+                                  <button
+                                    type="button"
+                                    onClick={() => { setHistRangeOpen((v) => !v); haptic(); }}
+                                    aria-haspopup="menu"
+                                    aria-expanded={histRangeOpen}
+                                    className="flex min-w-[8rem] cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-border/60 bg-card px-3.5 py-1.5 text-[13px] transition-colors active:scale-95"
+                                  >
+                                    <Calendar className="h-4 w-4 shrink-0 text-emerald-600" strokeWidth={2} />
+                                    <span className="flex-1 text-left font-medium text-foreground">
+                                      {histDateRange === "custom"
+                                        ? "Custom"
+                                        : { all: "All", today: "Today", week: "This week", month: "This month" }[histDateRange]}
+                                    </span>
+                                    <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={2} />
+                                  </button>
+                                  <AnimatePresence>
+                                    {histRangeOpen && (
+                                      <>
+                                        <div
+                                          className="fixed inset-0 z-30 cursor-default"
+                                          onClick={() => setHistRangeOpen(false)}
+                                        />
+                                        <motion.div
+                                          initial={{ opacity: 0, scale: 0.96, y: -4 }}
+                                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                                          exit={{ opacity: 0, scale: 0.96, y: -4 }}
+                                          transition={{ duration: 0.15, ease: "easeOut" }}
+                                          role="menu"
+                                          className="absolute left-0 z-40 mt-1 w-44 overflow-hidden rounded-2xl border border-border/60 bg-card p-1 shadow-lg"
+                                        >
+                                          {[
+                                            { id: "all", label: "All" },
+                                            { id: "today", label: "Today" },
+                                            { id: "week", label: "This week" },
+                                            { id: "month", label: "This month" },
+                                          ].map((opt) => (
+                                            <button
+                                              key={opt.id}
+                                              type="button"
+                                              role="menuitemradio"
+                                              aria-checked={histDateRange === opt.id}
+                                              onClick={() => { setHistRangeOpen(false); setHistDateRange(opt.id); setHistCustomDate(""); haptic(); }}
+                                              className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-xl px-3 py-2 text-left text-[15px] transition-colors active:bg-muted"
+                                            >
+                                              <span className={histDateRange === opt.id ? "font-semibold text-foreground" : "text-muted-foreground"}>
+                                                {opt.label}
+                                              </span>
+                                              {histDateRange === opt.id && (
+                                                <Check className="h-4 w-4 shrink-0 text-emerald-600" strokeWidth={2.5} />
+                                              )}
+                                            </button>
+                                          ))}
+                                          <button
+                                            type="button"
+                                            role="menuitem"
+                                            onClick={() => { setHistRangeOpen(false); openHistDayPicker(); }}
+                                            className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-xl px-3 py-2 text-left text-[15px] transition-colors active:bg-muted"
+                                          >
+                                            <span className={histDateRange === "custom" ? "font-semibold text-foreground" : "text-muted-foreground"}>
+                                              Pick a day…
+                                            </span>
+                                            <Calendar className="h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={2} />
+                                          </button>
+                                        </motion.div>
+                                      </>
+                                    )}
+                                  </AnimatePresence>
                                 </div>
+                                {histDateRange === "custom" && histCustomDate ? (
+                                  <button
+                                    type="button"
+                                    onClick={openHistDayPicker}
+                                    aria-label="Change custom day"
+                                    className="flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full bg-emerald-600 px-3.5 py-1.5 text-[13px] font-semibold text-white transition-colors active:scale-95"
+                                  >
+                                    <Calendar className="h-4 w-4" strokeWidth={2} />
+                                    {new Date(`${histCustomDate}T00:00:00+08:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                                  </button>
+                                ) : null}
+                                <input
+                                  ref={histDateInputRef}
+                                  type="date"
+                                  aria-label="Filter history by day"
+                                  className="sr-only"
+                                  value={histCustomDate}
+                                  max={histManilaDayKey()}
+                                  onChange={(e) => { if (!e.target.value) return; setHistCustomDate(e.target.value); setHistDateRange("custom"); haptic(); }}
+                                />
                               </div>
-                            )}
-                            <div className={displayHistory.length > 1 ? "mt-3 px-4" : "mt-5 px-4"}>
+                              <button
+                                type="button"
+                                onClick={() => { setHistorySort((s) => (s === "newest" ? "oldest" : "newest")); haptic(); }}
+                                aria-label={historySort === "newest" ? "Sort oldest first" : "Sort newest first"}
+                                title={historySort === "newest" ? "Sort oldest first" : "Sort newest first"}
+                                className="flex min-w-[6.75rem] shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-border/60 bg-card px-3.5 py-1.5 text-[13px] font-medium text-foreground transition-colors active:scale-95"
+                              >
+                                <ArrowUpDown className="h-4 w-4 text-emerald-600" strokeWidth={2} />
+                                {historySort === "newest" ? "Newest" : "Oldest"}
+                              </button>
+                            </div>
+                            {displayHistory.length === 0 ? (
+                              <div className="flex flex-1 flex-col items-center justify-center px-6 py-10 text-center">
+                                <h3 className="text-[15px] font-semibold tracking-tight text-foreground">No history in this period</h3>
+                                <p className="mt-1 max-w-[240px] text-[13px] leading-normal text-muted-foreground">
+                                  Try another day, or show everything.
+                                </p>
+                                <button
+                                  type="button"
+                                  onClick={() => { setHistDateRange("all"); setHistCustomDate(""); haptic(); }}
+                                  className="mt-3 shrink-0 cursor-pointer rounded-full bg-emerald-600 px-4 py-2 text-[13px] font-semibold text-white transition-all active:scale-95"
+                                >
+                                  Show all
+                                </button>
+                              </div>
+                            ) : (
+                            <div className="mt-3 px-4">
                               <div className="divide-y divide-border/60 overflow-hidden rounded-2xl border border-border/60 bg-card">
                                 {displayHistory.map((s) => (
                                   <button
@@ -1562,6 +1748,7 @@ export default function DriverPage() {
                                 ))}
                               </div>
                             </div>
+                            )}
                             {isHistoryPreview && (
                               <p className="mt-2.5 text-center text-[13px] text-muted-foreground">
                                 Preview. Routes you finish will appear here.
@@ -1906,7 +2093,7 @@ export default function DriverPage() {
                     if (truckState?.scheduleId === detailSchedule.id) {
                       await stopGpsWatch();
                     }
-                    await cancelAssignment({
+                    const result = await cancelAssignment({
                       scheduleId: detailSchedule.id,
                       truckId: selectedTruckId,
                       cancelledBy: "driver",
@@ -1914,7 +2101,13 @@ export default function DriverPage() {
                     });
                     setShowCancelModal(false);
                     setAssignmentDetailId(null);
-                    toast("Assignment cancelled. Admin notified.");
+                    if (!result?.scheduleSaved) {
+                      toast("Assignment cancelled locally, but the status could not be saved. Check the console.", { variant: "error" });
+                    } else if (!result?.adminNotified) {
+                      toast("Assignment cancelled, but admin could NOT be notified (check console).", { variant: "warning" });
+                    } else {
+                      toast("Assignment cancelled. Admin notified.");
+                    }
                   } catch {
                     toast("Could not cancel the assignment. Please try again.", { variant: "error" });
                   } finally {
@@ -1990,6 +2183,80 @@ export default function DriverPage() {
           </motion.div>
         </div>
       )}
+
+      <AnimatePresence>
+        {showDriverUpdates && (
+          <motion.div
+            key="fs-driver-updates"
+            initial={{ opacity: 0, scale: 0.98, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.98, y: 8 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+            className="fixed inset-0 z-[101] flex flex-col bg-background"
+          >
+            <div className="relative z-20 shrink-0 border-b border-border/60 bg-background/80 backdrop-blur-md pt-[calc(env(safe-area-inset-top)+12px)] pb-3">
+              <div className="relative flex h-[52px] items-center justify-center px-2">
+                <button
+                  type="button"
+                  onClick={() => { setShowDriverUpdates(false); haptic(); }}
+                  className="absolute left-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-all active:scale-95 cursor-pointer"
+                  aria-label="Back"
+                >
+                  <ChevronLeft className="h-6 w-6" strokeWidth={2} />
+                </button>
+                <h1 className="text-[17px] font-semibold tracking-tight text-foreground">Updates</h1>
+                {driverUnread > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => { markAllNotificationsRead(driverAudiences); haptic(); }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[13px] font-semibold text-emerald-600 active:text-emerald-700 cursor-pointer"
+                  >
+                    Mark all read
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="flex flex-1 flex-col overflow-y-auto bg-muted/40 pb-10">
+              {driverNotifs.length === 0 ? (
+                <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
+                  <h3 className="mt-4 text-[17px] font-semibold tracking-tight text-foreground">No Updates Yet</h3>
+                  <p className="mt-1 max-w-[240px] text-[13px] leading-normal text-muted-foreground">
+                    Dispatch notices and assignment updates will appear here.
+                  </p>
+                </div>
+              ) : (
+                <div className="mt-5 px-4">
+                  <div className="divide-y divide-border/60 overflow-hidden rounded-2xl border border-border/60 bg-card">
+                    {driverNotifs.map((notif) => (
+                      <button
+                        key={notif.id}
+                        type="button"
+                        onClick={() => { markNotificationRead(notif.id); haptic(); }}
+                        className="flex w-full cursor-pointer items-start gap-3 px-4 py-3 text-left transition-colors active:bg-muted"
+                      >
+                        {driverNotifIcon(notif.type)}
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-baseline justify-between gap-2">
+                            <span className={cn("text-[15px] tracking-tight text-foreground", !notif.isRead ? "font-semibold" : "font-normal")}>
+                              {notif.title}
+                            </span>
+                            <span className="shrink-0 text-[12px] tabular-nums text-muted-foreground">
+                              {notif.at ? driverTimeAgo(notif.at, driverNotifNow) : "—"}
+                            </span>
+                          </span>
+                          <span className="mt-0.5 line-clamp-2 block text-[13px] leading-normal text-muted-foreground">
+                            {notif.message}
+                          </span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {ToastViewport}
     </div>

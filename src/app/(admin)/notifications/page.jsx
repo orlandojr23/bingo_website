@@ -9,6 +9,8 @@ import {
   Ticket as TicketIcon,
   Info,
   CheckCheck,
+  CheckCircle2,
+  XCircle,
   Trash2,
   X,
 } from "lucide-react";
@@ -72,22 +74,32 @@ function absoluteDateTimeLabel(iso) {
 
 const typeStyles = {
   Emergency: {
-    icon: <AlertTriangle className="h-4 w-4 text-muted-foreground/60" />,
+    icon: <AlertTriangle className="h-4 w-4 text-rose-600" />,
     pill: "text-muted-foreground bg-transparent",
     label: "Emergency",
   },
   Dispatch: {
-    icon: <Truck className="h-4 w-4 text-muted-foreground/60" />,
+    icon: <Truck className="h-4 w-4 text-sky-600" />,
     pill: "text-muted-foreground bg-transparent",
     label: "Dispatch",
   },
   Ticket: {
-    icon: <TicketIcon className="h-4 w-4 text-muted-foreground/60" />,
+    icon: <TicketIcon className="h-4 w-4 text-amber-600" />,
     pill: "text-muted-foreground bg-transparent",
     label: "Report",
   },
+  Cancelled: {
+    icon: <XCircle className="h-4 w-4 text-rose-600" />,
+    pill: "text-muted-foreground bg-transparent",
+    label: "Cancelled",
+  },
+  Resolved: {
+    icon: <CheckCircle2 className="h-4 w-4 text-emerald-600" />,
+    pill: "text-muted-foreground bg-transparent",
+    label: "Resolved",
+  },
   System: {
-    icon: <Info className="h-4 w-4 text-muted-foreground/60" />,
+    icon: <Info className="h-4 w-4 text-zinc-500" />,
     pill: "text-muted-foreground bg-transparent",
     label: "System",
   },
@@ -139,7 +151,7 @@ export default function NotificationsPage() {
       type: "Dispatch",
       title: "Assignment cancelled at Sitio Vilgon & Sitio Mac Arthur",
       message:
-        "Sitio Vilgon & Sitio Mac Arthur (2026-09-27 · 08:00 AM - 11:00 AM) was cancelled by its driver. Reason: Truck breakdown. It needs a new driver.",
+        "Sitio Vilgon & Sitio Mac Arthur was cancelled by its driver. Reason: Truck breakdown. Assign a new driver.",
       barangay: "Tejero",
       location: "Sitio Vilgon, Brgy. Tejero",
       timestamp: "2h ago",
@@ -154,7 +166,7 @@ export default function NotificationsPage() {
       type: "Ticket",
       title: "New report: Overflowing Bin at Sitio Vilgon",
       message:
-        "A resident reported Overflowing Bin at Sitio Vilgon, Brgy. Tejero. Priority: High.",
+        "Overflowing Bin at Sitio Vilgon. Priority: High.",
       barangay: "Tejero",
       location: "Sitio Vilgon, Brgy. Tejero",
       timestamp: "26m ago",

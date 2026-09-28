@@ -126,14 +126,8 @@ export function ResidentShellSkeleton() {
               <div className="h-3 w-48 rounded bg-foreground/5 animate-pulse" />
             </div>
           </div>
-          <div className="ml-1 flex w-11 shrink-0 flex-col items-center justify-center gap-[2px]">
-            <div className="h-5 w-5 rounded bg-foreground/10 animate-pulse" />
-            <div className="h-2 w-7 rounded bg-foreground/10 animate-pulse" />
-          </div>
-          <div className="ml-1 flex w-11 shrink-0 flex-col items-center justify-center gap-[2px]">
-            <div className="h-5 w-5 rounded bg-foreground/10 animate-pulse" />
-            <div className="h-2 w-7 rounded bg-foreground/10 animate-pulse" />
-          </div>
+          <div className="ml-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-foreground/5 animate-pulse" />
+          <div className="ml-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-foreground/5 animate-pulse" />
         </div>
 
         {/* Floating Map Action Buttons Skeleton */}
@@ -182,6 +176,7 @@ export function DriverShellSkeleton() {
               <div className="h-3 w-48 rounded bg-foreground/5 animate-pulse" />
             </div>
           </div>
+          <div className="ml-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-foreground/5 animate-pulse" />
         </div>
 
         {/* Floating Map Action Buttons Skeleton */}
