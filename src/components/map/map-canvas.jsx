@@ -18,7 +18,15 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
 });
 
-const OSM_TILE_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+// HOT (humanitarian) style renders large, high-contrast labels that stay
+// readable on phones at high zoom. Free, no API key, and serves native
+// z20 tiles (one level deeper than the OSM standard style), which keeps
+// deep zoom-ins sharp on retina screens. Hosted by OSM France.
+const HOT_TILE_URL = "https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png";
+// Fallback when HOT is unreachable from the viewer's network (seen as
+// ERR_CONNECTION_TIMED_OUT on some routes): OSM standard — same coverage,
+// smaller labels, but reliably reachable.
+const OSM_FALLBACK_TILE_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 
 // Metro Cebu Map Bounds & Zoom (Expanded map scope for Admin, Resident, and Driver)
 const METRO_CEBU_MAX_BOUNDS = [
@@ -696,6 +704,23 @@ function BearingWatcher({ onBearing }) {
 export default function MapCanvas({ tickets = [], trucks = [], mapMode = "pins", center, zoom, highlightedTicketId, currentStop, upcomingStops = [], onSelectTicket, onMapDrag, onBoundsChange, flySignal, onMapReady, showZoomControl = false, showTicketPopup = true, rotatable = false, bearing = null, perspective3D = false, hidePausedTrucks = false }) {
   const [mounted, setMounted] = useState(false);
   const tileRef = useRef(null);
+  // Basemap fallback: HOT is served from France and can time out on some
+  // networks. After several consecutive tile failures, switch to OSM
+  // standard so the map always renders something.
+  const [tileUrl, setTileUrl] = useState(HOT_TILE_URL);
+  const tileErrorsRef = useRef(0);
+  const fellBackRef = useRef(false);
+  const tileEvents = useMemo(() => ({
+    tileload: () => { tileErrorsRef.current = 0; },
+    tileerror: () => {
+      if (fellBackRef.current) return;
+      tileErrorsRef.current += 1;
+      if (tileErrorsRef.current >= 8) {
+        fellBackRef.current = true;
+        setTileUrl(OSM_FALLBACK_TILE_URL);
+      }
+    },
+  }), []);
   const tejeroCenter = [10.3016, 123.9086];
   const mapCenter = center || tejeroCenter;
   const mapZoom = zoom ?? (center ? 16 : 14);
@@ -848,13 +873,15 @@ export default function MapCanvas({ tickets = [], trucks = [], mapMode = "pins",
           <BearingWatcher onBearing={handleBearing} />
           {showZoomControl && <ZoomControl position="topleft" />}
           
-          {/* OpenStreetMap standard tiles (no API key required) */}
+          {/* HOT tiles (big labels) with automatic fallback to OSM standard if HOT is unreachable */}
           <TileLayer
+            key={tileUrl}
             ref={tileRef}
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url={OSM_TILE_URL}
-            maxZoom={19}
+            attribution={tileUrl === HOT_TILE_URL ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | Tiles style by <a href="https://www.hotosm.org/">HOT</a> — <a href="https://www.openstreetmap.fr/">OSM France</a>' : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}
+            url={tileUrl}
+            maxZoom={tileUrl === HOT_TILE_URL ? 20 : 19}
             detectRetina={true}
+            eventHandlers={tileEvents}
           />
           {onMapReady && <MapReadyNotifier onReady={onMapReady} tileRef={tileRef} />}
 

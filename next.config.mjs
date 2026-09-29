@@ -4,7 +4,7 @@ const cspHeader = `
   default-src 'self';
   script-src 'self' 'unsafe-eval' 'unsafe-inline' https://challenges.cloudflare.com;
   style-src 'self' 'unsafe-inline';
-  img-src 'self' blob: data: https://picsum.photos https://tile.openstreetmap.org https://cdnjs.cloudflare.com;
+  img-src 'self' blob: data: https://picsum.photos https://tile.openstreetmap.org https://*.tile.openstreetmap.fr https://cdnjs.cloudflare.com;
   font-src 'self' data:;
   connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openrouteservice.org https://challenges.cloudflare.com https://formspree.io https://*.formspree.io;
   frame-src 'self' https://challenges.cloudflare.com;

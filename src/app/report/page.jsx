@@ -1802,7 +1802,7 @@ export default function ResidentMobilePWA() {
               />
               <span
                 aria-hidden="true"
-                className="absolute inset-0 flex items-center justify-center text-[10px] font-extrabold leading-none text-foreground" style={{ transform: "translate(0.5px, -0.25px)" }}
+                className="absolute inset-0 flex items-center justify-center text-[10px] font-extrabold leading-none text-foreground" style={{ transform: "translate(0.5px, 0.75px)" }}
 
               >
                 B
@@ -1854,11 +1854,11 @@ export default function ResidentMobilePWA() {
                   }
                   haptic();
                 }}
-                className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full border border-black/10 bg-white text-zinc-800 shadow-md active:scale-95 transition-transform cursor-pointer"
+                className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full border border-black/10 bg-white text-zinc-800 shadow-lg active:bg-zinc-100 active:scale-95 transition-transform cursor-pointer touch-manipulation"
                 title="Focus Active Truck"
                 aria-label="Focus Active Truck"
               >
-                <Truck className="h-[22px] w-[22px]" strokeWidth={2} />
+                <Truck className="h-6 w-6" strokeWidth={2} />
               </motion.button>
             )}
           </AnimatePresence>
@@ -1901,11 +1901,11 @@ export default function ResidentMobilePWA() {
                   }
                   haptic();
                 }}
-                className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full border border-black/10 bg-white text-zinc-800 shadow-md active:scale-95 transition-transform cursor-pointer"
+                className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full border border-black/10 bg-white text-zinc-800 shadow-lg active:bg-zinc-100 active:scale-95 transition-transform cursor-pointer touch-manipulation"
                 title="Center My Location"
                 aria-label="Center My Location"
               >
-                <LocateFixed className="h-[22px] w-[22px]" strokeWidth={2} />
+                <LocateFixed className="h-6 w-6" strokeWidth={2} />
               </motion.button>
             )}
           </AnimatePresence>
