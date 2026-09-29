@@ -6,7 +6,7 @@ const cspHeader = `
   style-src 'self' 'unsafe-inline';
   img-src 'self' blob: data: https://picsum.photos https://tile.openstreetmap.org https://*.tile.openstreetmap.fr https://cdnjs.cloudflare.com;
   font-src 'self' data:;
-  connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openrouteservice.org https://challenges.cloudflare.com https://formspree.io https://*.formspree.io;
+  connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openrouteservice.org https://challenges.cloudflare.com https://formspree.io https://*.formspree.io https://*.tile.openstreetmap.fr https://tile.openstreetmap.org;
   frame-src 'self' https://challenges.cloudflare.com;
   object-src 'none';
   base-uri 'self';

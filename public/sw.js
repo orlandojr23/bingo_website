@@ -1,5 +1,5 @@
 // Bin'Go Smart Waste Collection - Progressive Web App Service Worker
-const CACHE_NAME = "bingo-pwa-v3";
+const CACHE_NAME = "bingo-pwa-v4";
 const OFFLINE_URL = "/offline.html";
 
 const PRECACHE_ASSETS = [
