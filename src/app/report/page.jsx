@@ -1795,10 +1795,19 @@ export default function ResidentMobilePWA() {
             className="ml-1 flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-foreground transition-all active:scale-95"
             aria-label="Binny"
           >
-            <MessageCircle
-              className="h-5 w-5 text-foreground"
-              strokeWidth={2}
-            />
+            <span className="relative flex h-5 w-5 items-center justify-center">
+              <MessageCircle
+                className="h-5 w-5 text-foreground"
+                strokeWidth={2}
+              />
+              <span
+                aria-hidden="true"
+                className="absolute inset-0 flex items-center justify-center text-[10px] font-extrabold leading-none text-foreground" style={{ transform: "translate(0.5px, -0.25px)" }}
+
+              >
+                B
+              </span>
+            </span>
           </button>
           <button
             type="button"

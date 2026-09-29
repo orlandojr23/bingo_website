@@ -2,6 +2,8 @@ const BINNY_SYSTEM_PROMPT = `You are Binny, the friendly in-app assistant for Bi
 
 Personality:
 - Friendly first: greet warmly, keep it light, always easy to understand.
+- Be creative and playful like a cheerful neighbor, never a robot reading a manual: vary your openers, use vivid everyday words, celebrate good questions, and let a little warmth and humor shine in EVERY reply.
+- Small delights are welcome (a fun remark, a tiny compliment), but the correct answer must always land clearly in the first sentence or two.
 - Speak like a native. Reply in the SAME language the user uses: English or Tagalog. Never mix the two in one reply. Only code-switch if the user code-switches first. Use everyday words Tejero residents actually say, not textbook or translated-sounding phrases. Examples of natural tone: English "Kumusta! Happy to help.", Tagalog "Kumusta! Ano ang maitutulong ko sa paghihiwalay ng basura?"
 - Reliable above all: never guess or invent facts. If you don't know, say so honestly and point to where the truth lives in the app.
 - Concise: short answers, simple words, no jargon. At most one emoji per reply, only when it adds warmth.
@@ -26,6 +28,10 @@ Facts you know (never contradict these):
 - Users see their collection days in the Schedule tab.
 
 Guidelines:
+- "Where should I throw", "where does this go", and "where can I put" are SEGREGATION questions: name the bin the item belongs in (Malata, Recyclable, Dili Malata, or special drop-off), never the Map tab. Mention the Map tab only when they ask where the truck is or when pickup arrives.
+- If they name no exact item ("my garbage", "my trash"), give the general 4-way sort first (food scraps Go to Malata, clean bottles paper and cans Go to Recyclable, dirty wrappers and diapers Go to Dili Malata, batteries and bulbs need special drop-off), then ask which exact item they mean.
+- Greetings get time-aware wit: the live Philippine time is in your context. If their greeting does not match the time of day (goodnight in the morning, good morning at midnight), tease them gently about it like a playful neighbor, then help.
+- "Is it a good day to take the bins out" is a weather-plus-collection question: if no live weather data is in context, say plainly you cannot see the live sky, then advise from what they describe (wet-day rules if they mention rain).
 - Never estimate truck arrival times, tell them to check the Map tab for the live truck or the Schedule tab for their day.
 - For complaints about uncollected waste, sympathize briefly, then guide them to file a report in the Report tab so the crew sees it.
 - Be concise, smart, and sensible: answer in 1 to 2 short sentences, max around 45 words. No long paragraphs, no lists, no filler. Only give steps if the user explicitly asks how to do something, and then keep it to 3 very brief steps max.
@@ -125,7 +131,7 @@ function isRateLimited(ip) {
   return hits.length > RATE_MAX;
 }
 
-const TAGALOG_MARKERS = ['ano', 'sino', 'saan', 'nasaan', 'itatapon', 'paano', 'kailan', 'akin', 'iyo', 'hindi', 'po', 'paki', 'ngayon', 'kahapon', 'bukas', 'araw', 'oras', 'huwag', 'maitutulong', 'pakitingnan', 'pakihawanan'];
+const TAGALOG_MARKERS = ['ano', 'sino', 'saan', 'nasaan', 'itatapon', 'paano', 'kailan', 'akin', 'iyo', 'hindi', 'po', 'paki', 'ngayon', 'kahapon', 'bukas', 'araw', 'oras', 'huwag', 'maitutulong', 'pakitingnan', 'pakihawanan', 'magandang', 'umaga', 'hapon', 'gabi', 'kumusta', 'kamusta', 'umuulan', 'uulan', 'maulan', 'maaraw', 'bagyo', 'baha', 'panahon'];
 
 function detectLang(t, word) {
   let tgl = 0;
@@ -137,46 +143,46 @@ function detectLang(t, word) {
 
 const FAQ_TEXT = {
   en: {
-    identity: 'I am Binny, your waste buddy for the BinGo app. I help with segregation, collection days, truck tracking, and reports.',
-    capability: 'I understand English and Tagalog. Ask me what goes where, when your pickup is, or how to report a problem.',
-    bottle: 'Water and PET bottles Go to Recyclable. Please empty the bottle first and rinse if dirty.',
-    oil: 'Cooking oil needs special handling. Keep it sealed for special drop-off, never in bins or drains.',
-    liquid: 'Please pour out all liquids first and never throw liquid-filled containers.',
-    plastic: 'Clean hard plastics Go to Recyclable. Dirty sachets, wrappers, and styrofoam Go to Dili Malata.',
-    paperplate: 'For paper plates, scrape leftover food into Malata first. Clean dry plates Go to Recyclable, greasy ones Go to Dili Malata.',
-    paper: 'Clean dry paper and cardboard Go to Recyclable. Dirty, oily, or wet paper Goes to Dili Malata.',
-    metal: 'Clean cans and metals Go to Recyclable. Please empty and rinse them first.',
-    glass: 'Whole empty glass Goes to Recyclable. Broken glass Goes to Dili Malata, please wrap it safely.',
-    food: 'Leftover food, rice, peelings, and trimmings Go to Malata. Please drain liquids first.',
-    malata: 'Malata means biodegradable. Put leftover food and rice, fruit and vegetable peelings, eggshells, coffee grounds and tea bags, plus leaves and yard trimmings.',
-    dilimalata: 'Dili Malata means residual. Put dirty sachets and wrappers, styrofoam, diapers and sanitary products, used tissue, plus broken ceramics and glass.',
-    recyclable: 'Recyclable means clean and dry. Put PET bottles, glass jars, tin and aluminum cans, plus cardboard and paper.',
-    hazardous: 'Special waste needs special drop-off. Keep batteries, electronics, and bulbs separate and never mix them with regular waste.',
-    schedulenone: 'I cannot give an exact time since pickup depends on your sitio. Please check your day in the Schedule tab and watch the live truck in the Map tab.',
-    report: 'To report, open the Report tab, add a specific landmark and photo, pin the location, then submit. You can track progress in the Tickets tab.',
-    nav: 'Use the Map tab to track the truck, the Schedule tab for your day, and the Report tab to report a problem.',
-    garbage: 'Tell me the exact item and I will sort it for you. In general: food scraps Go to Malata, clean bottles paper and cans Go to Recyclable, dirty wrappers and diapers Go to Dili Malata, and batteries or bulbs need special drop-off.',
+    identity: 'Hey there! I am Binny, your cheerful waste buddy for the BinGo app. I sort your trash troubles, track pickups, and help you report problems.',
+    capability: 'I chat in English and Tagalog! Ask me what goes where, when your pickup rolls around, or how to report a messy spot.',
+    bottle: 'Nice, bottles are easy wins! Water and PET bottles Go to Recyclable. Just empty them first and give a quick rinse if dirty.',
+    oil: 'Good instinct asking! Cooking oil needs special handling. Seal it up for special drop-off, never pour it in bins or drains.',
+    liquid: 'Quick tip before you toss! Pour out all liquids first and never throw containers that still have liquid inside.',
+    plastic: 'Plastics can be tricky, I got you! Clean hard plastics Go to Recyclable. Dirty sachets, wrappers, and styrofoam Go to Dili Malata.',
+    paperplate: 'Great question, party leftovers confuse everyone! Scrape leftover food into Malata first. Clean dry plates Go to Recyclable, greasy ones Go to Dili Malata.',
+    paper: 'Paper is simple once you know the trick! Clean dry paper and cardboard Go to Recyclable. Dirty, oily, or wet paper Goes to Dili Malata.',
+    metal: 'Shiny stuff, nice! Clean cans and metals Go to Recyclable. Just empty and rinse them first.',
+    glass: 'Careful with this one! Whole empty glass Goes to Recyclable. Broken glass Goes to Dili Malata, please wrap it safely.',
+    food: 'Yummy leftovers for the soil! Leftover food, rice, peelings, and trimmings Go to Malata. Just drain liquids first.',
+    malata: 'Malata means biodegradable, nature doing its own recycling! Toss in leftover food and rice, fruit and vegetable peelings, eggshells, coffee grounds and tea bags, plus leaves and yard trimmings.',
+    dilimalata: 'Dili Malata means residual, the last-resort bin! That is dirty sachets and wrappers, styrofoam, diapers and sanitary products, used tissue, plus broken ceramics and glass.',
+    recyclable: 'Recyclable means clean and dry, ready for a second life! That is PET bottles, glass jars, tin and aluminum cans, plus cardboard and paper.',
+    hazardous: 'Whoa, careful superstar! Special waste needs special drop-off. Keep batteries, electronics, and bulbs separate and never mix them with regular waste.',
+    schedulenone: 'Wish I could pin the exact time! Pickup depends on your sitio, so please check your day in the Schedule tab and watch the live truck in the Map tab.',
+    report: 'Let us get that fixed together! Open the Report tab, add a clear landmark and photo, pin the location, then submit. You can follow progress in the Tickets tab.',
+    nav: 'Happy to show you around! Use the Map tab to track the truck, the Schedule tab for your day, and the Report tab to report a problem.',
+    garbage: 'Ooh I love sorting games! Tell me the exact item and I will sort it for you. Quick guide: food scraps Go to Malata, clean bottles paper and cans Go to Recyclable, dirty wrappers and diapers Go to Dili Malata, and batteries or bulbs need special drop-off.',
   },
   tgl: {
-    identity: 'Ako si Binny, ang iyong waste buddy sa BinGo app. Tumutulong ako sa segregation, collection days, truck tracking, at reports.',
-    capability: 'Naiintindihan ko ang English at Tagalog. Magtanong kung saan itatapon, kailan ang pickup, o paano mag-report.',
-    bottle: 'Ang water at PET bottles ay Recyclable. Pakihawanan muna ang bote at banlawan kung marumi.',
-    oil: 'Ang used oil ay special handling. Itago nang naka-seal para sa special drop-off, huwag ibuhos sa basurahan o kanal.',
-    liquid: 'Pakihawanan muna ang lahat ng likido at huwag itapon ang lalagyang may laman.',
-    plastic: 'Ang malinis na plastic ay Recyclable. Ang maruming sachet, wrapper, at styrofoam ay Dili Malata.',
-    paperplate: 'Sa paper plate, alisin muna ang tirang pagkain papunta sa Malata. Kung malinis at tuyo ay Recyclable, kung mamantika ay Dili Malata.',
-    paper: 'Ang malinis at tuyong papel at karton ay Recyclable. Ang marumi, mamantika, o basa ay Dili Malata.',
-    metal: 'Ang malinis na lata at metal ay Recyclable. Pakihawanan at banlawan muna.',
-    glass: 'Ang buong walang lamang bote ay Recyclable. Ang basag ay Dili Malata, paki-balot nang maayos.',
-    food: 'Ang tirang pagkain, kanin, balat, at damo ay Malata. Pakihawanan muna ng sabaw.',
-    malata: 'Ang Malata ay nabubulok. Ilagay ang tirang pagkain at kanin, balat ng prutas at gulay, eggshell, coffee ground at tea bag, at mga dahon.',
-    dilimalata: 'Ang Dili Malata ay residual. Ilagay ang maruming sachet at wrapper, styrofoam, diaper, used tissue, at basag na seramiko at bote.',
-    recyclable: 'Ang Recyclable ay kailangang malinis at tuyo. Ilagay ang PET bottles, bote, lata, karton, at papel.',
-    hazardous: 'Ang special waste ay kailangan ng special drop-off. Huwag ihalo ang battery, electronics, at bumbilya sa normal na basura.',
-    schedulenone: 'Hindi ako makapagbigay ng saktong oras dahil depende ito sa inyong sitio. Pakitingnan ang inyong araw sa Schedule tab at bantayan ang live truck sa Map tab.',
-    report: 'Para mag-report, buksan ang Report tab, ilagay ang malinaw na landmark at litrato, i-pin ang lokasyon, tapos i-submit. Makikita ang update sa Tickets tab.',
-    nav: 'Gamitin ang Map tab para sa truck, ang Schedule tab para sa inyong araw, at ang Report tab para mag-report.',
-    garbage: 'Sabihin mo ang saktong bagay at aayusin ko ito para sa iyo. Sa pangkalahatan: tirang pagkain ay Malata, malinis na bote papel at lata ay Recyclable, maruming wrapper at diaper ay Dili Malata, at ang battery o bumbilya ay special drop-off.',
+    identity: 'Kumusta, silingan! Ako si Binny, ang masayahin mong waste buddy sa BinGo app. Ako ang bahala sa segregation, pickup, at reports mo.',
+    capability: 'Marunong ako mag-English at Tagalog! Magtanong ka kung saan itatapon, kailan ang pickup, o paano mag-report ng problema.',
+    bottle: 'Ayos, madali lang yan! Ang water at PET bottles ay Recyclable. Pakihawanan muna at banlawan kung marumi.',
+    oil: 'Buti nagtanong ka! Ang used oil ay special handling. Itago nang naka-seal para sa special drop-off, huwag ibuhos sa basurahan o kanal.',
+    liquid: 'Mabilis na tip bago itapon! Pakihawanan muna ang lahat ng likido at huwag itapon ang lalagyang may laman.',
+    plastic: 'Nakakalito nga ang plastic, pero andito ako! Ang malinis na plastic ay Recyclable. Ang maruming sachet, wrapper, at styrofoam ay Dili Malata.',
+    paperplate: 'Ayos na tanong, laging nakakalito ang handaan! Alisin muna ang tirang pagkain papunta sa Malata. Kung malinis at tuyo ay Recyclable, kung mamantika ay Dili Malata.',
+    paper: 'Madali lang ang papel pag alam mo na! Ang malinis at tuyong papel at karton ay Recyclable. Ang marumi, mamantika, o basa ay Dili Malata.',
+    metal: 'Makinang, ayos! Ang malinis na lata at metal ay Recyclable. Pakihawanan at banlawan muna.',
+    glass: 'Dahan-dahan dito! Ang buong walang lamang bote ay Recyclable. Ang basag ay Dili Malata, paki-balot nang maayos.',
+    food: 'Pagkain ng lupa yan! Ang tirang pagkain, kanin, balat, at damo ay Malata. Pakihawanan muna ng sabaw.',
+    malata: 'Ang Malata ay nabubulok, parang recycle ng kalikasan! Ilagay ang tirang pagkain at kanin, balat ng prutas at gulay, eggshell, coffee ground at tea bag, at mga dahon.',
+    dilimalata: 'Ang Dili Malata ay residual, ang last-resort na basurahan! Diyan ang maruming sachet at wrapper, styrofoam, diaper, used tissue, at basag na seramiko at bote.',
+    recyclable: 'Ang Recyclable ay kailangang malinis at tuyo, para magamit ulit! Diyan ang PET bottles, bote, lata, karton, at papel.',
+    hazardous: 'Naku, ingat diyan, superstar! Ang special waste ay kailangan ng special drop-off. Huwag ihalo ang battery, electronics, at bumbilya sa normal na basura.',
+    schedulenone: 'Sana masabi ko ang saktong oras! Depende kasi ito sa inyong sitio, kaya pakitingnan ang inyong araw sa Schedule tab at bantayan ang live truck sa Map tab.',
+    report: 'Ayusin natin yan! Buksan ang Report tab, ilagay ang malinaw na landmark at litrato, i-pin ang lokasyon, tapos i-submit. Makikita ang update sa Tickets tab.',
+    nav: 'Tara, igala kita! Gamitin ang Map tab para sa truck, ang Schedule tab para sa inyong araw, at ang Report tab para mag-report.',
+    garbage: 'Paborito ko ang pag-aayos! Sabihin mo ang saktong bagay at aayusin ko ito para sa iyo. Mabilis na gabay: tirang pagkain ay Malata, malinis na bote papel at lata ay Recyclable, maruming wrapper at diaper ay Dili Malata, at ang battery o bumbilya ay special drop-off.',
   },
 };
 
@@ -206,7 +212,78 @@ function localPickup(ctx, lang) {
   return { title, subtitle: ctx.pickupSubtitle };
 }
 
-function faqReply(text, ctx) {
+const TEJERO_LAT = 10.3035;
+const TEJERO_LON = 123.9065;
+const WEATHER_TTL_MS = 15 * 60 * 1000;
+let weatherCache = { at: 0, data: null };
+
+// Live skies over Tejero via Open-Meteo (free, no key). Cached briefly so
+// chatty residents do not hammer the API. Stale data beats nothing.
+async function getTejeroWeather() {
+  const now = Date.now();
+  if (weatherCache.data && now - weatherCache.at < WEATHER_TTL_MS) return weatherCache.data;
+  const url =
+    `https://api.open-meteo.com/v1/forecast?latitude=${TEJERO_LAT}&longitude=${TEJERO_LON}` +
+    '&current=temperature_2m,weather_code,rain,showers,precipitation&timezone=Asia%2FManila&forecast_days=1';
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 6000);
+  try {
+    const res = await fetch(url, { signal: ctrl.signal });
+    if (!res.ok) return weatherCache.data;
+    const cur = (await res.json())?.current;
+    if (!cur || typeof cur.temperature_2m !== 'number' || typeof cur.weather_code !== 'number') {
+      return weatherCache.data;
+    }
+    const data = { temp: Math.round(cur.temperature_2m), code: cur.weather_code };
+    weatherCache = { at: now, data };
+    return data;
+  } catch {
+    return weatherCache.data;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function weatherKind(code) {
+  if (code === 95 || code === 96 || code === 99) return 'storm';
+  if ((code >= 51 && code <= 57) || (code >= 61 && code <= 67) || (code >= 80 && code <= 82)) {
+    return 'rain';
+  }
+  return 'fair';
+}
+
+function weatherFairLabel(code, lang) {
+  if (lang === 'tgl') {
+    if (code === 0 || code === 1) return 'maaliwalas';
+    if (code === 2) return 'medyo maulap';
+    if (code === 3) return 'maulap';
+    return 'malabo ang paligid';
+  }
+  if (code === 0) return 'clear skies';
+  if (code === 1) return 'mostly clear';
+  if (code === 2) return 'partly cloudy';
+  if (code === 3) return 'overcast';
+  return 'foggy';
+}
+
+function weatherReply(data, lang) {
+  if (!data) {
+    return lang === 'tgl'
+      ? 'Hindi ko maabot ang weather service ngayon. Kung umuulan, takpan at ayusin ang inyong basurahan para hindi kumalat.'
+      : 'I cannot reach the weather service right now. If it is raining, keep your bins covered and secured so nothing scatters.';
+  }
+  const kind = weatherKind(data.code);
+  if (lang === 'tgl') {
+    if (kind === 'storm') return `Ingat, superstar! Masama ang panahon sa Tejero ngayon, mga ${data.temp}°C. Itago ang basurahan kung kaya, asahan ang posibleng pagkaantala ng pickup, at i-report ang baha sa Report tab.`;
+    if (kind === 'rain') return `Umuulan sa Tejero ngayon, mga ${data.temp}°C. Takpan at ayusin ang basurahan para hindi kumalat, at asahan ang posibleng pagkaantala ng pickup.`;
+    return `Sa Tejero ngayon ay ${weatherFairLabel(data.code, lang)} at mga ${data.temp}°C, ayos para sa koleksyon! Ilabas ang basurahan sa oras at takpan para sigurado.`;
+  }
+  if (kind === 'storm') return `Heads up, superstar! It is stormy in Tejero right now, around ${data.temp}°C. Secure your bins indoors if you can, expect possible pickup delays, and report any flooding through the Report tab.`;
+  if (kind === 'rain') return `It is rainy in Tejero right now, around ${data.temp}°C. Keep your bins covered and secured so waste does not scatter, and expect possible pickup delays.`;
+  return `Right now in Tejero it is ${weatherFairLabel(data.code, lang)} around ${data.temp}°C, a nice day for collection! Take your bins out on time and keep them covered just in case.`;
+}
+
+async function faqReply(text, ctx) {
   const raw = String(text || '').toLowerCase();
   const norm = raw
     .replace(/dimalata/g, 'dili malata')
@@ -218,6 +295,13 @@ function faqReply(text, ctx) {
   const word = (...words) => words.some((w) => new RegExp(`\\b${w}\\b`).test(t));
   const lang = detectLang(t, word);
   const L = (key) => (FAQ_TEXT[lang] && FAQ_TEXT[lang][key]) || FAQ_TEXT.en[key];
+  const throwWord =
+    has('throw', 'dump', 'belong', 'dispose', 'disposal', 'labay', 'tambak', 'tapon', 'segregat') ||
+    has('throw away', 'throw out', 'get rid of', 'dispose of');
+  const garbageWord = has('garbage', 'trash', 'basura', 'rubbish', 'waste', 'segregat', 'labog', 'sagbot');
+  const weatherWord =
+    has('weather', 'raining', 'rainy', 'rainfall', 'storm', 'bagyo', 'flood', 'baha', 'thunder', 'kidlat', 'forecast', 'ulan', 'maulan', 'maaraw', 'panahon', 'cloudy', 'clouds', 'maulap') ||
+    word('rain', 'init', 'mainit');
 
   if (has('who are you', 'your name', 'about yourself', 'what are you', 'kinsa ka', 'sino ka') || (word('binny') && has('who', 'what', 'your name'))) {
     return L('identity');
@@ -230,7 +314,7 @@ function faqReply(text, ctx) {
       'what day is it', 'what day is today', 'what date', "what's the date", 'todays date', "today's date",
       'what year', 'which year', 'anong oras', 'anong araw', 'unsang orasa', 'unsang adlawa', 'unsa nga adlaw') ||
       ((has('time', 'day', 'date', 'year', 'today', 'orasa', 'adlaw', 'araw', 'oras') && has('now', 'current', 'today', 'karon', 'ngayon')))) &&
-    !has('pickup', 'pick up', 'collect', 'hakot', 'kolekta', 'schedul', 'truck', 'garbage', 'report', 'arriv')
+    !has('pickup', 'pick up', 'collect', 'hakot', 'kolekta', 'schedul', 'truck', 'garbage', 'report', 'arriv', 'weather', 'rain', 'ulan', 'bagyo', 'baha', 'panahon')
   ) {
     const now = philippineNow();
     if (lang === 'tgl') {
@@ -258,7 +342,7 @@ function faqReply(text, ctx) {
   } else if (has('paper', 'newspaper', 'cardboard', 'carton', 'magazine', 'notebook', 'papel')) {
     items.push(L('paper'));
   }
-  if (has('metal', 'aluminum', 'aluminium', 'steel') || word('can', 'cans', 'tin', 'iron', 'lata', 'kana')) {
+  if (has('metal', 'aluminum', 'aluminium', 'steel', 'tin can', 'empty can', 'soda can', 'sardine', 'delata') || word('cans', 'tin', 'iron', 'lata', 'kana')) {
     items.push(L('metal'));
   }
   if (has('botelya') || word('glass', 'bote', 'jar', 'bildo', 'bote')) {
@@ -285,7 +369,10 @@ function faqReply(text, ctx) {
   if (has('hazard', 'battery', 'batteries', 'electronic', 'bulb', 'special', 'bumbilya', 'baterya')) {
     return L('hazardous');
   }
-  if (has('collection day', 'pickup', 'pick up', 'schedule', 'when will', 'what day', 'what time', 'arrival', 'truck', 'collect', 'hakot', 'kolekta', 'kanus-a ang pickup', 'kailan ang pickup')) {
+  // A weather-plus-schedule question without an explicit when ("will rain
+  // affect my pickup") is really asking about conditions, so it falls
+  // through to the weather branch below. Explicit when-questions stay here.
+  if (has('collection day', 'pickup', 'pick up', 'schedule', 'when will', 'what day', 'what time', 'arrival', 'truck', 'collect', 'hakot', 'kolekta', 'kanus-a ang pickup', 'kailan ang pickup') && !(weatherWord && !has('when', 'what day', 'what time', 'arrival'))) {
     if (ctx?.pickupTitle && ctx?.pickupSubtitle) {
       if (lang === 'tgl') { const p = localPickup(ctx, 'tgl'); return `${p.title}: ${p.subtitle}. Pakitingnan ang Schedule tab para sa kumpletong detalye.`; }
       return `${ctx.pickupTitle}: ${ctx.pickupSubtitle}. Please also check the Schedule tab for full details.`;
@@ -299,14 +386,77 @@ function faqReply(text, ctx) {
   if (has('report', 'overflowing', 'overflow', 'missed', 'uncollected', 'not collected', 'complaint', 'ticket', 'reklamo')) {
     return L('report');
   }
-  if (has('where', 'how to use', 'how do i use', 'navigate', 'map tab', 'schedule tab', 'report tab')) {
+  // Live weather over Tejero, tied to collection: rain means covered bins
+  // and possible pickup delays, storms mean securing bins and reporting
+  // floods. Skipped when the question is really about sorting (disposal
+  // words win below), and complaints above already won.
+  if (weatherWord && !throwWord && !garbageWord) {
+    return weatherReply(await getTejeroWeather(), lang);
+  }
+  // Disposal intent ("where do I throw/put X") is a SEGREGATION question, not a
+  // navigation question. Check it BEFORE the nav branch so a bare "where"
+  // never misroutes to "Use the Map tab...".
+  if (
+    throwWord ||
+    garbageWord ||
+    (word('where') && word('put', 'belong'))
+  ) {
+    return L('garbage');
+  }
+  if (
+    has('how to use', 'how do i use', 'navigate', 'map tab', 'schedule tab', 'report tab', 'tickets tab') ||
+    word('where')
+  ) {
     return L('nav');
   }
-  if (has('garbage', 'trash', 'basura', 'rubbish', 'waste', 'segregat', 'labog', 'sagbot')) {
-    return L('garbage');
-  }
-  if (has('where') && has('throw', 'belong', 'put', 'segregat', 'dispose', 'labay', 'tambak', 'ilabay', 'itatapon')) {
-    return L('garbage');
+  // Time-aware greetings. Specific intents above win, so "good morning, when
+  // is my pickup" still answers the pickup question. A bare greeting gets a
+  // warm reply, and a greeting that does not match the actual time of day in
+  // Tejero gets gentle teasing instead.
+  const greet =
+    has('good morning', 'magandang umaga') || word('morning', 'umaga')
+      ? 'morning'
+      : has('good afternoon', 'magandang hapon') || word('afternoon', 'hapon')
+        ? 'afternoon'
+        : has('good evening', 'magandang gabi') || word('evening', 'gabi')
+          ? 'evening'
+          : has('goodnight') || has('good night') || word('hatinggabi') || has('matutulog')
+            ? 'night'
+            : has('good day') || word('hello', 'hi', 'hey', 'kumusta', 'kamusta')
+              ? 'hello'
+              : null;
+  if (greet) {
+    const now = philippineNow();
+    const tm = now.time.match(/(\d+)\s*:\s*(\d+)\s*([AP])\.?\s*M\.?/i);
+    const hour = tm ? (+tm[1] % 12) + (tm[3].toUpperCase() === 'P' ? 12 : 0) : 12;
+    const period =
+      hour >= 5 && hour < 12
+        ? 'morning'
+        : hour >= 12 && hour < 18
+          ? 'afternoon'
+          : hour >= 18 && hour < 22
+            ? 'evening'
+            : 'night';
+    if (lang === 'tgl') {
+      const TGL_PERIOD = { morning: 'Umaga', afternoon: 'Hapon', evening: 'Gabi', night: 'Hatinggabi' };
+      if (greet === 'hello') return 'Kumusta, silingan! Mabuting nandito ka. Magtanong ka kung saan itatapon, kailan ang pickup, o paano mag-report.';
+      if (greet === period) {
+        if (period === 'morning') return 'Magandang umaga, silingan! Ang aga mo ah. Ano ang maitutulong ko?';
+        if (period === 'afternoon') return 'Magandang hapon! Kumusta ang araw mo? Ano ang kailangan mo?';
+        if (period === 'evening') return 'Magandang gabi! Patapos na ang araw. Ano ang maitutulong ko?';
+        return 'Gabi na, gising ka pa? Ayos lang, hindi naman ako natutulog. Ano yan?';
+      }
+      return `Mukhang time traveler ka! ${TGL_PERIOD[period]} na dito sa Tejero ngayon, hindi ${TGL_PERIOD[greet]}. Ano ang maitutulong ko?`;
+    }
+    const EN_PERIOD = { morning: 'morning', afternoon: 'afternoon', evening: 'evening', night: 'night' };
+    if (greet === 'hello') return 'Hey there! Good to see you. Ask me what goes where, when your pickup is, or how to report a problem.';
+    if (greet === period) {
+      if (period === 'morning') return 'Good morning, silingan! Bright and early, I like it. What can I sort out for you today?';
+      if (period === 'afternoon') return 'Good afternoon! Hope your day is going well. What can I help you with?';
+      if (period === 'evening') return 'Good evening! Wrapping up the day nicely. What do you need?';
+      return 'Good night! Up late, huh? Ask away, I never sleep anyway.';
+    }
+    return `Ooh, a time traveler! It is ${EN_PERIOD[period]} here in Tejero right now, not ${EN_PERIOD[greet]}. What can I sort out for you?`;
   }
   return null;
 }
@@ -360,7 +510,7 @@ export async function POST(req) {
       reply: 'Sorry, I only help with BinGo waste and collection questions. Ask me what goes where, when your pickup is, or how to report a problem.',
     });
   }
-  const direct = faqReply(lastUser?.content, ctx);
+  const direct = await faqReply(lastUser?.content, ctx);
   if (direct) {
     return Response.json({ reply: direct });
   }
