@@ -28,16 +28,6 @@ export default function ProductTour({
         },
       },
       {
-        element: '[data-tour="profile-btn"]',
-        popover: {
-          title: "Profile & Settings",
-          description:
-            "Manage account settings, update your home sitio location, toggle audio alert preferences, or sign out.",
-          side: "bottom",
-          align: "end",
-        },
-      },
-      {
         element: '[data-tour="binny-btn"]',
         popover: {
           title: "Ask Binny",
@@ -75,6 +65,16 @@ export default function ProductTour({
             "Track real-time progress and official resolution updates on all reports you've submitted.",
           side: "top",
           align: "center",
+        },
+      },
+      {
+        element: '[data-tour="profile-btn"]',
+        popover: {
+          title: "Profile & Settings",
+          description:
+            "Manage account settings, update your home sitio location, toggle audio alert preferences, or sign out.",
+          side: "top",
+          align: "end",
         },
       },
     ];
