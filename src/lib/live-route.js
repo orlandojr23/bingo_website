@@ -2,6 +2,8 @@ import { useSyncExternalStore } from "react";
 import { mockPilotData, TEJERO_SITOS } from "@/lib/mock-data";
 import { pushNotification } from "@/lib/notifications";
 import { supabase } from "@/lib/supabase";
+import { recordDbSuccess, recordDbFailure, isNetworkError, withDbRetry, getDbStatus } from "@/lib/db-health";
+import { enqueueOp, flushOutbox, registerExecutor } from "@/lib/outbox";
 
 const STORAGE_KEY = "bingo-live-route-v1";
 const STORE_VERSION = 5;
@@ -17,6 +19,35 @@ function buildSeed() {
 
 const SEED = buildSeed();
 
+// Outage plan: the last confirmed snapshot is persisted locally. First
+// paint rehydrates from it (instant real data), and a failed sync keeps it
+// on screen instead of blanking dispatch and the live map.
+function loadSnapshot() {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    if (parsed && parsed.v === STORE_VERSION && parsed.schedules && parsed.trucks) {
+      return { ...buildSeed(), ...parsed };
+    }
+  } catch {}
+  return null;
+}
+
+function persistSnapshot(snap) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      v: STORE_VERSION,
+      rev: snap.rev || 0,
+      trucks: snap.trucks || {},
+      schedules: snap.schedules || {},
+      scheduleStatus: snap.scheduleStatus || {},
+      driverByTruck: snap.driverByTruck || {},
+    }));
+  } catch {}
+}
+
 const listeners = new Set();
 let cache = null;
 
@@ -26,7 +57,7 @@ function notify() {
 
 function getSnapshot() {
   if (!cache) {
-    cache = SEED;
+    cache = loadSnapshot() || SEED;
     if (typeof window !== "undefined") {
       initSupabaseSync();
     }
@@ -38,10 +69,29 @@ let syncInitialized = false;
 let subsInitialized = false;
 
 export async function reinitSupabaseSync() {
-  const [schedulesRes, trackingRes] = await Promise.all([
-    supabase.from('schedules').select('*'),
-    supabase.from('live_tracking').select('*')
-  ]);
+  let schedulesRes = null;
+  let trackingRes = null;
+  try {
+    [schedulesRes, trackingRes] = await withDbRetry(() =>
+      Promise.all([
+        supabase.from("schedules").select("*"),
+        supabase.from("live_tracking").select("*"),
+      ])
+    );
+  } catch (err) {
+    // Outage plan: keep the previous snapshot on screen and mark it stale.
+    // A failed sync must never blank dispatch or the live map.
+    recordDbFailure(err);
+    return { ok: false, error: err };
+  }
+  if (schedulesRes?.error || trackingRes?.error) {
+    // The backend answered but refused (e.g. RLS) — same rule: keep cache.
+    const err = schedulesRes?.error || trackingRes?.error;
+    recordDbFailure(err);
+    return { ok: false, error: err };
+  }
+  recordDbSuccess();
+  flushOutbox();
 
   write((next) => {
     // Clear old data when re-initializing to ensure deleted items are removed
@@ -200,6 +250,7 @@ function write(mutator) {
   const result = mutator(next);
   next.rev = (next.rev || 0) + 1;
   cache = next;
+  persistSnapshot(next);
   notify();
   return result;
 }
@@ -882,9 +933,22 @@ export async function updateTracking(truckId, patch) {
   if (patch.eta !== undefined) dbPatch.eta = patch.eta;
   if (patch.isActive !== undefined) dbPatch.is_active = patch.isActive;
 
-  const { error } = await supabase.from('live_tracking').update(dbPatch).eq('truck_id', truckId);
-  if (error) {
-    console.error("Telemetry update failed:", error);
+  try {
+    const { error } = await supabase.from("live_tracking").update(dbPatch).eq("truck_id", truckId);
+    if (error) throw error;
+    recordDbSuccess();
+    flushOutbox();
+  } catch (err) {
+    // High-frequency GPS fixes must never be dropped on a blip: queue the
+    // latest fix per truck and keep the local marker moving via the
+    // write-through below. Coalescing keeps an offline hour to one row
+    // per truck instead of thousands.
+    if (isNetworkError(err)) {
+      enqueueOp("telemetry", { truckId, patch: dbPatch }, { key: `telemetry:${truckId}` });
+    } else {
+      console.error("Telemetry update failed:", err);
+    }
+    recordDbFailure(err);
   }
 
   write((next) => {
@@ -964,3 +1028,24 @@ export function useLiveRoute() {
 // the driver's device pushes a fix via updateTracking, Uber/Waze-style.
 // Kept as a no-op so existing useLiveRoute() callers don't change.
 export function ensureRouteSim() {}
+
+// Outage recovery: re-run the full sync when the browser reports coming
+// back online, and poll while marked stale for outages the browser never
+// noticed (backend down, connection fine). Successful syncs clear the
+// stale flag, which idles the poll.
+if (typeof window !== "undefined") {
+  window.addEventListener("online", () => {
+    reinitSupabaseSync();
+  });
+  window.setInterval(() => {
+    if (getDbStatus().stale) reinitSupabaseSync();
+  }, 30000);
+}
+
+
+// Outbox executor owned by this lib: replays queued GPS fixes.
+registerExecutor("telemetry", async ({ truckId, patch }) => {
+  const { error } = await supabase.from("live_tracking").update(patch).eq("truck_id", truckId);
+  if (error) throw error;
+  recordDbSuccess();
+});

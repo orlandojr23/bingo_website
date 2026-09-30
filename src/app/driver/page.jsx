@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   Play,
   CheckCircle2,
-  XCircle,
+
   Eye,
   EyeOff,
   Loader2,
@@ -44,6 +44,7 @@ import {
   reinitSupabaseSync,
   dutyStatusOf,
 } from "@/lib/live-route";
+import { snapToRoute, travelHeading, compassBearing, resolveTravelHeading } from "@/lib/route-snap";
 import { cn, haptic } from "@/lib/utils";
 import {
   useNotifications,
@@ -57,6 +58,7 @@ import { getDriverSession, clearDriverSession } from "@/lib/driver-session";
 import { changeDriverPassword } from "@/lib/driver-accounts";
 import { MapSkeleton, DriverShellSkeleton } from "@/components/ui/skeletons";
 import { useToast } from "@/components/pwa/Toast";
+import DbStatusBanner from "@/components/pwa/DbStatusBanner";
 import { supabase } from "@/lib/supabase";
 
 // Minimalist High-DPI Leaflet MapCanvas
@@ -115,12 +117,6 @@ function driverTimeAgo(iso, nowMs) {
   return new Date(t).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-function driverNotifIcon(type) {
-  if (type === "Cancelled") return <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-600" strokeWidth={2} />;
-  if (type === "Dispatch") return <Truck className="mt-0.5 h-5 w-5 shrink-0 text-sky-600" strokeWidth={2} />;
-  return <Bell className="mt-0.5 h-5 w-5 shrink-0 text-zinc-500" strokeWidth={2} />;
-}
-
 // Bottom-nav tab: the active tab gets a duotone (tinted-fill + bold-stroke)
 // emerald icon — no background pill, just the icon and label.
 function DriverTab({ id, label, icon: Icon, activeTab, onSelect, badge = 0 }) {
@@ -147,6 +143,30 @@ function DriverTab({ id, label, icon: Icon, activeTab, onSelect, badge = 0 }) {
       </span>
       <span className={`text-[10px] leading-none ${active ? "font-semibold" : "font-medium"}`}>{label}</span>
     </button>
+  );
+}
+
+// Car/truck steering wheel glyph (lucide has no car wheel): outer rim, hub,
+// and three lower spokes, drawn in the same 24px stroke style as lucide icons.
+function SteeringWheelIcon({ className, strokeWidth = 2 }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="2" />
+      <path d="M12 14v7" />
+      <path d="M10.3 13.2 4.2 16.5" />
+      <path d="M13.7 13.2l6.1 3.3" />
+    </svg>
   );
 }
 
@@ -815,6 +835,19 @@ export default function DriverPage() {
 
   const lastAcceptedGpsRef = useRef(null);
 
+  // Remaining-route snapshot for the offline route snap (see route-snap.js).
+  // Synced on schedule/stop changes; the GPS handler reads it via ref so it
+  // never works from a stale closure.
+  const routeRef = useRef({ points: [], stopIndex: 0, scheduleId: null });
+  const snapProgressRef = useRef(null);
+  useEffect(() => {
+    routeRef.current = {
+      points: routePoints,
+      stopIndex: truckState?.stopIndex ?? 0,
+      scheduleId: activeSchedule?.id ?? null,
+    };
+  }, [routePoints, truckState?.stopIndex, activeSchedule?.id]);
+
   const startGpsWatch = () => {
     if (watchIdRef.current !== null) return;
     
@@ -829,11 +862,15 @@ export default function DriverPage() {
         
         const s = speed ? speed : 0;
         const prev = lastAcceptedGpsRef.current;
+        let course = null;
         
         if (prev) {
           const dx = (longitude - prev.lng) * 111320 * Math.cos((prev.lat * Math.PI) / 180);
           const dy = (latitude - prev.lat) * 111320;
           const distM = Math.hypot(dx, dy);
+          // Ground course (direction of actual travel) — trusted once the
+          // fix moved far enough to drown out GPS jitter.
+          if (distM >= 8) course = compassBearing(prev, { lat: latitude, lng: longitude });
           
           // Waze-style stationary noise filter: if moving very slowly (speed <= 1 m/s)
           // and the GPS fix only jumped by < 10 meters, it's just satellite wobble while
@@ -841,22 +878,55 @@ export default function DriverPage() {
           if (s <= 1 && distM < 10) {
             return; 
           }
-          if (finalHeading === null) finalHeading = prev.heading;
+
         }
 
-        if (finalHeading === null) finalHeading = 90;
+
+        // Waze-style route snap: project the raw fix onto the remaining
+        // collection-route path so the marker rides the road instead of
+        // houses or GPS wobble. Beyond the corridor the raw fix is kept.
+        // While moving, face along the road, not the noisy device heading.
+        let roadHeading = null;
+        let outLat = latitude;
+        let outLng = longitude;
+        const rte = routeRef.current;
+        const snap = rte.points.length >= 2
+          ? snapToRoute(latitude, longitude, rte.points, rte.stopIndex)
+          : null;
+        if (snap) {
+          const snapKey = `${rte.scheduleId}|${rte.stopIndex}`;
+          const prevSnap = snapProgressRef.current;
+          const solved = travelHeading(
+            snap,
+            prevSnap && prevSnap.key === snapKey ? prevSnap.along : null
+          );
+          snapProgressRef.current = { key: snapKey, along: solved.along };
+          outLat = snap.lat;
+          outLng = snap.lng;
+          roadHeading = solved.heading;
+        }
+        // Face the road, not the phone: road snap > ground course > device
+        // compass (which follows the handset, not the truck). Parked holds
+        // the last heading instead of swinging with compass wobble.
+        finalHeading = resolveTravelHeading({
+          road: roadHeading,
+          course,
+          device: (heading !== null && !isNaN(heading)) ? heading : null,
+          prevHeading: prev ? prev.heading : null,
+          speedMps: s,
+        });
         lastAcceptedGpsRef.current = { lat: latitude, lng: longitude, heading: finalHeading };
 
         setCoords({
-          lat: latitude,
-          lng: longitude,
+          lat: outLat,
+          lng: outLng,
           speed: s ? Math.round(s * 3.6) : 0,
           heading: finalHeading,
           accuracy: Math.round(accuracy),
         });
 
         if (truckFocusedRef.current) {
-          setMapCenter([latitude, longitude]);
+          setMapCenter([outLat, outLng]);
         }
         lastBroadcastTime.current =
           new Date().toLocaleTimeString([], {
@@ -871,12 +941,12 @@ export default function DriverPage() {
         if (now - lastPushRef.current >= 2000) {
           lastPushRef.current = now;
           updateTracking(selectedTruckIdRef.current, {
-            lat: latitude,
-            lng: longitude,
+            lat: outLat,
+            lng: outLng,
             // Device GPS reports a compass bearing (0 = North). The app's
-            // heading convention is compass + 90 (see headingAlong in
-            // use-route-path.js), which is what the map marker and
-            // course-up camera expect.
+            // heading convention is compass + 90 (segment headings from
+            // route-snap.js are compass too), which is what the map marker
+            // and course-up camera expect.
             heading: (Math.round(finalHeading) + 90) % 360,
             lastGpsAt: now,
           });
@@ -1010,17 +1080,22 @@ export default function DriverPage() {
   };
 
   // Single "current stop" pin: shown only once the driver has started the route.
+  // Once the driver arrives at a stop (Stop By puts the truck "onsite"), that
+  // stop is done, so the highlight advances to the NEXT stop: the map always
+  // points at where to drive next. Past the last stop there is nothing ahead.
+  const dStopIdx = truckState?.stopIndex ?? 0;
+  const highlightIdx = truckState?.phase === "onsite" ? dStopIdx + 1 : dStopIdx;
+  const highlightPoint = routePoints[highlightIdx];
   const driverCurrentStop = (!activeSchedule || truckState?.phase === "completed")
     ? null
-    : currentPoint ? { ...currentPoint, index: truckState?.stopIndex ?? 0 } : null;
+    : highlightPoint ? { ...highlightPoint, index: highlightIdx } : null;
 
-  // Compact numbered pins for every stop after the current one.
-  const dStopIdx = truckState?.stopIndex ?? 0;
+  // Compact numbered pins for every stop after the highlighted one.
   const driverUpcomingStops = (!activeSchedule || truckState?.phase === "completed")
     ? []
-    : routePoints.slice(dStopIdx + 1).map((p, i) => ({ ...p, index: dStopIdx + 1 + i }));
+    : routePoints.slice(highlightIdx + 1).map((p, i) => ({ ...p, index: highlightIdx + 1 + i }));
 
-  // Use raw device GPS heading directly (no road-snapping).
+  // Fused travel heading: road snap > ground course > device (see route-snap).
   const bestHeading = truckState?.tracking.heading ?? 0;
 
   const trucksForMap = useMemo(() => {
@@ -1042,7 +1117,7 @@ export default function DriverPage() {
   }, [currentTruck, truckState, isOnDuty, liveDriver, bestHeading]);
 
   // Waze-style course-up camera while driving: heading up, auto-follow truck.
-  const navBearing = isOnDuty ? Math.round(bestHeading ?? 0) : null;
+  const navBearing = isOnDuty ? Math.round((bestHeading ?? 0) / 6) * 6 : null;
 
   useEffect(() => {
     if (isOnDuty) {
@@ -1058,6 +1133,7 @@ export default function DriverPage() {
       }
     } else {
       stopGpsWatch();
+      setMapZoom(16);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOnDuty]);
@@ -1149,10 +1225,10 @@ export default function DriverPage() {
             aria-label="Notifications"
           >
             <Bell
-              className={`h-5 w-5 ${driverUnread > 0 ? "text-emerald-600" : "text-foreground"}`}
+              className="h-5 w-5 text-foreground"
               strokeWidth={2}
-              fill={driverUnread > 0 ? "currentColor" : "none"}
-              fillOpacity={driverUnread > 0 ? 0.18 : 0}
+              fill="none"
+              fillOpacity={0}
             />
             {driverUnread > 0 && (
               <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[9px] font-bold leading-none text-white">
@@ -1195,7 +1271,7 @@ export default function DriverPage() {
                   title="Focus Compactor Unit"
                   aria-label="Focus Compactor Unit"
                 >
-                  <Truck className="h-[22px] w-[22px]" strokeWidth={2} />
+                  <SteeringWheelIcon className="h-[22px] w-[22px]" strokeWidth={2} />
                 </motion.button>
               );
             })()}
@@ -2234,7 +2310,6 @@ export default function DriverPage() {
                         onClick={() => { markNotificationRead(notif.id); haptic(); }}
                         className="flex w-full cursor-pointer items-start gap-3 px-4 py-3 text-left transition-colors active:bg-muted"
                       >
-                        {driverNotifIcon(notif.type)}
                         <span className="min-w-0 flex-1">
                           <span className="flex items-baseline justify-between gap-2">
                             <span className={cn("text-[15px] tracking-tight text-foreground", !notif.isRead ? "font-semibold" : "font-normal")}>
@@ -2258,6 +2333,7 @@ export default function DriverPage() {
         )}
       </AnimatePresence>
 
+      <DbStatusBanner />
       {ToastViewport}
     </div>
   );

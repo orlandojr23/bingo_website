@@ -1,40 +1,34 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback, useMemo } from "react";
-import { MapContainer, TileLayer, Marker, Popup, Circle, useMap, ZoomControl } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
-import L from "leaflet";
-import "leaflet-rotate";
-import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
+import { useEffect, useState, useRef, useCallback } from "react";
+import * as maplibregl from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
 import { MapSkeleton } from "@/components/ui/skeletons";
 import { Navigation } from "lucide-react";
 import { SERVICE_AREAS } from "@/lib/mock-data";
 
-// Fix default leaflet icons in Next.js
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
-  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
-  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-});
-
-// HOT (humanitarian) style renders large, high-contrast labels that stay
-// readable on phones at high zoom. Free, no API key, and serves native
-// z20 tiles (one level deeper than the OSM standard style), which keeps
-// deep zoom-ins sharp on retina screens. Hosted by OSM France.
-const HOT_TILE_URL = "https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png";
-// Fallback when HOT is unreachable from the viewer's network (seen as
-// ERR_CONNECTION_TIMED_OUT on some routes): OSM standard — same coverage,
-// smaller labels, but reliably reachable.
-const OSM_FALLBACK_TILE_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+// OpenFreeMap Bright — free keyless vector tiles (OpenMapTiles schema), no
+// API key, with glyphs + sprites so street labels render natively. Unlike the
+// old raster basemap, labels stay crisp and readable inside a pitched camera.
+const VECTOR_STYLE_URL = "https://tiles.openfreemap.org/styles/bright";
 
 // Metro Cebu Map Bounds & Zoom (Expanded map scope for Admin, Resident, and Driver)
+// MapLibre maxBounds takes [southwest, northeast] in [lng, lat] order.
 const METRO_CEBU_MAX_BOUNDS = [
-  [10.1500, 123.7000], // SW Metro Cebu (Talisay / Minglanilla)
-  [10.4800, 124.0800], // NE Metro Cebu (Mandaue / Lapu-Lapu / Liloan)
+  [123.7000, 10.1500], // SW Metro Cebu (Talisay / Minglanilla)
+  [124.0800, 10.4800], // NE Metro Cebu (Mandaue / Lapu-Lapu / Liloan)
 ];
 const METRO_CEBU_MIN_ZOOM = 11;
-const METRO_CEBU_BOUNDS_VISCOSITY = 0.3;
+
+// True 3D drive camera (replaces the old CSS pseudo-tilt): pitch 60 reads as
+// a Waze-style first-person view; 0 is flat top-down.
+const DRIVE_PITCH = 60;
+const FLAT_PITCH = 0;
+
+// Screen-stable ahead offset for drive mode, in meters at zoom 18 (~150px
+// below center on a typical phone, leaving more road visible ahead). Scales
+// with zoom so the marker holds the same screen position at any level.
+const DRIVE_AHEAD_METERS_AT_Z18 = 90;
 
 function toLatLngTuple(pos) {
   if (!pos) return null;
@@ -44,9 +38,47 @@ function toLatLngTuple(pos) {
   return [lat, lng];
 }
 
-function sanitizePositions(positions) {
-  if (!Array.isArray(positions)) return [];
-  return positions.map(toLatLngTuple).filter(Boolean);
+// Minimal HTML escaping for popup strings (ticket locations, driver names).
+// The old Leaflet popups were JSX (auto-escaped); MapLibre popups take HTML
+// strings, so user-controlled text must be escaped explicitly.
+function esc(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+// Waze-style ahead offset: aim the camera at a point ahead of the truck
+// along the travel heading so the marker sits below center, leaving more
+// road visible ahead. Pure geography (no map instance), so it holds at any
+// zoom, bearing, or pitch. bearingApp uses the app heading convention
+// (compass + 90); driveOn gates the offset to drive mode.
+function aheadTarget(tuple, bearingApp, zoom, driveOn) {
+  if (!driveOn || bearingApp == null || !tuple) return tuple;
+  const compass = (((bearingApp - 90) % 360) + 360) % 360;
+  const rad = (compass * Math.PI) / 180;
+  const z = typeof zoom === "number" ? zoom : 18;
+  const meters = DRIVE_AHEAD_METERS_AT_Z18 * Math.pow(2, 18 - Math.min(19, Math.max(14, z)));
+  const [lat, lng] = tuple;
+  const cosLat = Math.cos((lat * Math.PI) / 180) || 1;
+  return [
+    lat + (meters * Math.cos(rad)) / 111000,
+    lng + (meters * Math.sin(rad)) / (111000 * cosLat),
+  ];
+}
+
+// App heading (compass + 90) to a MapLibre bearing. MapLibre measures bearing
+// counter-clockwise from north as the compass direction facing up-screen, so
+// the value equals the plain compass heading.
+function appHeadingToMlBearing(bearingApp) {
+  if (bearingApp == null) return null;
+  return (((bearingApp - 90) % 360) + 360) % 360;
+}
+
+// Shortest signed angular distance in degrees, wrapped to [-180, 180].
+function angDelta(from, to) {
+  return ((((to - from) % 360) + 540) % 360) - 180;
 }
 
 const getUrgencyColor = (urgency) => {
@@ -63,121 +95,136 @@ const getUrgencyColor = (urgency) => {
   }
 };
 
-const createTicketIcon = (urgency) => {
-  const color = getUrgencyColor(urgency);
-  return L.divIcon({
-    className: "custom-pin bg-transparent border-0",
-    html: `
-      <div style="display: flex; align-items: center; justify-content: center; transform-origin: 50% 50%; animation: ticketPinPopIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);">
-        <style>
-          @keyframes ticketPinPopIn {
-            0% { opacity: 0; transform: scale(0.2); }
-            100% { opacity: 1; transform: scale(1); }
-          }
-          @keyframes ticketPinFadeOut {
-            from { opacity: 1; transform: scale(1); }
-            to { opacity: 0; transform: scale(0.5); }
-          }
-        </style>
-        <svg width="18" height="18" viewBox="0 0 18 18" style="filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.3));">
-          <circle cx="9" cy="9" r="7" fill="${color}" stroke="#ffffff" stroke-width="2.5" />
-        </svg>
-      </div>
-    `,
-    iconSize: [18, 18],
-    iconAnchor: [9, 9],
-    popupAnchor: [0, -9],
-  });
+const urgencyDisplay = (urgency) => (urgency === "Critical" ? "Emergency" : (urgency ?? ""));
+
+const statusDisplay = (status) => {
+  if (status === "Pending") return "Waiting";
+  if (status === "In Progress") return "On the Way";
+  if (status === "Resolved") return "Cleaned Up";
+  return status ?? "";
 };
 
-// Cache per urgency so re-renders keep the same icon and never replay the
-// pop-in animation — a fresh divIcon each render would swap the DOM node and
-// restart the CSS animation on every live-store tick.
-const ticketIconCache = new Map();
-const getTicketIcon = (urgency) => {
-  const key = urgency ?? "default";
-  let icon = ticketIconCache.get(key);
-  if (!icon) {
-    icon = createTicketIcon(urgency);
-    ticketIconCache.set(key, icon);
+const statusTextColor = (status) => {
+  switch (status) {
+    case "Resolved":
+    case "Completed":
+    case "Active":
+    case "On Duty":
+      return "text-emerald-700";
+    case "In Progress":
+    case "Assigned":
+    case "Accepted":
+      return "text-blue-700";
+    case "Pending":
+    case "Paused":
+      return "text-amber-700";
+    case "Suspended":
+    case "Cancelled":
+      return "text-rose-700";
+    case "Inactive":
+    case "Off Duty":
+    case "Unassigned":
+      return "text-zinc-500";
+    case "Scheduled":
+    default:
+      return "text-zinc-700";
   }
-  return icon;
 };
 
-const createTruckIcon = () => {
-  return L.divIcon({
-    className: "custom-truck bg-transparent border-0",
-    html: `
-      <div style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; filter: drop-shadow(0px 3px 5px rgba(0,0,0,0.28)); animation: truckPopIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);">
-        <style>
-          @keyframes truckPopIn {
-            0% { opacity: 0; transform: scale(0); }
-            100% { opacity: 1; transform: scale(1); }
-          }
-          @keyframes truckFadeOut {
-            from { opacity: 1; }
-            to { opacity: 0; }
-          }
-        </style>
-        <svg width="32" height="32" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
-          {/* 4 Side Tires */}
-          <rect x="7" y="9" width="3.5" height="7" rx="1.5" fill="#18181b" />
-          <rect x="33.5" y="9" width="3.5" height="7" rx="1.5" fill="#18181b" />
-          <rect x="6.5" y="27" width="4" height="8" rx="1.5" fill="#18181b" />
-          <rect x="33.5" y="27" width="4" height="8" rx="1.5" fill="#18181b" />
-
-          {/* Compactor Main Container Box */}
-          <rect x="10" y="16" width="24" height="20" rx="3" fill="#10b981" stroke="#059669" stroke-width="1" />
-          {/* Container Top 3D Roof Highlight */}
-          <rect x="13" y="18" width="18" height="14" rx="2" fill="#34d399" opacity="0.9" />
-          <line x1="10" y1="21" x2="34" y2="21" stroke="#047857" stroke-width="1.2" />
-          <line x1="10" y1="26" x2="34" y2="26" stroke="#047857" stroke-width="1.2" />
-          <line x1="10" y1="31" x2="34" y2="31" stroke="#047857" stroke-width="1.2" />
-
-          {/* Rear Hopper Loader */}
-          <rect x="12" y="35" width="20" height="3" rx="1" fill="#064e3b" />
-          <rect x="15" y="35.5" width="4" height="2" fill="#facc15" />
-          <rect x="25" y="35.5" width="4" height="2" fill="#facc15" />
-
-          {/* 3D Cab Front Hood */}
-          <path d="M 12 16 H 32 V 9 C 32 6.5 29.5 5 27 5 H 17 C 14.5 5 12 6.5 12 9 V 16 Z" fill="#059669" stroke="#047857" stroke-width="1" />
-
-          {/* Side Mirrors */}
-          <rect x="7.5" y="11" width="3" height="2" rx="0.5" fill="#047857" />
-          <rect x="33.5" y="11" width="3" height="2" rx="0.5" fill="#047857" />
-
-          {/* Glossy Sky Blue Curved Windshield */}
-          <path d="M 14 11 H 30 L 28 14.5 H 16 L 14 11 Z" fill="#38bdf8" stroke="#e0f2fe" stroke-width="0.8" />
-          <line x1="20" y1="11.5" x2="22" y2="14" stroke="#ffffff" stroke-width="1" opacity="0.8" />
-
-          {/* LED Headlights */}
-          <rect x="13.5" y="5" width="3.5" height="1.8" rx="0.5" fill="#facc15" />
-          <rect x="27" y="5" width="3.5" height="1.8" rx="0.5" fill="#facc15" />
-        </svg>
-      </div>
-    `,
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
-    popupAnchor: [0, -16],
-  });
+const urgencyTextColor = (urgency) => {
+  switch (urgency) {
+    case "Critical":
+      return "text-rose-700";
+    case "High":
+      return "text-orange-700";
+    case "Medium":
+      return "text-amber-700";
+    case "Low":
+      return "text-zinc-600";
+    default:
+      return "text-zinc-700";
+  }
 };
 
-// Single unrotated icon; TruckMarker rotates the inner element per frame so
-// turns tween smoothly instead of swapping icons (which replays the pop-in).
-const truckIcon = createTruckIcon();
+function formatTicketTimestamp(t) {
+  if (t.timestamp) {
+    try {
+      const d = new Date(t.timestamp);
+      return `${d.toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })} · ${d.toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })}`;
+    } catch {
+      return "";
+    }
+  }
+  return `${t.date || ""}${t.time ? ` · ${t.time}` : ""}`;
+}
 
-const createStopPinIcon = (stop, { compact = false } = {}) => {
-  const name = String(stop.name ?? "Next stop").replace(/&/g, "&amp;").replace(/</g, "&lt;");
-  const time = String(stop.time ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
-  const num = stop.index != null ? stop.index + 1 : "";
+// ---- Marker elements (plain DOM for maplibregl.Marker) --------------------
+// Entrance/fade keyframes keep their Leaflet-era names so the marker effects
+// below (and their timings) behave exactly as before.
+
+function makeTicketEl(urgency) {
+  const color = getUrgencyColor(urgency);
+  const el = document.createElement("div");
+  el.className = "custom-pin bg-transparent border-0";
+  el.innerHTML = `
+    <div style="display: flex; align-items: center; justify-content: center; transform-origin: 50% 50%; animation: ticketPinPopIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);">
+      <style>
+        @keyframes ticketPinPopIn {
+          0% { opacity: 0; transform: scale(0.2); }
+          100% { opacity: 1; transform: scale(1); }
+        }
+        @keyframes ticketPinFadeOut {
+          from { opacity: 1; transform: scale(1); }
+          to { opacity: 0; transform: scale(0.5); }
+        }
+      </style>
+      <svg width="18" height="18" viewBox="0 0 18 18" style="filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.3));">
+        <circle cx="9" cy="9" r="7" fill="${color}" stroke="#ffffff" stroke-width="2.5" />
+      </svg>
+    </div>
+  `;
+  return el;
+}
+
+function makeTruckEl() {
+  const el = document.createElement("div");
+  el.className = "custom-truck bg-transparent border-0";
+  el.innerHTML = `
+    <div style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; filter: drop-shadow(0px 3px 5px rgba(0,0,0,0.28)); animation: truckPopIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);">
+      <style>
+        @keyframes truckPopIn {
+          0% { opacity: 0; transform: scale(0); }
+          100% { opacity: 1; transform: scale(1); }
+        }
+        @keyframes truckFadeOut {
+          from { opacity: 1; }
+          to { opacity: 0; }
+        }
+      </style>
+      <svg data-arrow width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="transform-origin: 50% 50%;">
+        <path d="M16 5 L25 25 L16 20 L7 25 Z" fill="#29B6F6" stroke="#ffffff" stroke-width="2.5" stroke-linejoin="round" />
+
+      </svg>
+    </div>
+  `;
+  el.style.zIndex = "5000";
+  return el;
+}
+
+function stopPinInnerHTML(stop, compact = false) {
+  const name = esc(stop.name ?? "Next stop");
+  const time = esc(stop.time ?? "");
+
   const svg = compact
     ? `<svg width="26" height="30" viewBox="0 0 24 28" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.22));">
-        <path d="M12 26 C 12 26 2 17 2 11 C 2 5.5 6.5 1 12 1 C 17.5 1 22 5.5 22 11 C 22 17 12 26 12 26 Z" fill="#059669" stroke="#ffffff" stroke-width="1.8" />
-        ${num ? `<text x="12" y="11" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="800" fill="#ffffff" font-family="ui-sans-serif, system-ui, sans-serif">${num}</text>` : ""}
+        <circle cx="12" cy="10.5" r="7" fill="#ffffff" stroke="#059669" stroke-width="3.5" />
+        <path d="M8.5 16.5 L12 24 L15.5 16.5 Z" fill="#059669" />
+        ${stop.index != null ? `<text x="12" y="10.5" text-anchor="middle" dominant-baseline="central" font-size="7" font-weight="800" fill="#059669" font-family="ui-sans-serif, system-ui, sans-serif">${stop.index + 1}</text>` : ""}
       </svg>`
     : `<svg width="36" height="42" viewBox="0 0 36 42" style="filter: drop-shadow(0 2px 5px rgba(0,0,0,0.25));">
-        <path d="M18 40 C 18 40 3 26 3 17 C 3 8.7 9.7 2 18 2 C 26.3 2 33 8.7 33 17 C 33 26 18 40 18 40 Z" fill="#059669" stroke="#ffffff" stroke-width="2" />
-        ${num ? `<text x="18" y="17" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="800" fill="#ffffff" font-family="ui-sans-serif, system-ui, sans-serif">${num}</text>` : ""}
+        <circle cx="18" cy="15" r="11" fill="#ffffff" stroke="#059669" stroke-width="5" />
+        <path d="M12.5 24 L18 35 L23.5 24 Z" fill="#059669" />
+        ${stop.index != null ? `<text x="18" y="15" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="800" fill="#059669" font-family="ui-sans-serif, system-ui, sans-serif">${stop.index + 1}</text>` : ""}
       </svg>`;
 
   const pill = compact
@@ -187,78 +234,117 @@ const createStopPinIcon = (stop, { compact = false } = {}) => {
         ${time ? `<div style="font-size: 8.5px; font-weight: 600; color: #059669; line-height: 1.35;">${time}</div>` : ""}
       </div>`;
 
-  const totalHeight = compact ? 30 : 76;
+  return `
+    <div data-compact="${compact ? "1" : "0"}" data-stop-index="${stop.index ?? ""}" style="display: flex; flex-direction: column-reverse; align-items: center; pointer-events: none; transform-origin: 50% 100%; animation: stopPinPopIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;">
+      <style>
+        @keyframes stopPinPopIn {
+          0% { opacity: 0; transform: scale(0.2); }
+          100% { opacity: 1; transform: scale(1); }
+        }
+        @keyframes stopPinFadeOut {
+          from { opacity: 1; transform: scale(1); }
+          to { opacity: 0; transform: scale(0.55); }
+        }
+      </style>
+      ${svg}
+      ${pill}
+    </div>
+  `;
+}
+
+function makeStopEl(stop, compact = false) {
+
   const iconWidth = compact ? 26 : 36;
-  const anchorX = Math.round(iconWidth / 2);
+  const el = document.createElement("div");
+  el.className = "custom-stop-pin bg-transparent border-0";
+  el.style.width = `${iconWidth}px`;
+  // Positioning is owned by maplibregl.Marker (anchor:'bottom' at the call
+  // site, like the old iconAnchor) — never transform the element directly.
+  el.innerHTML = stopPinInnerHTML(stop, compact);
+  el.style.zIndex = compact ? "1800" : "2000";
+  return el;
+}
 
-  return L.divIcon({
-    className: "custom-stop-pin bg-transparent border-0",
-    html: `
-      <div data-compact="${compact ? "1" : "0"}" data-stop-index="${stop.index ?? ""}" style="display: flex; flex-direction: column-reverse; align-items: center; pointer-events: none; transform-origin: 50% 100%; animation: stopPinPopIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;">
-        <style>
-          @keyframes stopPinPopIn {
-            0% { opacity: 0; transform: scale(0.2); }
-            100% { opacity: 1; transform: scale(1); }
-          }
-          @keyframes stopPinFadeOut {
-            from { opacity: 1; transform: scale(1); }
-            to { opacity: 0; transform: scale(0.55); }
-          }
-        </style>
-        ${svg}
-        ${pill}
+// ---- Popup HTML (MapLibre popups take HTML strings) ------------------------
+
+function ticketPopupHTML(t) {
+  return `
+    <div style="display:flex;flex-direction:column;gap:8px;min-width:220px;max-width:260px;color:#18181b;font-family:ui-sans-serif,system-ui,sans-serif;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding-bottom:6px;border-bottom:1px solid #f4f4f5;">
+        <span style="font-family:ui-monospace,monospace;font-weight:600;font-size:12px;">${esc(t.id)}</span>
+        <span style="display:inline-flex;align-items:center;padding:4px 10px;border-radius:8px;font-size:12px;font-weight:600;white-space:nowrap;" class="${urgencyTextColor(t.urgency)}">${esc(urgencyDisplay(t.urgency))}</span>
       </div>
-    `,
-    iconSize: [iconWidth, totalHeight],
-    iconAnchor: [anchorX, totalHeight],
-    popupAnchor: [0, -totalHeight],
-  });
-};
+      <div style="display:flex;flex-direction:column;">
+        <span style="font-weight:600;font-size:12px;">${esc(t.location)}</span>
+        <span style="font-size:12px;color:#71717a;">${esc(t.barangay)}${t.city ? `, ${esc(t.city)}` : ""}</span>
+      </div>
+      <p style="font-size:12px;color:#52525b;line-height:1.5;margin:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
+        ${esc(t.description || t.notes)}
+      </p>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding-top:8px;border-top:1px solid #f4f4f5;margin-top:2px;">
+        <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:8px;font-size:12px;font-weight:600;white-space:nowrap;" class="${statusTextColor(t.status)}"><span style="width:6px;height:6px;border-radius:999px;background:currentColor;opacity:0.85;"></span>${esc(statusDisplay(t.status))}</span>
+        <span style="font-size:12px;color:#a1a1aa;font-family:ui-monospace,monospace;">${esc(formatTicketTimestamp(t))}</span>
+      </div>
+    </div>
+  `;
+}
 
-// Cache by stop identity + variant so re-renders keep the same icon and never
-// replay the pop-in animation; a stopIndex change produces a fresh key, which is
-// exactly when we want the pin to pop in again.
-const stopPinCache = new Map();
-const getStopPinIcon = (stop, compact = false) => {
-  const key = `${stop.name ?? ""}|${stop.lat}|${stop.lng}|${stop.time ?? ""}|${stop.index ?? ""}|${compact ? "c" : "f"}`;
-  let icon = stopPinCache.get(key);
-  if (!icon) {
-    icon = createStopPinIcon(stop, { compact });
-    stopPinCache.set(key, icon);
-  }
-  return icon;
-};
+function truckPopupHTML(trk) {
+  const duty = trk.isActive
+    ? `<span style="font-size:12px;color:#059669;font-weight:600;">• On Duty</span>`
+    : `<span style="font-size:12px;color:#d97706;font-weight:600;">• Paused</span>`;
+  return `
+    <div style="display:flex;flex-direction:column;gap:6px;min-width:200px;color:#18181b;font-family:ui-sans-serif,system-ui,sans-serif;padding:12px;">
+      <div style="display:flex;align-items:center;gap:6px;padding-bottom:4px;border-bottom:1px solid #f4f4f5;">
+        <span style="font-weight:600;font-size:12px;">${esc(trk.id)}</span>
+        ${duty}
+      </div>
+      <div style="display:flex;flex-direction:column;font-size:12px;color:#52525b;gap:2px;">
+        <div><span style="font-weight:600;color:#3f3f46;">Driver:</span> ${esc(trk.driver)}</div>
+        <div><span style="font-weight:600;color:#3f3f46;">Plate:</span> ${esc(trk.plate)}</div>
+        ${trk.capacity ? `<div><span style="font-weight:600;color:#3f3f46;">Load:</span> ${esc(trk.capacity)}</div>` : ""}
+        ${trk.eta ? `<div style="color:#059669;font-weight:700;margin-top:4px;">Arriving in: ${esc(trk.eta)}</div>` : ""}
+      </div>
+    </div>
+  `;
+}
 
-// Stable identity for an upcoming-stop pin: absolute route index + position.
-const upcomingPinKey = (s) => `${s.index}-${s.lat}-${s.lng}`;
+// ---- Marker components (each owns one maplibregl.Marker) ------------------
 
-function StopPinMarker({ stop, fading, compact = false }) {
+function TicketMarker({ map, ticket: t, fading, highlighted, showTicketPopup, onSelectTicket }) {
   const markerRef = useRef(null);
 
   useEffect(() => {
-    const inner = markerRef.current?.getElement()?.firstElementChild;
-    if (!inner) return;
-    if (fading) {
-      inner.style.animation = "stopPinFadeOut 0.45s ease-in forwards";
-    }
-  }, [fading]);
+    if (!map) return;
+    const marker = new maplibregl.Marker({ element: makeTicketEl(t.urgency) })
+      .setLngLat([t.lng, t.lat])
+      .addTo(map);
+    if (highlighted) marker.getElement().style.zIndex = "1000";
+    markerRef.current = marker;
+    const onClick = () => {
+      if (!showTicketPopup && onSelectTicket) {
+        onSelectTicket(t);
+        return;
+      }
+      if (showTicketPopup) {
+        new maplibregl.Popup({ offset: 12, maxWidth: "280px" })
+          .setLngLat([t.lng, t.lat])
+          .setHTML(ticketPopupHTML(t))
+          .addTo(map);
+      }
+    };
+    marker.getElement().addEventListener("click", onClick);
+    return () => {
+      marker.getElement().removeEventListener("click", onClick);
+      marker.remove();
+      markerRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map]);
 
-  return (
-    <Marker
-      ref={markerRef}
-      position={[stop.lat, stop.lng]}
-      icon={getStopPinIcon(stop, compact)}
-      zIndexOffset={compact ? 1800 : 2000}
-    />
-  );
-}
-
-// Report/ticket pin: pops in on mount via the icon's own animation; on removal
-// the parent keeps it mounted ~500ms with `fading` so it shrinks away instead
-// of vanishing. Same key whether live or fading, so the marker never remounts
-// mid-transition.
-function TicketMarker({ ticket: t, fading, highlighted, showTicketPopup, onSelectTicket }) {
-  const markerRef = useRef(null);
+  useEffect(() => {
+    markerRef.current?.setLngLat([t.lng, t.lat]);
+  }, [t.lat, t.lng]);
 
   useEffect(() => {
     const inner = markerRef.current?.getElement()?.firstElementChild;
@@ -268,63 +354,44 @@ function TicketMarker({ ticket: t, fading, highlighted, showTicketPopup, onSelec
     }
   }, [fading]);
 
-  return (
-    <Marker
-      ref={markerRef}
-      position={[t.lat, t.lng]}
-      icon={getTicketIcon(t.urgency)}
-      zIndexOffset={highlighted ? 1000 : 0}
-      eventHandlers={
-        !showTicketPopup && onSelectTicket
-          ? { click: () => onSelectTicket(t) }
-          : undefined
-      }
-    >
-      {showTicketPopup && (
-      <Popup>
-        <div className="p-3.5 flex flex-col gap-2 min-w-[220px] max-w-[260px] text-zinc-900 font-sans">
-          <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-zinc-100">
-            <span className="font-mono font-semibold text-xs text-zinc-900">
-              {t.id}
-            </span>
-            <UrgencyBadge urgency={t.urgency} />
-          </div>
-
-          <div className="flex flex-col">
-            <span className="font-semibold text-xs text-zinc-900">
-              {t.location}
-            </span>
-            <span className="text-xs text-zinc-500">
-              {t.barangay}, {t.city || "Cebu City"}
-            </span>
-          </div>
-
-          <p className="text-xs text-zinc-600 line-clamp-2 leading-relaxed">
-            {t.description || t.notes}
-          </p>
-
-          <div className="flex items-center justify-between pt-2 border-t border-zinc-100 mt-0.5">
-            <StatusBadge status={t.status} />
-            <span className="text-xs text-zinc-400 font-mono tabular-nums">
-              {t.timestamp
-                ? `${new Date(t.timestamp).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })} · ${new Date(t.timestamp).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })}`
-                : `${t.date || ""}${t.time ? ` · ${t.time}` : ""}`}
-            </span>
-          </div>
-        </div>
-      </Popup>
-      )}
-    </Marker>
-  );
+  return null;
 }
 
-
-function TruckMarker({ trk, fading, bearing = 0 }) {
-  const map = useMap();
+function StopPinMarker({ map, stop, fading, compact = false }) {
   const markerRef = useRef(null);
-  const [view, setView] = useState({ lat: trk.lat, lng: trk.lng, rot: trk.heading ?? 90 });
+
+  useEffect(() => {
+    if (!map) return;
+    const marker = new maplibregl.Marker({ element: makeStopEl(stop, compact), anchor: "bottom" })
+      .setLngLat([stop.lng, stop.lat])
+      .addTo(map);
+    markerRef.current = marker;
+    return () => {
+      marker.remove();
+      markerRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map]);
+
+  useEffect(() => {
+    markerRef.current?.setLngLat([stop.lng, stop.lat]);
+  }, [stop.lat, stop.lng]);
+
+  useEffect(() => {
+    const inner = markerRef.current?.getElement()?.firstElementChild;
+    if (!inner) return;
+    if (fading) {
+      inner.style.animation = "stopPinFadeOut 0.45s ease-in forwards";
+    }
+  }, [fading]);
+
+  return null;
+}
+
+function TruckMarker({ map, trk, fading }) {
+  const markerRef = useRef(null);
+  const [view, setView] = useState({ lat: trk.lat, lng: trk.lng });
   const viewRef = useRef(view);
-  viewRef.current = view;
   const animRef = useRef(null);
   // When the marker mounts (Start/Resume), the first road-snapped fix lands
   // just after the raw mount point. Fixes inside this window snap instead of
@@ -335,12 +402,10 @@ function TruckMarker({ trk, fading, bearing = 0 }) {
   if (mountedAt.current === null) mountedAt.current = performance.now();
   const wasFading = useRef(fading);
 
-  const activeIcon = truckIcon;
-
-  // New telemetry retargets the tween; position glides over the 5s update
-  // cadence and heading eases faster so turns read like a nav arrow.
-  // If the position jumps > 30m (e.g. route start or reset), snap immediately
-  // so the truck pops in cleanly on the trajectory instead of floating across the map.
+  // New telemetry retargets the tween; position glides over the ~2s update
+  // cadence. Jumps > 30m (route start, reset) snap immediately. The arrow
+  // art points north; its screen rotation is applied separately below from
+  // the truck heading and the live map bearing.
   useEffect(() => {
     const v = viewRef.current;
     const dLat = (trk.lat - v.lat) * 111000;
@@ -348,7 +413,7 @@ function TruckMarker({ trk, fading, bearing = 0 }) {
     const distMeters = Math.sqrt(dLat * dLat + dLng * dLng);
 
     if (distMeters > 30 || performance.now() - mountedAt.current < APPEAR_GRACE_MS) {
-      setView({ lat: trk.lat, lng: trk.lng, rot: trk.heading ?? 90 });
+      setView({ lat: trk.lat, lng: trk.lng });
       animRef.current = null;
       return;
     }
@@ -358,38 +423,74 @@ function TruckMarker({ trk, fading, bearing = 0 }) {
       fromLng: v.lng,
       toLat: trk.lat,
       toLng: trk.lng,
-      fromRot: v.rot,
-      toRot: trk.heading ?? 90,
       start: performance.now(),
     };
-  }, [trk.lat, trk.lng, trk.heading]);
+  }, [trk.lat, trk.lng]);
 
   useEffect(() => {
     let raf;
     const loop = (now) => {
       const a = animRef.current;
       if (a) {
-        const pk = Math.min(1, (now - a.start) / 1000);
-        const rk = Math.min(1, (now - a.start) / 900);
-        const dRot = ((a.toRot - a.fromRot + 540) % 360) - 180;
+        const k = Math.min(1, (now - a.start) / 1000);
         const next = {
-          lat: a.fromLat + (a.toLat - a.fromLat) * pk,
-          lng: a.fromLng + (a.toLng - a.fromLng) * pk,
-          rot: a.fromRot + dRot * rk,
+          lat: a.fromLat + (a.toLat - a.fromLat) * k,
+          lng: a.fromLng + (a.toLng - a.fromLng) * k,
         };
         const v = viewRef.current;
-        if (next.lat !== v.lat || next.lng !== v.lng || next.rot !== v.rot) setView(next);
-        // Stop looping once both tweens are done
-        if (pk >= 1 && rk >= 1) { animRef.current = null; return; }
+        if (next.lat !== v.lat || next.lng !== v.lng) setView(next);
+        if (k >= 1) { animRef.current = null; return; }
       } else {
-        // No active animation — don't keep looping
         return;
       }
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [trk.lat, trk.lng, trk.heading]);
+  }, [trk.lat, trk.lng]);
+
+  useEffect(() => {
+    if (!map) return;
+    const marker = new maplibregl.Marker({ element: makeTruckEl() })
+      .setLngLat([viewRef.current.lng, viewRef.current.lat])
+      .addTo(map);
+    markerRef.current = marker;
+    const onClick = () => {
+      new maplibregl.Popup({ offset: 14, maxWidth: "280px" })
+        .setLngLat([viewRef.current.lng, viewRef.current.lat])
+        .setHTML(truckPopupHTML(trk))
+        .addTo(map);
+    };
+    marker.getElement().addEventListener("click", onClick);
+    return () => {
+      marker.getElement().removeEventListener("click", onClick);
+      marker.remove();
+      markerRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map]);
+
+  useEffect(() => {
+    markerRef.current?.setLngLat([view.lng, view.lat]);
+    viewRef.current = view;
+  }, [view]);
+
+  // Waze-style heading arrow: spin it by (compass heading minus compass
+  // up-screen map bearing). Re-applied on heading changes and while the map
+  // itself rotates (course-up drive mode).
+  useEffect(() => {
+    const el = markerRef.current?.getElement();
+    if (!el || !map) return;
+    const apply = () => {
+      const arrow = el.querySelector("[data-arrow]");
+      if (!arrow) return;
+      const deg = (((trk.heading ?? 0) - map.getBearing()) % 360 + 360) % 360;
+      arrow.style.transform = `rotate(${deg}deg)`;
+    };
+    apply();
+    map.on("rotate", apply);
+    return () => { map.off("rotate", apply); };
+  }, [map, trk.heading]);
 
   useEffect(() => {
     const inner = markerRef.current?.getElement()?.firstElementChild;
@@ -405,322 +506,19 @@ function TruckMarker({ trk, fading, bearing = 0 }) {
       inner.style.animation = "truckPopIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)";
       wasFading.current = false;
     }
-    const svg = inner.querySelector('svg');
-    if (!svg) return;
-
-    const updateRotation = () => {
-      // The map's actual physical bearing (whether auto-rotated or manually rotated)
-      const currentMapBearing = typeof map.getBearing === "function" ? map.getBearing() : (bearing || 0);
-      // App heading convention is compass + 90 and the icon faces north at
-      // rotation 0, so the drawn rotation is (heading - 90) minus whatever
-      // the map itself is rotated by (so it stays aligned to the roads on screen).
-      svg.style.transform = `rotate(${view.rot - currentMapBearing - 90}deg)`;
-    };
-
-    updateRotation();
-    map.on("rotate", updateRotation);
-    return () => map.off("rotate", updateRotation);
-  }, [view.rot, map, fading, bearing]);
-
-  return (
-    <Marker
-      ref={markerRef}
-      position={[view.lat, view.lng]}
-      icon={activeIcon}
-      zIndexOffset={5000}
-    >
-      <Popup>
-        <div className="p-3 flex flex-col gap-1.5 min-w-[200px] text-zinc-900 font-sans">
-          <div className="flex items-center gap-1.5 pb-1 border-b border-zinc-100">
-            <span className="font-semibold text-xs text-zinc-900">
-              {trk.id}
-            </span>
-            {trk.isActive ? (
-              <span className="text-xs text-emerald-600 font-semibold">
-                • On Duty
-              </span>
-            ) : (
-              <span className="text-xs text-amber-600 font-semibold">
-                • Paused
-              </span>
-            )}
-          </div>
-          <div className="flex flex-col text-xs text-zinc-600 gap-0.5">
-            <div><span className="font-semibold text-zinc-700">Driver:</span> {trk.driver}</div>
-            <div><span className="font-semibold text-zinc-700">Plate:</span> {trk.plate}</div>
-            {trk.capacity && <div><span className="font-semibold text-zinc-700">Load:</span> {trk.capacity}</div>}
-            {trk.eta && <div className="text-emerald-600 font-bold mt-1">Arriving in: {trk.eta}</div>}
-          </div>
-        </div>
-      </Popup>
-    </Marker>
-  );
-}
-
-
-function MapCameraController({ center, zoom, onMapDrag, onBoundsChange, flySignal, bearing, onUserRotate, perspective3D }) {
-  const map = useMap();
-  const isFirstRender = useRef(true);
-  const prevCenterRef = useRef(toLatLngTuple(center) || [10.3025, 123.9095]);
-  const prevZoomRef = useRef(zoom);
-  const centerRef = useRef(center);
-  const zoomRef = useRef(zoom);
-  centerRef.current = center;
-  zoomRef.current = zoom;
-  const selfRotate = useRef(false);
-  // While the user's finger is down (between dragstart and dragend), camera
-  // follow is suspended: GPS pushes arriving mid-drag must not yank the view
-  // back with an animated setView, which reads as the map "reacting" to —
-  // and fighting — the drag.
-  const draggingRef = useRef(false);
-  // Same idea for zoom gestures: pinch/button zoom fires zoomstart/zoomend,
-  // NOT drag events, so without this a GPS push landing mid-zoom animates the
-  // camera and the trajectory swings with your POV instead of staying put.
-  const zoomingRef = useRef(false);
-  const cameraHeld = () => draggingRef.current || zoomingRef.current;
-
-  // Any rotation we did not trigger ourselves came from a user gesture
-  // (two-finger rotate / shift+wheel), which pauses the auto camera.
-  useEffect(() => {
-    const handler = () => {
-      if (!selfRotate.current) onUserRotate?.();
-    };
-    map.on("rotate", handler);
-    return () => map.off("rotate", handler);
-  }, [map, onUserRotate]);
-
-  // Reactive camera follow: smoothly pan as the center prop updates.
-  // Suspended while the user is actively dragging or zooming (see cameraHeld).
-  useEffect(() => {
-    if (!center || cameraHeld()) return;
-    const tuple = toLatLngTuple(center);
-    if (!tuple) return;
-    if (
-      isFirstRender.current ||
-      !prevCenterRef.current ||
-      prevCenterRef.current[0] !== tuple[0] ||
-      prevCenterRef.current[1] !== tuple[1] ||
-      prevZoomRef.current !== zoom
-    ) {
-      map.setView(tuple, zoom, { animate: true, duration: 0.8 });
-      prevCenterRef.current = tuple;
-      prevZoomRef.current = zoom;
-      isFirstRender.current = false;
-    }
-  }, [center, zoom, map]);
-
-  // Course-up camera (Waze-style): rotate the map so the travel heading is up.
-  // bearing === null means the user is rotating manually; leave them alone.
-  // Also held during zoom gestures so a heading update can't start a rotation
-  // tween mid-zoom and make the trajectory swing.
-  useEffect(() => {
-    if (bearing == null || zoomingRef.current || !map._rotate || typeof map.setBearing !== "function") return;
-    const apply = (deg) => {
-      selfRotate.current = true;
-      map.setBearing(deg);
-      selfRotate.current = false;
-    };
-    const target = bearing;
-    const from = map.getBearing();
-    const delta = ((target - from + 540) % 360) - 180;
-    if (Math.abs(delta) < 0.5) {
-      apply(target);
-      return;
-    }
-    const start = performance.now();
-    const dur = 900;
-    let raf;
-    const step = (now) => {
-      const k = Math.min(1, (now - start) / dur);
-      const e = k * (2 - k);
-      apply(from + delta * e);
-      if (k < 1) raf = requestAnimationFrame(step);
-    };
-    raf = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(raf);
-  }, [bearing, map]);
-
-  // A manual drag moves the map without updating React state, so re-clicking a
-  // recenter button sends identical center/zoom values; flySignal forces the fly.
-  useEffect(() => {
-    if (!flySignal || cameraHeld()) return;
-    const tuple = toLatLngTuple(centerRef.current);
-    if (tuple) map.flyTo(tuple, zoomRef.current, { animate: true, duration: 0.8 });
-  }, [flySignal, map]);
-
-  // Drag dismissal is gated on a real pan distance: `dragstart` fires on
-  // even a 1px accidental touch, which used to wipe focused pins/sheets.
-  // Micro-pans below the threshold keep focus; an intentional pan dismisses.
-  // The gesture window also drives draggingRef so camera-follow effects hold
-  // still until the finger lifts — independent of onMapDrag being set.
-  useEffect(() => {
-    const handleDragStart = () => {
-      draggingRef.current = true;
-    };
-    const handleDragEnd = () => {
-      draggingRef.current = false;
-    };
-    const handleZoomStart = () => {
-      zoomingRef.current = true;
-    };
-    const handleZoomEnd = () => {
-      zoomingRef.current = false;
-    };
-    map.on("dragstart", handleDragStart);
-    map.on("dragend", handleDragEnd);
-    map.on("zoomstart", handleZoomStart);
-    map.on("zoomend", handleZoomEnd);
-    return () => {
-      map.off("dragstart", handleDragStart);
-      map.off("dragend", handleDragEnd);
-      map.off("zoomstart", handleZoomStart);
-      map.off("zoomend", handleZoomEnd);
-    };
-  }, [map]);
-
-  useEffect(() => {
-    if (!onMapDrag) return;
-    const INTENTIONAL_PAN_PX = 20;
-    let startCenter = null;
-    const handleDragStart = () => {
-      startCenter = map.getCenter();
-    };
-    const handleDragEnd = () => {
-      if (!startCenter) {
-        onMapDrag();
-        return;
-      }
-      try {
-        const z = map.getZoom();
-        const moved = map.project(startCenter, z).distanceTo(map.project(map.getCenter(), z));
-        if (moved >= INTENTIONAL_PAN_PX) onMapDrag();
-      } catch {
-        onMapDrag();
-      }
-      startCenter = null;
-    };
-    map.on("dragstart", handleDragStart);
-    map.on("dragend", handleDragEnd);
-    return () => {
-      map.off("dragstart", handleDragStart);
-      map.off("dragend", handleDragEnd);
-    };
-  }, [map, onMapDrag]);
-
-  useEffect(() => {
-    if (!onBoundsChange) return;
-    const report = () => {
-      const b = map.getBounds();
-      onBoundsChange({
-        north: b.getNorth(),
-        south: b.getSouth(),
-        east: b.getEast(),
-        west: b.getWest(),
-      });
-    };
-    report();
-    map.on("moveend", report);
-    return () => {
-      map.off("moveend", report);
-    };
-  }, [map, onBoundsChange]);
-
-  useEffect(() => {
-    // Multi-phase invalidateSize to handle tab transitions, mobile shell animations, and perspective3D changes
-    const t1 = setTimeout(() => map.invalidateSize(), 50);
-    const t2 = setTimeout(() => map.invalidateSize(), 250);
-    const t3 = setTimeout(() => map.invalidateSize(), 600);
-
-    const handleResize = () => map.invalidateSize();
-    window.addEventListener("resize", handleResize);
-
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-      clearTimeout(t3);
-      window.removeEventListener("resize", handleResize);
-    };
-  }, [map, perspective3D]);
-
-  useEffect(() => {
-    const tuple = toLatLngTuple(center);
-    if (!tuple) return;
-    const [lat, lng] = tuple;
-
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      prevCenterRef.current = [lat, lng];
-      prevZoomRef.current = zoom;
-      return;
-    }
-    const [prevLat, prevLng] = prevCenterRef.current || [];
-    const centerChanged = lat !== prevLat || lng !== prevLng;
-    const zoomChanged = zoom !== prevZoomRef.current;
-    if (centerChanged) prevCenterRef.current = [lat, lng];
-    if (zoomChanged) prevZoomRef.current = zoom;
-    // Never animate the camera mid-drag or mid-zoom: refs above still advance
-    // so follow resumes cleanly from the next update instead of yanking back.
-    if (cameraHeld()) return;
-    if (zoomChanged) {
-      map.flyTo([lat, lng], zoom, { animate: true, duration: 0.8 });
-    } else if (centerChanged) {
-      map.panTo([lat, lng], { animate: true, duration: 0.4 });
-    }
-  }, [center, zoom, map]);
+  }, [fading]);
 
   return null;
 }
 
-function MapReadyNotifier({ onReady, tileRef }) {
-  const map = useMap();
-  useEffect(() => {
-    let done = false;
-    const fire = () => {
-      if (done) return;
-      done = true;
-      onReady();
-    };
-    const tl = tileRef.current;
-    tl?.on("load", fire);
-    const fallback = setTimeout(fire, 3000);
-    return () => {
-      clearTimeout(fallback);
-      tl?.off("load", fire);
-    };
-  }, [map, onReady, tileRef]);
-  return null;
-}
-
-function BearingWatcher({ onBearing }) {
-  const map = useMap();
-  useEffect(() => {
-    const handler = () => onBearing(map.getBearing());
-    map.on("rotate", handler);
-    return () => map.off("rotate", handler);
-  }, [map, onBearing]);
-  return null;
-}
+// Stable identity for an upcoming-stop pin: absolute route index + position.
+const upcomingPinKey = (s) => `${s.index}-${s.lat}-${s.lng}`;
 
 export default function MapCanvas({ tickets = [], trucks = [], mapMode = "pins", center, zoom, highlightedTicketId, currentStop, upcomingStops = [], onSelectTicket, onMapDrag, onBoundsChange, flySignal, onMapReady, showZoomControl = false, showTicketPopup = true, rotatable = false, bearing = null, perspective3D = false, hidePausedTrucks = false }) {
-  const [mounted, setMounted] = useState(false);
-  const tileRef = useRef(null);
-  // Basemap fallback: HOT is served from France and can time out on some
-  // networks. After several consecutive tile failures, switch to OSM
-  // standard so the map always renders something.
-  const [tileUrl, setTileUrl] = useState(HOT_TILE_URL);
-  const tileErrorsRef = useRef(0);
-  const fellBackRef = useRef(false);
-  const tileEvents = useMemo(() => ({
-    tileload: () => { tileErrorsRef.current = 0; },
-    tileerror: () => {
-      if (fellBackRef.current) return;
-      tileErrorsRef.current += 1;
-      if (tileErrorsRef.current >= 8) {
-        fellBackRef.current = true;
-        setTileUrl(OSM_FALLBACK_TILE_URL);
-      }
-    },
-  }), []);
+  const containerRef = useRef(null);
+  const [mapObj, setMapObj] = useState(null);
+  const [mapError, setMapError] = useState(false);
+  const [mapLoaded, setMapLoaded] = useState(false);
   const tejeroCenter = [10.3016, 123.9086];
   const mapCenter = center || tejeroCenter;
   const mapZoom = zoom ?? (center ? 16 : 14);
@@ -729,8 +527,20 @@ export default function MapCanvas({ tickets = [], trucks = [], mapMode = "pins",
   // the driver map, north-up elsewhere) until the compass button resumes it.
   const [autoFollow, setAutoFollow] = useState(true);
   const [viewBearing, setViewBearing] = useState(0);
+
   const handleUserRotate = useCallback(() => setAutoFollow(false), []);
-  const handleBearing = useCallback((deg) => setViewBearing(deg), []);
+  const bearingTargetRef = useRef(null);
+
+  // The `bearing` prop uses the app heading convention (heading = compass +
+  // 90). MapLibre bearings equal the compass facing up-screen, so the camera
+  // takes the plain compass value. Course-up == travel points up, natively.
+  const compassBearing = appHeadingToMlBearing(bearing);
+  const driveOn = perspective3D && autoFollow && compassBearing != null;
+  const cameraBearing = driveOn ? compassBearing : (rotatable ? 0 : null);
+  // Flat north-up maps still reset a leftover drive rotation; manual user
+  // rotations (autoFollow false) are left alone.
+  const wantBearing = autoFollow ? cameraBearing : null;
+  const wantPitch = perspective3D ? DRIVE_PITCH : FLAT_PITCH;
 
   // On-duty trucks broadcast live; paused trucks (mid-route, GPS stopped via
   // End Route) stay visible at their last known position so admins can see an
@@ -830,147 +640,256 @@ export default function MapCanvas({ tickets = [], trucks = [], mapMode = "pins",
   const fadingUpcomingOnly = fadingUpcoming.filter((s) => !upcomingKeys.has(upcomingPinKey(s)));
   const fadingUpcomingKeys = new Set(fadingUpcomingOnly.map(upcomingPinKey));
 
-  useEffect(() => {
-    const t = setTimeout(() => setMounted(true), 0);
-    return () => clearTimeout(t);
-  }, []);
-
-  if (!mounted) {
-    return <MapSkeleton />;
-  }
-
-  const highlightedTicket = highlightedTicketId ? tickets.find(t => t.id === highlightedTicketId) : null;
-
-  // The `bearing` prop uses the app heading convention (heading = compass + 90).
-  // Course-up means rotating the map by -compass so travel points up, while the
-  // truck marker (unrotated pane) compensates by the compass value to stay up.
-  const compassBearing = bearing == null ? null : (((bearing - 90) % 360) + 360) % 360;
-  const cameraBearing = compassBearing == null ? null : (360 - compassBearing) % 360;
-
   // Shortest angular distance of the live map rotation from its rest bearing,
   // used to decide when the compass reset button is worth showing.
   const normBearing = (((viewBearing % 360) + 540) % 360) - 180;
   const showCompass = rotatable || Math.abs(normBearing) > 2;
 
+  // ---- Map instance (created once; camera follows via effects) ------------
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    let map = null;
+    let settled = false;
+    const settle = () => {
+      if (settled) return;
+      settled = true;
+      setMapLoaded(true);
+      try { onMapReady?.(); } catch {}
+    };
+    try {
+      if (mapError) return;
+      // Turbopack does not emit maplibre's worker chunk (its URL is derived
+      // from import.meta at runtime and 404s as HTML), so serve the vendored
+      // worker explicitly. Both files are pinned to maplibre-gl 6.11.2 —
+      // re-copy from node_modules/maplibre-gl/dist on upgrade.
+      maplibregl.setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
+      const first = toLatLngTuple(mapCenter) || tejeroCenter;
+      map = new maplibregl.Map({
+        container,
+        style: VECTOR_STYLE_URL,
+        center: [first[1], first[0]],
+        zoom: mapZoom,
+        minZoom: METRO_CEBU_MIN_ZOOM,
+        maxBounds: METRO_CEBU_MAX_BOUNDS,
+        maxPitch: 70,
+        attributionControl: false,
+      });
+      if (showZoomControl) {
+        map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-left");
+      }
+      // v6 has no supported() export: GPU failure surfaces as a DOM event on
+      // the canvas (plus a sync throw at construction, caught below).
+      const handleWebglFail = () => setMapError(true);
+      container.addEventListener("webglcontextcreationerror", handleWebglFail);
+      map.on("load", settle);
+      // Tiles can lag on slow links; never trap the UI behind the skeleton.
+      // (Mirrors the old 3s tile-load fallback.)
+      setTimeout(settle, 4000);
+      setMapObj(map);
+    } catch {
+      setTimeout(() => setMapError(true), 0);
+    }
+    return () => {
+      setMapObj(null);
+      try { container.removeEventListener("webglcontextcreationerror", handleWebglFail); } catch {}
+      try { map?.remove(); } catch {}
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ---- Gesture + camera plumbing ------------------------------------------
+  const draggingRef = useRef(false);
+  const zoomingRef = useRef(false);
+  const cameraHeld = () => draggingRef.current || zoomingRef.current;
+  const centerRef = useRef(toLatLngTuple(mapCenter));
+  const zoomRef = useRef(mapZoom);
+  const prevSentRef = useRef(null);
+  const isFirstCamera = useRef(true);
+
+  // Finger/zoom gestures suspend the follow camera; an intentional pan past
+  // ~20px also dismisses focus (same threshold as before, converted through
+  // the local meters-per-pixel at the gesture zoom).
+  useEffect(() => {
+    if (!mapObj) return;
+    let startCenter = null;
+    let startZoom = mapZoom;
+    const onDragStart = () => {
+      draggingRef.current = true;
+      try { startCenter = mapObj.getCenter(); startZoom = mapObj.getZoom(); } catch { startCenter = null; }
+    };
+    const onDragEnd = () => {
+      draggingRef.current = false;
+      if (startCenter && onMapDrag) {
+        try {
+          const end = mapObj.getCenter();
+          const mPerPx = (156543.03392 * Math.cos((startCenter.lat * Math.PI) / 180)) / Math.pow(2, startZoom);
+          const dx = (end.lng - startCenter.lng) * 111320 * Math.cos((startCenter.lat * Math.PI) / 180);
+          const dy = (end.lat - startCenter.lat) * 111320;
+          if (Math.hypot(dx, dy) >= 20 * mPerPx) onMapDrag();
+        } catch {
+          onMapDrag();
+        }
+      }
+      startCenter = null;
+    };
+    const onZoomStart = () => { zoomingRef.current = true; };
+    const onZoomEnd = () => { zoomingRef.current = false; };
+    mapObj.on("dragstart", onDragStart);
+    mapObj.on("dragend", onDragEnd);
+    mapObj.on("zoomstart", onZoomStart);
+    mapObj.on("zoomend", onZoomEnd);
+    return () => {
+      mapObj.off("dragstart", onDragStart);
+      mapObj.off("dragend", onDragEnd);
+      mapObj.off("zoomstart", onZoomStart);
+      mapObj.off("zoomend", onZoomEnd);
+    };
+  }, [mapObj, onMapDrag, mapZoom]);
+
+  // Rotation tracking: programmatic tweens carry a target bearing, so only
+  // anything else counts as a user rotate gesture (pauses auto-follow).
+  useEffect(() => {
+    if (!mapObj) return;
+    const handler = () => {
+      const b = mapObj.getBearing();
+      setViewBearing(b);
+      const t = bearingTargetRef.current;
+      if (t != null && Math.abs(angDelta(b, t)) < 2) return;
+      handleUserRotate();
+    };
+    mapObj.on("rotate", handler);
+    return () => {
+      mapObj.off("rotate", handler);
+    };
+  }, [mapObj, handleUserRotate]);
+
+  useEffect(() => {
+    if (!mapObj || !onBoundsChange) return;
+    const report = () => {
+      try {
+        const b = mapObj.getBounds();
+        onBoundsChange({ north: b.getNorth(), south: b.getSouth(), east: b.getEast(), west: b.getWest() });
+      } catch {}
+    };
+    report();
+    mapObj.on("moveend", report);
+    return () => {
+      mapObj.off("moveend", report);
+    };
+  }, [mapObj, onBoundsChange]);
+
+  // Reactive follow camera: center + zoom + course-up bearing + drive pitch
+  // in ONE easeTo (a second easeTo would cancel the first). Manual user
+  // rotation leaves bearing alone; an untouched flat map stays north-up.
+  useEffect(() => {
+    if (!mapObj) return;
+    const tuple = toLatLngTuple(mapCenter);
+    centerRef.current = tuple;
+    zoomRef.current = mapZoom;
+    if (!tuple) return;
+    const dest = aheadTarget(tuple, autoFollow ? bearing : null, mapZoom, perspective3D);
+    const b = wantBearing;
+    const p = wantPitch;
+    const prev = prevSentRef.current;
+    const same =
+      prev &&
+      prev.lat === dest[0] &&
+      prev.lng === dest[1] &&
+      prev.zoom === mapZoom &&
+      prev.bearing === b &&
+      prev.pitch === p;
+    prevSentRef.current = { lat: dest[0], lng: dest[1], zoom: mapZoom, bearing: b, pitch: p };
+    if (same || cameraHeld()) return;
+    const center = [dest[1], dest[0]];
+    if (isFirstCamera.current) {
+      isFirstCamera.current = false;
+      mapObj.jumpTo({ center, zoom: mapZoom, bearing: b ?? mapObj.getBearing(), pitch: p });
+      return;
+    }
+    bearingTargetRef.current = b;
+    mapObj.easeTo({ center, zoom: mapZoom, bearing: b ?? mapObj.getBearing(), pitch: p, duration: 800 });
+  }, [mapObj, mapCenter, mapZoom, wantBearing, wantPitch, bearing, autoFollow, perspective3D]);
+
+  // Recenter signal (re-tapping focus sends identical center values).
+  useEffect(() => {
+    if (!mapObj || !flySignal || cameraHeld()) return;
+    const tuple = centerRef.current;
+    if (!tuple) return;
+    mapObj.flyTo({ center: [tuple[1], tuple[0]], zoom: zoomRef.current, duration: 1600 });
+  }, [flySignal, mapObj]);
+
+  // Compass needle points at screen-north: with compass C facing up-screen,
+  // north sits C degrees counter-clockwise from up.
+  const compassUp = ((viewBearing % 360) + 360) % 360;
+
+  if (mapError) {
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-muted p-6 text-center text-sm text-muted-foreground">
+        Map unavailable (WebGL or map tiles unreachable). Everything below stays live.
+      </div>
+    );
+  }
+
   return (
     <div className="w-full h-full relative overflow-hidden">
-      <div className="w-full h-full absolute">
-        <MapContainer
-          center={mapCenter}
-          zoom={mapZoom}
-          scrollWheelZoom={true}
-          attributionControl={false}
-          zoomControl={false}
-          rotate
-          rotateControl={false}
-          touchRotate={true}
-          minZoom={METRO_CEBU_MIN_ZOOM}
-          maxBounds={METRO_CEBU_MAX_BOUNDS}
-          maxBoundsViscosity={METRO_CEBU_BOUNDS_VISCOSITY}
-          className="w-full h-full z-10"
-        >
-          <MapCameraController center={mapCenter} zoom={mapZoom} onMapDrag={onMapDrag} onBoundsChange={onBoundsChange} flySignal={flySignal} bearing={autoFollow ? (rotatable ? cameraBearing : 0) : null} onUserRotate={handleUserRotate} perspective3D={perspective3D} />
-          <BearingWatcher onBearing={handleBearing} />
-          {showZoomControl && <ZoomControl position="topleft" />}
-          
-          {/* HOT tiles (big labels) with automatic fallback to OSM standard if HOT is unreachable */}
-          <TileLayer
-            key={tileUrl}
-            ref={tileRef}
-            attribution={tileUrl === HOT_TILE_URL ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | Tiles style by <a href="https://www.hotosm.org/">HOT</a> — <a href="https://www.openstreetmap.fr/">OSM France</a>' : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}
-            url={tileUrl}
-            maxZoom={tileUrl === HOT_TILE_URL ? 20 : 19}
-            detectRetina={true}
-            eventHandlers={tileEvents}
-          />
-          {onMapReady && <MapReadyNotifier onReady={onMapReady} tileRef={tileRef} />}
+      <div ref={containerRef} className="w-full h-full absolute" />
+      {!mapLoaded && (
+        <div className="absolute inset-0 z-10 bg-background">
+          <MapSkeleton />
+        </div>
+      )}
+      {mapObj && mapLoaded && (
+        <>
+          {(mapMode === "pins" || mapMode === "combined") &&
+            [...tickets, ...fadingTicketsOnly].map((t) => (
+              <TicketMarker
+                key={`pin-${t.id}`}
+                map={mapObj}
+                ticket={t}
+                fading={fadingTicketIds.has(t.id)}
+                highlighted={highlightedTicketId === t.id}
+                showTicketPopup={showTicketPopup}
+                onSelectTicket={onSelectTicket}
+              />
+            ))}
 
-
-
-        {/* Heatmap / Accumulation Density Circles */}
-        {(mapMode === "heatmap" || mapMode === "combined") &&
-          tickets.map((t) => {
-            const color = getUrgencyColor(t.urgency);
-            const radius = t.urgency === "Critical" ? 150 : t.urgency === "High" ? 120 : t.urgency === "Medium" ? 100 : 80;
-            return (
-              <span key={`heat-group-${t.id}`}>
-                {/* Outer Glow Circle */}
-                <Circle
-                  center={[t.lat, t.lng]}
-                  radius={radius}
-                  pathOptions={{
-                    stroke: false,
-                    fillColor: color,
-                    fillOpacity: 0.06,
-                    interactive: false,
-                  }}
-                />
-                {/* Inner Core Circle */}
-                <Circle
-                  center={[t.lat, t.lng]}
-                  radius={radius * 0.4}
-                  pathOptions={{
-                    stroke: false,
-                    fillColor: color,
-                    fillOpacity: 0.18,
-                    interactive: false,
-                  }}
-                />
-              </span>
-            );
-          })}
-
-
-        {/* Point Markers (removed pins finish their fade-out before unmount) */}
-        {(mapMode === "pins" || mapMode === "combined") &&
-          [...tickets, ...fadingTicketsOnly].map((t) => (
-            <TicketMarker
-              key={`pin-${t.id}`}
-              ticket={t}
-              fading={fadingTicketIds.has(t.id)}
-              highlighted={highlightedTicketId === t.id}
-              showTicketPopup={showTicketPopup}
-              onSelectTicket={onSelectTicket}
+          {[...activeTrucks, ...fadingOnly].map((trk) => (
+            <TruckMarker
+              key={`truck-${trk.id}`}
+              map={mapObj}
+              trk={trk}
+              fading={fadingIds.has(trk.id)}
             />
           ))}
 
-        {/* Truck Markers (Only render active trucks on route; fading ones finish their fade-out) */}
-        {[...activeTrucks, ...fadingOnly].map((trk) => (
-          <TruckMarker
-            key={`truck-${trk.id}`}
-            trk={trk}
-            fading={fadingIds.has(trk.id)}
-            bearing={rotatable ? (compassBearing ?? 0) : 0}
-            isDriverPOV={perspective3D}
-            currentStreet={currentStop?.name ?? "Sitio Zapanta"}
-          />
-        ))}
-
-        {/* Current Stop Pin (hands off smoothly from sitio to sitio) */}
-        {fadingStop && (
-          <StopPinMarker
-            key={`stop-pin-fading-${fadingStop.name}-${fadingStop.lat}-${fadingStop.lng}`}
-            stop={fadingStop}
-            fading
-          />
-        )}
-        {currentStop && (
-          <StopPinMarker
-            key={`stop-pin-${stopKey}`}
-            stop={currentStop}
-            fading={false}
-          />
-        )}
-        {[...(upcomingStops || []), ...fadingUpcomingOnly].map((s) => (
-          <StopPinMarker
-            key={`upcoming-pin-${upcomingPinKey(s)}`}
-            stop={s}
-            compact
-            fading={fadingUpcomingKeys.has(upcomingPinKey(s))}
-          />
-        ))}
-      </MapContainer>
-      </div>
+          {fadingStop && (
+            <StopPinMarker
+              key={`stop-pin-fading-${fadingStop.name}-${fadingStop.lat}-${fadingStop.lng}`}
+              map={mapObj}
+              stop={fadingStop}
+              fading
+            />
+          )}
+          {currentStop && (
+            <StopPinMarker
+              key={`stop-pin-${stopKey}`}
+              map={mapObj}
+              stop={currentStop}
+              fading={false}
+            />
+          )}
+          {[...(upcomingStops || []), ...fadingUpcomingOnly].map((s) => (
+            <StopPinMarker
+              key={`upcoming-pin-${upcomingPinKey(s)}`}
+              map={mapObj}
+              stop={s}
+              compact
+              fading={fadingUpcomingKeys.has(upcomingPinKey(s))}
+            />
+          ))}
+        </>
+      )}
       {showCompass && (
         <button
           type="button"
@@ -980,7 +899,7 @@ export default function MapCanvas({ tickets = [], trucks = [], mapMode = "pins",
         >
           <Navigation
             className="h-5 w-5 text-emerald-600"
-            style={{ transform: `rotate(${viewBearing}deg)` }}
+            style={{ transform: `rotate(${-compassUp}deg)` }}
           />
         </button>
       )}

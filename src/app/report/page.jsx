@@ -47,6 +47,7 @@ import { Button } from "@/components/ui/button";
 import { MapSkeleton, ResidentShellSkeleton } from "@/components/ui/skeletons";
 import { InfoRow } from "@/components/ui/info-row";
 import { useToast } from "@/components/pwa/Toast";
+import DbStatusBanner from "@/components/pwa/DbStatusBanner";
 import {
   useNotifications,
   markNotificationRead,
@@ -1358,7 +1359,9 @@ export default function ResidentMobilePWA() {
           setSubmittedTicket(created);
           // The report itself is saved at this point; only warn if the admin
           // alert didn't go out so it can be retried/reported.
-          if (result && result.notified === false) {
+          if (result && result.queued) {
+            toast("Report saved on this device. It will send automatically when you're back online.", { variant: "warning" });
+          } else if (result && result.notified === false) {
             toast("Report saved, but the admin alert failed to send.", { variant: "error" });
           } else if (result && result.notified && !result.remote) {
             toast("Report saved, but the admin alert stayed on this device. Check connection/RLS.", { variant: "error" });
@@ -1816,10 +1819,10 @@ export default function ResidentMobilePWA() {
             aria-label="Updates"
           >
             <Bell
-              className={`h-5 w-5 ${residentUnread > 0 ? "text-emerald-600" : "text-foreground"}`}
+              className="h-5 w-5 text-foreground"
               strokeWidth={2}
-              fill={residentUnread > 0 ? "currentColor" : "none"}
-              fillOpacity={residentUnread > 0 ? 0.18 : 0}
+              fill="none"
+              fillOpacity={0}
             />
             {residentUnread > 0 && (
               <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[9px] font-bold leading-none text-white">
@@ -3095,16 +3098,9 @@ export default function ResidentMobilePWA() {
                     onClick={() => { toast("This is a preview."); haptic(); }}
                     className="flex w-full cursor-pointer items-start gap-3 px-4 py-3 text-left transition-colors active:bg-muted"
                   >
-                    {notif.type === "Resolved" ? (
-                      <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" strokeWidth={2} />
-                    ) : notif.type === "Cancelled" ? (
-                      <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-600" strokeWidth={2} />
-                    ) : (
-                      <Ticket className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" strokeWidth={2} />
-                    )}
                     <span className="min-w-0 flex-1">
                       <span className="flex items-baseline justify-between gap-2">
-                        <span className="text-[15px] font-semibold tracking-tight text-foreground">
+                        <span className="min-w-0 text-[15px] font-semibold tracking-tight text-foreground">
                           {notif.title}
                         </span>
                         <span className="shrink-0 text-[12px] tabular-nums text-muted-foreground">
@@ -3133,16 +3129,9 @@ export default function ResidentMobilePWA() {
                   onClick={() => openUpdate(notif)}
                   className="flex w-full cursor-pointer items-start gap-3 px-4 py-3 text-left transition-colors active:bg-muted"
                 >
-                  {notif.type === "Resolved" ? (
-                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" strokeWidth={2} />
-                  ) : notif.type === "Cancelled" ? (
-                    <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-600" strokeWidth={2} />
-                  ) : (
-                    <Ticket className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" strokeWidth={2} />
-                  )}
                     <span className="min-w-0 flex-1">
                       <span className="flex items-baseline justify-between gap-2">
-                        <span className={cn("text-[15px] tracking-tight text-foreground", isUpdateUnread(notif) ? "font-semibold" : "font-normal")}>
+                        <span className={cn("min-w-0 text-[15px] tracking-tight text-foreground", isUpdateUnread(notif) ? "font-semibold" : "font-normal")}>
                           {notif.title}
                         </span>
                         <span className="shrink-0 text-[12px] tabular-nums text-muted-foreground">
@@ -3245,6 +3234,7 @@ export default function ResidentMobilePWA() {
     activeTab,
   }}
 />
+<DbStatusBanner />
 { ToastViewport }
     </div >
   );

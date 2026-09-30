@@ -337,11 +337,12 @@ export default function DispatchPage() {
     setTruckSheet(null);
   };
 
-  const handleTruckDeleteRequest = () => {
-    const t = truckSheet?.truck;
+  const handleTruckDeleteRequest = (truck = null) => {
+    const t = truck ?? truckSheet?.truck;
     if (!t) return;
     if (live.trucks[t.id]?.tracking?.isActive) {
-      setTruckError("This truck is on duty. End its route before removing it.");
+      if (truckSheet) setTruckError("This truck is on duty. End its route before removing it.");
+      else toast("This truck is on duty. End its route before removing it.", { variant: "warning" });
       return;
     }
     setTruckToRemove(t);
@@ -583,7 +584,7 @@ export default function DispatchPage() {
           className={cn(inputClass, "cursor-pointer", date === "" && "text-muted-foreground/60")}
         />
         <p className="text-[10px] text-muted-foreground">
-          Which day this task is for — today, tomorrow, and so on. A driver can hold several tasks for different days at once.
+          Which day this task is for today, tomorrow, and so on. A driver can hold several tasks for different days at once.
         </p>
       </Field>
 
@@ -681,7 +682,7 @@ export default function DispatchPage() {
                         </span>
                       </div>
 
-                      <div className="mt-3 flex shrink-0 items-center justify-end">
+                      <div className="mt-3 flex shrink-0 items-center justify-end gap-2">
                         <button
                           type="button"
                           onClick={(e) => {
@@ -691,6 +692,17 @@ export default function DispatchPage() {
                           className="inline-flex cursor-pointer items-center rounded-full bg-muted px-3 py-1 text-[13px] font-semibold text-foreground transition-all hover:bg-muted/80 active:scale-95"
                         >
                           Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleTruckDeleteRequest(t);
+                          }}
+                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-rose-600/10 px-3 py-1 text-[13px] font-semibold text-rose-600 transition-all hover:bg-rose-600/20 active:scale-95"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Remove
                         </button>
                       </div>
                     </div>
@@ -996,15 +1008,7 @@ export default function DispatchPage() {
                   </div>
                 </div>
 
-                <div className="mt-auto shrink-0 touch-none flex flex-col-reverse gap-2 border-t border-border-subtle pt-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    {truckSheet.mode === "edit" && (
-                      <Button variant="secondary" type="button" onClick={handleTruckDeleteRequest} className="h-10 w-full gap-1.5 rounded-xl px-4 text-[14px] text-rose-600 sm:w-auto">
-                        <Trash2 className="w-4 h-4" />
-                        Remove Truck
-                      </Button>
-                    )}
-                  </div>
+                <div className="mt-auto shrink-0 touch-none flex flex-col-reverse gap-2 border-t border-border-subtle pt-4 sm:flex-row sm:items-center sm:justify-end">
                   <div className="grid grid-cols-2 items-center gap-2 sm:flex">
                     <Button variant="secondary" type="button" className="h-10 rounded-xl px-4 text-[14px] font-semibold" onClick={() => setTruckSheet(null)}>
                       Close

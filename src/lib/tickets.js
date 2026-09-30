@@ -1,10 +1,15 @@
 import { useMemo, useSyncExternalStore } from "react";
 import { supabase } from "@/lib/supabase";
+import { recordDbSuccess, recordDbFailure, isNetworkError, withDbRetry } from "@/lib/db-health";
+import { enqueueOp, flushOutbox, registerExecutor } from "@/lib/outbox";
+
+const TICKETS_KEY = "bingo-tickets-v1";
 import { pushNotification } from "@/lib/notifications";
 
 const listeners = new Set();
-let cache = { tickets: [] };
+let cache = loadPersistedTickets() || { tickets: [] };
 let isFetching = false;
+let lastFailAt = 0;
 let initialized = false;
 
 function notify() {
@@ -74,19 +79,41 @@ function mapToFrontend(dbRow) {
 
 async function fetchTickets() {
   if (isFetching) return;
+  // Bound failed first-loads to one attempt per 10s so an outage doesn't
+  // refetch on every render while `initialized` is still false.
+  if (!initialized && Date.now() - lastFailAt < 10000) return;
   isFetching = true;
-  
-  const { data, error } = await supabase
-    .from('tickets')
-    .select('*, lat, lng')
-    .order('created_at', { ascending: false });
 
-  if (data) {
-    cache = { tickets: data.map(mapToFrontend) };
-    initialized = true;
-    notify();
+  const run = async () => {
+    const { data, error } = await supabase
+      .from('tickets')
+      .select('*, lat, lng')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data;
+  };
+
+  try {
+    // Retry only the first load; withDbRetry records health itself.
+    // Realtime-event refetches must not retry-storm on every notification.
+    const data = initialized ? await run() : await withDbRetry(run);
+    if (data) {
+      cache = { tickets: data.map(mapToFrontend) };
+      persistTickets(cache.tickets);
+      initialized = true;
+      notify();
+    }
+    if (initialized) {
+      recordDbSuccess();
+      flushOutbox();
+    }
+  } catch (err) {
+    // Keep the previous list on screen and mark it stale.
+    if (initialized) recordDbFailure(err);
+    else lastFailAt = Date.now();
+  } finally {
+    isFetching = false;
   }
-  isFetching = false;
 }
 
 // Listen for Realtime Changes
@@ -155,7 +182,9 @@ export async function addTicket(ticket) {
   // Either one lands in the `notes` column so it is never dropped.
   const notes = ticket.notes ?? ticket.description ?? "";
 
-  const { data, error } = await supabase.from('tickets').insert({
+  const clientId = ticket.clientId || newTicketId();
+  const row = {
+    id: clientId,
     reporter_id: sessionData?.session?.user?.id || null,
     reporter_name: ticket.reporter,
     location_name: ticket.location,
@@ -166,11 +195,26 @@ export async function addTicket(ticket) {
     image_url: imageUrl,
     status: ticket.status || 'Pending',
     location_geo: wktPoint
-  }).select('id').single();
+  };
 
-  if (error) {
-    console.error("Error adding ticket:", describeDbError(error));
-    throw new Error(error.message || "Failed to add ticket");
+  let data = null;
+  try {
+    const res = await supabase.from('tickets').insert(row).select('id').single();
+    if (res.error) throw res.error;
+    data = res.data;
+  } catch (err) {
+    if (isNetworkError(err)) {
+      // Outage plan: the report stays on this device and sends itself
+      // when connectivity returns (see outbox.js). The client-generated
+      // id makes the replay idempotent — a lost response can never file
+      // it twice. Photo is dropped from the queued copy only (the row
+      // keeps image_url); it only feeds the confirmation screen.
+      enqueueOp('ticket-insert', { row, ticket: { ...ticket, photo: undefined } }, { key: `ticket:${clientId}` });
+      recordDbFailure(err);
+      return { ticketId: clientId, queued: true, notified: false, remote: false };
+    }
+    console.error("Error adding ticket:", describeDbError(err));
+    throw new Error(err.message || "Failed to add ticket");
   }
 
   fetchTickets();
@@ -179,7 +223,10 @@ export async function addTicket(ticket) {
   // about the new resident report. Fire-and-forget: a notification failure
   // must never fail the report submission itself. The outcome is returned so
   // the UI can warn visibly when the admin was not reached.
-  const newId = data?.id || null;
+  return sendTicketAdminNotification(ticket, data?.id || null);
+}
+
+async function sendTicketAdminNotification(ticket, newId) {
   try {
     const isEmergency = ticket.urgency === "Critical";
     const { remote, deduped, error: notifError } = await pushNotification({
@@ -211,7 +258,6 @@ export async function addTicket(ticket) {
     return { ticketId: newId, notified: false, remote: false };
   }
 }
-
 
 export async function updateTicket(id, patch) {
   const dbPatch = {};
@@ -297,7 +343,6 @@ export async function updateTicket(id, patch) {
   return { notified: false, remote: true };
 }
 
-
 export async function removeTicket(id) {
   const { error } = await supabase.from('tickets').update({ is_archived: true }).eq('id', id);
   if (error) {
@@ -325,4 +370,44 @@ export async function hardDeleteTicket(id) {
   }
 }
 
+// ---- Outage plan: stale cache + queued reports (see db-health.js) ----
+function newTicketId() {
+  try {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+  } catch {}
+  return `local-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
 
+function loadPersistedTickets() {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(TICKETS_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    if (parsed && Array.isArray(parsed.tickets)) return parsed;
+  } catch {}
+  return null;
+}
+
+function persistTickets(tickets) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(TICKETS_KEY, JSON.stringify({ v: 1, tickets }));
+  } catch {}
+}
+
+// Outbox executor owned by this lib: replays a queued report idempotently.
+// The client-generated id means a lost response can never duplicate the
+// row; the admin notification reuses its dedupeKey for the same reason.
+registerExecutor("ticket-insert", async ({ row, ticket }) => {
+  const { data: existing } = await supabase.from('tickets').select('id').eq('id', row.id).maybeSingle();
+  let ticketId = existing?.id || null;
+  if (!ticketId) {
+    const { data, error } = await supabase.from('tickets').insert(row).select('id').single();
+    if (error) throw error;
+    ticketId = data?.id || row.id;
+  }
+  fetchTickets();
+  await sendTicketAdminNotification(ticket, ticketId);
+  recordDbSuccess();
+  return { ticketId };
+});

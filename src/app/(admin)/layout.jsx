@@ -10,6 +10,7 @@ import { useNotifications } from "@/lib/notifications";
 import { useDensity } from "@/lib/density";
 import { playDing } from "@/lib/sounds";
 import { useToast } from "@/components/pwa/Toast";
+import DbStatusBanner from "@/components/pwa/DbStatusBanner";
 import { reinitSupabaseSync } from "@/lib/live-route";
 
 // Announces every new admin notification (route started, truck arrived at a
@@ -140,6 +141,7 @@ export default function AdminLayout({ children }) {
           </button>
         </div>
 
+        <DbStatusBanner />
         <main id="admin-main-scroll" className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden">
           {children}
         </main>
