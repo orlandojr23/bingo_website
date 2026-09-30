@@ -484,7 +484,9 @@ function TruckMarker({ map, trk, fading }) {
     const apply = () => {
       const arrow = el.querySelector("[data-arrow]");
       if (!arrow) return;
-      const deg = (((trk.heading ?? 0) - map.getBearing()) % 360 + 360) % 360;
+      // Shared headings are stored app-convention (compass + 90); the CSS
+      // arrow points north at 0, so convert back to compass first.
+      const deg = ((((trk.heading ?? 90) - 90 - map.getBearing()) % 360) + 360) % 360;
       arrow.style.transform = `rotate(${deg}deg)`;
     };
     apply();
