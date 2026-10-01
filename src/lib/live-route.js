@@ -338,6 +338,53 @@ export function scheduleLabel(schedule) {
   return names.join(", ");
 }
 
+// Split a schedule label into its location parts ("A & B" or "A, B, C"
+// → ["A", "B", ...]). Accepts a schedule or a ready-made label string.
+export function splitScheduleLabel(scheduleOrLabel) {
+  const text =
+    typeof scheduleOrLabel === "string"
+      ? scheduleOrLabel
+      : scheduleLabel(scheduleOrLabel);
+  return String(text ?? "")
+    .split(/\s*[,&]\s*/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+}
+
+// Compact one-line label for list rows and cards: the first two locations
+// plus a "+N more" suffix when the route is longer ("Sitio Vilgon &
+// Sitio Mac Arthur" stays whole; longer routes become "Sitio Vilgon,
+// Sitio Mac Arthur +2 more"). Detail screens list every stop instead.
+export function compactScheduleLabel(scheduleOrLabel, max = 2) {
+  const text =
+    typeof scheduleOrLabel === "string"
+      ? String(scheduleOrLabel ?? "")
+      : scheduleLabel(scheduleOrLabel);
+  const parts = splitScheduleLabel(text);
+  if (parts.length <= max) return text;
+  return `${parts.slice(0, max).join(", ")} +${parts.length - max} more`;
+}
+
+// Every stop for a detail screen: route points first, falling back to the
+// label parts when a schedule has no points (e.g. zone-only assignments).
+export function scheduleStops(schedule) {
+  const pts = Array.isArray(schedule?.routePoints) ? schedule.routePoints : [];
+  const named = pts
+    .map((p) => (typeof p === "string" ? { name: p } : { name: p?.name, time: p?.time }))
+    .filter((s) => s.name);
+  if (named.length) return named;
+  return splitScheduleLabel(schedule).map((name) => ({ name }));
+}
+
+// Detail header title: first stop → last stop, so it stays tidy for any
+// route length. The full stop list lives in the detail stops card.
+export function scheduleEndpointTitle(schedule) {
+  const stops = scheduleStops(schedule);
+  if (stops.length >= 2) return `${stops[0].name} → ${stops[stops.length - 1].name}`;
+  if (stops.length === 1) return stops[0].name;
+  return scheduleLabel(schedule);
+}
+
 // True when a Supabase error is about an unknown/missing column — lets
 // writes degrade gracefully when the scheduled_date migration hasn't been
 // applied to the database yet.

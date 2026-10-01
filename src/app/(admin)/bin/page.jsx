@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Search, Trash2, RotateCcw, X, ImageOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useArchivedTickets, restoreTicket, hardDeleteTicket } from "@/lib/tickets";
-import { useLiveRoute, getSchedules, restoreSchedule, hardDeleteSchedule, scheduleLabel } from "@/lib/live-route";
+import { useLiveRoute, getSchedules, restoreSchedule, hardDeleteSchedule, scheduleLabel, compactScheduleLabel, scheduleEndpointTitle } from "@/lib/live-route";
 import { StatusBadge, UrgencyBadge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
 import { InfoRow } from "@/components/ui/info-row";
@@ -201,8 +201,8 @@ export default function BinPage() {
                     className="group flex cursor-pointer select-none flex-col justify-between rounded-2xl border border-border/60 bg-card p-4 transition-all hover:border-zinc-300 hover:bg-muted/40"
                   >
                     <div className="flex shrink-0 flex-nowrap items-center justify-between gap-2">
-                      <span className="truncate text-xs font-semibold tracking-tight text-muted-foreground">
-                        {scheduleLabel(sch)}
+                      <span title={scheduleLabel(sch)} className="truncate text-xs font-semibold tracking-tight text-muted-foreground">
+                        {compactScheduleLabel(sch)}
                       </span>
                       <StatusBadge status={sch.status} />
                     </div>
@@ -286,7 +286,7 @@ export default function BinPage() {
                       </>
                     ) : (
                       <>
-                        <span className="text-[17px] font-semibold tracking-tight text-foreground">{scheduleLabel(selectedItem?.data) || "Schedule"}</span>
+                        <span title={scheduleLabel(selectedItem?.data)} className="text-[17px] font-semibold tracking-tight text-foreground">{(selectedItem?.data && scheduleEndpointTitle(selectedItem.data)) || "Schedule"}</span>
                         <StatusBadge status={selectedItem?.data?.status} />
                       </>
                     )}

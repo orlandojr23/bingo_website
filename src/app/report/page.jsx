@@ -35,7 +35,7 @@ import {
 import { TEJERO_SITOS, mockPilotData } from "@/lib/mock-data";
 import { useTickets, addTicket, updateTicket, removeTicket } from "@/lib/tickets";
 import { useAuth } from "@/context/AuthContext";
-import { useLiveRoute, getSchedule, getSchedules, scheduleLabel, selectTruckHeading } from "@/lib/live-route";
+import { useLiveRoute, getSchedule, getSchedules, scheduleLabel, scheduleStops, scheduleEndpointTitle, splitScheduleLabel, selectTruckHeading } from "@/lib/live-route";
 import { playDing, playTrumpet, useSoundEnabled, setSoundEnabled } from "@/lib/sounds";
 import { useFleet } from "@/lib/fleet";
 import { clearResidentSession } from "@/lib/resident-session";
@@ -93,6 +93,45 @@ function schedDayLabel(iso) {
   const dt = new Date(y, (m || 1) - 1, d || 1);
   if (Number.isNaN(dt.getTime())) return iso;
   return dt.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+}
+
+// Compact label for schedule list rows: first two locations plus a muted
+// "+N more" suffix when the route is longer. The detail screen lists every
+// stop in its own card so nothing is ever cut off.
+function CompactScheduleLabel({ label }) {
+  const text = label == null ? "" : String(label);
+  const parts = splitScheduleLabel(text);
+  if (parts.length <= 2) return <>{text}</>;
+  return (
+    <>
+      {parts.slice(0, 2).join(", ")}
+      <span className="text-muted-foreground"> +{parts.length - 2} more</span>
+    </>
+  );
+}
+
+// Numbered stop list card for the schedule detail screen.
+function ScheduleStopsCard({ schedule }) {
+  const stops = scheduleStops(schedule);
+  if (!stops.length) return null;
+  return (
+    <div className="mt-5 px-4">
+      <p className="px-1 pb-1.5 text-[13px] text-muted-foreground">Stops · {stops.length}</p>
+      <div className="divide-y divide-border/60 overflow-hidden rounded-2xl border border-border/60 bg-card">
+        {stops.map((stop, i) => (
+          <div key={`${stop.name}-${i}`} className="flex min-h-[48px] items-center gap-3 px-4 py-2.5">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-600/10 text-[12px] font-semibold text-emerald-600">
+              {i + 1}
+            </span>
+            <span className="min-w-0 flex-1 text-[15px] leading-snug break-words text-foreground">{stop.name}</span>
+            {stop.time && (
+              <span className="shrink-0 text-[13px] tabular-nums text-muted-foreground">{stop.time}</span>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 // Map banner is text-only (native style); status glyphs use Lucide icons.
@@ -256,6 +295,19 @@ function ProfileFieldNote({ message, tone = "rose" }) {
         </motion.p>
       )}
     </AnimatePresence>
+  );
+}
+
+// Flat vector badge for schedule cards: calendar page with a check.
+function ScheduleBadge({ className }) {
+  return (
+    <svg viewBox="0 0 40 40" className={className} aria-hidden="true">
+      <circle cx="20" cy="20" r="20" fill="#059669" />
+      <rect x="15" y="7" width="3" height="6" rx="1.5" fill="#ffffff" />
+      <rect x="22" y="7" width="3" height="6" rx="1.5" fill="#ffffff" />
+      <rect x="10" y="12" width="20" height="18" rx="4" fill="#ffffff" />
+      <path d="M15.5 21 l3.2 3.2 6-6.5" fill="none" stroke="#059669" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 
@@ -1555,9 +1607,9 @@ export default function ResidentMobilePWA() {
         onClick={() => { setScheduleDetailId(sch.id); haptic(); }}
         className="flex w-full cursor-pointer items-center justify-between gap-3 px-4 py-2.5 text-left transition-colors active:bg-muted"
       >
-        <Calendar className="h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+        <ScheduleBadge className="h-9 w-9 shrink-0" />
         <span className="min-w-0 flex-1">
-          <p className="text-[15px] leading-snug break-words text-foreground">{scheduleLabel(sch)}</p>
+          <p title={scheduleLabel(sch)} className="text-[15px] leading-snug break-words text-foreground"><CompactScheduleLabel label={scheduleLabel(sch)} /></p>
           <p className="mt-0.5 text-[13px] text-muted-foreground">
             {[sch.time, categoryShortLabel].filter(Boolean).join(" · ") || "—"}
           </p>
@@ -2165,13 +2217,17 @@ export default function ResidentMobilePWA() {
                     <>
                       {/* Centered header */}
                       <div className="flex flex-col items-center px-4 pb-2 pt-6 text-center">
-                        <h2 className="text-[20px] font-semibold tracking-tight text-foreground">{scheduleLabel(scheduleDetail)}</h2>
+                        <ScheduleBadge className="mb-2 h-16 w-16" />
+                        <h2 title={scheduleDetail ? scheduleLabel(scheduleDetail) : undefined} className="text-[20px] font-semibold tracking-tight text-balance break-words text-foreground">{scheduleDetail ? scheduleEndpointTitle(scheduleDetail) : ""}</h2>
                         {([schedDayLabel(scheduleDetail?.assignmentDate), scheduleDetail?.time].filter(Boolean).join(" · ")) && (
                           <p className="mt-0.5 text-[13px] text-muted-foreground">
                             {[schedDayLabel(scheduleDetail?.assignmentDate), scheduleDetail?.time].filter(Boolean).join(" · ")}
                           </p>
                         )}
                       </div>
+
+                      {/* Stops — every location on this route */}
+                      <ScheduleStopsCard schedule={scheduleDetail} />
 
                       {/* Details — single card, no section labels */}
                       <div className="mt-5 px-4">

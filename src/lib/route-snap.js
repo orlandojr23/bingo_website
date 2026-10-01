@@ -129,3 +129,76 @@ export function resolveTravelHeading({ road, course, device, prevHeading, speedM
   if (prevHeading != null) return prevHeading;
   return 0;
 }
+
+// --- Live-tracking stabilization (driver GPS watch) ---
+//
+// Raw phone fixes jitter ±5–20 m, which at zoom 17–18 reads as the marker
+// wobbling off the road. Two guards keep it planted:
+//
+// 1. smoothFix: exponential moving average with speed-adaptive trust.
+//    Fast movement follows the new fix (low lag); slow movement leans on
+//    history (absorbs sidewalk-level wobble); poor-accuracy fixes are
+//    trusted less. Teleport-scale jumps reset instead of dragging the
+//    marker through buildings for seconds.
+// 2. createSnapFilter: sticky snapped/raw mode (hysteresis). A single
+//    off-corridor fix — GPS jump, sidewalk wobble — holds the last snapped
+//    point instead of teleporting off-road and back. Only consecutive
+//    off-corridor fixes admit a real detour and switch to raw.
+
+// Consecutive off-corridor fixes before the filter admits the truck really
+// left the route and shows the (smoothed) raw position.
+export const OFF_ROUTE_CONFIRM_FIXES = 3;
+
+export function smoothFix(prev, lat, lng, { speedMps = 0, accuracyM = null } = {}) {
+  if (typeof lat !== "number" || typeof lng !== "number" || isNaN(lat) || isNaN(lng)) return prev;
+  if (!prev || typeof prev.lat !== "number" || typeof prev.lng !== "number") return { lat, lng };
+  const dx = (lng - prev.lng) * M_PER_DEG_LAT * Math.cos((prev.lat * Math.PI) / 180);
+  const dy = (lat - prev.lat) * M_PER_DEG_LAT;
+  // Teleport-scale jump (tunnel exit, reacquire): reset the average instead
+  // of smearing the marker across the map for seconds.
+  if (Math.hypot(dx, dy) > 50) return { lat, lng };
+  const speed = Math.max(0, speedMps ?? 0);
+  // 0 m/s → 0.25 (heavy smoothing), 4 m/s → ~0.5, 8+ m/s → ~0.8 (follow).
+  let alpha = 0.25 + 0.55 * Math.min(1, speed / 8);
+  if (accuracyM != null && accuracyM > 20) alpha *= 0.6;
+  return {
+    lat: prev.lat + (lat - prev.lat) * alpha,
+    lng: prev.lng + (lng - prev.lng) * alpha,
+  };
+}
+
+// Stateful snap filter — one per GPS watch session (reset on start/resume).
+// Returns { lat, lng, heading, snapped }: the snapped road point while the
+// fix is in-corridor (or held there through brief excursions), otherwise
+// the smoothed raw fix once a detour is confirmed. heading is the road
+// direction, or null when raw/held (caller falls back to course/device).
+export function createSnapFilter() {
+  let progress = null; // { key, along } for travelHeading continuity
+  let held = null; // last snapped point, shown through brief excursions
+  let offCount = 0;
+  const reset = () => {
+    progress = null;
+    held = null;
+    offCount = 0;
+  };
+  const update = (lat, lng, points, stopIndex = 0, scheduleId = null) => {
+    const snap =
+      Array.isArray(points) && points.length >= 2
+        ? snapToRoute(lat, lng, points, stopIndex)
+        : null;
+    if (snap) {
+      const key = `${scheduleId}|${stopIndex}`;
+      const solved = travelHeading(snap, progress && progress.key === key ? progress.along : null);
+      progress = { key, along: solved.along };
+      offCount = 0;
+      held = { lat: snap.lat, lng: snap.lng };
+      return { lat: snap.lat, lng: snap.lng, heading: solved.heading, snapped: true };
+    }
+    offCount += 1;
+    if (held && offCount <= OFF_ROUTE_CONFIRM_FIXES) {
+      return { lat: held.lat, lng: held.lng, heading: null, snapped: true, held: true };
+    }
+    return { lat, lng, heading: null, snapped: false };
+  };
+  return { update, reset };
+}

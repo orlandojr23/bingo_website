@@ -19,7 +19,7 @@ import {
   ChevronRight,
   ChevronDown,
   LocateFixed,
-  MapPin,
+  Flag,
   Truck,
   User,
   Calendar,
@@ -35,17 +35,20 @@ import {
   stopByAtPoint,
   continueRoute,
   completeRoute,
-  endRoute,
   updateTracking,
   getSchedule,
   getSchedules,
   scheduleLabel,
+  compactScheduleLabel,
+  scheduleStops,
+  scheduleEndpointTitle,
+  splitScheduleLabel,
   acceptAssignment,
   cancelAssignment,
   reinitSupabaseSync,
   dutyStatusOf,
 } from "@/lib/live-route";
-import { snapToRoute, travelHeading, compassBearing, resolveTravelHeading } from "@/lib/route-snap";
+import { smoothFix, createSnapFilter, compassBearing, resolveTravelHeading } from "@/lib/route-snap";
 import { cn, haptic } from "@/lib/utils";
 import {
   useNotifications,
@@ -79,6 +82,52 @@ function assignedAreaTagline(schedule, zone) {
   }
   if (names.length === 1) return names[0];
   return `${names[0]} +${names.length - 1} stops`;
+}
+
+// Compact label for driver list rows: the first two locations plus a muted
+// "+N more" suffix when the route is longer (see compactScheduleLabel).
+// Detail screens list every stop in their own card instead so nothing is
+// ever cut off.
+function CompactScheduleLabel({ label }) {
+  const text = label == null ? "" : String(label);
+  const parts = splitScheduleLabel(text);
+  if (parts.length <= 2) return <>{text}</>;
+  return (
+    <>
+      {parts.slice(0, 2).join(", ")}
+      <span className="text-muted-foreground"> +{parts.length - 2} more</span>
+    </>
+  );
+}
+
+// Detail header: first stop → last stop, so it stays tidy for any count.
+// The full stop list lives in the card below.
+function detailHeaderTitle(schedule) {
+  return scheduleEndpointTitle(schedule);
+}
+
+// Numbered stop list card for the assignment/history detail screens.
+function DetailStopsCard({ schedule }) {
+  const stops = scheduleStops(schedule);
+  if (!stops.length) return null;
+  return (
+    <div className="mt-5 px-4">
+      <p className="px-1 pb-1.5 text-[13px] text-muted-foreground">Stops · {stops.length}</p>
+      <div className="divide-y divide-border/60 overflow-hidden rounded-2xl border border-border/60 bg-card">
+        {stops.map((stop, i) => (
+          <div key={`${stop.name}-${i}`} className="flex min-h-[48px] items-center gap-3 px-4 py-2.5">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-600/10 text-[12px] font-semibold text-emerald-600">
+              {i + 1}
+            </span>
+            <span className="min-w-0 flex-1 text-[15px] leading-snug break-words text-foreground">{stop.name}</span>
+            {stop.time && (
+              <span className="shrink-0 text-[13px] tabular-nums text-muted-foreground">{stop.time}</span>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 // "2026-09-27" → "Today", "Tomorrow", or "Mon, Sep 28". Null → null.
@@ -381,6 +430,10 @@ export default function DriverPage() {
     heading: 90,
     accuracy: 8,
   });
+  // True once the running watch accepted a fix this session; gates the
+  // per-fix local marker path below (coords otherwise holds a stale or
+  // fallback position). Batches with setCoords into a single render.
+  const [hasLiveFix, setHasLiveFix] = useState(false);
   const lastBroadcastTime = useRef(null);
   const broadcastCount = useRef(0);
   const [broadcastStatus, setBroadcastStatus] = useState("Standby");
@@ -508,12 +561,6 @@ export default function DriverPage() {
   const isAssignmentAccepted =
     assignedScheduleStatus === "Accepted" || assignedScheduleStatus === "In Progress";
   const needsAcceptance = !!assignedSchedule && !isOnDuty && !isAssignmentAccepted;
-
-  const hasAvailableAssignment =
-    isOnDuty ||
-    (!!truckState &&
-      (truckState.phase === "enroute" || truckState.phase === "onsite")) ||
-    !!assignedSchedule;
 
   // How many routes are still queued for this truck — drives the banner's
   // "N new assignments" headline so it stays truthful with multiple queued.
@@ -868,19 +915,28 @@ export default function DriverPage() {
       if (watchIdRef.current !== null) {
         navigator.geolocation.clearWatch(watchIdRef.current);
         watchIdRef.current = null;
-        lastAcceptedGpsRef.current = null;
       }
       releaseWakeLock();
     };
   }, []);
 
   const lastAcceptedGpsRef = useRef(null);
+  // Smoothed-fix + sticky snap state for the GPS watch session (see
+  // route-snap.js). Reset on start/resume/stop so a new session never
+  // inherits a stale average or held road point.
+  const smoothRef = useRef(null);
+  const snapFilterRef = useRef(null);
+  const resetFixFilters = () => {
+    smoothRef.current = null;
+    lastAcceptedGpsRef.current = null;
+    setHasLiveFix(false);
+    if (snapFilterRef.current) snapFilterRef.current.reset();
+  };
 
   // Remaining-route snapshot for the offline route snap (see route-snap.js).
   // Synced on schedule/stop changes; the GPS handler reads it via ref so it
   // never works from a stale closure.
   const routeRef = useRef({ points: [], stopIndex: 0, scheduleId: null });
-  const snapProgressRef = useRef(null);
   useEffect(() => {
     routeRef.current = {
       points: routePoints,
@@ -902,50 +958,51 @@ export default function DriverPage() {
         let finalHeading = (heading !== null && !isNaN(heading)) ? heading : null;
         
         const s = speed ? speed : 0;
+        // Speed-adaptive smoothing first: slow movement leans on history so
+        // sidewalk-level jitter never reaches the snap or the marker, while
+        // fast movement follows the new fix with minimal lag.
+        const smoothed = smoothFix(smoothRef.current, latitude, longitude, { speedMps: s, accuracyM: accuracy });
+        smoothRef.current = smoothed;
         const prev = lastAcceptedGpsRef.current;
         let course = null;
-        
+
         if (prev) {
-          const dx = (longitude - prev.lng) * 111320 * Math.cos((prev.lat * Math.PI) / 180);
-          const dy = (latitude - prev.lat) * 111320;
+          const dx = (smoothed.lng - prev.lng) * 111320 * Math.cos((prev.lat * Math.PI) / 180);
+          const dy = (smoothed.lat - prev.lat) * 111320;
           const distM = Math.hypot(dx, dy);
           // Ground course (direction of actual travel) — trusted once the
           // fix moved far enough to drown out GPS jitter.
-          if (distM >= 8) course = compassBearing(prev, { lat: latitude, lng: longitude });
-          
+          if (distM >= 8) course = compassBearing(prev, smoothed);
+
           // Waze-style stationary noise filter: if moving very slowly (speed <= 1 m/s)
           // and the GPS fix only jumped by < 10 meters, it's just satellite wobble while
           // parked. Ignore it so the truck marker doesn't slide back and forth.
           if (s <= 1 && distM < 10) {
-            return; 
+            return;
           }
 
         }
 
 
-        // Waze-style route snap: project the raw fix onto the remaining
-        // collection-route path so the marker rides the road instead of
-        // houses or GPS wobble. Beyond the corridor the raw fix is kept.
-        // While moving, face along the road, not the noisy device heading.
-        let roadHeading = null;
-        let outLat = latitude;
-        let outLng = longitude;
+        // Waze-style route snap with hysteresis: the filter projects the
+        // smoothed fix onto the remaining collection-route path so the
+        // marker rides the road instead of houses or GPS wobble, and holds
+        // the last road point through brief off-corridor excursions instead
+        // of teleporting off-road and back. Only consecutive off-corridor
+        // fixes admit a real detour (raw position). While moving, face
+        // along the road, not the noisy device heading.
+        if (!snapFilterRef.current) snapFilterRef.current = createSnapFilter();
         const rte = routeRef.current;
-        const snap = rte.points.length >= 2
-          ? snapToRoute(latitude, longitude, rte.points, rte.stopIndex)
-          : null;
-        if (snap) {
-          const snapKey = `${rte.scheduleId}|${rte.stopIndex}`;
-          const prevSnap = snapProgressRef.current;
-          const solved = travelHeading(
-            snap,
-            prevSnap && prevSnap.key === snapKey ? prevSnap.along : null
-          );
-          snapProgressRef.current = { key: snapKey, along: solved.along };
-          outLat = snap.lat;
-          outLng = snap.lng;
-          roadHeading = solved.heading;
-        }
+        const solved = snapFilterRef.current.update(
+          smoothed.lat,
+          smoothed.lng,
+          rte.points,
+          rte.stopIndex,
+          rte.scheduleId
+        );
+        const roadHeading = solved.heading;
+        const outLat = solved.lat;
+        const outLng = solved.lng;
         // Face the road, not the phone: road snap > ground course > device
         // compass (which follows the handset, not the truck). Parked holds
         // the last heading instead of swinging with compass wobble.
@@ -956,7 +1013,7 @@ export default function DriverPage() {
           prevHeading: prev ? prev.heading : null,
           speedMps: s,
         });
-        lastAcceptedGpsRef.current = { lat: latitude, lng: longitude, heading: finalHeading };
+        lastAcceptedGpsRef.current = { lat: smoothed.lat, lng: smoothed.lng, heading: finalHeading };
 
         setCoords({
           lat: outLat,
@@ -965,6 +1022,7 @@ export default function DriverPage() {
           heading: finalHeading,
           accuracy: Math.round(accuracy),
         });
+        setHasLiveFix(true);
 
         if (truckFocusedRef.current) {
           setMapCenter([outLat, outLng]);
@@ -1014,6 +1072,9 @@ export default function DriverPage() {
       }
       watchIdRef.current = null;
     }
+    // Drop session filter state so the next duty starts from a clean
+    // average instead of dragging the marker from a stale position.
+    resetFixFilters();
     await releaseWakeLock();
     setBroadcastStatus("Standby");
   };
@@ -1081,7 +1142,7 @@ export default function DriverPage() {
     );
     toast(
       next
-        ? `Route completed. New assignment: ${scheduleLabel(next)}.`
+        ? `Route completed. New assignment: ${compactScheduleLabel(next)}.`
         : "Route completed. No further assignments."
     );
   };
@@ -1118,6 +1179,7 @@ export default function DriverPage() {
     }
     setBroadcastStatus("Broadcasting live");
     await requestWakeLock();
+    resetFixFilters();
     startGpsWatch();
 
     // Waze Navigation Camera Mode: Focus truck, set zoom 18 & fly camera
@@ -1134,13 +1196,6 @@ export default function DriverPage() {
     setFlySignal((s) => s + 1);
 
     toast(wasPaused ? "Route resumed." : "Route started.");
-  };
-
-  const handleEndRoute = async () => {
-    haptic(15);
-    endRoute(selectedTruckId);
-    await stopGpsWatch();
-    toast("Route ended.");
   };
 
   // Single "current stop" pin: shown only once the driver has started the route.
@@ -1162,6 +1217,18 @@ export default function DriverPage() {
   // Fused travel heading: road snap > ground course > device (see route-snap).
   const bestHeading = truckState?.tracking.heading ?? 0;
 
+  // Driver's own marker rides the per-fix local position (every accepted
+  // GPS fix) instead of the store copy, which is throttled to the 2s
+  // broadcast cadence — otherwise the marker visibly steps twice a second
+  // behind reality. The store copy stays the fallback (no fix yet) and is
+  // still what everyone else sees. coords.heading is compass-style, so it
+  // is converted to the app convention like the broadcast does.
+  const liveFixCoords = isOnDuty && hasLiveFix ? coords : null;
+  const displayHeading =
+    liveFixCoords?.heading != null
+      ? (Math.round(liveFixCoords.heading) + 90) % 360
+      : bestHeading;
+
   const trucksForMap = useMemo(() => {
     if (!currentTruck || !truckState) return [];
     return [
@@ -1170,18 +1237,18 @@ export default function DriverPage() {
         plate: currentTruck.plate,
         driver: liveDriver,
         capacity: currentTruck.capacity,
-        lat: truckState.tracking.lat,
-        lng: truckState.tracking.lng,
-        heading: bestHeading,
+        lat: liveFixCoords?.lat ?? truckState.tracking.lat,
+        lng: liveFixCoords?.lng ?? truckState.tracking.lng,
+        heading: displayHeading,
         eta: isOnDuty ? "Active On Route" : "Standby",
         isActive: truckState.tracking.isActive,
         phase: truckState.phase,
       },
     ];
-  }, [currentTruck, truckState, isOnDuty, liveDriver, bestHeading]);
+  }, [currentTruck, truckState, isOnDuty, liveDriver, displayHeading, liveFixCoords]);
 
   // Waze-style course-up camera while driving: heading up, auto-follow truck.
-  const navBearing = isOnDuty ? Math.round((bestHeading ?? 0) / 6) * 6 : null;
+  const navBearing = isOnDuty ? Math.round((displayHeading ?? 0) / 6) * 6 : null;
 
   useEffect(() => {
     if (isOnDuty) {
@@ -1211,24 +1278,28 @@ export default function DriverPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trackLat, trackLng]);
 
-  // Center nav CTA: one action button for the whole duty cycle (start,
-  // stop by, continue, complete). Start stays disabled until the driver
-  // accepts an assignment (a paused route may resume without re-accepting).
+  // Center nav CTA: one action button for the whole duty cycle. Off duty
+  // the label follows assignment state: resume a paused route, start an
+  // accepted assignment, accept a pending assignment, or show empty when
+  // dispatch hasn't assigned anything yet.
   const canResume =
     !!truckState &&
     (truckState.phase === "enroute" || truckState.phase === "onsite") &&
     !truckState.tracking.isActive;
-  const startArmed = canResume || (hasAvailableAssignment && isAssignmentAccepted);
   const cta =
     !isOnDuty
-      ? startArmed
-        ? { tone: "bg-emerald-600 shadow-[0_8px_20px_rgba(5,150,105,0.35)]", icon: <Play className="h-6 w-6 fill-white" />, label: "Start Route", short: "Start", disabled: false }
-        : { tone: "bg-zinc-300 shadow-[0_8px_20px_rgba(0,0,0,0.15)] dark:bg-zinc-700", icon: <Play className="h-6 w-6 fill-white" />, label: "Start Route", short: "Start", disabled: true }
+      ? canResume
+        ? { tone: "bg-emerald-600", icon: <Play className="h-6 w-6 fill-white" />, label: "Resume Route", short: "Resume", disabled: false }
+        : !assignedSchedule
+          ? { tone: "bg-zinc-300 dark:bg-zinc-700", icon: <ClipboardList className="h-6 w-6" />, label: "No Assignment", short: "No Task", disabled: true }
+          : !isAssignmentAccepted
+            ? { tone: "bg-emerald-600", icon: <ClipboardList className="h-6 w-6" />, label: "Accept Assignment", short: "Accept", disabled: false }
+            : { tone: "bg-emerald-600", icon: <Play className="h-6 w-6 fill-white" />, label: "Start Route", short: "Start", disabled: false }
       : truckState?.phase === "enroute"
-        ? { tone: "bg-amber-500 shadow-[0_8px_20px_rgba(217,119,6,0.35)]", icon: <MapPin className="h-6 w-6" strokeWidth={2.25} />, label: "Stop By", short: "Stop By" }
+        ? { tone: "bg-amber-500", icon: <Flag className="h-6 w-6" strokeWidth={2.25} />, label: "Stop By", short: "Stop By" }
         : !isLastPoint
-          ? { tone: "bg-emerald-600 shadow-[0_8px_20px_rgba(5,150,105,0.35)]", icon: <Play className="h-6 w-6 fill-white" />, label: "Continue Route", short: "Continue" }
-          : { tone: "bg-emerald-600 shadow-[0_8px_20px_rgba(5,150,105,0.35)]", icon: <Check className="h-6 w-6" strokeWidth={2.5} />, label: "Complete Route", short: "Complete" };
+          ? { tone: "bg-emerald-600", icon: <Play className="h-6 w-6 fill-white" />, label: "Continue Route", short: "Continue" }
+          : { tone: "bg-emerald-600", icon: <Check className="h-6 w-6" strokeWidth={2.5} />, label: "Complete Route", short: "Complete" };
 
   if (!sessionReady) {
     return <DriverShellSkeleton />;
@@ -1426,7 +1497,7 @@ export default function DriverPage() {
               <span className={cn("absolute -top-7 left-1/2 flex h-14 w-14 -translate-x-1/2 items-center justify-center rounded-full text-white transition-transform active:scale-95", cta.tone)}>
                 {cta.icon}
               </span>
-              <span className="text-[10px] font-semibold leading-none text-emerald-600">{cta.short}</span>
+              <span className={cn("text-[10px] font-semibold leading-none", cta.disabled ? "text-muted-foreground" : "text-emerald-600")}>{cta.short}</span>
             </button>
             <DriverTab
               id="history"
@@ -1492,7 +1563,7 @@ export default function DriverPage() {
                                       >
                                         <AssignmentBadge className="h-9 w-9 shrink-0" />
                                         <div className="min-w-0 flex-1">
-                                          <p className="text-[15px] leading-snug break-words text-foreground">{scheduleLabel(s)}</p>
+                                          <p title={scheduleLabel(s)} className="text-[15px] leading-snug break-words text-foreground"><CompactScheduleLabel label={scheduleLabel(s)} /></p>
                                           <p className="mt-0.5 text-[13px] text-muted-foreground">{s.time || "No time specified"}</p>
                                         </div>
                                         <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground/50" />
@@ -1515,13 +1586,16 @@ export default function DriverPage() {
                           {/* Centered header */}
                           <div className="flex flex-col items-center px-4 pb-2 pt-6 text-center">
                             <AssignmentBadge className="mb-2 h-16 w-16" />
-                            <h2 className="text-[20px] font-semibold tracking-tight text-foreground">{scheduleLabel(detailSchedule)}</h2>
+                            <h2 title={detailSchedule ? scheduleLabel(detailSchedule) : undefined} className="text-[20px] font-semibold tracking-tight text-balance break-words text-foreground">{detailSchedule ? detailHeaderTitle(detailSchedule) : ""}</h2>
                             {([assignmentDayLabel(detailSchedule?.assignmentDate), detailSchedule?.time].filter(Boolean).join(" · ") || detailAreaName) && (
                               <p className="mt-0.5 text-[13px] text-muted-foreground">
                                 {[assignmentDayLabel(detailSchedule?.assignmentDate), detailSchedule?.time].filter(Boolean).join(" · ") || detailAreaName}
                               </p>
                             )}
                           </div>
+
+                          {/* Stops — every location on this route */}
+                          <DetailStopsCard schedule={detailSchedule} />
 
                           {/* Details — single card, no section labels */}
                           <div className="mt-5 px-4">
@@ -1756,7 +1830,7 @@ export default function DriverPage() {
                                   >
                                     <HistoryBadge className="h-9 w-9 shrink-0" />
                                     <span className="min-w-0 flex-1">
-                                      <p className="text-[15px] leading-snug break-words text-foreground">{s.label ?? scheduleLabel(s)}</p>
+                                      <p title={s.label ?? scheduleLabel(s)} className="text-[15px] leading-snug break-words text-foreground"><CompactScheduleLabel label={s.label ?? scheduleLabel(s)} /></p>
                                       <p className="mt-0.5 text-[13px] text-muted-foreground">
                                         {[formatHistoryDate(s.assignmentDate), s.time].filter(Boolean).join(" · ") || "No time specified"}
                                       </p>
@@ -1778,13 +1852,16 @@ export default function DriverPage() {
                           {/* Centered header */}
                           <div className="flex flex-col items-center px-4 pb-2 pt-6 text-center">
                             <HistoryBadge className="mb-2 h-16 w-16" />
-                            <h2 className="text-[20px] font-semibold tracking-tight text-foreground">{scheduleLabel(historyDetail)}</h2>
+                            <h2 title={historyDetail ? scheduleLabel(historyDetail) : undefined} className="text-[20px] font-semibold tracking-tight text-balance break-words text-foreground">{historyDetail ? detailHeaderTitle(historyDetail) : ""}</h2>
                             {([formatHistoryDate(historyDetail?.assignmentDate), historyDetail?.time].filter(Boolean).join(" · ") || historyDetailArea) && (
                               <p className="mt-0.5 text-[13px] text-muted-foreground">
                                 {[formatHistoryDate(historyDetail?.assignmentDate), historyDetail?.time].filter(Boolean).join(" · ") || historyDetailArea}
                               </p>
                             )}
                           </div>
+
+                          {/* Stops — every location on this route */}
+                          <DetailStopsCard schedule={historyDetail} />
 
                           {/* Details — single card, no section labels */}
                           <div className="mt-5 px-4">
@@ -2086,16 +2163,6 @@ export default function DriverPage() {
 
           {/* Actions */}
           <div className="mt-5 px-4">
-            {isOnDuty && (
-              <button
-                type="button"
-                onClick={handleEndRoute}
-                className="mb-2.5 flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-rose-600 text-[15px] font-semibold text-white transition-all active:scale-[0.99] active:bg-rose-700"
-              >
-                <X className="h-5 w-5" strokeWidth={2} />
-                End Route
-              </button>
-            )}
             <button
               type="button"
               onClick={() => {
@@ -2224,7 +2291,7 @@ export default function DriverPage() {
               <h3 className="text-[17px] font-semibold tracking-tight text-zinc-900">Start Route?</h3>
               <p className="mt-1 text-[13px] leading-normal text-zinc-600">
                 {assignedSchedule
-                  ? `Begin ${scheduleLabel(assignedSchedule)}? GPS broadcasting will turn on.`
+                  ? `Begin ${compactScheduleLabel(assignedSchedule)}? GPS broadcasting will turn on.`
                   : "Resume the route? GPS broadcasting will turn on."}
               </p>
             </div>

@@ -20,7 +20,7 @@ const LottiePlayer = dynamic(
 import { Calendar, Plus, Minus, X, Search, Truck, Shuffle, MapPin, Trash2, ListTodo, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TEJERO_SITOS } from "@/lib/mock-data";
-import { useLiveRoute, getSchedules, addSchedule, updateSchedule, removeSchedule, assignDriver, estimateStopTime, retimeRoutePoints, scheduleLabel, dutyStatusOf, cancelAssignment } from "@/lib/live-route";
+import { useLiveRoute, getSchedules, addSchedule, updateSchedule, removeSchedule, assignDriver, estimateStopTime, retimeRoutePoints, scheduleLabel, compactScheduleLabel, dutyStatusOf, cancelAssignment } from "@/lib/live-route";
 import { useFleet, addTruck, updateTruck, removeTruck } from "@/lib/fleet";
 import { useStaffRoster } from "@/lib/staff";
 import ConfirmModal from "@/components/ui/confirm-modal";
@@ -760,8 +760,8 @@ export default function DispatchPage() {
                     }`}
                   >
                     <div>
-                      <div className="text-sm font-semibold leading-tight text-foreground">
-                        {scheduleLabel(sch)}
+                      <div title={scheduleLabel(sch)} className="text-sm font-semibold leading-tight text-foreground">
+                        {compactScheduleLabel(sch)}
                       </div>
 
                       <div className="mt-3 border-t border-border-subtle pt-2 info-stack">
