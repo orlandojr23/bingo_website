@@ -34,6 +34,7 @@ import { MapSkeleton } from "@/components/ui/skeletons";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/pwa/Toast";
 import { useLockBodyScroll } from "@/lib/use-lock-body-scroll";
+import { useMapView } from "@/lib/use-map-view";
 
 // Helpers for the Collection Days text input — title-cases day names on type,
 // and normalises the final value on blur so "monday, wednesday" → "Monday, Wednesday".
@@ -111,6 +112,7 @@ export default function DispatchPage() {
 
   const [sitioQuery, setSitioQuery] = useState("");
   const [previewZoom, setPreviewZoom] = useState(14);
+  const [mapView] = useMapView("admin-map-view");
   const [sitioDropdownOpen, setSitioDropdownOpen] = useState(false);
   const [truckId, setTruckId] = useState("");
   const [type, setType] = useState("");
@@ -489,6 +491,7 @@ export default function DispatchPage() {
               tickets={[]}
               trucks={[]}
               mapMode="pins"
+              tilted={mapView === "tilt"}
               currentStop={{ ...stopOrder[0], index: 0 }}
               upcomingStops={stopOrder.slice(1).map((s, i) => ({ ...s, index: i + 1 }))}
               center={[stopOrder[0].lat, stopOrder[0].lng]}

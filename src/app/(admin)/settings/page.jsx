@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { inputClass, labelClass } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useSoundEnabled, setSoundEnabled } from "@/lib/sounds";
+import { useMapView } from "@/lib/use-map-view";
 import AppearanceSection from "./appearance-section";
 import { useAuth } from "@/context/AuthContext";
 
@@ -100,6 +101,7 @@ export default function SettingsPage() {
   };
   const [notifications, setNotifications] = useState(DEFAULT_NOTIF_PREFS);
   const soundEnabled = useSoundEnabled();
+  const [mapView, setMapView] = useMapView("admin-map-view");
 
   useEffect(() => {
     try {
@@ -391,6 +393,42 @@ export default function SettingsPage() {
                 </Button>
               </div>
             </form>
+          </section>
+
+          <section className={sectionCard}>
+            <div className={sectionHeader}>
+              <div>
+                <h2 className="text-sm font-semibold text-foreground">Map Display</h2>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Choose the default camera for admin maps
+                </p>
+              </div>
+            </div>
+
+            <div className="flex rounded-full bg-muted p-1">
+              {[
+                { id: "default", label: "Default" },
+                { id: "tilt", label: "Camera Tilt" },
+              ].map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => {
+                    setMapView(opt.id);
+                    showToast("Map display updated.");
+                  }}
+                  aria-pressed={mapView === opt.id}
+                  className={cn(
+                    "h-10 flex-1 cursor-pointer rounded-full text-[13px] transition-all active:scale-[0.98]",
+                    mapView === opt.id
+                      ? "bg-card font-semibold text-foreground shadow-sm"
+                      : "font-medium text-muted-foreground"
+                  )}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
           </section>
 
           <AppearanceSection

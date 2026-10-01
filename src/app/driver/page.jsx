@@ -14,11 +14,12 @@ import {
   Map as MapIcon,
   ClipboardList,
   History,
-  Route as RouteIcon,
+
   ChevronLeft,
   ChevronRight,
   ChevronDown,
   LocateFixed,
+  MapPin,
   Truck,
   User,
   Calendar,
@@ -52,6 +53,7 @@ import {
   markAllNotificationsRead,
 } from "@/lib/notifications";
 import { playDing, useSoundEnabled, setSoundEnabled } from "@/lib/sounds";
+import { useMapView } from "@/lib/use-map-view";
 import { Button } from "@/components/ui/button";
 import { useFleet } from "@/lib/fleet";
 import { getDriverSession, clearDriverSession } from "@/lib/driver-session";
@@ -67,7 +69,7 @@ const MapCanvas = dynamic(() => import("@/components/map/map-canvas"), {
   loading: () => <MapSkeleton />,
 });
 
-const TAB_IDS = ["map", "route", "assignment", "history", "profile"];
+const TAB_IDS = ["map", "assignment", "history", "profile"];
 
 function assignedAreaTagline(schedule, zone) {
   if (!schedule) return null;
@@ -170,6 +172,34 @@ function SteeringWheelIcon({ className, strokeWidth = 2 }) {
   );
 }
 
+// Flat vector badge for history cards: clock face.
+function HistoryBadge({ className }) {
+  return (
+    <svg viewBox="0 0 40 40" className={className} aria-hidden="true">
+      <circle cx="20" cy="20" r="20" fill="#059669" />
+
+
+      <circle cx="20" cy="20" r="10.5" fill="#ffffff" />
+      <path d="M20 20 V13 M20 20 L24 22" fill="none" stroke="#059669" strokeWidth="2.6" strokeLinecap="round" />
+      <circle cx="20" cy="20" r="1.7" fill="#059669" />
+    </svg>
+  );
+}
+
+// Flat vector badge for assignment cards: winding route path.
+function AssignmentBadge({ className }) {
+  return (
+    <svg viewBox="0 0 40 40" className={className} aria-hidden="true">
+      <circle cx="20" cy="20" r="20" fill="#059669" />
+      <g transform="translate(20 20) scale(0.7) translate(-20 -20)" fill="none" stroke="#ffffff" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="10" cy="31.7" r="5" />
+        <path d="M15 31.7 h14.2 a5.8 5.8 0 0 0 0-11.7 h-18.3 a5.8 5.8 0 0 1 0-11.7 H25" />
+        <circle cx="30" cy="8.3" r="5" />
+      </g>
+    </svg>
+  );
+}
+
 export default function DriverPage() {
   const [selectedTruckId, setSelectedTruckId] = useState("");
   const [wakeLockActive, setWakeLockActive] = useState(false);
@@ -208,7 +238,8 @@ export default function DriverPage() {
   const [isSigningOut, setIsSigningOut] = useState(false);
 
   // Change Password (profile sub-screen)
-  const [profileView, setProfileView] = useState("main"); // "main" | "password"
+  const [profileView, setProfileView] = useState("main"); // "main" | "password" | "mapview"
+  const [mapView, setMapView] = useMapView("driver-map-view");
   // Tasks sub-screen: the list drills into one assignment's details.
   const [assignmentDetailId, setAssignmentDetailId] = useState(null);
   // Task ids already seen in the Tasks tab (persisted per truck) — drives
@@ -237,6 +268,7 @@ export default function DriverPage() {
   };
   // Cancel-assignment confirm modal (task details screen).
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [confirmStart, setConfirmStart] = useState(false);
   const [cancelReason, setCancelReason] = useState("Truck breakdown");
   const [isCancelling, setIsCancelling] = useState(false);
   // History sub-screen: same drill-in for completed routes.
@@ -646,9 +678,18 @@ export default function DriverPage() {
     : null;
   const historyDetailArea = assignedAreaTagline(historyDetail, historyDetailZone);
 
-  const activeSchedule = truckState?.scheduleId
+  const rawActiveSchedule = truckState?.scheduleId
     ? getSchedule(truckState.scheduleId)
     : null;
+  // A cancelled or binned schedule must never drive the map: its pins
+  // disappear even if the truck link survives (missed sync, partial save).
+  const activeEffStatus = rawActiveSchedule
+    ? (live.scheduleStatus[rawActiveSchedule.id] ?? rawActiveSchedule.status)
+    : null;
+  const activeSchedule =
+    rawActiveSchedule && activeEffStatus !== "Cancelled" && !rawActiveSchedule.isArchived
+      ? rawActiveSchedule
+      : null;
   const routePoints = activeSchedule?.routePoints ?? [];
   const currentPoint = routePoints[truckState?.stopIndex ?? 0];
   const isLastPoint = truckState
@@ -999,35 +1040,8 @@ export default function DriverPage() {
         return;
       }
 
-      // Bug 4 fix: await startRoute so GPS and wake lock don't activate before route is recorded
-      const scheduleId = await startRoute(selectedTruckId, coords);
-      if (!scheduleId) {
-        if (needsAcceptance) {
-          toast("Please accept your assignment in Tasks before starting the route.", { variant: "warning" });
-          switchTab("assignment");
-        } else {
-          toast("No route assignments available.", { variant: "error" });
-        }
-        return;
-      }
-      setBroadcastStatus("Broadcasting live");
-      await requestWakeLock();
-      startGpsWatch();
-
-      // Waze Navigation Camera Mode: Focus truck, set zoom 18 & fly camera
-      setTruckFocused(true);
-      const tracking = live.trucks[selectedTruckId]?.tracking;
-      if (tracking?.lat != null && tracking?.lng != null) {
-        setMapCenter([tracking.lat, tracking.lng]);
-      } else if (coords?.lat != null && coords?.lng != null) {
-        setMapCenter([coords.lat, coords.lng]);
-      } else {
-        setMapCenter([10.3025, 123.9095]);
-      }
-      setMapZoom(18);
-      setFlySignal((s) => s + 1);
-
-      toast(wasPaused ? "Route resumed." : "Route started.");
+      // Misclick guard: confirm before GPS and wake lock engage.
+      setConfirmStart(true);
       return;
     }
 
@@ -1070,6 +1084,56 @@ export default function DriverPage() {
         ? `Route completed. New assignment: ${scheduleLabel(next)}.`
         : "Route completed. No further assignments."
     );
+  };
+
+  // Runs only from the Start Route confirmation dialog.
+  const proceedStartRoute = async () => {
+    setConfirmStart(false);
+    haptic(15);
+    const wasPaused =
+      !!truckState &&
+      (truckState.phase === "enroute" || truckState.phase === "onsite") &&
+      !truckState.tracking.isActive;
+
+    if (!wasPaused && !assignedSchedule) {
+      toast("No route assignments available.", { variant: "error" });
+      return;
+    }
+    if (!wasPaused && !isAssignmentAccepted) {
+      toast("Please accept your assignment in Tasks before starting the route.", { variant: "warning" });
+      switchTab("assignment");
+      return;
+    }
+
+    // Bug 4 fix: await startRoute so GPS and wake lock don't activate before route is recorded
+    const scheduleId = await startRoute(selectedTruckId, coords);
+    if (!scheduleId) {
+      if (needsAcceptance) {
+        toast("Please accept your assignment in Tasks before starting the route.", { variant: "warning" });
+        switchTab("assignment");
+      } else {
+        toast("No route assignments available.", { variant: "error" });
+      }
+      return;
+    }
+    setBroadcastStatus("Broadcasting live");
+    await requestWakeLock();
+    startGpsWatch();
+
+    // Waze Navigation Camera Mode: Focus truck, set zoom 18 & fly camera
+    setTruckFocused(true);
+    const tracking = live.trucks[selectedTruckId]?.tracking;
+    if (tracking?.lat != null && tracking?.lng != null) {
+      setMapCenter([tracking.lat, tracking.lng]);
+    } else if (coords?.lat != null && coords?.lng != null) {
+      setMapCenter([coords.lat, coords.lng]);
+    } else {
+      setMapCenter([10.3025, 123.9095]);
+    }
+    setMapZoom(18);
+    setFlySignal((s) => s + 1);
+
+    toast(wasPaused ? "Route resumed." : "Route started.");
   };
 
   const handleEndRoute = async () => {
@@ -1147,6 +1211,25 @@ export default function DriverPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trackLat, trackLng]);
 
+  // Center nav CTA: one action button for the whole duty cycle (start,
+  // stop by, continue, complete). Start stays disabled until the driver
+  // accepts an assignment (a paused route may resume without re-accepting).
+  const canResume =
+    !!truckState &&
+    (truckState.phase === "enroute" || truckState.phase === "onsite") &&
+    !truckState.tracking.isActive;
+  const startArmed = canResume || (hasAvailableAssignment && isAssignmentAccepted);
+  const cta =
+    !isOnDuty
+      ? startArmed
+        ? { tone: "bg-emerald-600 shadow-[0_8px_20px_rgba(5,150,105,0.35)]", icon: <Play className="h-6 w-6 fill-white" />, label: "Start Route", short: "Start", disabled: false }
+        : { tone: "bg-zinc-300 shadow-[0_8px_20px_rgba(0,0,0,0.15)] dark:bg-zinc-700", icon: <Play className="h-6 w-6 fill-white" />, label: "Start Route", short: "Start", disabled: true }
+      : truckState?.phase === "enroute"
+        ? { tone: "bg-amber-500 shadow-[0_8px_20px_rgba(217,119,6,0.35)]", icon: <MapPin className="h-6 w-6" strokeWidth={2.25} />, label: "Stop By", short: "Stop By" }
+        : !isLastPoint
+          ? { tone: "bg-emerald-600 shadow-[0_8px_20px_rgba(5,150,105,0.35)]", icon: <Play className="h-6 w-6 fill-white" />, label: "Continue Route", short: "Continue" }
+          : { tone: "bg-emerald-600 shadow-[0_8px_20px_rgba(5,150,105,0.35)]", icon: <Check className="h-6 w-6" strokeWidth={2.5} />, label: "Complete Route", short: "Complete" };
+
   if (!sessionReady) {
     return <DriverShellSkeleton />;
   }
@@ -1177,6 +1260,7 @@ export default function DriverPage() {
             rotatable
             bearing={navBearing}
             perspective3D={isOnDuty && truckFocused}
+            tilted={mapView === "tilt"}
             hidePausedTrucks
           />
         </div>
@@ -1324,13 +1408,6 @@ export default function DriverPage() {
               onSelect={() => { switchTab("map"); }}
             />
             <DriverTab
-              id="route"
-              label="Route"
-              icon={RouteIcon}
-              activeTab={activeTab}
-              onSelect={() => { switchTab("route"); }}
-            />
-            <DriverTab
               id="assignment"
               label="Tasks"
               icon={ClipboardList}
@@ -1338,6 +1415,19 @@ export default function DriverPage() {
               onSelect={() => { switchTab("assignment"); }}
               badge={unseenTasks}
             />
+            <button
+              type="button"
+              onClick={() => { handlePrimaryAction(); }}
+              aria-label={cta.label}
+              title={cta.label}
+              disabled={cta.disabled}
+              className="relative flex cursor-pointer flex-col items-center justify-end pb-3 disabled:cursor-not-allowed"
+            >
+              <span className={cn("absolute -top-7 left-1/2 flex h-14 w-14 -translate-x-1/2 items-center justify-center rounded-full text-white transition-transform active:scale-95", cta.tone)}>
+                {cta.icon}
+              </span>
+              <span className="text-[10px] font-semibold leading-none text-emerald-600">{cta.short}</span>
+            </button>
             <DriverTab
               id="history"
               label="History"
@@ -1358,157 +1448,6 @@ export default function DriverPage() {
 
         {/* FULL SCREEN VIEWS - native app style fade transition */}
         <AnimatePresence mode="wait" initial={false}>
-          {activeTab === "route" && (
-            <motion.div
-              key="fs-route"
-              initial={{ opacity: 0, scale: 0.98, y: 8 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.98, y: 8 }}
-              transition={{ duration: 0.18, ease: "easeOut" }}
-              className="fixed inset-0 z-[90] flex flex-col bg-background"
-            >
-              <div className="shrink-0 border-b border-border/60 bg-background/80 backdrop-blur-md pt-[calc(env(safe-area-inset-top)+12px)] pb-3">
-                <div className="relative flex h-[52px] items-center justify-center px-2">
-                  <button
-                    type="button"
-                    onClick={() => { switchTab("map"); }}
-                    className="absolute left-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-all active:scale-95 cursor-pointer"
-                    aria-label="Back to map"
-                  >
-                    <ChevronLeft className="h-6 w-6" strokeWidth={2} />
-                  </button>
-                  <h1 className="text-[17px] font-semibold tracking-tight text-foreground">Route</h1>
-                </div>
-              </div>
-              <div className="flex flex-1 flex-col overflow-y-auto bg-muted/40 pb-10">
-                <div className="flex flex-1 flex-col space-y-2.5 p-4">
-
-                    {/* Tab 1: Route — native grouped style (matches Tasks tab) */}
-                    {activeTab === "route" && (
-                      <div className="flex flex-1 flex-col">
-                          {/* Centered header */}
-                          <div className="flex flex-col items-center px-4 pb-2 pt-6 text-center">
-                            <h2 className="text-[20px] font-semibold tracking-tight text-foreground">
-                              {activeSchedule
-                                ? scheduleLabel(activeSchedule)
-                                : assignedSchedule
-                                  ? scheduleLabel(assignedSchedule)
-                                  : "No Route"}
-                            </h2>
-                            {(activeSchedule?.time ?? assignedSchedule?.time) && (
-                              <p className="mt-0.5 text-[13px] text-muted-foreground">
-                                {activeSchedule?.time ?? assignedSchedule?.time}
-                              </p>
-                            )}
-                          </div>
-
-                          {/* Action */}
-                          <div className="mt-5 px-4 space-y-2.5">
-                              <button
-                                type="button"
-                                onClick={handlePrimaryAction}
-                                disabled={!isOnDuty && (!hasAvailableAssignment || needsAcceptance)}
-                                className={cn(
-                                  "flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-[15px] font-semibold transition-all active:scale-[0.99]",
-                                  !isOnDuty && (!hasAvailableAssignment || needsAcceptance)
-                                    ? "bg-zinc-200 text-zinc-400 cursor-not-allowed dark:bg-zinc-800 dark:text-zinc-500 opacity-80"
-                                    : isOnDuty && truckState?.phase === "enroute"
-                                      ? "bg-amber-600 text-white active:bg-amber-700 cursor-pointer"
-                                      : "bg-emerald-600 text-white active:bg-emerald-700 cursor-pointer"
-                                )}
-                              >
-                                {!isOnDuty ? (
-                                  !hasAvailableAssignment ? (
-                                    <>
-                                      <Play className="h-4 w-4 fill-zinc-400 dark:fill-zinc-500" /> No Assignment Available
-                                    </>
-                                  ) : needsAcceptance ? (
-                                    <>
-                                      <Play className="h-4 w-4 fill-zinc-400 dark:fill-zinc-500" /> Accept in Tasks to Start
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Play className="h-4 w-4 fill-white" /> Start Route
-                                    </>
-                                  )
-                                ) : truckState.phase === "enroute" ? (
-                                  <>
-                                    Stop By: {currentPoint?.name ?? "Stop"}
-                                  </>
-                                ) : !isLastPoint ? (
-                                  <>
-                                    Continue Route
-                                  </>
-                                ) : (
-                                  <>
-                                    <CheckCircle2 className="h-4 w-4" /> Complete Route
-                                  </>
-                                )}
-                              </button>
-
-                            {needsAcceptance && (
-                              <p className="text-center text-[13px] leading-normal text-muted-foreground">
-                                Accept your assignment in{" "}
-                                <button
-                                  type="button"
-                                  onClick={() => switchTab("assignment")}
-                                  className="font-semibold text-emerald-600 underline underline-offset-2 cursor-pointer"
-                                >
-                                  Tasks
-                                </button>{" "}
-                                before starting the route.
-                              </p>
-                            )}
-
-                            {isOnDuty && (
-                              <button
-                                type="button"
-                                onClick={handleEndRoute}
-                                className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-rose-600 text-[15px] font-semibold text-white transition-all active:bg-rose-700 active:scale-[0.99] cursor-pointer"
-                              >
-                                <X className="h-5 w-5" strokeWidth={2} />
-                                End Route
-                              </button>
-                            )}
-                          </div>
-
-                          {/* Details — single card, no section labels */}
-                          <div className="mt-5 px-4">
-                            <div className="divide-y divide-border/60 overflow-hidden rounded-2xl border border-border/60 bg-card">
-                              <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
-                                <span className="shrink-0 text-[15px] text-foreground">Next Stop</span>
-                                <span className="text-right text-[15px] leading-snug break-words text-muted-foreground">
-                                  {truckState?.phase === "completed"
-                                    ? "Route Completed"
-                                    : truckState?.onsite
-                                      ? `At ${currentPoint?.name ?? "stop"}`
-                                      : currentPoint
-                                        ? `${currentPoint.name} • ${currentPoint.time}`
-                                        : "Standby"}
-                                </span>
-                              </div>
-                              <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2.5">
-                                <span className="shrink-0 text-[15px] text-foreground">Stops</span>
-                                <span className="text-right text-[15px] tabular-nums text-muted-foreground">
-                                  {routePoints.length
-                                    ? `${
-                                        truckState?.phase === "completed"
-                                          ? routePoints.length
-                                          : truckState?.onsite
-                                            ? truckState.stopIndex + 1
-                                            : truckState?.stopIndex ?? 0
-                                      } of ${routePoints.length}`
-                                    : "—"}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                      </div>
-                    )}
-                </div>
-              </div>
-            </motion.div>
-          )}
 
           {activeTab === "assignment" && (
             <motion.div
@@ -1551,7 +1490,7 @@ export default function DriverPage() {
                                         onClick={() => { haptic(); setAssignmentDetailId(s.id); }}
                                         className="flex w-full cursor-pointer items-center justify-between gap-3 px-4 py-2.5 text-left transition-colors active:bg-muted"
                                       >
-                                        <RouteIcon className="h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+                                        <AssignmentBadge className="h-9 w-9 shrink-0" />
                                         <div className="min-w-0 flex-1">
                                           <p className="text-[15px] leading-snug break-words text-foreground">{scheduleLabel(s)}</p>
                                           <p className="mt-0.5 text-[13px] text-muted-foreground">{s.time || "No time specified"}</p>
@@ -1575,6 +1514,7 @@ export default function DriverPage() {
                         <>
                           {/* Centered header */}
                           <div className="flex flex-col items-center px-4 pb-2 pt-6 text-center">
+                            <AssignmentBadge className="mb-2 h-16 w-16" />
                             <h2 className="text-[20px] font-semibold tracking-tight text-foreground">{scheduleLabel(detailSchedule)}</h2>
                             {([assignmentDayLabel(detailSchedule?.assignmentDate), detailSchedule?.time].filter(Boolean).join(" · ") || detailAreaName) && (
                               <p className="mt-0.5 text-[13px] text-muted-foreground">
@@ -1618,7 +1558,9 @@ export default function DriverPage() {
                                   haptic(15);
                                   try {
                                     await acceptAssignment(detailSchedule.id);
-                                    toast("Assignment accepted. You can now start the route.");
+                                    toast("Assignment accepted. Start the route from the map.");
+                                    setAssignmentDetailId(null);
+                                    switchTab("map");
                                   } catch {
                                     toast("Could not accept the assignment. Please try again.", { variant: "error" });
                                   }
@@ -1630,12 +1572,12 @@ export default function DriverPage() {
                             )}
                             {(!isOnDuty && isDetailAccepted && detailStatus === "Accepted") && (
                               <p className="text-center text-[13px] text-muted-foreground">
-                                Assignment accepted. Start it from Route.
+                                Assignment accepted. Start it from the map.
                               </p>
                             )}
                             {detailStatus === "In Progress" && (
                               <p className="text-center text-[13px] text-muted-foreground">
-                                In progress. Manage it from Route.
+                                In progress. Manage it from the map.
                               </p>
                             )}
                             <button
@@ -1812,7 +1754,7 @@ export default function DriverPage() {
                                     onClick={() => { haptic(); setHistoryDetailId(s.id); }}
                                     className="flex w-full cursor-pointer items-center justify-between gap-3 px-4 py-2.5 text-left transition-opacity active:opacity-60"
                                   >
-                                    <History className="h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+                                    <HistoryBadge className="h-9 w-9 shrink-0" />
                                     <span className="min-w-0 flex-1">
                                       <p className="text-[15px] leading-snug break-words text-foreground">{s.label ?? scheduleLabel(s)}</p>
                                       <p className="mt-0.5 text-[13px] text-muted-foreground">
@@ -1835,6 +1777,7 @@ export default function DriverPage() {
                         <>
                           {/* Centered header */}
                           <div className="flex flex-col items-center px-4 pb-2 pt-6 text-center">
+                            <HistoryBadge className="mb-2 h-16 w-16" />
                             <h2 className="text-[20px] font-semibold tracking-tight text-foreground">{scheduleLabel(historyDetail)}</h2>
                             {([formatHistoryDate(historyDetail?.assignmentDate), historyDetail?.time].filter(Boolean).join(" · ") || historyDetailArea) && (
                               <p className="mt-0.5 text-[13px] text-muted-foreground">
@@ -1890,13 +1833,13 @@ export default function DriverPage() {
                 <div className="relative flex h-[52px] items-center justify-center px-2">
                   <button
                     type="button"
-                    onClick={() => { profileView === "password" ? setProfileView("main") : switchTab("map"); }}
+                    onClick={() => { profileView === "main" ? switchTab("map") : setProfileView("main"); }}
                     className="absolute left-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-all active:scale-95 cursor-pointer"
-                    aria-label={profileView === "password" ? "Back to profile" : "Back to map"}
+                    aria-label={profileView === "main" ? "Back to map" : "Back to profile"}
                   >
                     <ChevronLeft className="h-6 w-6" strokeWidth={2} />
                   </button>
-                  <h1 className="text-[17px] font-semibold tracking-tight text-foreground">{profileView === "password" ? "Change Password" : "Profile"}</h1>
+                  <h1 className="text-[17px] font-semibold tracking-tight text-foreground">{profileView === "password" ? "Change Password" : profileView === "mapview" ? "Map Display" : "Profile"}</h1>
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto bg-muted/40 pb-10">
@@ -1999,6 +1942,44 @@ export default function DriverPage() {
             </div>
           </div>
               </motion.div>
+              ) : profileView === "mapview" ? (
+              <motion.div
+                key="profile-mapview"
+                initial={{ x: 48, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: 48, opacity: 0 }}
+                transition={{ duration: 0.18, ease: "easeOut" }}
+                className="flex flex-1 flex-col"
+              >
+          <div className="mt-5 px-4">
+            <div className="rounded-2xl border border-border/60 bg-card p-4 space-y-2.5">
+              <p className="text-[13px] leading-normal text-muted-foreground">
+                Choose how the map camera looks when you open it.
+              </p>
+              <div className="flex rounded-full bg-muted p-1">
+                {[
+                  { id: "default", label: "Default" },
+                  { id: "tilt", label: "Camera Tilt" },
+                ].map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => { setMapView(opt.id); haptic(); }}
+                    aria-pressed={mapView === opt.id}
+                    className={cn(
+                      "h-9 flex-1 cursor-pointer rounded-full text-[13px] transition-all active:scale-[0.98]",
+                      mapView === opt.id
+                        ? "bg-card font-semibold text-foreground shadow-sm"
+                        : "font-medium text-muted-foreground"
+                    )}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+              </motion.div>
               ) : (
               <motion.div
                 key="profile-main"
@@ -2063,6 +2044,17 @@ export default function DriverPage() {
           {/* Preferences group */}
           <div className="mt-5 px-4">
             <p className="px-1 pb-1.5 text-[13px] text-muted-foreground">Preferences</p>
+            <button
+              type="button"
+              onClick={() => { setProfileView("mapview"); haptic(); }}
+              className="mb-2.5 flex min-h-[48px] w-full cursor-pointer items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card px-4 py-2.5 transition-all active:bg-muted"
+            >
+              <span className="text-left">
+                <span className="block text-[15px] text-foreground">Map Display</span>
+                <span className="block text-[13px] text-muted-foreground">{mapView === "tilt" ? "Camera tilt" : "Default"}</span>
+              </span>
+              <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground/50" />
+            </button>
             <div className="flex min-h-[48px] w-full items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card px-4 py-2.5">
               <div className="min-w-0 flex-1">
                 <p className="text-[15px] text-foreground">Notification Sounds</p>
@@ -2094,6 +2086,16 @@ export default function DriverPage() {
 
           {/* Actions */}
           <div className="mt-5 px-4">
+            {isOnDuty && (
+              <button
+                type="button"
+                onClick={handleEndRoute}
+                className="mb-2.5 flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-rose-600 text-[15px] font-semibold text-white transition-all active:scale-[0.99] active:bg-rose-700"
+              >
+                <X className="h-5 w-5" strokeWidth={2} />
+                End Route
+              </button>
+            )}
             <button
               type="button"
               onClick={() => {
@@ -2205,6 +2207,47 @@ export default function DriverPage() {
       )}
 
       {/* Native iOS-style Sign Out Confirmation Alert */}
+      {confirmStart && (
+        <div
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setConfirmStart(false)}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 1.1 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.1 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+            className="w-full max-w-[270px] overflow-hidden rounded-[14px] bg-white text-center shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-4 pb-4 pt-5">
+              <h3 className="text-[17px] font-semibold tracking-tight text-zinc-900">Start Route?</h3>
+              <p className="mt-1 text-[13px] leading-normal text-zinc-600">
+                {assignedSchedule
+                  ? `Begin ${scheduleLabel(assignedSchedule)}? GPS broadcasting will turn on.`
+                  : "Resume the route? GPS broadcasting will turn on."}
+              </p>
+            </div>
+            <div className="flex divide-x divide-black/10 border-t border-black/10">
+              <button
+                type="button"
+                onClick={() => setConfirmStart(false)}
+                className="h-11 flex-1 text-[17px] text-zinc-800 transition-colors hover:bg-black/5 active:bg-black/10 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={proceedStartRoute}
+                className="h-11 flex-1 text-[17px] font-semibold text-emerald-600 transition-colors hover:bg-black/5 active:bg-black/10 cursor-pointer"
+              >
+                Start
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
       {showSignOutModal && (
         <div
           className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 p-4"

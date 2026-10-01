@@ -48,6 +48,7 @@ import { MapSkeleton, ResidentShellSkeleton } from "@/components/ui/skeletons";
 import { InfoRow } from "@/components/ui/info-row";
 import { useToast } from "@/components/pwa/Toast";
 import DbStatusBanner from "@/components/pwa/DbStatusBanner";
+import { useMapView } from "@/lib/use-map-view";
 import {
   useNotifications,
   markNotificationRead,
@@ -453,7 +454,8 @@ export default function ResidentMobilePWA() {
 
   // Resident password change (mirrors the driver flow): validate locally,
   // verify the current password by re-authenticating, then update via Auth.
-  const [residentProfileView, setResidentProfileView] = useState("main");
+  const [residentProfileView, setResidentProfileView] = useState("main"); // "main" | "password" | "mapview"
+  const [mapView, setMapView] = useMapView("resident-map-view");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
@@ -679,12 +681,15 @@ export default function ResidentMobilePWA() {
   // broadcasting (or finished). A paused/ended route (isActive false while
   const activeTs = useMemo(
     () =>
-      Object.values(live.trucks || {}).find(
-        (ts) =>
-          ts.scheduleId &&
-          ts.phase !== "idle" &&
-          (ts.tracking?.isActive || ts.phase === "completed")
-      ) || null,
+      Object.values(live.trucks || {}).find((ts) => {
+        if (!ts.scheduleId || ts.phase === "idle") return false;
+        if (!ts.tracking?.isActive && ts.phase !== "completed") return false;
+        // Cancelled or binned schedules never count as the running route,
+        // so their pins and banner disappear from the resident map.
+        const sch = getSchedule(ts.scheduleId);
+        const eff = sch ? (live.scheduleStatus?.[sch.id] ?? sch.status) : null;
+        return !!sch && eff !== "Cancelled" && !sch.isArchived;
+      }) || null,
     [live]
   );
   const activeSchedule = activeTs ? getSchedule(activeTs.scheduleId) : null;
@@ -1695,6 +1700,7 @@ export default function ResidentMobilePWA() {
             tickets={mapFocusTicket ? [mapFocusTicket] : []}
             trucks={activeTrucks}
             mapMode="pins"
+            tilted={mapView === "tilt"}
             currentStop={currentStop}
             upcomingStops={upcomingStops}
             center={mapFocusTicket ? [mapFocusTicket.lat, mapFocusTicket.lng] : selectedTicket ? [selectedTicket.lat, selectedTicket.lng] : mapCenter}
@@ -2687,13 +2693,13 @@ export default function ResidentMobilePWA() {
         <div className="relative flex h-[52px] items-center justify-center px-2">
           <button
             type="button"
-            onClick={() => { residentProfileView === "password" ? setResidentProfileView("main") : setActiveTab("map"); haptic(); }}
+            onClick={() => { residentProfileView === "main" ? setActiveTab("map") : setResidentProfileView("main"); haptic(); }}
             className="absolute left-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-all active:scale-95 cursor-pointer"
-            aria-label={residentProfileView === "password" ? "Back to profile" : "Back to map"}
+            aria-label={residentProfileView === "main" ? "Back to map" : "Back to profile"}
           >
             <ChevronLeft className="h-6 w-6" strokeWidth={2} />
           </button>
-          <h1 className="text-[17px] font-semibold tracking-tight text-foreground">{residentProfileView === "password" ? "Change Password" : "Profile"}</h1>
+          <h1 className="text-[17px] font-semibold tracking-tight text-foreground">{residentProfileView === "password" ? "Change Password" : residentProfileView === "mapview" ? "Map Display" : "Profile"}</h1>
         </div>
       </div>
       <div className="flex-1 overflow-y-auto bg-muted/40 pb-10">
@@ -2760,6 +2766,43 @@ export default function ResidentMobilePWA() {
                   "Update Password"
                 )}
               </Button>
+            </div>
+          </div>
+        </motion.div>
+      ) : residentProfileView === "mapview" ? (
+        <motion.div
+          key="resident-profile-mapview"
+          initial={{ x: 48, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          exit={{ x: 48, opacity: 0 }}
+          transition={{ duration: 0.18, ease: "easeOut" }}
+        >
+          <div className="mt-5 px-4">
+            <div className="rounded-2xl border border-border/60 bg-card p-4 space-y-2.5">
+              <p className="text-[13px] leading-normal text-muted-foreground">
+                Choose how the map camera looks when you open it.
+              </p>
+              <div className="flex rounded-full bg-muted p-1">
+                {[
+                  { id: "default", label: "Default" },
+                  { id: "tilt", label: "Camera Tilt" },
+                ].map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => { setMapView(opt.id); haptic(); }}
+                    aria-pressed={mapView === opt.id}
+                    className={cn(
+                      "h-9 flex-1 cursor-pointer rounded-full text-[13px] transition-all active:scale-[0.98]",
+                      mapView === opt.id
+                        ? "bg-card font-semibold text-foreground shadow-sm"
+                        : "font-medium text-muted-foreground"
+                    )}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </motion.div>
@@ -2871,6 +2914,17 @@ export default function ResidentMobilePWA() {
         {/* Preferences group */}
         <div className="mt-5 px-4">
           <p className="px-1 pb-1.5 text-[13px] text-muted-foreground">Preferences</p>
+          <button
+            type="button"
+            onClick={() => { setResidentProfileView("mapview"); haptic(); }}
+            className="mb-2.5 flex min-h-[48px] w-full cursor-pointer items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card px-4 py-2.5 transition-all active:bg-muted"
+          >
+            <span className="text-left">
+              <span className="block text-[15px] text-foreground">Map Display</span>
+              <span className="block text-[13px] text-muted-foreground">{mapView === "tilt" ? "Camera tilt" : "Default"}</span>
+            </span>
+            <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground/50" />
+          </button>
           <div className="flex min-h-[48px] w-full items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card px-4 py-2.5">
             <div className="min-w-0 flex-1">
               <p className="text-[15px] text-foreground">Notification Sounds</p>

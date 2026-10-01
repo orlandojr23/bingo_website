@@ -839,8 +839,8 @@ export async function cancelAssignment({ scheduleId, truckId = null, cancelledBy
 
   const activeTruckId = truckId || schedule.truckId;
   const ts = activeTruckId ? getSnapshot().trucks[activeTruckId] : null;
-  const wasRunning = !!ts && ts.scheduleId === scheduleId && ts.phase !== "idle";
-  if (wasRunning) {
+  const attached = !!ts && ts.scheduleId === scheduleId;
+  if (attached) {
     await supabase.from('live_tracking').update({
       schedule_id: null,
       phase: 'idle',
@@ -859,7 +859,7 @@ export async function cancelAssignment({ scheduleId, truckId = null, cancelledBy
       };
       next.scheduleStatus = { ...next.scheduleStatus, [scheduleId]: "Cancelled" };
     }
-    if (wasRunning && next.trucks?.[activeTruckId]) {
+    if (attached && next.trucks?.[activeTruckId]) {
       const cur = next.trucks[activeTruckId];
       next.trucks = {
         ...next.trucks,

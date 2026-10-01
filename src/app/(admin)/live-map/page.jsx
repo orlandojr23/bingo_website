@@ -13,6 +13,7 @@ import { inputClass } from "@/components/ui/input";
 import { MapSkeleton } from "@/components/ui/skeletons";
 import { cn, formatTicketDateTime } from "@/lib/utils";
 import { useToast } from "@/components/pwa/Toast";
+import { useMapView } from "@/lib/use-map-view";
 import { Search, MapPin, Truck as TruckIcon } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -53,6 +54,7 @@ function LiveMapContent() {
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [mapCenter, setMapCenter] = useState([10.3016, 123.9086]);
   const [mapZoom, setMapZoom] = useState(null);
+  const [cameraView] = useMapView("admin-map-view");
 
   const live = useLiveRoute();
   const fleet = useFleet();
@@ -246,6 +248,7 @@ function LiveMapContent() {
           highlightedTicketId={mapView === "reports" ? activeTicketId : null}
           onSelectTicket={mapView === "reports" ? handlePinClick : undefined}
           showZoomControl
+          tilted={cameraView === "tilt"}
           showTicketPopup={false}
         />
       </div>

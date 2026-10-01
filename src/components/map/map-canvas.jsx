@@ -516,7 +516,7 @@ function TruckMarker({ map, trk, fading }) {
 // Stable identity for an upcoming-stop pin: absolute route index + position.
 const upcomingPinKey = (s) => `${s.index}-${s.lat}-${s.lng}`;
 
-export default function MapCanvas({ tickets = [], trucks = [], mapMode = "pins", center, zoom, highlightedTicketId, currentStop, upcomingStops = [], onSelectTicket, onMapDrag, onBoundsChange, flySignal, onMapReady, showZoomControl = false, showTicketPopup = true, rotatable = false, bearing = null, perspective3D = false, hidePausedTrucks = false }) {
+export default function MapCanvas({ tickets = [], trucks = [], mapMode = "pins", center, zoom, highlightedTicketId, currentStop, upcomingStops = [], onSelectTicket, onMapDrag, onBoundsChange, flySignal, onMapReady, showZoomControl = false, showTicketPopup = true, rotatable = false, bearing = null, perspective3D = false, tilted = false, hidePausedTrucks = false }) {
   const containerRef = useRef(null);
   const [mapObj, setMapObj] = useState(null);
   const [mapError, setMapError] = useState(false);
@@ -542,7 +542,9 @@ export default function MapCanvas({ tickets = [], trucks = [], mapMode = "pins",
   // Flat north-up maps still reset a leftover drive rotation; manual user
   // rotations (autoFollow false) are left alone.
   const wantBearing = autoFollow ? cameraBearing : null;
-  const wantPitch = perspective3D ? DRIVE_PITCH : FLAT_PITCH;
+  // Tilted default view pitches the camera without engaging drive mode
+  // (course-up bearing and ahead offset stay behind perspective3D).
+  const wantPitch = perspective3D || tilted ? DRIVE_PITCH : FLAT_PITCH;
 
   // On-duty trucks broadcast live; paused trucks (mid-route, GPS stopped via
   // End Route) stay visible at their last known position so admins can see an
