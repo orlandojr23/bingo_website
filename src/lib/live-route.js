@@ -641,8 +641,13 @@ export async function startRoute(truckId, coords = null) {
     }
 
     newTracking = {
-      lat: coords?.lat ?? first?.lat ?? ts.tracking.lat,
-      lng: coords?.lng ?? first?.lng ?? ts.tracking.lng,
+      // Fresh GPS first, then wherever the truck already is. The first
+      // stop is only a last resort so the marker has a mount point (the
+      // pop-in + snap grace cover the first real fix). Never let a stale
+      // fallback position teleport the marker — callers pass coords only
+      // when they hold a live fix.
+      lat: coords?.lat ?? ts.tracking.lat ?? first?.lat,
+      lng: coords?.lng ?? ts.tracking.lng ?? first?.lng,
       heading: initialHeading,
       eta: "5 mins",
       isActive: true,
@@ -712,10 +717,12 @@ export async function stopByAtPoint(truckId) {
   if (!ts || !ts.scheduleId) return;
   const point = getSchedule(ts.scheduleId)?.routePoints?.[ts.stopIndex];
 
+  // Never overwrite lat/lng with the pin: the truck is where its GPS says,
+  // not exactly on the pin (drivers stop meters away, tap early/late).
+  // Writing pin coords here used to teleport every map marker onto the pin
+  // like a magnet on every Stop By. Only the phase/eta change.
   const newTracking = {
     ...ts.tracking,
-    lat: point?.lat ?? ts.tracking.lat,
-    lng: point?.lng ?? ts.tracking.lng,
     eta: "On Site",
   };
 
@@ -723,8 +730,6 @@ export async function stopByAtPoint(truckId) {
     phase: "onsite",
     onsite: true,
     eta: newTracking.eta,
-    lat: newTracking.lat,
-    lng: newTracking.lng,
   }).eq('truck_id', truckId);
 
   write((next) => {

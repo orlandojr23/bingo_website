@@ -1167,7 +1167,10 @@ export default function DriverPage() {
     }
 
     // Bug 4 fix: await startRoute so GPS and wake lock don't activate before route is recorded
-    const scheduleId = await startRoute(selectedTruckId, coords);
+    // Pass coords only with a live fix this session — the state otherwise
+    // holds the Tejero Hall fallback (or a stale teardown position), which
+    // used to teleport the marker there on every fresh start.
+    const scheduleId = await startRoute(selectedTruckId, hasLiveFix ? coords : null);
     if (!scheduleId) {
       if (needsAcceptance) {
         toast("Please accept your assignment in Tasks before starting the route.", { variant: "warning" });
