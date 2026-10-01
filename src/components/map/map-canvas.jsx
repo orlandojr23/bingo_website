@@ -190,7 +190,7 @@ function makeTruckEl() {
   const el = document.createElement("div");
   el.className = "custom-truck bg-transparent border-0";
   el.innerHTML = `
-    <div style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; filter: drop-shadow(0px 3px 5px rgba(0,0,0,0.28)); animation: truckPopIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);">
+    <div style="display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; filter: drop-shadow(0px 3px 5px rgba(0,0,0,0.28)); animation: truckPopIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);">
       <style>
         @keyframes truckPopIn {
           0% { opacity: 0; transform: scale(0); }
@@ -201,9 +201,34 @@ function makeTruckEl() {
           to { opacity: 0; }
         }
       </style>
-      <svg data-arrow width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="transform-origin: 50% 50%;">
-        <path d="M16 5 L25 25 L16 20 L7 25 Z" fill="#29B6F6" stroke="#ffffff" stroke-width="2.5" stroke-linejoin="round" />
-
+      <svg data-arrow width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" style="transform-origin: 50% 50%;">
+        <!-- Top-down compactor truck, nose pointing up (north at rest) so the
+             existing heading rotation keeps working. White strokes lift it
+             off any basemap. -->
+        <!-- wheels -->
+        <g fill="#27272a">
+          <rect x="12" y="11" width="4.5" height="8" rx="1.5" />
+          <rect x="31.5" y="11" width="4.5" height="8" rx="1.5" />
+          <rect x="12" y="31" width="4.5" height="8" rx="1.5" />
+          <rect x="31.5" y="31" width="4.5" height="8" rx="1.5" />
+        </g>
+        <!-- compactor body -->
+        <rect x="16" y="16" width="16" height="24" rx="3" fill="#059669" stroke="#ffffff" stroke-width="2" />
+        <!-- body ribs -->
+        <g stroke="#047857" stroke-width="1.4" stroke-linecap="round">
+          <line x1="18.5" y1="22.5" x2="29.5" y2="22.5" />
+          <line x1="18.5" y1="27.5" x2="29.5" y2="27.5" />
+          <line x1="18.5" y1="32.5" x2="29.5" y2="32.5" />
+        </g>
+        <!-- rear hopper -->
+        <rect x="16" y="35.5" width="16" height="5" rx="2" fill="#065f46" />
+        <!-- cab -->
+        <rect x="17" y="7.5" width="14" height="9.5" rx="2.5" fill="#f4f4f5" stroke="#ffffff" stroke-width="2" />
+        <!-- windshield -->
+        <rect x="19.5" y="10" width="9" height="3.6" rx="1.6" fill="#7DD3FC" />
+        <!-- headlights -->
+        <circle cx="18.4" cy="8.2" r="1.3" fill="#FDE047" />
+        <circle cx="29.6" cy="8.2" r="1.3" fill="#FDE047" />
       </svg>
     </div>
   `;

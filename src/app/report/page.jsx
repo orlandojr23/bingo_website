@@ -507,6 +507,7 @@ export default function ResidentMobilePWA() {
   // Resident password change (mirrors the driver flow): validate locally,
   // verify the current password by re-authenticating, then update via Auth.
   const [residentProfileView, setResidentProfileView] = useState("main"); // "main" | "password" | "mapview"
+  const [confirmTilt, setConfirmTilt] = useState(false);
   const [mapView, setMapView] = useMapView("resident-map-view");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -2846,7 +2847,13 @@ export default function ResidentMobilePWA() {
                   <button
                     key={opt.id}
                     type="button"
-                    onClick={() => { setMapView(opt.id); haptic(); }}
+                    onClick={() => {
+                      // Tilt changes the camera perspective — confirm first
+                      // since it affects how the truck marker looks.
+                      if (opt.id === "tilt" && mapView !== "tilt") setConfirmTilt(true);
+                      else setMapView(opt.id);
+                      haptic();
+                    }}
                     aria-pressed={mapView === opt.id}
                     className={cn(
                       "h-9 flex-1 cursor-pointer rounded-full text-[13px] transition-all active:scale-[0.98]",
@@ -3346,6 +3353,45 @@ export default function ResidentMobilePWA() {
 />
 <DbStatusBanner />
 { ToastViewport }
+{/* Native iOS-style Camera Tilt Confirmation Alert */}
+{confirmTilt && (
+  <div
+    className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 p-4"
+    onClick={() => setConfirmTilt(false)}
+  >
+    <motion.div
+      initial={{ opacity: 0, scale: 1.1 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 1.1 }}
+      transition={{ duration: 0.15, ease: "easeOut" }}
+      className="w-full max-w-[270px] overflow-hidden rounded-[14px] bg-white text-center shadow-xl"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="px-4 pb-4 pt-5">
+        <h3 className="text-[17px] font-semibold tracking-tight text-zinc-900">Camera Tilt?</h3>
+        <p className="mt-1 text-[13px] leading-normal text-zinc-600">
+          Tilt changes how the truck marker looks on the map. 3D markers aren&apos;t supported for now.
+        </p>
+      </div>
+      <div className="flex divide-x divide-black/10 border-t border-black/10">
+        <button
+          type="button"
+          onClick={() => setConfirmTilt(false)}
+          className="h-11 flex-1 text-[17px] text-zinc-800 transition-colors hover:bg-black/5 active:bg-black/10 cursor-pointer"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={() => { setMapView("tilt"); setConfirmTilt(false); haptic(); }}
+          className="h-11 flex-1 text-[17px] font-semibold text-emerald-600 transition-colors hover:bg-black/5 active:bg-black/10 cursor-pointer"
+        >
+          Use Tilt
+        </button>
+      </div>
+    </motion.div>
+  </div>
+)}
     </div >
   );
 }

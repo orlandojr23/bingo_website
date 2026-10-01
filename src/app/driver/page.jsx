@@ -19,7 +19,6 @@ import {
   ChevronRight,
   ChevronDown,
   LocateFixed,
-  Flag,
   Truck,
   User,
   Calendar,
@@ -318,6 +317,8 @@ export default function DriverPage() {
   // Cancel-assignment confirm modal (task details screen).
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [confirmStart, setConfirmStart] = useState(false);
+  const [confirmStopBy, setConfirmStopBy] = useState(false);
+  const [confirmTilt, setConfirmTilt] = useState(false);
   const [cancelReason, setCancelReason] = useState("Truck breakdown");
   const [isCancelling, setIsCancelling] = useState(false);
   // History sub-screen: same drill-in for completed routes.
@@ -1107,8 +1108,8 @@ export default function DriverPage() {
     }
 
     if (truckState.phase === "enroute") {
-      stopByAtPoint(selectedTruckId);
-      toast(`Arrived at ${currentPoint?.name ?? "stop"}. Admin notified.`);
+      // Misclick guard: confirm before marking arrival (notifies admin).
+      setConfirmStopBy(true);
       return;
     }
 
@@ -1199,6 +1200,14 @@ export default function DriverPage() {
     setFlySignal((s) => s + 1);
 
     toast(wasPaused ? "Route resumed." : "Route started.");
+  };
+
+  // Runs only from the Stop By confirmation dialog.
+  const proceedStopBy = () => {
+    setConfirmStopBy(false);
+    haptic(15);
+    stopByAtPoint(selectedTruckId);
+    toast(`Arrived at ${currentPoint?.name ?? "stop"}. Admin notified.`);
   };
 
   // Single "current stop" pin: shown only once the driver has started the route.
@@ -1299,7 +1308,18 @@ export default function DriverPage() {
             ? { tone: "bg-emerald-600", icon: <ClipboardList className="h-6 w-6" />, label: "Accept Assignment", short: "Accept", disabled: false }
             : { tone: "bg-emerald-600", icon: <Play className="h-6 w-6 fill-white" />, label: "Start Route", short: "Start", disabled: false }
       : truckState?.phase === "enroute"
-        ? { tone: "bg-amber-500", icon: <Flag className="h-6 w-6" strokeWidth={2.25} />, label: "Stop By", short: "Stop By" }
+        ? {
+            tone: "bg-amber-500",
+            icon: (
+              <svg width="30" height="35" viewBox="0 0 24 28" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <circle cx="12" cy="10.5" r="7" fill="#ffffff" stroke="#059669" strokeWidth="3" />
+                <path d="M8.5 16.5 L12 24 L15.5 16.5 Z" fill="#059669" />
+                <circle cx="12" cy="10.5" r="2.5" fill="#059669" />
+              </svg>
+            ),
+            label: "Stop By",
+            short: "Stop By",
+          }
         : !isLastPoint
           ? { tone: "bg-emerald-600", icon: <Play className="h-6 w-6 fill-white" />, label: "Continue Route", short: "Continue" }
           : { tone: "bg-emerald-600", icon: <Check className="h-6 w-6" strokeWidth={2.5} />, label: "Complete Route", short: "Complete" };
@@ -2044,7 +2064,13 @@ export default function DriverPage() {
                   <button
                     key={opt.id}
                     type="button"
-                    onClick={() => { setMapView(opt.id); haptic(); }}
+                    onClick={() => {
+                      // Tilt changes the camera perspective — confirm first
+                      // since it affects how the truck marker looks.
+                      if (opt.id === "tilt" && mapView !== "tilt") setConfirmTilt(true);
+                      else setMapView(opt.id);
+                      haptic();
+                    }}
                     aria-pressed={mapView === opt.id}
                     className={cn(
                       "h-9 flex-1 cursor-pointer rounded-full text-[13px] transition-all active:scale-[0.98]",
@@ -2312,6 +2338,86 @@ export default function DriverPage() {
                 className="h-11 flex-1 text-[17px] font-semibold text-emerald-600 transition-colors hover:bg-black/5 active:bg-black/10 cursor-pointer"
               >
                 Start
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Native iOS-style Stop By Confirmation Alert */}
+      {confirmStopBy && (
+        <div
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setConfirmStopBy(false)}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 1.1 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.1 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+            className="w-full max-w-[270px] overflow-hidden rounded-[14px] bg-white text-center shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-4 pb-4 pt-5">
+              <h3 className="text-[17px] font-semibold tracking-tight text-zinc-900">Stop By?</h3>
+              <p className="mt-1 text-[13px] leading-normal text-zinc-600">
+                {`Arrived at ${currentPoint?.name ?? "this stop"}? Admin will be notified.`}
+              </p>
+            </div>
+            <div className="flex divide-x divide-black/10 border-t border-black/10">
+              <button
+                type="button"
+                onClick={() => setConfirmStopBy(false)}
+                className="h-11 flex-1 text-[17px] text-zinc-800 transition-colors hover:bg-black/5 active:bg-black/10 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={proceedStopBy}
+                className="h-11 flex-1 text-[17px] font-semibold text-amber-600 transition-colors hover:bg-black/5 active:bg-black/10 cursor-pointer"
+              >
+                Stop By
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Native iOS-style Camera Tilt Confirmation Alert */}
+      {confirmTilt && (
+        <div
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setConfirmTilt(false)}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 1.1 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.1 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+            className="w-full max-w-[270px] overflow-hidden rounded-[14px] bg-white text-center shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-4 pb-4 pt-5">
+              <h3 className="text-[17px] font-semibold tracking-tight text-zinc-900">Camera Tilt?</h3>
+              <p className="mt-1 text-[13px] leading-normal text-zinc-600">
+                Tilt changes how the truck marker looks on the map. 3D markers aren&apos;t supported for now.
+              </p>
+            </div>
+            <div className="flex divide-x divide-black/10 border-t border-black/10">
+              <button
+                type="button"
+                onClick={() => setConfirmTilt(false)}
+                className="h-11 flex-1 text-[17px] text-zinc-800 transition-colors hover:bg-black/5 active:bg-black/10 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => { setMapView("tilt"); setConfirmTilt(false); haptic(); }}
+                className="h-11 flex-1 text-[17px] font-semibold text-emerald-600 transition-colors hover:bg-black/5 active:bg-black/10 cursor-pointer"
+              >
+                Use Tilt
               </button>
             </div>
           </motion.div>

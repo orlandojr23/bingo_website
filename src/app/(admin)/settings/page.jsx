@@ -35,6 +35,7 @@ function Toggle({ checked, onChange }) {
 export default function SettingsPage() {
   const { setProfile: setAuthProfile, refreshProfile } = useAuth();
   const [toastMessage, setToastMessage] = useState(null);
+  const [confirmTilt, setConfirmTilt] = useState(false);
 
   const showToast = (message) => {
     setToastMessage(message);
@@ -200,6 +201,41 @@ export default function SettingsPage() {
       {toastMessage && (
         <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-6 z-50 flex animate-in-fade items-center justify-center gap-2 rounded-[10px] bg-zinc-900 px-4 py-3 text-[13px] text-white shadow-lg">
           <span>{toastMessage}</span>
+        </div>
+      )}
+      {/* Camera Tilt confirmation */}
+      {confirmTilt && (
+        <div
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setConfirmTilt(false)}
+        >
+          <div
+            className="w-full max-w-[270px] overflow-hidden rounded-[14px] bg-white text-center shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-4 pb-4 pt-5">
+              <h3 className="text-[17px] font-semibold tracking-tight text-zinc-900">Camera Tilt?</h3>
+              <p className="mt-1 text-[13px] leading-normal text-zinc-600">
+                Tilt changes how the truck marker looks on the map. 3D markers aren&apos;t supported for now.
+              </p>
+            </div>
+            <div className="flex divide-x divide-black/10 border-t border-black/10">
+              <button
+                type="button"
+                onClick={() => setConfirmTilt(false)}
+                className="h-11 flex-1 text-[17px] text-zinc-800 transition-colors hover:bg-black/5 active:bg-black/10 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => { setMapView("tilt"); setConfirmTilt(false); showToast("Map display updated."); }}
+                className="h-11 flex-1 text-[17px] font-semibold text-emerald-600 transition-colors hover:bg-black/5 active:bg-black/10 cursor-pointer"
+              >
+                Use Tilt
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -414,8 +450,13 @@ export default function SettingsPage() {
                   key={opt.id}
                   type="button"
                   onClick={() => {
-                    setMapView(opt.id);
-                    showToast("Map display updated.");
+                    // Tilt changes the camera perspective — confirm first
+                    // since it affects how the truck marker looks.
+                    if (opt.id === "tilt" && mapView !== "tilt") setConfirmTilt(true);
+                    else {
+                      setMapView(opt.id);
+                      showToast("Map display updated.");
+                    }
                   }}
                   aria-pressed={mapView === opt.id}
                   className={cn(

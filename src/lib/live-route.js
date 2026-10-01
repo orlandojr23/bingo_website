@@ -137,8 +137,10 @@ export async function reinitSupabaseSync() {
           truckId: t.truck_id,
           scheduleId: t.schedule_id,
           phase: t.phase || "idle",
-          stopIndex: t.stop_index || 0,
-          onsite: t.onsite || false,
+          // DB columns are current_stop_index (int4); there is no
+          // stop_index/onsite column — onsite is derived from phase.
+          stopIndex: t.current_stop_index ?? 0,
+          onsite: t.phase === "onsite",
           tracking: {
             lat: t.lat || mockPilotData.center[0],
             lng: t.lng || mockPilotData.center[1],
@@ -218,8 +220,8 @@ async function initSupabaseSync() {
               truckId: t.truck_id,
               scheduleId: t.schedule_id,
               phase: t.phase || "idle",
-              stopIndex: t.stop_index || 0,
-              onsite: t.onsite || false,
+              stopIndex: t.current_stop_index ?? 0,
+              onsite: t.phase === "onsite",
               tracking: {
                 lat: t.lat || mockPilotData.center[0],
                 lng: t.lng || mockPilotData.center[1],
@@ -728,7 +730,6 @@ export async function stopByAtPoint(truckId) {
 
   await supabase.from('live_tracking').update({
     phase: "onsite",
-    onsite: true,
     eta: newTracking.eta,
   }).eq('truck_id', truckId);
 
@@ -770,8 +771,7 @@ export async function continueRoute(truckId) {
 
   await supabase.from('live_tracking').update({
     phase: "enroute",
-    onsite: false,
-    stop_index: newIndex,
+    current_stop_index: newIndex,
     eta: "5 mins",
   }).eq('truck_id', truckId);
 
@@ -829,8 +829,7 @@ export async function completeRoute(truckId) {
 
   await supabase.from('live_tracking').update({
     phase: "completed",
-    onsite: false,
-    stop_index: newIndex,
+    current_stop_index: newIndex,
     is_active: false,
     eta: "Route Done",
   }).eq('truck_id', truckId);
@@ -896,8 +895,7 @@ export async function cancelAssignment({ scheduleId, truckId = null, cancelledBy
     await supabase.from('live_tracking').update({
       schedule_id: null,
       phase: 'idle',
-      stop_index: 0,
-      onsite: false,
+      current_stop_index: 0,
       is_active: false,
       eta: 'Standby',
     }).eq('truck_id', activeTruckId);
@@ -977,8 +975,11 @@ export async function cancelAssignment({ scheduleId, truckId = null, cancelledBy
   return { ok: scheduleSaved, scheduleSaved, adminNotified: adminPush.remote, residentsNotified: residentPush.remote, driverNotified };
 }
 
-export async function updateTracking(truckId, patch) {
-  const dbPatch = {};
+// One-time flag for the telemetry rejection diagnostic below — reset only
+// on reload. Keeps the 2s-cadence failure to a single console line.
+let telemetryRejectionLogged = false;
+
+export async function updateTracking(truckId, patch) {  const dbPatch = {};
   if (patch.lat !== undefined) dbPatch.lat = patch.lat;
   if (patch.lng !== undefined) dbPatch.lng = patch.lng;
   if (patch.heading !== undefined) dbPatch.heading = patch.heading;
@@ -998,7 +999,20 @@ export async function updateTracking(truckId, patch) {
     if (isNetworkError(err)) {
       enqueueOp("telemetry", { truckId, patch: dbPatch }, { key: `telemetry:${truckId}` });
     } else {
-      console.error("Telemetry update failed:", err);
+      // PostgREST logic rejection (400 etc.) — print the backend's reason
+      // on ONE line, once per session, so the console stays readable at the
+      // 2s telemetry cadence and the message is directly copy-pasteable.
+      if (!telemetryRejectionLogged) {
+        telemetryRejectionLogged = true;
+        const bits = [
+          err?.code ? `code ${err.code}` : null,
+          err?.status ?? err?.statusCode ? `http ${err.status ?? err.statusCode}` : null,
+          err?.message || String(err),
+          err?.details ? `details: ${err.details}` : null,
+          err?.hint ? `hint: ${err.hint}` : null,
+        ].filter(Boolean);
+        console.error(`[telemetry] live_tracking PATCH rejected — ${bits.join(" | ")}`);
+      }
     }
     recordDbFailure(err);
   }
