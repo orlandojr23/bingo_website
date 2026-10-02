@@ -1257,10 +1257,14 @@ export default function DriverPage() {
     ? null
     : highlightPoint ? { ...highlightPoint, index: highlightIdx } : null;
 
-  // Compact numbered pins for every stop after the highlighted one.
+  // Plain compact pins for every non-highlighted stop: visited stops behind
+  // the highlight (including the one just marked via Stop By) stay on the map
+  // as default pins, plus the numbered ones still ahead.
   const driverUpcomingStops = (!activeSchedule || truckState?.phase === "completed")
     ? []
-    : routePoints.slice(highlightIdx + 1).map((p, i) => ({ ...p, index: highlightIdx + 1 + i }));
+    : routePoints
+        .map((p, i) => ({ ...p, index: i }))
+        .filter((s) => s.index !== highlightIdx);
 
   // Fused travel heading: road snap > ground course > device (see route-snap).
   const bestHeading = truckState?.tracking.heading ?? 0;
@@ -2585,7 +2589,7 @@ export default function DriverPage() {
                               {notif.at ? driverTimeAgo(notif.at, driverNotifNow) : "—"}
                             </span>
                           </span>
-                          <span className="mt-0.5 line-clamp-2 block text-[13px] leading-normal text-muted-foreground">
+                          <span className={cn("mt-0.5 block text-[13px] leading-normal text-muted-foreground", !notif.isRead && "line-clamp-2")}>
                             {notif.message}
                           </span>
                         </span>

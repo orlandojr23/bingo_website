@@ -3253,7 +3253,7 @@ export default function ResidentMobilePWA() {
                           {notif.at ? timeAgo(notif.at, notifNow) : "—"}
                         </span>
                       </span>
-                      <span className="mt-0.5 line-clamp-2 block text-[13px] leading-normal text-muted-foreground">
+                      <span className={cn("mt-0.5 block text-[13px] leading-normal text-muted-foreground", isUpdateUnread(notif) && "line-clamp-2")}>
                         {notif.message}
                       </span>
                     </span>
