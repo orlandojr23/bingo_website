@@ -1,5 +1,5 @@
 // Bin'Go Smart Waste Collection - Progressive Web App Service Worker
-const CACHE_NAME = "bingo-pwa-v4";
+const CACHE_NAME = "bingo-pwa-v5";
 const OFFLINE_URL = "/offline.html";
 
 const PRECACHE_ASSETS = [
@@ -10,6 +10,11 @@ const PRECACHE_ASSETS = [
   "/hero-bg.svg",
   "/favicon.ico",
   "/manifest.webmanifest",
+  "/mascot/arms-open-pose-clean.webp",
+  "/mascot/arms-open-pose.webp",
+  "/mascot/pointing-pose.webp",
+  "/mascot/coffee-pose.webp",
+  "/mascot/star-pose.webp",
 ];
 
 // Install: Cache critical shell assets

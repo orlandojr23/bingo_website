@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 
@@ -33,6 +33,21 @@ const ONBOARDING_STEPS = [
 
 export default function OnboardingModal({ isOpen, onComplete }) {
   const [[currentStep, direction], setStepState] = useState([0, 1]);
+  // Tracks decoded mascot images so each step fades in only once its art is
+  // ready — otherwise the step transition plays over an empty frame and the
+  // image snaps in late (very visible in the installed PWA on first launch,
+  // where the disk/network fetch loses the race against the 0.3s fade).
+  const [loadedSrcs, setLoadedSrcs] = useState({});
+
+  // Warm the mascot cache the moment onboarding opens so swipes never wait.
+  useEffect(() => {
+    if (!isOpen) return;
+    ONBOARDING_STEPS.forEach((step) => {
+      const img = new window.Image();
+      img.src = step.mascot;
+      img.decode?.().catch(() => {});
+    });
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -123,7 +138,14 @@ export default function OnboardingModal({ isOpen, onComplete }) {
                     alt={stepData.title}
                     fetchPriority="high"
                     loading="eager"
-                    className="object-contain w-full h-full"
+                    onLoad={() =>
+                      setLoadedSrcs((prev) =>
+                        prev[stepData.mascot] ? prev : { ...prev, [stepData.mascot]: true }
+                      )
+                    }
+                    className={`object-contain w-full h-full transition-opacity duration-300 ${
+                      loadedSrcs[stepData.mascot] ? "opacity-100" : "opacity-0"
+                    }`}
                   />
                 </div>
               </div>
