@@ -1629,7 +1629,7 @@ export default function ResidentMobilePWA() {
             {[sch.time, categoryShortLabel].filter(Boolean).join(" · ") || "—"}
           </p>
         </span>
-        <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground/50" />
+        <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={2} />
       </button>
     );
   };
@@ -2723,7 +2723,7 @@ export default function ResidentMobilePWA() {
                           : (ticket.date || "—")].filter(Boolean).join(" · ")}
                       </p>
                     </span>
-                    <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground/50" />
+                    <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={2} />
                   </button>
                 ))}
               </div>
@@ -2974,7 +2974,7 @@ export default function ResidentMobilePWA() {
             className="flex min-h-[48px] w-full cursor-pointer items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card px-4 py-2.5 transition-all active:bg-muted"
           >
             <span className="text-[15px] text-foreground">Change Password</span>
-            <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground/50" />
+            <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={2} />
           </button>
         </div>
 
@@ -2990,7 +2990,7 @@ export default function ResidentMobilePWA() {
               <span className="block text-[15px] text-foreground">Map Display</span>
               <span className="block text-[13px] text-muted-foreground">{mapView === "tilt" ? "Camera tilt" : "Default"}</span>
             </span>
-            <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground/50" />
+            <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={2} />
           </button>
           <div className="flex min-h-[48px] w-full items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card px-4 py-2.5">
             <div className="min-w-0 flex-1">
@@ -3114,7 +3114,7 @@ export default function ResidentMobilePWA() {
           {selectedTicket.description || selectedTicket.notes ? (
             <div className="mt-5 px-4">
               <div className="rounded-2xl border border-border/60 bg-card px-4 py-3">
-                <p className="text-[14px] leading-normal text-muted-foreground">
+                <p className="text-[14px] leading-normal text-foreground">
                   {selectedTicket.description || selectedTicket.notes}
                 </p>
               </div>
@@ -3220,6 +3220,7 @@ export default function ResidentMobilePWA() {
                     onClick={() => { toast("This is a preview."); haptic(); }}
                     className="flex w-full cursor-pointer items-start gap-3 px-4 py-3 text-left transition-colors active:bg-muted"
                   >
+                    <span aria-hidden="true" className="mt-[7px] h-2 w-2 shrink-0 rounded-full bg-emerald-600" />
                     <span className="min-w-0 flex-1">
                       <span className="flex items-baseline justify-between gap-2">
                         <span className="min-w-0 text-[15px] font-semibold tracking-tight text-foreground">
@@ -3251,6 +3252,7 @@ export default function ResidentMobilePWA() {
                   onClick={() => openUpdate(notif)}
                   className="flex w-full cursor-pointer items-start gap-3 px-4 py-3 text-left transition-colors active:bg-muted"
                 >
+                    <span aria-hidden="true" className={cn("mt-[7px] h-2 w-2 shrink-0 rounded-full", isUpdateUnread(notif) ? "bg-emerald-600" : "bg-transparent")} />
                     <span className="min-w-0 flex-1">
                       <span className="flex items-baseline justify-between gap-2">
                         <span className={cn("min-w-0 text-[15px] tracking-tight text-foreground", isUpdateUnread(notif) ? "font-semibold" : "font-normal")}>

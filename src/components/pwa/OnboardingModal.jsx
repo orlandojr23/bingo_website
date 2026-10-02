@@ -154,7 +154,7 @@ export default function OnboardingModal({ isOpen, onComplete }) {
                 className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${
                   currentStep === idx
                     ? "w-6 bg-emerald-600"
-                    : "w-2 bg-zinc-300"
+                    : "w-2 bg-zinc-300 dark:bg-zinc-700"
                 }`}
               />
             ))}

@@ -178,7 +178,7 @@ export default function AiAssistant({ isOpen, onOpenChange, context }) {
                             onClick={() => { clearChat(); setMenuOpen(false); }}
                             className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[15px] text-foreground transition-colors active:bg-muted"
                           >
-                            <Plus className="h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={2} />
+                            <Plus className="h-4 w-4 shrink-0 text-foreground" strokeWidth={2} />
                             New chat
                           </button>
                         </motion.div>

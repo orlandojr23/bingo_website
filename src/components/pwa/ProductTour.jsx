@@ -131,10 +131,10 @@ export default function ProductTour({
       /* Ultra-Minimalist Product Tour Popover Styling */
       .driver-popover.bingo-driver-popover-minimal {
         background: #ffffff !important;
-        border: 1px solid #e4e4e7 !important;
-        border-radius: 16px !important;
+        border: 1px solid rgba(0, 0, 0, 0.1) !important;
+        border-radius: 20px !important;
         padding: 16px 18px !important;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12) !important;
         max-width: 280px !important;
         font-family: inherit !important;
       }
@@ -173,8 +173,8 @@ export default function ProductTour({
         color: #ffffff !important;
         font-weight: 600 !important;
         font-size: 11px !important;
-        padding: 5px 12px !important;
-        border-radius: 8px !important;
+        padding: 6px 14px !important;
+        border-radius: 999px !important;
         border: none !important;
         text-shadow: none !important;
         transition: background-color 0.15s ease !important;
@@ -185,11 +185,11 @@ export default function ProductTour({
       }
       .driver-popover.bingo-driver-popover-minimal button.driver-popover-prev-btn {
         background-color: #f4f4f5 !important;
-        color: #71717a !important;
+        color: #3f3f46 !important;
         font-weight: 600 !important;
         font-size: 11px !important;
-        padding: 5px 10px !important;
-        border-radius: 8px !important;
+        padding: 6px 12px !important;
+        border-radius: 999px !important;
         border: none !important;
         text-shadow: none !important;
       }
@@ -198,7 +198,7 @@ export default function ProductTour({
         background-color: #e4e4e7 !important;
       }
       .driver-popover.bingo-driver-popover-minimal button.driver-popover-close-btn {
-        color: #a1a1aa !important;
+        color: #71717a !important;
         top: 10px !important;
         right: 10px !important;
       }
