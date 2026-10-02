@@ -11,7 +11,6 @@ import {
   MessageCircle,
   LocateFixed,
   Camera,
-  Map as MapIcon,
   MapPin,
   CheckCircle2,
   XCircle,
@@ -187,9 +186,10 @@ function pathMeters(positions) {
   return meters;
 }
 
-// Bottom-nav tab: the active tab gets a duotone (tinted-fill + bold-stroke)
-// emerald icon — no background pill, just the icon and label. `badge` shows
-// a count bubble (open tickets). `tourId` preserves product-tour anchors.
+// Bottom-nav tab for the floating pill bar: outline icon over a small label,
+// like the reference style — the active tab gets a soft neutral pill behind
+// icon + label. `badge` shows a count bubble (open tickets). `tourId`
+// preserves product-tour anchors.
 function ResidentTab({ id, label, icon: Icon, active, onSelect, badge = 0, tourId }) {
   return (
     <button
@@ -197,17 +197,18 @@ function ResidentTab({ id, label, icon: Icon, active, onSelect, badge = 0, tourI
       data-tour={tourId}
       onClick={onSelect}
       aria-label={label}
-      className={`flex flex-col items-center justify-center gap-1 transition-all active:scale-90 cursor-pointer ${active ? "text-emerald-600" : "text-zinc-500"}`}
+      className={cn(
+        "relative flex cursor-pointer flex-col items-center justify-center gap-0.5 rounded-full px-4 py-1.5 transition-all active:scale-95",
+        active ? "bg-foreground/[0.07] text-foreground" : "text-foreground"
+      )}
     >
-      <span className="relative flex h-8 items-center justify-center px-4">
+      <span className="relative flex items-center justify-center">
         <Icon
-          className="relative h-6 w-6"
-          strokeWidth={active ? 2.25 : 2}
-          fill={active ? "currentColor" : "none"}
-          fillOpacity={active ? 0.18 : 0}
+          className="relative h-[22px] w-[22px]"
+          strokeWidth={2}
         />
         {badge > 0 && (
-          <span className="absolute right-1.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold leading-none text-white">
+          <span className="absolute -right-2.5 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold leading-none text-white">
             {badge > 9 ? "9+" : badge}
           </span>
         )}
@@ -1826,8 +1827,9 @@ export default function ResidentMobilePWA() {
           )}
         </AnimatePresence>
 
-        {/* Native status banner */}
-        <div className="pointer-events-auto absolute top-0 inset-x-0 z-20 w-full border-b border-border/60 bg-background/80 backdrop-blur-md flex items-center select-none overflow-hidden px-4 pt-[calc(env(safe-area-inset-top)+12px)] pb-3">
+        {/* Floating status banner — same card language as the pill nav */}
+        <div className="pointer-events-none absolute inset-x-0 top-[calc(env(safe-area-inset-top)+0.75rem)] z-20 flex justify-center px-3">
+        <div className="pointer-events-auto flex w-full max-w-md items-center select-none rounded-3xl border border-black/10 bg-card/95 px-4 py-2.5 shadow-[0_8px_30px_rgba(0,0,0,0.12)] backdrop-blur-xl">
           {/* Left: Live status readout */}
           <div data-tour="live-banner" onClick={handleHeaderClick} className="min-w-0 flex-1 overflow-hidden relative flex items-center cursor-pointer">
             {!mapReady ? (
@@ -1862,19 +1864,7 @@ export default function ResidentMobilePWA() {
               </AnimatePresence>
             )}
           </div>
-          {/* Right: Assistant + Report updates */}
-          <button
-            type="button"
-            onClick={() => { setChatOpen(true); haptic(); }}
-            data-tour="binny-btn"
-            className="ml-1 flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-foreground transition-all active:scale-95"
-            aria-label="Binny"
-          >
-            <MessageCircle
-              className="h-5 w-5 text-foreground"
-              strokeWidth={2}
-            />
-          </button>
+          {/* Right: Report updates */}
           <button
             type="button"
             onClick={openUpdates}
@@ -1894,12 +1884,13 @@ export default function ResidentMobilePWA() {
             )}
           </button>
         </div>
+        </div>
 
 
 
         {/* Floating Map Action Buttons */}
         {/* 1. Bottom-Left: Focus Active Truck (native style, just above bottom nav) */}
-        <div className="pointer-events-none absolute bottom-[calc(5.5rem+env(safe-area-inset-bottom))] left-3 z-20">
+        <div className="pointer-events-none absolute bottom-[calc(6.75rem+env(safe-area-inset-bottom))] left-3 z-20">
           <AnimatePresence>
             {activeTs?.tracking && !isPointInView(activeTs.tracking.lat, activeTs.tracking.lng) && (
               <motion.button
@@ -1931,7 +1922,7 @@ export default function ResidentMobilePWA() {
         </div>
 
         {/* 2. Bottom-Right: Center My Location (native style, just above bottom nav) */}
-        <div className="pointer-events-none absolute bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-3 z-20">
+        <div className="pointer-events-none absolute bottom-[calc(6.75rem+env(safe-area-inset-bottom))] right-3 z-20">
           <AnimatePresence>
             {(!gpsCoords || !isPointInView(gpsCoords.lat, gpsCoords.lng)) && (
               <motion.button
@@ -1981,16 +1972,17 @@ export default function ResidentMobilePWA() {
         {/* Bottom Navigation Bar - native tab bar with center action, only visible
             on map and hidden beneath full-screen overlays (Updates, Details),
             which sit below its z-index */}
+        <AnimatePresence>
         {activeTab === "map" && !showUpdates && !selectedTicket && !chatOpen && (
-        <div className="fixed bottom-0 inset-x-0 z-[100] border-t border-black/10 bg-background/85 backdrop-blur-xl shadow-[0_-4px_16px_rgba(0,0,0,0.06)] pb-[env(safe-area-inset-bottom)]">
-          <div className="grid grid-cols-5 h-[64px] max-w-md mx-auto px-2">
-            <ResidentTab
-              id="map"
-              label="Map"
-              icon={MapIcon}
-              active={activeTab === "map"}
-              onSelect={() => { setActiveTab("map"); haptic(); }}
-            />
+        <motion.div
+          key="resident-pill-nav"
+          initial={{ opacity: 0, y: 24, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 24, scale: 0.96 }}
+          transition={{ duration: 0.22, ease: "easeOut" }}
+          className="pointer-events-none fixed inset-x-0 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-[100] flex justify-center px-4"
+        >
+          <div className="pointer-events-auto flex items-center gap-1 rounded-full border border-black/10 bg-card/95 py-2 pl-2 pr-2 shadow-[0_8px_30px_rgba(0,0,0,0.12)] backdrop-blur-xl">
             <ResidentTab
               id="schedule"
               label="Schedule"
@@ -1999,19 +1991,6 @@ export default function ResidentMobilePWA() {
               onSelect={() => { setActiveTab("schedule"); haptic(); }}
               tourId="nav-tab-schedule"
             />
-
-            {/* 3. Report (elevated center action) */}
-            <button
-              type="button"
-              onClick={() => { setActiveTab("report"); setTimeout(() => fileInputRef.current?.click(), 150); haptic(); }}
-              className="relative flex flex-col items-center justify-end pb-3 cursor-pointer"
-            >
-              <span data-tour="nav-tab-report" className="absolute -top-7 left-1/2 flex h-14 w-14 -translate-x-1/2 items-center justify-center rounded-full bg-emerald-600 text-white transition-transform active:scale-95">
-                <Camera className="h-6 w-6" strokeWidth={2} />
-              </span>
-              <span className="text-[10px] font-semibold leading-none text-emerald-600">Report</span>
-            </button>
-
             <ResidentTab
               id="tickets"
               label="Tickets"
@@ -2029,9 +2008,30 @@ export default function ResidentMobilePWA() {
               onSelect={() => { setResidentProfileView("main"); setActiveTab("profile"); haptic(); }}
               tourId="profile-btn"
             />
+            <ResidentTab
+              id="binny"
+              label="Binny"
+              icon={MessageCircle}
+              active={false}
+              onSelect={() => { setChatOpen(true); haptic(); }}
+              tourId="binny-btn"
+            />
+            <span aria-hidden="true" className="mx-1 h-8 w-px shrink-0 bg-black/10" />
+            {/* New report */}
+            <button
+              type="button"
+              data-tour="nav-tab-report"
+              onClick={() => { setActiveTab("report"); setTimeout(() => fileInputRef.current?.click(), 150); haptic(); }}
+              aria-label="New report"
+              title="New report"
+              className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-foreground transition-all active:scale-95"
+            >
+              <Plus className="h-6 w-6" strokeWidth={2} />
+            </button>
           </div>
-        </div>
+        </motion.div>
         )}
+        </AnimatePresence>
 
         {/* FULL SCREEN VIEWS - native app style fade/scale transition */}
         <AnimatePresence mode="wait" initial={false}>
