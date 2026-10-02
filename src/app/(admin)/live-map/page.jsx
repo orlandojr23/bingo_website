@@ -54,7 +54,7 @@ function LiveMapContent() {
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [mapCenter, setMapCenter] = useState([10.3016, 123.9086]);
   const [mapZoom, setMapZoom] = useState(null);
-  const [cameraView] = useMapView("admin-map-view");
+  const [cameraView, setCameraView] = useMapView("admin-map-view");
 
   const live = useLiveRoute();
   const fleet = useFleet();
@@ -249,6 +249,7 @@ function LiveMapContent() {
           onSelectTicket={mapView === "reports" ? handlePinClick : undefined}
           showZoomControl
           tilted={cameraView === "tilt"}
+          onTiltChange={(isTilted) => setCameraView(isTilted ? "tilt" : "default")}
           showTicketPopup={false}
         />
       </div>

@@ -131,7 +131,7 @@ export default function RegisterSheet({ isOpen, onClose }) {
       newErrors.fullName = "Full name must be at least 3 characters.";
     }
     if (!validateEmail(email)) {
-      newErrors.email = "Please enter a valid email address format.";
+      newErrors.email = "Please enter a valid email address.";
     }
     if (!validatePhone(phone)) {
       newErrors.phone = "Please enter a valid PH mobile number (e.g. 09123456789).";
@@ -322,7 +322,7 @@ export default function RegisterSheet({ isOpen, onClose }) {
                             <p className="text-xs text-rose-500">{errors.phone}</p>
                           ) : (
                             <p className="text-xs text-muted-foreground">
-                              Used only for real-time truck arrival SMS notifications.
+                              Used only for pickup alerts and important account notices.
                             </p>
                           )}
                         </div>
@@ -337,7 +337,7 @@ export default function RegisterSheet({ isOpen, onClose }) {
                             className={cn(inputClass, "cursor-pointer")}
                           >
                             <option value="tejero">Barangay Tejero, Cebu City</option>
-                            <option value="other">Other parts of Metro Cebu (Coming Soon...)</option>
+                            <option value="other">Other parts of Metro Cebu (coming soon)</option>
                           </select>
                         </div>
 
@@ -491,7 +491,7 @@ export default function RegisterSheet({ isOpen, onClose }) {
                       </h1>
                       
                       <p className="text-zinc-500 text-sm font-medium leading-relaxed mb-6 sm:mb-8 max-w-sm">
-                        Your account has been registered successfully. You can now download the Bin&apos;Go mobile app to start tracking waste collection in real-time.
+                        Your account has been created. You can now sign in to start tracking waste collection in real time.
                       </p>
 
                       <div className="w-full border-t border-zinc-100 pt-6 mb-6 sm:mb-8">

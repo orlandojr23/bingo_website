@@ -37,11 +37,11 @@ const faqCategories = [
         answer: "Every collection truck has a tracker that shares its location every few seconds, so the live map stays accurate and up to date."
       },
       {
-        question: "What happens when I report an uncollected garbage bin?",
+        question: "What happens after I report uncollected garbage?",
         answer: "When you submit a report, it appears right away on your barangay's live map. The collection team reviews it and dispatches a truck to handle it, and you can follow your report's status from your own report list."
       },
       {
-        question: "Can I track trucks outside of my designated Barangay?",
+        question: "Can I track trucks outside my barangay?",
         answer: "During the pilot, your map is focused on your own barangay's coverage area so it always stays clear and easy to read. As Bin'Go expands to more barangays, you'll be able to follow collection activity in every covered area."
       }
     ]

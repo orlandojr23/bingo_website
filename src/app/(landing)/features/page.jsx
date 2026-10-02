@@ -32,7 +32,7 @@ export default function FeaturesPage() {
           <div className="bg-white p-8 rounded-3xl shadow-sm border border-zinc-100 flex flex-col items-start transition-all hover:shadow-md hover:-translate-y-1">
             <h3 className="text-xl font-bold text-zinc-900 mb-3">Resident App</h3>
             <p className="text-zinc-600 font-medium leading-relaxed text-sm">
-              Residents report uncollected garbage or dumping in seconds, complete with a photo and the exact location, right from the browser — no app store download needed.
+              Residents can report uncollected garbage or dumping in seconds, with a photo and the exact location, right from the browser. No app store download needed.
             </p>
           </div>
 

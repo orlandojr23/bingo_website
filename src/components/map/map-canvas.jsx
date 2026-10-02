@@ -541,7 +541,7 @@ function TruckMarker({ map, trk, fading }) {
 // Stable identity for an upcoming-stop pin: absolute route index + position.
 const upcomingPinKey = (s) => `${s.index}-${s.lat}-${s.lng}`;
 
-export default function MapCanvas({ tickets = [], trucks = [], mapMode = "pins", center, zoom, highlightedTicketId, currentStop, upcomingStops = [], onSelectTicket, onMapDrag, onBoundsChange, flySignal, onMapReady, showZoomControl = false, showTicketPopup = true, rotatable = false, bearing = null, perspective3D = false, tilted = false, hidePausedTrucks = false }) {
+export default function MapCanvas({ tickets = [], trucks = [], mapMode = "pins", center, zoom, highlightedTicketId, currentStop, upcomingStops = [], onSelectTicket, onMapDrag, onBoundsChange, flySignal, onMapReady, showZoomControl = false, showTicketPopup = true, rotatable = false, bearing = null, perspective3D = false, tilted = false, onTiltChange, hidePausedTrucks = false }) {
   const containerRef = useRef(null);
   const [mapObj, setMapObj] = useState(null);
   const [mapError, setMapError] = useState(false);
@@ -702,6 +702,10 @@ export default function MapCanvas({ tickets = [], trucks = [], mapMode = "pins",
         minZoom: METRO_CEBU_MIN_ZOOM,
         maxBounds: METRO_CEBU_MAX_BOUNDS,
         maxPitch: 70,
+        // Two-finger vertical swipe tilts on phones (touch pitch). Explicit
+        // so a manual finger tilt always works and can sync the Map Display
+        // switch via onTiltChange below.
+        touchPitch: true,
         attributionControl: false,
       });
       if (showZoomControl) {
@@ -730,7 +734,8 @@ export default function MapCanvas({ tickets = [], trucks = [], mapMode = "pins",
   // ---- Gesture + camera plumbing ------------------------------------------
   const draggingRef = useRef(false);
   const zoomingRef = useRef(false);
-  const cameraHeld = () => draggingRef.current || zoomingRef.current;
+  const pitchingRef = useRef(false);
+  const cameraHeld = () => draggingRef.current || zoomingRef.current || pitchingRef.current;
   const centerRef = useRef(toLatLngTuple(mapCenter));
   const zoomRef = useRef(mapZoom);
   const prevSentRef = useRef(null);
@@ -792,6 +797,44 @@ export default function MapCanvas({ tickets = [], trucks = [], mapMode = "pins",
       mapObj.off("rotate", handler);
     };
   }, [mapObj, handleUserRotate]);
+
+  // Manual tilt tracking: a two-finger vertical swipe (or right-drag on
+  // desktop) pitches the camera. Only user gestures sync the Map Display
+  // switch — programmatic easeTo tweens carry no originalEvent, so drive
+  // mode engaging/disengaging never flips the switch by itself.
+  const onTiltChangeRef = useRef(onTiltChange);
+  const tiltedRef = useRef(tilted);
+  useEffect(() => {
+    onTiltChangeRef.current = onTiltChange;
+    tiltedRef.current = tilted;
+  });
+  const userPitchedRef = useRef(false);
+  useEffect(() => {
+    if (!mapObj) return;
+    const TILT_THRESHOLD = 20;
+    const onPitchStart = (e) => {
+      pitchingRef.current = true;
+      if (e?.originalEvent) userPitchedRef.current = true;
+    };
+    const onPitchEnd = () => {
+      pitchingRef.current = false;
+      if (!userPitchedRef.current) return;
+      userPitchedRef.current = false;
+      let pitch = 0;
+      try { pitch = mapObj.getPitch(); } catch { return; }
+      const isTilted = pitch > TILT_THRESHOLD;
+      // Skip when the switch already matches — keeps the parent setter (and
+      // its localStorage write) idempotent and avoids render loops.
+      if (isTilted === tiltedRef.current) return;
+      try { onTiltChangeRef.current?.(isTilted); } catch {}
+    };
+    mapObj.on("pitchstart", onPitchStart);
+    mapObj.on("pitchend", onPitchEnd);
+    return () => {
+      mapObj.off("pitchstart", onPitchStart);
+      mapObj.off("pitchend", onPitchEnd);
+    };
+  }, [mapObj]);
 
   useEffect(() => {
     if (!mapObj || !onBoundsChange) return;

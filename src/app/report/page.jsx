@@ -187,20 +187,17 @@ function pathMeters(positions) {
 }
 
 // Bottom-nav tab for the floating pill bar: outline icon over a small label,
-// like the reference style — the active tab gets a soft neutral pill behind
-// icon + label. `badge` shows a count bubble (open tickets). `tourId`
-// preserves product-tour anchors.
-function ResidentTab({ id, label, icon: Icon, active, onSelect, badge = 0, tourId }) {
+// Bottom-bar tab — no active highlight: each tab opens its own full screen,
+// so a selected-pill state would never make sense here. `badge` shows a
+// count bubble (open tickets). `tourId` preserves product-tour anchors.
+function ResidentTab({ label, icon: Icon, onSelect, badge = 0, tourId }) {
   return (
     <button
       type="button"
       data-tour={tourId}
       onClick={onSelect}
       aria-label={label}
-      className={cn(
-        "relative flex cursor-pointer flex-col items-center justify-center gap-0.5 rounded-full px-4 py-1.5 transition-all active:scale-95",
-        active ? "bg-foreground/[0.07] text-foreground" : "text-foreground"
-      )}
+      className="relative flex cursor-pointer flex-col items-center justify-center gap-0.5 rounded-full px-4 py-1.5 text-foreground transition-all active:scale-95"
     >
       <span className="relative flex items-center justify-center">
         <Icon
@@ -213,7 +210,7 @@ function ResidentTab({ id, label, icon: Icon, active, onSelect, badge = 0, tourI
           </span>
         )}
       </span>
-      <span className={`text-[10px] leading-none ${active ? "font-semibold" : "font-medium"}`}>{label}</span>
+      <span className="text-[10px] font-medium leading-none">{label}</span>
     </button>
   );
 }
@@ -1768,6 +1765,7 @@ export default function ResidentMobilePWA() {
             trucks={activeTrucks}
             mapMode="pins"
             tilted={mapView === "tilt"}
+            onTiltChange={(isTilted) => setMapView(isTilted ? "tilt" : "default")}
             currentStop={currentStop}
             upcomingStops={upcomingStops}
             center={mapFocusTicket ? [mapFocusTicket.lat, mapFocusTicket.lng] : selectedTicket ? [selectedTicket.lat, selectedTicket.lng] : mapCenter}
@@ -1984,35 +1982,27 @@ export default function ResidentMobilePWA() {
         >
           <div className="pointer-events-auto flex items-center gap-1 rounded-full border border-black/10 bg-card/95 py-2 pl-2 pr-2 shadow-[0_8px_30px_rgba(0,0,0,0.12)] backdrop-blur-xl">
             <ResidentTab
-              id="schedule"
               label="Schedule"
               icon={Calendar}
-              active={activeTab === "schedule"}
               onSelect={() => { setActiveTab("schedule"); haptic(); }}
               tourId="nav-tab-schedule"
             />
             <ResidentTab
-              id="tickets"
               label="Tickets"
               icon={Ticket}
-              active={activeTab === "tickets"}
               onSelect={() => { setActiveTab("tickets"); haptic(); }}
               badge={myOpenTickets}
               tourId="nav-tab-tickets"
             />
             <ResidentTab
-              id="profile"
               label="Profile"
               icon={User}
-              active={activeTab === "profile"}
               onSelect={() => { setResidentProfileView("main"); setActiveTab("profile"); haptic(); }}
               tourId="profile-btn"
             />
             <ResidentTab
-              id="binny"
               label="Binny"
               icon={MessageCircle}
-              active={false}
               onSelect={() => { setChatOpen(true); haptic(); }}
               tourId="binny-btn"
             />

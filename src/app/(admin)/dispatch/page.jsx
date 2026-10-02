@@ -112,7 +112,7 @@ export default function DispatchPage() {
 
   const [sitioQuery, setSitioQuery] = useState("");
   const [previewZoom, setPreviewZoom] = useState(14);
-  const [mapView] = useMapView("admin-map-view");
+  const [mapView, setMapView] = useMapView("admin-map-view");
   const [sitioDropdownOpen, setSitioDropdownOpen] = useState(false);
   const [truckId, setTruckId] = useState("");
   const [type, setType] = useState("");
@@ -492,6 +492,7 @@ export default function DispatchPage() {
               trucks={[]}
               mapMode="pins"
               tilted={mapView === "tilt"}
+              onTiltChange={(isTilted) => setMapView(isTilted ? "tilt" : "default")}
               currentStop={{ ...stopOrder[0], index: 0 }}
               upcomingStops={stopOrder.slice(1).map((s, i) => ({ ...s, index: i + 1 }))}
               center={[stopOrder[0].lat, stopOrder[0].lng]}

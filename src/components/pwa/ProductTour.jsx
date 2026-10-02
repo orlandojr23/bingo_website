@@ -15,7 +15,9 @@ export default function ProductTour({
   useEffect(() => {
     if (!run) return;
 
-    // Minimalist tour steps pointing directly to active UI buttons on the resident screen
+    // Tour steps follow the visual sequence: top banner first, then the
+    // bottom bar left-to-right (Schedule → Tickets → Profile → Binny),
+    // ending on the rightmost New Report action as the primary CTA.
     const tourSteps = [
       {
         element: '[data-tour="live-banner"]',
@@ -28,31 +30,11 @@ export default function ProductTour({
         },
       },
       {
-        element: '[data-tour="binny-btn"]',
-        popover: {
-          title: "Ask Binny",
-          description:
-            "Chat with Binny for waste segregation help, collection days, truck tracking, and reporting guidance.",
-          side: "bottom",
-          align: "end",
-        },
-      },
-      {
         element: '[data-tour="nav-tab-schedule"]',
         popover: {
           title: "Collection Schedule",
           description:
             "Check waste collection timetables, pickup days, and upcoming schedule details for your sitio.",
-          side: "top",
-          align: "center",
-        },
-      },
-      {
-        element: '[data-tour="nav-tab-report"]',
-        popover: {
-          title: "Submit Waste Ticket",
-          description:
-            "Report uncollected garbage, illegal dumping, or neighborhood waste issues with photos and location pins.",
           side: "top",
           align: "center",
         },
@@ -75,6 +57,26 @@ export default function ProductTour({
             "Manage account settings, update your home sitio location, toggle audio alert preferences, or sign out.",
           side: "top",
           align: "end",
+        },
+      },
+      {
+        element: '[data-tour="binny-btn"]',
+        popover: {
+          title: "Ask Binny",
+          description:
+            "Chat with Binny for waste segregation help, collection days, truck tracking, and reporting guidance.",
+          side: "top",
+          align: "center",
+        },
+      },
+      {
+        element: '[data-tour="nav-tab-report"]',
+        popover: {
+          title: "Submit Waste Ticket",
+          description:
+            "Report uncollected garbage, illegal dumping, or neighborhood waste issues with photos and location pins.",
+          side: "top",
+          align: "center",
         },
       },
     ];

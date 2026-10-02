@@ -37,10 +37,10 @@ export default function TermsOfServicePage() {
             <h2 className="text-2xl font-bold text-zinc-900">1. Acceptance of Terms</h2>
             <div className="space-y-3 text-zinc-600 font-medium leading-relaxed">
               <p>
-                By accessing or using the Bin'Go platform, you agree to be bound by these Terms of Service. If you disagree with any part of the terms, you may not access the platform.
+                By accessing or using the Bin'Go platform, you agree to follow these Terms of Service. If you do not agree with any part of these terms, please do not use the platform.
               </p>
               <p>
-                Bin'Go is currently available to residents of Barangay Tejero, Cebu City as part of our first pilot launch. Accounts registered outside the covered service area may be limited until Bin'Go expands to your community.
+                Bin'Go is currently available to residents of Barangay Tejero, Cebu City as part of our first pilot launch. Accounts registered outside the covered service area may have limited access until Bin'Go expands to your community.
               </p>
             </div>
           </section>
@@ -53,7 +53,7 @@ export default function TermsOfServicePage() {
             <div className="space-y-3 text-zinc-600 font-medium leading-relaxed">
               <ul className="list-disc pl-5 space-y-2">
                 <li>You must provide accurate and complete information when creating an account.</li>
-                <li>You are responsible for safeguarding the password that you use to access the service.</li>
+                <li>Keep your password safe and do not share it with anyone.</li>
                 <li>When reporting illegal dumping or waste collection issues, you agree to submit truthful and accurate information to the best of your knowledge.</li>
               </ul>
             </div>
@@ -66,7 +66,7 @@ export default function TermsOfServicePage() {
             <h2 className="text-2xl font-bold text-zinc-900">3. Platform Misuse</h2>
             <div className="space-y-3 text-zinc-600 font-medium leading-relaxed">
               <p>
-                Any abuse of the reporting system, including submitting fake reports or spamming the barangay or the Bin'Go team, may result in the immediate suspension or termination of your account without prior notice.
+                Any abuse of the reporting system, including submitting fake reports or spamming the barangay or the Bin'Go team, may lead us to suspend or close your account immediately without prior notice.
               </p>
               <p className="text-sm bg-zinc-50 p-4 rounded-xl border border-zinc-100">
                 Last Updated: September 3, 2026

@@ -84,7 +84,7 @@ export default function SupportPage() {
     }
 
     if (!captchaToken) {
-      newErrors.captcha = "Please complete the anti-bot verification check.";
+      newErrors.captcha = "Please verify that you are not a robot.";
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -102,7 +102,7 @@ export default function SupportPage() {
         });
         const verifyData = await verifyRes.json();
         if (!verifyData.success && verifyData.error !== "Missing Turnstile secret key") {
-          setErrors({ captcha: "Anti-bot verification failed. Please try again." });
+          setErrors({ captcha: "Verification failed. Please try again." });
           setIsSubmitting(false);
           return;
         }
@@ -156,8 +156,8 @@ export default function SupportPage() {
             Contact <span className="text-emerald-600">Support.</span>
           </h1>
           <p className="text-sm sm:text-base text-zinc-600 font-medium max-w-md mx-auto leading-relaxed">
-            Have a question or need assistance with the Bin&apos;Go platform?
-            Send us a message and our support team will help you out.
+            Have a question or need help with the Bin&apos;Go platform?
+            Send us a message and our support team will get back to you.
           </p>
         </div>
 

@@ -205,7 +205,7 @@ function AboutContent() {
       </h2>
 
       <p className="text-sm sm:text-lg lg:[@media(max-height:800px)]:text-base text-zinc-700 font-medium mb-6 sm:mb-8 lg:[@media(max-height:800px)]:mb-5 max-w-md leading-relaxed">
-        Connect waste collection services directly with local neighborhoods. Track routes, log waste reports in real-time, and ensure quick cleanups.
+        Connect waste collection services directly with local neighborhoods. Track routes, log waste reports in real time, and get cleanups done faster.
       </p>
 
       <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
@@ -232,7 +232,7 @@ function FeaturesContent() {
       </h2>
 
       <p className="text-sm sm:text-lg lg:[@media(max-height:800px)]:text-base text-zinc-700 font-medium mb-6 sm:mb-8 lg:[@media(max-height:800px)]:mb-5 max-w-md leading-relaxed">
-        Experience real-time tracking, smart truck routing, and community-driven waste reports in one beautifully designed platform.
+        Experience real-time tracking, smart truck routing, and resident waste reports in one beautifully designed platform.
       </p>
 
       <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
@@ -274,7 +274,7 @@ function FaqContent() {
   );
 }
 
-// ---------------- UI Mockups ----------------
+// UI Mockups
 
 function MockupMinimalist({ pose, title, icon: Icon, bgClass, imgClass, delay = 0 }) {
   const [imgLoaded, setImgLoaded] = useState(false);

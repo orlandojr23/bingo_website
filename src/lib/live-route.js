@@ -431,15 +431,49 @@ export async function addSchedule(fields) {
   if (fields.truckId) {
     const label = scheduleLabel({ ...fields, id });
     const when = [fields.assignmentDate, fields.time].filter(Boolean).join(" · ");
+    const stamp = Date.now();
+    // Driver inbox (Updates screen, audience `driver:<truckId>`) + banner:
+    // the banner derives "N new assignments" from the synced schedule store,
+    // and this push is the brief message in the Updates inbox (with ding +
+    // Tasks badge on arrival).
     pushNotification({
       audience: `driver:${fields.truckId}`,
       type: "Dispatch",
       title: "New assignment",
       message: `${label}${when ? ` (${when})` : ""}. See Tasks.`,
       at: new Date().toISOString(),
-      dedupeKey: `${id}:assigned:${Date.now()}`,
+      dedupeKey: `${id}:assigned:${stamp}`,
     }).then((r) => {
       if (!r.remote) console.warn("New assignment: driver notification stayed local-only (not delivered).");
+    });
+    // Resident inbox (Updates screen, broadcast audience `residents`) +
+    // banner: the banner derives "Pickup today / Next" from the synced
+    // schedule store, and this push is the brief message in Updates.
+    pushNotification({
+      audience: "residents",
+      type: "Dispatch",
+      title: "Pickup scheduled",
+      message: `${label}${when ? ` (${when})` : ""}. See Schedule.`,
+      at: new Date().toISOString(),
+      dedupeKey: `${id}:assigned-residents:${stamp}`,
+    }).then((r) => {
+      if (!r.remote) console.warn("New assignment: resident notification stayed local-only (not delivered).");
+    });
+    // Admin inbox (Notifications page + sidebar badge + ding/toast): a
+    // confirmation record so every admin sees what was assigned and that the
+    // driver and residents were notified.
+    pushNotification({
+      audience: "admin",
+      type: "Dispatch",
+      title: `Assignment posted — ${fields.truckId}`,
+      message: `${label}${when ? ` (${when})` : ""} assigned to ${fields.truckId}. Driver and residents notified.`,
+      truckId: fields.truckId,
+      actionUrl: "/dispatch",
+      actionLabel: "Open Dispatch",
+      at: new Date().toISOString(),
+      dedupeKey: `${id}:assigned-admin:${stamp}`,
+    }).then((r) => {
+      if (!r.remote) console.warn("New assignment: admin notification stayed local-only (not delivered).");
     });
   }
 
@@ -483,6 +517,7 @@ export async function updateSchedule(id, patch) {
 
   if (patch.truckId !== undefined) {
     const prevTruckId = getSchedule(id)?.truckId ?? null;
+    const stamp = Date.now();
     if (patch.truckId && patch.truckId !== prevTruckId) {
       const after = { ...(getSchedule(id) || {}), ...patch };
       const label = scheduleLabel({ ...after, id });
@@ -492,7 +527,7 @@ export async function updateSchedule(id, patch) {
         title: "New assignment",
         message: `${label}. See Tasks.`,
         at: new Date().toISOString(),
-        dedupeKey: `${id}:assigned:${Date.now()}`,
+        dedupeKey: `${id}:assigned:${stamp}`,
       }).then((r) => {
         if (!r.remote) console.warn("Reassignment: new-driver notification stayed local-only (not delivered).");
       });
@@ -506,9 +541,38 @@ export async function updateSchedule(id, patch) {
         title: "Assignment moved",
         message: `${label} was moved to another truck. Check Tasks.`,
         at: new Date().toISOString(),
-        dedupeKey: `${id}:unassigned:${Date.now()}`,
+        dedupeKey: `${id}:unassigned:${stamp}`,
       }).then((r) => {
         if (!r.remote) console.warn("Reassignment: old-driver notification stayed local-only (not delivered).");
+      });
+    }
+    // Reassignment also refreshes the other two inboxes so every surface
+    // stays truthful: residents see the updated pickup, admins see the move.
+    if (patch.truckId && prevTruckId && patch.truckId !== prevTruckId) {
+      const after = { ...(getSchedule(id) || {}), ...patch };
+      const label = scheduleLabel({ ...after, id });
+      pushNotification({
+        audience: "residents",
+        type: "Dispatch",
+        title: "Schedule updated",
+        message: `${label} reassigned — a new truck is on the way. See Schedule.`,
+        at: new Date().toISOString(),
+        dedupeKey: `${id}:reassigned-residents:${stamp}`,
+      }).then((r) => {
+        if (!r.remote) console.warn("Reassignment: resident notification stayed local-only (not delivered).");
+      });
+      pushNotification({
+        audience: "admin",
+        type: "Dispatch",
+        title: `Assignment moved — ${label}`,
+        message: `${label} moved from ${prevTruckId} to ${patch.truckId}. Drivers and residents notified.`,
+        truckId: patch.truckId,
+        actionUrl: "/dispatch",
+        actionLabel: "Open Dispatch",
+        at: new Date().toISOString(),
+        dedupeKey: `${id}:reassigned-admin:${stamp}`,
+      }).then((r) => {
+        if (!r.remote) console.warn("Reassignment: admin notification stayed local-only (not delivered).");
       });
     }
   }
@@ -565,10 +629,29 @@ export async function hardDeleteSchedule(id) {
 }
 
 export async function acceptAssignment(scheduleId) {
-  const { data, error } = await supabase.from('schedules').update({ status: 'Accepted' }).eq('id', scheduleId).select();
+  const { error } = await supabase.from('schedules').update({ status: 'Accepted' }).eq('id', scheduleId).select();
   if (error) {
     console.error("Failed to update schedule status:", error);
     throw error;
+  }
+  // Close the assignment loop: the admin inbox records that the driver
+  // accepted, so dispatch knows the task is in hand.
+  const schedule = getSchedule(scheduleId);
+  if (schedule?.truckId) {
+    const label = scheduleLabel({ ...schedule, id: scheduleId });
+    pushNotification({
+      audience: "admin",
+      type: "Dispatch",
+      title: `Driver accepted — ${label}`,
+      message: `${schedule.truckId} accepted ${label}.`,
+      truckId: schedule.truckId,
+      actionUrl: "/dispatch",
+      actionLabel: "Open Dispatch",
+      at: new Date().toISOString(),
+      dedupeKey: `${scheduleId}:accepted:${Date.now()}`,
+    }).then((r) => {
+      if (!r.remote) console.warn("Accept assignment: admin notification stayed local-only (not delivered).");
+    });
   }
   return write((next) => {
     if (next.schedules?.[scheduleId]) {

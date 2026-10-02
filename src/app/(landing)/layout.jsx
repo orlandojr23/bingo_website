@@ -156,8 +156,8 @@ export default function LandingLayout({ children }) {
             title="Back to top"
           >
             <img 
-              src="/logo-green-v2.png" 
-              alt="Bin-Go Logo" 
+              src="/logo-green-v2.png"
+              alt="Bin'Go logo"
               fetchPriority="high"
               loading="eager"
               className={`h-16 w-auto object-contain origin-left scale-[1.65] transition-all duration-500 ease-out ${
@@ -268,8 +268,8 @@ export default function LandingLayout({ children }) {
                 title="Back to top"
               >
                 <img 
-                  src="/logo-green-v2.png" 
-                  alt="Bin-Go Logo" 
+                  src="/logo-green-v2.png"
+                  alt="Bin'Go logo"
                   fetchPriority="high"
                   loading="eager"
                   className="h-16 w-auto object-contain origin-left scale-[1.65] brightness-0 invert" 
@@ -277,19 +277,19 @@ export default function LandingLayout({ children }) {
               </a>
             </div>
             
-            {/* Platform links column — accordion on mobile, static column on desktop */}
+            {/* Platform links column: accordion on mobile, static column on desktop */}
             <FooterColumn
               title="Platform"
               isOpen={openFooterCol === "platform"}
               onToggle={() => setOpenFooterCol(openFooterCol === "platform" ? null : "platform")}
             >
-              <a href="#" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">Home</a>
-              <a href="#about" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">About</a>
-              <a href="#features" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">Features</a>
-              <a href="#faq" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">FAQ</a>
+              <a href="/#home" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">Home</a>
+              <a href="/#about" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">About</a>
+              <a href="/#features" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">Features</a>
+              <a href="/#faq" className="text-sm text-emerald-200 hover:text-white transition-colors font-medium">FAQ</a>
             </FooterColumn>
 
-            {/* Legal Links Column — accordion on mobile, static column on desktop */}
+            {/* Legal Links Column: accordion on mobile, static column on desktop */}
             <FooterColumn
               title="Legal & Support"
               isOpen={openFooterCol === "legal"}

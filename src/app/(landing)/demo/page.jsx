@@ -78,7 +78,7 @@ export default function DemoPage() {
       newErrors.name = "Full name is required";
     }
     if (!email.trim()) {
-      newErrors.email = "Work email is required";
+      newErrors.email = "Email address is required";
     } else if (!validateEmail(email.trim())) {
       newErrors.email = "Please enter a valid email address";
     }
@@ -231,7 +231,7 @@ export default function DemoPage() {
 
               <div className="space-y-1">
                 <label className="text-xs font-bold text-zinc-700 uppercase tracking-wider">
-                  Work Email <span className="text-rose-500">*</span>
+                  Email Address <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-zinc-400">

@@ -166,19 +166,15 @@ function driverTimeAgo(iso, nowMs) {
   return new Date(t).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-// Bottom-nav tab for the floating pill bar: bold outline icon over a small
-// label — the active tab gets a soft neutral pill behind icon + label.
-function DriverTab({ id, label, icon: Icon, activeTab, onSelect, badge = 0 }) {
-  const active = activeTab === id;
+// Bottom-nav tab for the floating pill bar — no active highlight: each tab
+// opens its own full screen, so a selected-pill state never makes sense.
+function DriverTab({ label, icon: Icon, onSelect, badge = 0 }) {
   return (
     <button
       type="button"
       onClick={onSelect}
       aria-label={label}
-      className={cn(
-        "relative flex cursor-pointer flex-col items-center justify-center gap-0.5 rounded-full px-4 py-1.5 transition-all active:scale-95",
-        active ? "bg-foreground/[0.07] text-foreground" : "text-foreground"
-      )}
+      className="relative flex cursor-pointer flex-col items-center justify-center gap-0.5 rounded-full px-4 py-1.5 text-foreground transition-all active:scale-95"
     >
       <span className="relative flex items-center justify-center">
         <Icon
@@ -191,7 +187,7 @@ function DriverTab({ id, label, icon: Icon, activeTab, onSelect, badge = 0 }) {
           </span>
         )}
       </span>
-      <span className={`text-[10px] leading-none ${active ? "font-semibold" : "font-medium"}`}>{label}</span>
+      <span className="text-[10px] font-medium leading-none">{label}</span>
     </button>
   );
 }
@@ -1354,6 +1350,7 @@ export default function DriverPage() {
             bearing={navBearing}
             perspective3D={isOnDuty && truckFocused}
             tilted={mapView === "tilt"}
+            onTiltChange={(isTilted) => setMapView(isTilted ? "tilt" : "default")}
             hidePausedTrucks
           />
         </div>
@@ -1504,25 +1501,19 @@ export default function DriverPage() {
         >
           <div className="pointer-events-auto flex items-center gap-1 rounded-full border border-black/10 bg-card/95 py-2 pl-2 pr-2 shadow-[0_8px_30px_rgba(0,0,0,0.12)] backdrop-blur-xl">
             <DriverTab
-              id="assignment"
               label="Tasks"
               icon={ClipboardList}
-              activeTab={activeTab}
               onSelect={() => { switchTab("assignment"); }}
               badge={unseenTasks}
             />
             <DriverTab
-              id="history"
               label="History"
               icon={History}
-              activeTab={activeTab}
               onSelect={() => { switchTab("history"); }}
             />
             <DriverTab
-              id="profile"
               label="Profile"
               icon={User}
-              activeTab={activeTab}
               onSelect={() => { setProfileView("main"); switchTab("profile"); }}
             />
             <AnimatePresence initial={false}>

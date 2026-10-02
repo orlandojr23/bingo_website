@@ -1,11 +1,12 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
+// Bottom nav — no active highlight: each button opens its own full screen,
+// so a selected-pill state never makes sense here. (Any `activeTab` prop
+// passed by callers is intentionally ignored.)
 export default function BottomNav({
   tabs,
-  activeTab,
   onChange,
   variant = "light",
   className,
@@ -28,10 +29,8 @@ export default function BottomNav({
         )}
       >
         {tabs.map((tab) => {
-          const active = activeTab === tab.id;
           const Icon = tab.icon;
-          const activeColor = dark ? "text-emerald-400" : "text-emerald-600";
-          const inactiveColor = dark ? "text-zinc-500" : "text-muted-foreground";
+          const labelColor = dark ? "text-zinc-400" : "text-muted-foreground";
 
           if (tab.raised) {
             return (
@@ -43,20 +42,10 @@ export default function BottomNav({
                 aria-label={tab.label}
                 className="flex min-w-0 flex-1 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-full transition-transform active:scale-[0.97]"
               >
-                <span
-                  className={cn(
-                    "flex h-9 w-9 items-center justify-center rounded-full bg-emerald-600 text-white transition-colors",
-                    active && "bg-emerald-700"
-                  )}
-                >
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-600 text-white transition-colors">
                   <Icon className="h-5 w-5" strokeWidth={1.75} />
                 </span>
-                <span
-                  className={cn(
-                    "text-[10px] font-medium tracking-tight",
-                    active ? activeColor : inactiveColor
-                  )}
-                >
+                <span className={cn("text-[10px] font-medium tracking-tight", labelColor)}>
                   {tab.label}
                 </span>
               </button>
@@ -70,24 +59,12 @@ export default function BottomNav({
               data-tour={`nav-tab-${tab.id}`}
               onClick={() => onChange(tab.id)}
               className={cn(
-                "relative flex min-w-0 flex-1 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-2xl py-1 transition-transform active:scale-[0.97]",
-                active
-                  ? (dark ? "text-emerald-400 font-bold" : "text-emerald-700 font-bold")
-                  : (dark ? "text-zinc-400 font-medium" : "text-muted-foreground font-medium")
+                "relative flex min-w-0 flex-1 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-2xl py-1 font-medium transition-transform active:scale-[0.97]",
+                dark ? "text-zinc-400" : "text-muted-foreground"
               )}
             >
-              {active && (
-                <motion.span
-                  layoutId={`nav-pill-${variant}`}
-                  transition={{ type: "spring", stiffness: 400, damping: 32 }}
-                  className={cn(
-                    "absolute inset-x-1 inset-y-1 rounded-2xl",
-                    dark ? "bg-emerald-500/10" : "bg-emerald-50/80 border border-emerald-200/50"
-                  )}
-                />
-              )}
               <span className="relative">
-                <Icon className="h-5 w-5" strokeWidth={active ? 2 : 1.75} />
+                <Icon className="h-5 w-5" strokeWidth={1.75} />
                 {typeof tab.badge === "number" && tab.badge > 0 && (
                   <span className="absolute -right-3 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald-600 px-1 font-mono text-[9px] font-semibold leading-none text-white">
                     {tab.badge}
