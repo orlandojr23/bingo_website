@@ -54,7 +54,7 @@ export default function TicketsPage() {
       );
       if (newStatus === "Resolved") {
         if (result?.remote) {
-          toast("Marked Cleaned Up — resident notified.");
+          toast("Marked Cleaned Up. Resident notified.");
         } else {
           toast("Marked Cleaned Up, but the resident could not be notified. Check connection/RLS.", { variant: "error" });
         }

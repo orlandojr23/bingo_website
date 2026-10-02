@@ -47,6 +47,7 @@ import { MapSkeleton, ResidentShellSkeleton } from "@/components/ui/skeletons";
 import { InfoRow } from "@/components/ui/info-row";
 import { useToast } from "@/components/pwa/Toast";
 import DbStatusBanner from "@/components/pwa/DbStatusBanner";
+import NotificationTypeIcon from "@/components/pwa/NotificationIcon";
 import { useMapView } from "@/lib/use-map-view";
 import {
   useNotifications,
@@ -3211,7 +3212,10 @@ export default function ResidentMobilePWA() {
                     onClick={() => { toast("This is a preview."); haptic(); }}
                     className="flex w-full cursor-pointer items-start gap-3 px-4 py-3 text-left transition-colors active:bg-muted"
                   >
-                    <span aria-hidden="true" className="mt-[7px] h-2 w-2 shrink-0 rounded-full bg-emerald-600" />
+                    <span className="relative mt-[1px] shrink-0">
+                      <NotificationTypeIcon type={notif.type} />
+                      <span aria-hidden="true" className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-card bg-emerald-600" />
+                    </span>
                     <span className="min-w-0 flex-1">
                       <span className="flex items-baseline justify-between gap-2">
                         <span className="min-w-0 text-[15px] font-semibold tracking-tight text-foreground">
@@ -3243,7 +3247,12 @@ export default function ResidentMobilePWA() {
                   onClick={() => openUpdate(notif)}
                   className="flex w-full cursor-pointer items-start gap-3 px-4 py-3 text-left transition-colors active:bg-muted"
                 >
-                    <span aria-hidden="true" className={cn("mt-[7px] h-2 w-2 shrink-0 rounded-full", isUpdateUnread(notif) ? "bg-emerald-600" : "bg-transparent")} />
+                    <span className="relative mt-[1px] shrink-0">
+                      <NotificationTypeIcon type={notif.type} />
+                      {isUpdateUnread(notif) && (
+                        <span aria-hidden="true" className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-card bg-emerald-600" />
+                      )}
+                    </span>
                     <span className="min-w-0 flex-1">
                       <span className="flex items-baseline justify-between gap-2">
                         <span className={cn("min-w-0 text-[15px] tracking-tight text-foreground", isUpdateUnread(notif) ? "font-semibold" : "font-normal")}>

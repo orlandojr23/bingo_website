@@ -790,7 +790,7 @@ export default function StaffPage() {
                               {fleet.map((t) => (
                                 <option key={t.id} value={t.id}>
                                   {truckLabel(t)}
-                                  {live.driverByTruck[t.id] ? ` — ${live.driverByTruck[t.id]}` : ""}
+                                  {live.driverByTruck[t.id] ? ` (${live.driverByTruck[t.id]})` : ""}
                                 </option>
                               ))}
                             </select>

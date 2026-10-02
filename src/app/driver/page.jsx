@@ -62,6 +62,7 @@ import { changeDriverPassword } from "@/lib/driver-accounts";
 import { MapSkeleton, DriverShellSkeleton } from "@/components/ui/skeletons";
 import { useToast } from "@/components/pwa/Toast";
 import DbStatusBanner from "@/components/pwa/DbStatusBanner";
+import NotificationTypeIcon from "@/components/pwa/NotificationIcon";
 import { supabase } from "@/lib/supabase";
 
 // Minimalist High-DPI Leaflet MapCanvas
@@ -2579,7 +2580,12 @@ export default function DriverPage() {
                         onClick={() => { markNotificationRead(notif.id); haptic(); }}
                         className="flex w-full cursor-pointer items-start gap-3 px-4 py-3 text-left transition-colors active:bg-muted"
                       >
-                        <span aria-hidden="true" className={cn("mt-[7px] h-2 w-2 shrink-0 rounded-full", !notif.isRead ? "bg-emerald-600" : "bg-transparent")} />
+                        <span className="relative mt-[1px] shrink-0">
+                          <NotificationTypeIcon type={notif.type} />
+                          {!notif.isRead && (
+                            <span aria-hidden="true" className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-card bg-emerald-600" />
+                          )}
+                        </span>
                         <span className="min-w-0 flex-1">
                           <span className="flex items-baseline justify-between gap-2">
                             <span className={cn("text-[15px] tracking-tight text-foreground", !notif.isRead ? "font-semibold" : "font-normal")}>

@@ -27,6 +27,7 @@ import {
   removeNotification,
 } from "@/lib/notifications";
 import { useTickets, useArchivedTickets } from "@/lib/tickets";
+import { useToast } from "@/components/pwa/Toast";
 import dynamic from "next/dynamic";
 import binEmptyState from "../../../../public/lottie/bin-empty-state.json";
 
@@ -111,6 +112,7 @@ export default function NotificationsPage() {
   const storeNotifications = useNotifications("admin");
   const [activeTab, setActiveTab] = useState("All");
   const [selectedNotifId, setSelectedNotifId] = useState(null);
+  const { toast, ToastViewport } = useToast();
 
   // Report tickets (live + archived) so a notification's location/barangay can
   // be resolved from its linked ticket when the row itself carries none.
@@ -189,6 +191,7 @@ export default function NotificationsPage() {
     if (selectedNotifId === id) {
       setSelectedNotifId(null);
     }
+    toast("Alert deleted.");
   };
 
   const markRead = (id) => {
@@ -363,6 +366,7 @@ export default function NotificationsPage() {
 
         {/* Guaranteed bottom spacer element */}
         <div className="h-6 sm:h-8 lg:h-10 w-full shrink-0 pointer-events-none" aria-hidden="true" />
+        {ToastViewport}
       </div>
 
       <AnimatePresence>

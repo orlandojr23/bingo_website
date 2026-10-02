@@ -476,7 +476,7 @@ export async function addSchedule(fields) {
     const adminPush = await pushNotification({
       audience: "admin",
       type: "Dispatch",
-      title: `Assignment posted — ${fields.truckId}`,
+      title: `Assignment posted to ${fields.truckId}`,
       message: `${label}${when ? ` (${when})` : ""} assigned to ${fields.truckId}. Driver and residents notified.`,
       truckId: fields.truckId,
       actionUrl: "/dispatch",
@@ -567,7 +567,7 @@ export async function updateSchedule(id, patch) {
         audience: "residents",
         type: "Dispatch",
         title: "Schedule updated",
-        message: `${label} reassigned — a new truck is on the way. See Schedule.`,
+        message: `${label} reassigned. A new truck is on the way. See Schedule.`,
         at: new Date().toISOString(),
         dedupeKey: `${id}:reassigned-residents:${stamp}`,
       }).then((r) => {
@@ -576,7 +576,7 @@ export async function updateSchedule(id, patch) {
       pushNotification({
         audience: "admin",
         type: "Dispatch",
-        title: `Assignment moved — ${label}`,
+        title: `Assignment moved: ${label}`,
         message: `${label} moved from ${prevTruckId} to ${patch.truckId}. Drivers and residents notified.`,
         truckId: patch.truckId,
         actionUrl: "/dispatch",
@@ -654,7 +654,7 @@ export async function acceptAssignment(scheduleId) {
     pushNotification({
       audience: "admin",
       type: "Dispatch",
-      title: `Driver accepted — ${label}`,
+      title: `Driver accepted: ${label}`,
       message: `${schedule.truckId} accepted ${label}.`,
       truckId: schedule.truckId,
       actionUrl: "/dispatch",
@@ -1028,7 +1028,7 @@ export async function cancelAssignment({ scheduleId, truckId = null, cancelledBy
   const adminPush = await pushNotification({
     audience: "admin",
     type: "Dispatch",
-    title: `Assignment cancelled — ${label}`,
+    title: `Assignment cancelled: ${label}`,
     message: `${label} was ${byText}.${reasonText} Assign a new driver.`,
     truckId: activeTruckId || undefined,
     actionUrl: "/dispatch",

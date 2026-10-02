@@ -2,7 +2,7 @@
 // these fixed upper address levels; only the sitio is chosen at signup. When
 // the service expands, these become real dropdown options.
 export const PILOT_AREA = {
-  region: "Region VII — Central Visayas",
+  region: "Region VII (Central Visayas)",
   province: "Cebu",
   city: "Cebu City",
   barangay: "Tejero",
