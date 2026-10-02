@@ -502,7 +502,10 @@ function TruckMarker({ map, trk, fading }) {
 
   // Waze-style heading arrow: spin it by (compass heading minus compass
   // up-screen map bearing). Re-applied on heading changes and while the map
-  // itself rotates (course-up drive mode).
+  // itself rotates (course-up drive mode). Uses shortest-arc rotation so the
+  // arrow never spins the long way around the 0/360 boundary, and animates
+  // smoothly with a CSS transition so turns look like Waze/Uber.
+  const prevDegRef = useRef(null);
   useEffect(() => {
     const el = markerRef.current?.getElement();
     if (!el || !map) return;
@@ -511,8 +514,18 @@ function TruckMarker({ map, trk, fading }) {
       if (!arrow) return;
       // Shared headings are stored app-convention (compass + 90); the CSS
       // arrow points north at 0, so convert back to compass first.
-      const deg = ((((trk.heading ?? 90) - 90 - map.getBearing()) % 360) + 360) % 360;
-      arrow.style.transform = `rotate(${deg}deg)`;
+      const raw = ((((trk.heading ?? 90) - 90 - map.getBearing()) % 360) + 360) % 360;
+      // Shortest-path accumulation: always rotate through the ≤180° arc.
+      // Prevents the arrow from spinning 340° when crossing the 0°/360° seam
+      // (e.g. turning from 350° to 10° goes +20°, not −340°).
+      if (prevDegRef.current === null) {
+        prevDegRef.current = raw;
+      } else {
+        const delta = ((raw - (prevDegRef.current % 360) + 540) % 360) - 180;
+        prevDegRef.current = prevDegRef.current + delta;
+      }
+      arrow.style.transition = "transform 0.3s ease-out";
+      arrow.style.transform = `rotate(${prevDegRef.current}deg)`;
     };
     apply();
     map.on("rotate", apply);

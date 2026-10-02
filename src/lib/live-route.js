@@ -428,6 +428,17 @@ export async function addSchedule(fields) {
 
   if (error) throw error;
 
+  // Delivery flags so the dispatch UI can confirm (or warn) visibly instead
+  // of failing silent. A `false` here almost always means the
+  // `public.notifications` RLS fix was never run in Supabase
+  // (supabase/migrations/20260921000000_notifications_rls.sql, STEP 2) — the
+  // insert is rejected and the push stays local-only on the admin's browser.
+  // The banner still appears because it reads the schedules table, which has
+  // its own working sync.
+  let driverNotified = false;
+  let residentsNotified = false;
+  let adminNotified = false;
+
   if (fields.truckId) {
     const label = scheduleLabel({ ...fields, id });
     const when = [fields.assignmentDate, fields.time].filter(Boolean).join(" · ");
@@ -436,33 +447,33 @@ export async function addSchedule(fields) {
     // the banner derives "N new assignments" from the synced schedule store,
     // and this push is the brief message in the Updates inbox (with ding +
     // Tasks badge on arrival).
-    pushNotification({
+    const driverPush = await pushNotification({
       audience: `driver:${fields.truckId}`,
       type: "Dispatch",
       title: "New assignment",
       message: `${label}${when ? ` (${when})` : ""}. See Tasks.`,
       at: new Date().toISOString(),
       dedupeKey: `${id}:assigned:${stamp}`,
-    }).then((r) => {
-      if (!r.remote) console.warn("New assignment: driver notification stayed local-only (not delivered).");
     });
+    driverNotified = driverPush.remote;
+    if (!driverNotified) console.warn("New assignment: driver notification stayed local-only (not delivered).");
     // Resident inbox (Updates screen, broadcast audience `residents`) +
     // banner: the banner derives "Pickup today / Next" from the synced
     // schedule store, and this push is the brief message in Updates.
-    pushNotification({
+    const residentPush = await pushNotification({
       audience: "residents",
       type: "Dispatch",
       title: "Pickup scheduled",
       message: `${label}${when ? ` (${when})` : ""}. See Schedule.`,
       at: new Date().toISOString(),
       dedupeKey: `${id}:assigned-residents:${stamp}`,
-    }).then((r) => {
-      if (!r.remote) console.warn("New assignment: resident notification stayed local-only (not delivered).");
     });
+    residentsNotified = residentPush.remote;
+    if (!residentsNotified) console.warn("New assignment: resident notification stayed local-only (not delivered).");
     // Admin inbox (Notifications page + sidebar badge + ding/toast): a
     // confirmation record so every admin sees what was assigned and that the
     // driver and residents were notified.
-    pushNotification({
+    const adminPush = await pushNotification({
       audience: "admin",
       type: "Dispatch",
       title: `Assignment posted — ${fields.truckId}`,
@@ -472,21 +483,22 @@ export async function addSchedule(fields) {
       actionLabel: "Open Dispatch",
       at: new Date().toISOString(),
       dedupeKey: `${id}:assigned-admin:${stamp}`,
-    }).then((r) => {
-      if (!r.remote) console.warn("New assignment: admin notification stayed local-only (not delivered).");
     });
+    adminNotified = adminPush.remote;
+    if (!adminNotified) console.warn("New assignment: admin notification stayed local-only (not delivered).");
   }
 
-  return write((next) => {
-    const schedule = {
+  const schedule = write((next) => {
+    const created = {
       ...fields,
       id,
       routePoints,
     };
-    next.schedules = { ...next.schedules, [id]: schedule };
-    next.scheduleStatus = { ...next.scheduleStatus, [id]: schedule.status || "Scheduled" };
-    return schedule;
+    next.schedules = { ...next.schedules, [id]: created };
+    next.scheduleStatus = { ...next.scheduleStatus, [id]: created.status || "Scheduled" };
+    return created;
   });
+  return { schedule, driverNotified, residentsNotified, adminNotified };
 }
 
 export async function updateSchedule(id, patch) {

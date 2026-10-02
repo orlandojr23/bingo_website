@@ -46,7 +46,7 @@ import {
   reinitSupabaseSync,
   dutyStatusOf,
 } from "@/lib/live-route";
-import { smoothFix, createSnapFilter, compassBearing, resolveTravelHeading } from "@/lib/route-snap";
+import { smoothFix, createSnapFilter, compassBearing, resolveTravelHeading, fetchRoadGeometry } from "@/lib/route-snap";
 import { cn, haptic } from "@/lib/utils";
 import {
   useNotifications,
@@ -930,15 +930,21 @@ export default function DriverPage() {
     if (snapFilterRef.current) snapFilterRef.current.reset();
   };
 
+  // Road geometry fetched from OSRM on route start/resume. Passed to the snap
+  // filter so it snaps to real streets instead of phantom straight lines
+  // between stop pins. null while pending or when OSRM is unreachable.
+  const geometryRef = useRef(null);
+
   // Remaining-route snapshot for the offline route snap (see route-snap.js).
   // Synced on schedule/stop changes; the GPS handler reads it via ref so it
   // never works from a stale closure.
-  const routeRef = useRef({ points: [], stopIndex: 0, scheduleId: null });
+  const routeRef = useRef({ points: [], stopIndex: 0, scheduleId: null, geometry: null });
   useEffect(() => {
     routeRef.current = {
       points: routePoints,
       stopIndex: truckState?.stopIndex ?? 0,
       scheduleId: activeSchedule?.id ?? null,
+      geometry: geometryRef.current,
     };
   }, [routePoints, truckState?.stopIndex, activeSchedule?.id]);
 
@@ -973,9 +979,29 @@ export default function DriverPage() {
 
           // Waze-style stationary noise filter: if moving very slowly (speed <= 1 m/s)
           // and the GPS fix only jumped by < 10 meters, it's just satellite wobble while
-          // parked. Ignore it so the truck marker doesn't slide back and forth.
+          // parked. Skip the position + broadcast update, but still recompute heading
+          // so turns at low speed (tight corners, U-turns) rotate the marker correctly.
           if (s <= 1 && distM < 10) {
-            return;
+            // Still update heading if the device compass or road snap gives us one
+            // (the marker was freezing during slow turns with the old full return).
+            if (!snapFilterRef.current) snapFilterRef.current = createSnapFilter();
+            const rte = routeRef.current;
+            const solved = snapFilterRef.current.update(
+              smoothed.lat, smoothed.lng,
+              rte.points, rte.stopIndex, rte.scheduleId, rte.geometry
+            );
+            const slowHeading = resolveTravelHeading({
+              road: solved.heading,
+              course: null, // too little movement for a reliable course
+              device: (heading !== null && !isNaN(heading)) ? heading : null,
+              prevHeading: prev ? prev.heading : null,
+              speedMps: s,
+            });
+            if (slowHeading !== (prev?.heading ?? null)) {
+              lastAcceptedGpsRef.current = { ...prev, heading: slowHeading };
+              setCoords((c) => c ? { ...c, heading: slowHeading } : c);
+            }
+            return; // still suppress position update + broadcast
           }
 
         }
@@ -995,7 +1021,8 @@ export default function DriverPage() {
           smoothed.lng,
           rte.points,
           rte.stopIndex,
-          rte.scheduleId
+          rte.scheduleId,
+          rte.geometry   // OSRM road polyline — snaps to real streets
         );
         const roadHeading = solved.heading;
         const outLat = solved.lat;
@@ -1180,6 +1207,19 @@ export default function DriverPage() {
     setBroadcastStatus("Broadcasting live");
     await requestWakeLock();
     resetFixFilters();
+
+    // Fetch OSRM road geometry so the snap filter follows real streets.
+    // Fire-and-forget: GPS watch starts immediately; geometry slots in when
+    // ready (usually < 1s on a good connection). Falls back to stop-pin
+    // segments automatically while the fetch is in-flight or if OSRM fails.
+    const stopsForGeom = activeSchedule?.routePoints ?? routePoints;
+    geometryRef.current = null;
+    routeRef.current = { ...routeRef.current, geometry: null };
+    fetchRoadGeometry(stopsForGeom).then((geom) => {
+      geometryRef.current = geom;
+      routeRef.current = { ...routeRef.current, geometry: geom };
+    }).catch(() => {});
+
     startGpsWatch();
 
     // Waze Navigation Camera Mode: Focus truck, set zoom 18 & fly camera

@@ -13,9 +13,17 @@
 // the app convention (compass + 90) before broadcasting.
 
 export const SNAP_CORRIDOR_M = 60;
+// Wider corridor used when snapping to a dense OSRM road polyline so minor
+// GPS wobble that lands a couple metres off the road line still snaps cleanly.
+export const ROAD_SNAP_CORRIDOR_M = 40;
 // Progress must regress more than this before the heading flips to the
 // segment's reverse direction — absorbs GPS jitter along the path.
 export const REVERSE_TOL_M = 5;
+// Looser reversal tolerance for dense OSRM road geometry: segments are
+// 5–15 m long so GPS jitter of 10–15 m routinely regresses alongM by more
+// than REVERSE_TOL_M and would falsely flip the heading 180° ("backwards").
+// 20 m still catches a genuine U-turn while absorbing jitter.
+export const ROAD_REVERSE_TOL_M = 20;
 
 const M_PER_DEG_LAT = 111320;
 
@@ -73,7 +81,7 @@ export function projectOnSegment(p, a, b) {
 // max(0, stopIndex - 1) onward — the arrival leg plus everything ahead — so
 // the marker never snaps backward to a finished leg. Returns the snapped
 // fix plus routing metadata, or null when the fix is off-route.
-export function snapToRoute(lat, lng, points, stopIndex = 0) {
+export function snapToRoute(lat, lng, points, stopIndex = 0, corridorM = SNAP_CORRIDOR_M) {
   if (typeof lat !== "number" || typeof lng !== "number" || isNaN(lat) || isNaN(lng)) return null;
   if (!Array.isArray(points) || points.length < 2) return null;
   const start = Math.min(Math.max(0, (stopIndex ?? 0) - 1), points.length - 2);
@@ -97,7 +105,7 @@ export function snapToRoute(lat, lng, points, stopIndex = 0) {
       best = { ...proj, segIndex: i, alongM: cum[i] + proj.t * proj.segLenM };
     }
   }
-  if (!best || best.distM > SNAP_CORRIDOR_M) return null;
+  if (!best || best.distM > corridorM) return null;
   const bearing = compassBearing(points[best.segIndex], points[best.segIndex + 1]);
   if (bearing == null) return null;
   return { lat: best.lat, lng: best.lng, segIndex: best.segIndex, alongM: best.alongM, distM: best.distM, bearing };
@@ -107,9 +115,9 @@ export function snapToRoute(lat, lng, points, stopIndex = 0) {
 // Progress (meters along the route) that keeps increasing means forward;
 // a regression beyond the jitter tolerance means reversing. prevAlong is
 // the caller's stored baseline (null on first fix / leg change).
-export function travelHeading(snap, prevAlong = null) {
+export function travelHeading(snap, prevAlong = null, reversalTolM = REVERSE_TOL_M) {
   if (!snap) return null;
-  if (prevAlong == null || snap.alongM >= prevAlong - REVERSE_TOL_M) {
+  if (prevAlong == null || snap.alongM >= prevAlong - reversalTolM) {
     return { heading: snap.bearing, along: snap.alongM };
   }
   return { heading: (snap.bearing + 180) % 360, along: snap.alongM };
@@ -181,18 +189,38 @@ export function createSnapFilter() {
     held = null;
     offCount = 0;
   };
-  const update = (lat, lng, points, stopIndex = 0, scheduleId = null) => {
-    const snap =
-      Array.isArray(points) && points.length >= 2
+  // geometry: dense OSRM road polyline ({ lat, lng }[]). When provided it is
+  // used for snapping first (road-accurate, no stopIndex window needed);
+  // stop-pin segments are the fallback when geometry is absent or misses.
+  const update = (lat, lng, points, stopIndex = 0, scheduleId = null, geometry = null) => {
+    // --- Primary: snap to OSRM road geometry (ignores stopIndex window) ---
+    const roadSnap =
+      Array.isArray(geometry) && geometry.length >= 2
+        ? snapToRoute(lat, lng, geometry, 0, ROAD_SNAP_CORRIDOR_M)
+        : null;
+
+    // --- Fallback: snap to sparse stop-pin segments ---
+    const pinSnap =
+      !roadSnap && Array.isArray(points) && points.length >= 2
         ? snapToRoute(lat, lng, points, stopIndex)
         : null;
+
+    const snap = roadSnap ?? pinSnap;
+    // Use different progress keys so switching between geometry / pins never
+    // makes the truck appear to reverse.
+    const snapMode = roadSnap ? "road" : "pin";
+
     if (snap) {
-      const key = `${scheduleId}|${stopIndex}`;
-      const solved = travelHeading(snap, progress && progress.key === key ? progress.along : null);
+      const key = `${snapMode}|${scheduleId}|${stopIndex}`;
+      // Road geometry uses a looser reversal tolerance: dense OSRM polylines
+      // have 5–15 m segments so ordinary GPS jitter would otherwise flip the
+      // heading 180° on every other fix ("marker faces backwards" bug).
+      const revTol = roadSnap ? ROAD_REVERSE_TOL_M : REVERSE_TOL_M;
+      const solved = travelHeading(snap, progress && progress.key === key ? progress.along : null, revTol);
       progress = { key, along: solved.along };
       offCount = 0;
       held = { lat: snap.lat, lng: snap.lng };
-      return { lat: snap.lat, lng: snap.lng, heading: solved.heading, snapped: true };
+      return { lat: snap.lat, lng: snap.lng, heading: solved.heading, snapped: true, roadSnapped: !!roadSnap };
     }
     offCount += 1;
     if (held && offCount <= OFF_ROUTE_CONFIRM_FIXES) {
@@ -201,4 +229,53 @@ export function createSnapFilter() {
     return { lat, lng, heading: null, snapped: false };
   };
   return { update, reset };
+}
+
+// --- OSRM road-geometry fetch ---
+//
+// The stop pins (routePoints) are sparse — just 4-5 barangay locations.
+// Snapping the truck onto straight lines between those pins puts the marker
+// in fields and buildings instead of on the road. fetchRoadGeometry() asks
+// OSRM (free, no API key) for a road-following polyline so the snap stays
+// on actual streets — exactly how Waze and Uber do it.
+//
+// Returns an array of { lat, lng } waypoints dense enough to ride every
+// road bend, or null when the fetch fails (offline fallback: the caller
+// falls back to the raw stop-pin segments).
+export async function fetchRoadGeometry(stops) {
+  if (!Array.isArray(stops) || stops.length < 2) return null;
+  // Validate every stop has numeric lat/lng.
+  const pts = stops
+    .map((s) => {
+      const lat = s?.lat ?? s?.latitude;
+      const lng = s?.lng ?? s?.longitude;
+      return typeof lat === "number" && typeof lng === "number" && !isNaN(lat) && !isNaN(lng)
+        ? { lat, lng }
+        : null;
+    })
+    .filter(Boolean);
+  if (pts.length < 2) return null;
+
+  // OSRM coordinate string: "lng,lat;lng,lat;..."
+  const coords = pts.map((p) => `${p.lng},${p.lat}`).join(";");
+  // overview=full returns the complete route geometry (not simplified).
+  // geometries=geojson gives us [lng, lat] coordinates directly.
+  const url =
+    `https://router.project-osrm.org/route/v1/driving/${coords}` +
+    `?overview=full&geometries=geojson&steps=false`;
+
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const route = data?.routes?.[0];
+    if (!route) return null;
+    const geomCoords = route.geometry?.coordinates;
+    if (!Array.isArray(geomCoords) || geomCoords.length < 2) return null;
+    // GeoJSON is [lng, lat]; convert to { lat, lng } for the snap functions.
+    return geomCoords.map(([lng, lat]) => ({ lat, lng }));
+  } catch {
+    // Network error, timeout, or OSRM unavailable — caller uses raw pins.
+    return null;
+  }
 }

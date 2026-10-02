@@ -233,14 +233,23 @@ export default function DispatchPage() {
     }
 
     setIsSubmittingSchedule(true);
-    await addSchedule({
+    const result = await addSchedule({
       ...buildScheduleFields(),
       routePoints: stopOrder,
     });
     setIsSubmittingSchedule(false);
-    
+
     setIsAdding(false);
     resetForm();
+    if (!result?.driverNotified || !result?.residentsNotified) {
+      const missing = [
+        !result?.driverNotified ? "driver" : null,
+        !result?.residentsNotified ? "residents" : null,
+      ].filter(Boolean).join(" and ");
+      toast(`Assignment saved, but the ${missing} could NOT be notified (check console and Supabase notifications RLS).`, { variant: "warning" });
+    } else {
+      toast("Assignment posted. Driver and residents notified.");
+    }
   };
 
   const handleUpdateSchedule = async (e) => {
