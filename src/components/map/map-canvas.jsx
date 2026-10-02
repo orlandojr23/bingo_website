@@ -541,7 +541,7 @@ function TruckMarker({ map, trk, fading }) {
 // Stable identity for an upcoming-stop pin: absolute route index + position.
 const upcomingPinKey = (s) => `${s.index}-${s.lat}-${s.lng}`;
 
-export default function MapCanvas({ tickets = [], trucks = [], mapMode = "pins", center, zoom, highlightedTicketId, currentStop, upcomingStops = [], onSelectTicket, onMapDrag, onBoundsChange, flySignal, onMapReady, showZoomControl = false, showTicketPopup = true, rotatable = false, bearing = null, perspective3D = false, tilted = false, onTiltChange, hidePausedTrucks = false }) {
+export default function MapCanvas({ tickets = [], trucks = [], mapMode = "pins", center, zoom, highlightedTicketId, currentStop, upcomingStops = [], onSelectTicket, onMapDrag, onBoundsChange, flySignal, onMapReady, showZoomControl = false, showTicketPopup = true, rotatable = false, bearing = null, perspective3D = false, tilted = false, onTiltChange, hideCompass = false, hidePausedTrucks = false }) {
   const containerRef = useRef(null);
   const [mapObj, setMapObj] = useState(null);
   const [mapError, setMapError] = useState(false);
@@ -962,7 +962,7 @@ export default function MapCanvas({ tickets = [], trucks = [], mapMode = "pins",
           ))}
         </>
       )}
-      {showCompass && (
+      {!hideCompass && showCompass && (
         <button
           type="button"
           aria-label="Reset map orientation"

@@ -248,6 +248,7 @@ function LiveMapContent() {
           highlightedTicketId={mapView === "reports" ? activeTicketId : null}
           onSelectTicket={mapView === "reports" ? handlePinClick : undefined}
           showZoomControl
+          hideCompass
           tilted={cameraView === "tilt"}
           onTiltChange={(isTilted) => setCameraView(isTilted ? "tilt" : "default")}
           showTicketPopup={false}

@@ -1347,6 +1347,7 @@ export default function DriverPage() {
             onBoundsChange={handleMapBoundsChange}
             flySignal={flySignal}
             rotatable
+            hideCompass
             bearing={navBearing}
             perspective3D={isOnDuty && truckFocused}
             tilted={mapView === "tilt"}

@@ -1766,6 +1766,7 @@ export default function ResidentMobilePWA() {
             mapMode="pins"
             tilted={mapView === "tilt"}
             onTiltChange={(isTilted) => setMapView(isTilted ? "tilt" : "default")}
+            hideCompass
             currentStop={currentStop}
             upcomingStops={upcomingStops}
             center={mapFocusTicket ? [mapFocusTicket.lat, mapFocusTicket.lng] : selectedTicket ? [selectedTicket.lat, selectedTicket.lng] : mapCenter}
