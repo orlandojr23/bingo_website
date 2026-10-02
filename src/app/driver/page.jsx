@@ -1290,23 +1290,22 @@ export default function DriverPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trackLat, trackLng]);
 
-  // Center nav CTA: one action button for the whole duty cycle. Off duty
-  // the label follows assignment state: resume a paused route, start an
-  // accepted assignment, accept a pending assignment, or show empty when
-  // dispatch hasn't assigned anything yet.
+  // Center nav CTA: shown only once the driver has an actionable route —
+  // accepted assignment, resumable pause, or active duty. The idle "No Task"
+  // and pre-accept states render nothing so the tab bar holds only the four
+  // tabs until acceptance, when the action button smoothly appears.
   const canResume =
     !!truckState &&
     (truckState.phase === "enroute" || truckState.phase === "onsite") &&
     !truckState.tracking.isActive;
+  const showCenterAction = isOnDuty || canResume || isAssignmentAccepted;
   const cta =
     !isOnDuty
       ? canResume
         ? { tone: "bg-emerald-600", icon: <Play className="h-6 w-6 fill-white" />, label: "Resume Route", short: "Resume", disabled: false }
-        : !assignedSchedule
-          ? { tone: "bg-zinc-300 dark:bg-zinc-700", icon: <ClipboardList className="h-6 w-6" />, label: "No Assignment", short: "No Task", disabled: true }
-          : !isAssignmentAccepted
-            ? { tone: "bg-emerald-600", icon: <ClipboardList className="h-6 w-6" />, label: "Accept Assignment", short: "Accept", disabled: false }
-            : { tone: "bg-emerald-600", icon: <Play className="h-6 w-6 fill-white" />, label: "Start Route", short: "Start", disabled: false }
+        : !isAssignmentAccepted
+          ? { tone: "bg-emerald-600", icon: <Play className="h-6 w-6 fill-white" />, label: "Start Route", short: "Start", disabled: false }
+          : { tone: "bg-emerald-600", icon: <Play className="h-6 w-6 fill-white" />, label: "Start Route", short: "Start", disabled: false }
       : truckState?.phase === "enroute"
         ? {
             tone: "bg-amber-500",
@@ -1445,11 +1444,11 @@ export default function DriverPage() {
                     setFlySignal((s) => s + 1);
                     haptic();
                   }}
-                  className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full border border-black/10 bg-white text-zinc-800 shadow-md active:scale-95 transition-transform cursor-pointer"
+                  className="pointer-events-auto flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full border border-black/10 bg-white text-zinc-800 shadow-md active:scale-95 transition-transform cursor-pointer touch-manipulation"
                   title="Focus Compactor Unit"
                   aria-label="Focus Compactor Unit"
                 >
-                  <SteeringWheelIcon className="h-[22px] w-[22px]" strokeWidth={2} />
+                  <SteeringWheelIcon className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={2} />
                 </motion.button>
               );
             })()}
@@ -1480,11 +1479,11 @@ export default function DriverPage() {
                   setFlySignal((s) => s + 1);
                   haptic();
                 }}
-                className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full border border-black/10 bg-white text-zinc-800 shadow-md active:scale-95 transition-transform cursor-pointer"
+                className="pointer-events-auto flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full border border-black/10 bg-white text-zinc-800 shadow-md active:scale-95 transition-transform cursor-pointer touch-manipulation"
                 title="Center Driver Location"
                 aria-label="Center Driver Location"
               >
-                <LocateFixed className="h-[22px] w-[22px]" strokeWidth={2} />
+                <LocateFixed className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={2} />
               </motion.button>
             )}
           </AnimatePresence>
@@ -1493,7 +1492,7 @@ export default function DriverPage() {
         {/* Bottom Navigation Bar - native tab bar, only visible on map */}
         {activeTab === "map" && (
         <div className="fixed bottom-0 inset-x-0 z-[100] border-t border-black/10 bg-background/85 backdrop-blur-xl shadow-[0_-4px_16px_rgba(0,0,0,0.06)] pb-[env(safe-area-inset-bottom)]">
-          <div className="grid grid-cols-5 h-[64px] max-w-md mx-auto px-2">
+          <div className={cn("grid h-[64px] max-w-md mx-auto px-2 transition-all duration-300", showCenterAction ? "grid-cols-5" : "grid-cols-4")}>
             <DriverTab
               id="map"
               label="Map"
@@ -1509,19 +1508,28 @@ export default function DriverPage() {
               onSelect={() => { switchTab("assignment"); }}
               badge={unseenTasks}
             />
-            <button
-              type="button"
-              onClick={() => { handlePrimaryAction(); }}
-              aria-label={cta.label}
-              title={cta.label}
-              disabled={cta.disabled}
-              className="relative flex cursor-pointer flex-col items-center justify-end pb-3 disabled:cursor-not-allowed"
-            >
-              <span className={cn("absolute -top-7 left-1/2 flex h-14 w-14 -translate-x-1/2 items-center justify-center rounded-full text-white transition-transform active:scale-95", cta.tone)}>
-                {cta.icon}
-              </span>
-              <span className={cn("text-[10px] font-semibold leading-none", cta.disabled ? "text-muted-foreground" : "text-emerald-600")}>{cta.short}</span>
-            </button>
+            <AnimatePresence initial={false}>
+              {showCenterAction && (
+                <motion.button
+                  key="center-route-action"
+                  type="button"
+                  initial={{ opacity: 0, scale: 0.5, y: 16 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.5, y: 16 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 28 }}
+                  onClick={() => { handlePrimaryAction(); }}
+                  aria-label={cta.label}
+                  title={cta.label}
+                  disabled={cta.disabled}
+                  className="relative flex cursor-pointer flex-col items-center justify-end pb-3 disabled:cursor-not-allowed"
+                >
+                  <span className={cn("absolute -top-7 left-1/2 flex h-14 w-14 -translate-x-1/2 items-center justify-center rounded-full text-white transition-transform active:scale-95", cta.tone)}>
+                    {cta.icon}
+                  </span>
+                  <span className={cn("text-[10px] font-semibold leading-none", cta.disabled ? "text-muted-foreground" : "text-emerald-600")}>{cta.short}</span>
+                </motion.button>
+              )}
+            </AnimatePresence>
             <DriverTab
               id="history"
               label="History"

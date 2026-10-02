@@ -41,7 +41,7 @@ import { useFleet } from "@/lib/fleet";
 import { clearResidentSession } from "@/lib/resident-session";
 import { reverseGeocode } from "@/lib/geocode";
 import { useSwipeToggle } from "@/lib/use-swipe-toggle";
-import { cn, haptic, formatTicketDateTime, formatTicketDateLong, formatTicketTime } from "@/lib/utils";
+import { cn, haptic, formatTicketDate, formatTicketDateTime, formatTicketDateLong, formatTicketTime } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { MapSkeleton, ResidentShellSkeleton } from "@/components/ui/skeletons";
@@ -307,6 +307,19 @@ function ScheduleBadge({ className }) {
       <rect x="22" y="7" width="3" height="6" rx="1.5" fill="#ffffff" />
       <rect x="10" y="12" width="20" height="18" rx="4" fill="#ffffff" />
       <path d="M15.5 21 l3.2 3.2 6-6.5" fill="none" stroke="#059669" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+// Flat vector badge for ticket cards: admission ticket with a check stub.
+function TicketBadge({ className }) {
+  return (
+    <svg viewBox="0 0 40 40" className={className} aria-hidden="true">
+      <circle cx="20" cy="20" r="20" fill="#059669" />
+      <rect x="8" y="13" width="24" height="14" rx="3.5" fill="#ffffff" />
+      <circle cx="8" cy="20" r="2.3" fill="#059669" />
+      <circle cx="32" cy="20" r="2.3" fill="#059669" />
+      <path d="M16.9 20 l2.2 2.2 4-4.5" fill="none" stroke="#059669" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -1857,19 +1870,10 @@ export default function ResidentMobilePWA() {
             className="ml-1 flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-foreground transition-all active:scale-95"
             aria-label="Binny"
           >
-            <span className="relative flex h-5 w-5 items-center justify-center">
-              <MessageCircle
-                className="h-5 w-5 text-foreground"
-                strokeWidth={2}
-              />
-              <span
-                aria-hidden="true"
-                className="absolute inset-0 flex items-center justify-center text-[10px] font-extrabold leading-none text-foreground" style={{ transform: "translate(0.5px, 0.75px)" }}
-
-              >
-                B
-              </span>
-            </span>
+            <MessageCircle
+              className="h-5 w-5 text-foreground"
+              strokeWidth={2}
+            />
           </button>
           <button
             type="button"
@@ -1916,11 +1920,11 @@ export default function ResidentMobilePWA() {
                   }
                   haptic();
                 }}
-                className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full border border-black/10 bg-white text-zinc-800 shadow-lg active:bg-zinc-100 active:scale-95 transition-transform cursor-pointer touch-manipulation"
+                className="pointer-events-auto flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full border border-black/10 bg-white text-zinc-800 shadow-lg active:bg-zinc-100 active:scale-95 transition-transform cursor-pointer touch-manipulation"
                 title="Focus Active Truck"
                 aria-label="Focus Active Truck"
               >
-                <Truck className="h-6 w-6" strokeWidth={2} />
+                <Truck className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={2} />
               </motion.button>
             )}
           </AnimatePresence>
@@ -1963,11 +1967,11 @@ export default function ResidentMobilePWA() {
                   }
                   haptic();
                 }}
-                className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full border border-black/10 bg-white text-zinc-800 shadow-lg active:bg-zinc-100 active:scale-95 transition-transform cursor-pointer touch-manipulation"
+                className="pointer-events-auto flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full border border-black/10 bg-white text-zinc-800 shadow-lg active:bg-zinc-100 active:scale-95 transition-transform cursor-pointer touch-manipulation"
                 title="Center My Location"
                 aria-label="Center My Location"
               >
-                <LocateFixed className="h-6 w-6" strokeWidth={2} />
+                <LocateFixed className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={2} />
               </motion.button>
             )}
           </AnimatePresence>
@@ -2002,7 +2006,7 @@ export default function ResidentMobilePWA() {
               onClick={() => { setActiveTab("report"); setTimeout(() => fileInputRef.current?.click(), 150); haptic(); }}
               className="relative flex flex-col items-center justify-end pb-3 cursor-pointer"
             >
-              <span data-tour="nav-tab-report" className="absolute -top-7 left-1/2 flex h-14 w-14 -translate-x-1/2 items-center justify-center rounded-full bg-emerald-600 text-white shadow-[0_8px_20px_rgba(5,150,105,0.35)] transition-transform active:scale-95">
+              <span data-tour="nav-tab-report" className="absolute -top-7 left-1/2 flex h-14 w-14 -translate-x-1/2 items-center justify-center rounded-full bg-emerald-600 text-white transition-transform active:scale-95">
                 <Camera className="h-6 w-6" strokeWidth={2} />
               </span>
               <span className="text-[10px] font-semibold leading-none text-emerald-600">Report</span>
@@ -2708,15 +2712,15 @@ export default function ResidentMobilePWA() {
                     onClick={() => { setSelectedTicket(ticket); haptic(); }}
                     className="flex w-full cursor-pointer items-center justify-between gap-3 px-4 py-2.5 border-b border-border/60 last:border-b-0 text-left transition-colors active:bg-muted"
                   >
-                    <Ticket className="h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+                    <TicketBadge className="h-9 w-9 shrink-0" />
                     <span className="min-w-0 flex-1">
                       <p className="text-[15px] leading-snug break-words text-foreground">
                         {ticket.location}
                       </p>
                       <p className="mt-0.5 text-[13px] text-muted-foreground">
                         {[ticket.status, ticket.timestamp
-                          ? formatTicketDateTime(ticket.timestamp)
-                          : `${ticket.date || "—"}${ticket.time ? ` · ${ticket.time}` : ""}`].filter(Boolean).join(" · ")}
+                          ? formatTicketDate(ticket.timestamp)
+                          : (ticket.date || "—")].filter(Boolean).join(" · ")}
                       </p>
                     </span>
                     <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground/50" />
@@ -3087,6 +3091,7 @@ export default function ResidentMobilePWA() {
         <div className="flex flex-1 flex-col">
           {/* Centered header */}
           <div className="flex flex-col items-center px-4 pb-2 pt-6 text-center">
+            <TicketBadge className="mb-2 h-16 w-16" />
             <h2 className="text-[20px] font-semibold tracking-tight text-foreground">{selectedTicket.location}</h2>
             {(selectedTicket.category || selectedTicket.status) && (
               <p className="mt-0.5 text-[13px] text-muted-foreground">
