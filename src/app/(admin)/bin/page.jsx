@@ -27,7 +27,7 @@ function TicketPhoto({ photo }) {
   if (!photo) {
     return (
       <div className="flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-lg border border-border bg-muted text-muted-foreground">
-        <ImageOff className="h-8 w-8 opacity-40" strokeWidth={1.5} />
+        <ImageOff className="h-8 w-8 opacity-60" strokeWidth={2} />
         <span className="text-xs">No photo attached</span>
       </div>
     );

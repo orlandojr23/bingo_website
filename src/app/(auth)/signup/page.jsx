@@ -426,7 +426,7 @@ export default function SignupPage() {
             <div className="grid grid-cols-2 gap-2.5">
               <div className="flex flex-col gap-1.5">
                 <div className="relative">
-                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-muted-foreground/70">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-muted-foreground">
                     <User className="h-4 w-4" />
                   </div>
                   <input
@@ -473,7 +473,7 @@ export default function SignupPage() {
             {/* Mobile / Contact Number */}
             <div className="flex flex-col gap-1.5">
               <div className="relative">
-                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-muted-foreground/70">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-muted-foreground">
                   <Phone className="h-4 w-4" />
                 </div>
                 <input
@@ -497,7 +497,7 @@ export default function SignupPage() {
 
           <div className="flex flex-col gap-1.5">
             <div className="relative">
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-muted-foreground/70">
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-muted-foreground">
                 <Mail className="h-4 w-4" />
               </div>
               {emailSuggestionSuffix && (
@@ -538,7 +538,7 @@ export default function SignupPage() {
                 { label: "Barangay", value: PILOT_AREA.barangay, fullWidth: true },
               ].map((field) => (
                 <div key={field.label} className={`flex flex-col gap-1 ${field.fullWidth ? "col-span-2" : "col-span-1"}`}>
-                  <span className="pl-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
+                  <span className="pl-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                     {field.label}
                   </span>
                   <div className="flex min-h-[50px] w-full items-center rounded-2xl border border-border/60 bg-card px-3.5 py-3 text-[15px] text-foreground/80 leading-normal">
@@ -549,11 +549,11 @@ export default function SignupPage() {
             </div>
 
             <div className="flex flex-col gap-1" ref={sitioDropdownRef}>
-              <span className="pl-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
+              <span className="pl-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                 Sitio
               </span>
               <div className="relative">
-                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-muted-foreground/70 z-10">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-muted-foreground z-10">
                   <MapPin className="h-4 w-4" />
                 </div>
                 <button
@@ -564,7 +564,7 @@ export default function SignupPage() {
                   }`}
                 >
                   <span className="truncate">{sitio || "Select your sitio"}</span>
-                  <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground/70 transition-transform duration-200 ${isSitioOpen ? "rotate-180" : ""}`} />
+                  <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 ${isSitioOpen ? "rotate-180" : ""}`} />
                 </button>
 
                 <AnimatePresence>
@@ -607,7 +607,7 @@ export default function SignupPage() {
 
           <div className="flex flex-col gap-1.5">
             <div className="relative">
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-muted-foreground/70">
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-muted-foreground">
                 <Lock className="h-4 w-4" />
               </div>
               <input
@@ -622,7 +622,7 @@ export default function SignupPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-muted-foreground/70 transition-colors hover:text-foreground"
+                className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-muted-foreground transition-colors hover:text-foreground"
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
                 {showPassword ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}

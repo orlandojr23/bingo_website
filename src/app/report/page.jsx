@@ -2315,7 +2315,7 @@ export default function ResidentMobilePWA() {
       <div className={cn("flex flex-1 flex-col overflow-y-auto p-4", !submittedTicket && "pb-10")}>
         {submittedTicket ? (
         <div className="flex flex-1 flex-col items-center justify-center px-6 py-12 text-center mt-[-10%]">
-          <CheckCircle2 className="h-12 w-12 text-emerald-600" strokeWidth={1.5} />
+          <CheckCircle2 className="h-12 w-12 text-emerald-600" strokeWidth={2} />
           <h2 className="mt-4 text-[17px] font-semibold tracking-tight text-foreground">
             Report Dispatched
           </h2>
@@ -2386,7 +2386,7 @@ export default function ResidentMobilePWA() {
                 onClick={() => fileInputRef.current?.click()}
                 className="flex min-h-[60vh] w-full flex-1 flex-col items-center justify-center px-6 py-12 text-center cursor-pointer active:opacity-70 transition-opacity"
               >
-                <Camera className="h-16 w-16 text-muted-foreground/40" strokeWidth={1.25} />
+                <Camera className="h-16 w-16 text-muted-foreground" strokeWidth={1.75} />
                 <span className="mt-5 block text-[17px] font-semibold tracking-tight text-foreground">Take a photo</span>
                 <span className="mx-auto mt-1 block max-w-[240px] text-[13px] leading-normal text-muted-foreground">
                   Take a photo of the waste or bin on the spot to start your report
@@ -2490,7 +2490,7 @@ export default function ResidentMobilePWA() {
               <div>
                 <div className="mb-1.5 flex items-center justify-between">
                   <label className="block text-[13px] text-muted-foreground">
-                    Additional Details <span className="text-muted-foreground/70">(optional)</span>
+                    Additional Details <span className="text-muted-foreground">(optional)</span>
                   </label>
                   <span className="text-[12px] tabular-nums text-muted-foreground">
                     {description.length}/500

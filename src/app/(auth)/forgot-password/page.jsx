@@ -146,7 +146,7 @@ export default function ForgotPasswordPage() {
           <form className="flex flex-col gap-4" onSubmit={handleSendLink} noValidate>
             <div className="flex flex-col gap-1.5">
               <div className="relative">
-                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-muted-foreground/70">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-muted-foreground">
                   <Mail className="h-4 w-4" />
                 </div>
                 {emailSuggestionSuffix && (

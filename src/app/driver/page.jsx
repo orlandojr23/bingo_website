@@ -11,7 +11,6 @@ import {
   EyeOff,
   Loader2,
   X,
-  Map as MapIcon,
   ClipboardList,
   History,
 
@@ -167,8 +166,8 @@ function driverTimeAgo(iso, nowMs) {
   return new Date(t).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-// Bottom-nav tab: the active tab gets a duotone (tinted-fill + bold-stroke)
-// emerald icon — no background pill, just the icon and label.
+// Bottom-nav tab for the floating pill bar: bold outline icon over a small
+// label — the active tab gets a soft neutral pill behind icon + label.
 function DriverTab({ id, label, icon: Icon, activeTab, onSelect, badge = 0 }) {
   const active = activeTab === id;
   return (
@@ -176,17 +175,18 @@ function DriverTab({ id, label, icon: Icon, activeTab, onSelect, badge = 0 }) {
       type="button"
       onClick={onSelect}
       aria-label={label}
-      className={`relative flex flex-col items-center justify-center gap-1 transition-all active:scale-90 cursor-pointer ${active ? "text-emerald-600" : "text-zinc-500"}`}
+      className={cn(
+        "relative flex cursor-pointer flex-col items-center justify-center gap-0.5 rounded-full px-4 py-1.5 transition-all active:scale-95",
+        active ? "bg-foreground/[0.07] text-foreground" : "text-foreground"
+      )}
     >
-      <span className="relative flex h-8 items-center justify-center px-4">
+      <span className="relative flex items-center justify-center">
         <Icon
-          className="relative h-6 w-6"
-          strokeWidth={active ? 2.25 : 2}
-          fill={active ? "currentColor" : "none"}
-          fillOpacity={active ? 0.18 : 0}
+          className="relative h-[22px] w-[22px]"
+          strokeWidth={2}
         />
         {badge > 0 && (
-          <span className="absolute right-1.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold leading-none text-white">
+          <span className="absolute -right-2.5 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold leading-none text-white">
             {badge > 9 ? "9+" : badge}
           </span>
         )}
@@ -1358,8 +1358,9 @@ export default function DriverPage() {
           />
         </div>
 
-        {/* Native status banner */}
-        <div className="pointer-events-auto absolute top-0 inset-x-0 z-20 w-full border-b border-border/60 bg-background/80 backdrop-blur-md flex items-center select-none overflow-hidden px-4 pt-[calc(env(safe-area-inset-top)+12px)] pb-3">
+        {/* Floating status banner — same card language as the pill nav */}
+        <div className="pointer-events-none absolute inset-x-0 top-[calc(env(safe-area-inset-top)+0.75rem)] z-20 flex justify-center px-3">
+        <div className="pointer-events-auto flex w-full max-w-md items-center select-none rounded-3xl border border-black/10 bg-card/95 px-4 py-2.5 shadow-[0_8px_30px_rgba(0,0,0,0.12)] backdrop-blur-xl">
           {/* Left: Live status readout */}
           <div className="min-w-0 flex-1 overflow-hidden relative flex items-center">
             {!mapReady ? (
@@ -1414,10 +1415,11 @@ export default function DriverPage() {
             )}
           </button>
         </div>
+        </div>
 
         {/* Floating native map action buttons, just above bottom nav */}
         {/* 1. Bottom-Left: Focus Compactor Unit (native style, just above bottom nav) */}
-        <div className="pointer-events-none absolute bottom-[calc(5.5rem+env(safe-area-inset-bottom))] left-3 z-20">
+        <div className="pointer-events-none absolute bottom-[calc(6.75rem+env(safe-area-inset-bottom))] left-3 z-20">
           <AnimatePresence>
             {(() => {
               const tracking = truckState?.tracking;
@@ -1456,7 +1458,7 @@ export default function DriverPage() {
         </div>
 
         {/* 2. Bottom-Right: Center GPS Location (native style, just above bottom nav) */}
-        <div className="pointer-events-none absolute bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-3 z-20">
+        <div className="pointer-events-none absolute bottom-[calc(6.75rem+env(safe-area-inset-bottom))] right-3 z-20">
           <AnimatePresence>
             {coords?.lat != null && !isPointInView(coords.lat, coords.lng) && (
               <motion.button
@@ -1489,17 +1491,18 @@ export default function DriverPage() {
           </AnimatePresence>
         </div>
 
-        {/* Bottom Navigation Bar - native tab bar, only visible on map */}
+        {/* Bottom Navigation Bar - floating pill, only visible on map */}
+        <AnimatePresence>
         {activeTab === "map" && (
-        <div className="fixed bottom-0 inset-x-0 z-[100] border-t border-black/10 bg-background/85 backdrop-blur-xl shadow-[0_-4px_16px_rgba(0,0,0,0.06)] pb-[env(safe-area-inset-bottom)]">
-          <div className={cn("grid h-[64px] max-w-md mx-auto px-2 transition-all duration-300", showCenterAction ? "grid-cols-5" : "grid-cols-4")}>
-            <DriverTab
-              id="map"
-              label="Map"
-              icon={MapIcon}
-              activeTab={activeTab}
-              onSelect={() => { switchTab("map"); }}
-            />
+        <motion.div
+          key="driver-pill-nav"
+          initial={{ opacity: 0, y: 24, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 24, scale: 0.96 }}
+          transition={{ duration: 0.22, ease: "easeOut" }}
+          className="pointer-events-none fixed inset-x-0 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-[100] flex justify-center px-4"
+        >
+          <div className="pointer-events-auto flex items-center gap-1 rounded-full border border-black/10 bg-card/95 py-2 pl-2 pr-2 shadow-[0_8px_30px_rgba(0,0,0,0.12)] backdrop-blur-xl">
             <DriverTab
               id="assignment"
               label="Tasks"
@@ -1508,28 +1511,6 @@ export default function DriverPage() {
               onSelect={() => { switchTab("assignment"); }}
               badge={unseenTasks}
             />
-            <AnimatePresence initial={false}>
-              {showCenterAction && (
-                <motion.button
-                  key="center-route-action"
-                  type="button"
-                  initial={{ opacity: 0, scale: 0.5, y: 16 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.5, y: 16 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 28 }}
-                  onClick={() => { handlePrimaryAction(); }}
-                  aria-label={cta.label}
-                  title={cta.label}
-                  disabled={cta.disabled}
-                  className="relative flex cursor-pointer flex-col items-center justify-end pb-3 disabled:cursor-not-allowed"
-                >
-                  <span className={cn("absolute -top-7 left-1/2 flex h-14 w-14 -translate-x-1/2 items-center justify-center rounded-full text-white transition-transform active:scale-95", cta.tone)}>
-                    {cta.icon}
-                  </span>
-                  <span className={cn("text-[10px] font-semibold leading-none", cta.disabled ? "text-muted-foreground" : "text-emerald-600")}>{cta.short}</span>
-                </motion.button>
-              )}
-            </AnimatePresence>
             <DriverTab
               id="history"
               label="History"
@@ -1544,9 +1525,34 @@ export default function DriverPage() {
               activeTab={activeTab}
               onSelect={() => { setProfileView("main"); switchTab("profile"); }}
             />
+            <AnimatePresence initial={false}>
+              {showCenterAction && (
+                <motion.span
+                  key="route-action-wrap"
+                  initial={{ opacity: 0, scale: 0.5 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.5 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 28 }}
+                  className="flex shrink-0 items-center"
+                >
+                  <span aria-hidden="true" className="mx-1 h-8 w-px shrink-0 bg-black/10" />
+                  <button
+                    type="button"
+                    onClick={() => { handlePrimaryAction(); }}
+                    aria-label={cta.label}
+                    title={cta.label}
+                    disabled={cta.disabled}
+                    className={cn("flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-white transition-all active:scale-95 disabled:cursor-not-allowed", cta.tone)}
+                  >
+                    {cta.icon}
+                  </button>
+                </motion.span>
+              )}
+            </AnimatePresence>
           </div>
-        </div>
+        </motion.div>
         )}
+        </AnimatePresence>
 
         {/* FULL SCREEN VIEWS - native app style fade transition */}
         <AnimatePresence mode="wait" initial={false}>
@@ -1597,7 +1603,7 @@ export default function DriverPage() {
                                           <p title={scheduleLabel(s)} className="text-[15px] leading-snug break-words text-foreground"><CompactScheduleLabel label={scheduleLabel(s)} /></p>
                                           <p className="mt-0.5 text-[13px] text-muted-foreground">{s.time || "No time specified"}</p>
                                         </div>
-                                        <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground/50" />
+                                        <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={2} />
                                       </button>
                                     ))}
                                   </div>
@@ -1866,7 +1872,7 @@ export default function DriverPage() {
                                         {[formatHistoryDate(s.assignmentDate), s.time].filter(Boolean).join(" · ") || "No time specified"}
                                       </p>
                                     </span>
-                                    <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground/50" />
+                                    <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={2} />
                                   </button>
                                 ))}
                               </div>
@@ -2151,7 +2157,7 @@ export default function DriverPage() {
               className="flex min-h-[48px] w-full cursor-pointer items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card px-4 py-2.5 transition-all active:bg-muted"
             >
               <span className="text-[15px] text-foreground">Change Password</span>
-              <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground/50" />
+              <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={2} />
             </button>
           </div>
 
@@ -2167,7 +2173,7 @@ export default function DriverPage() {
                 <span className="block text-[15px] text-foreground">Map Display</span>
                 <span className="block text-[13px] text-muted-foreground">{mapView === "tilt" ? "Camera tilt" : "Default"}</span>
               </span>
-              <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground/50" />
+              <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={2} />
             </button>
             <div className="flex min-h-[48px] w-full items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card px-4 py-2.5">
               <div className="min-w-0 flex-1">
@@ -2537,6 +2543,7 @@ export default function DriverPage() {
                         onClick={() => { markNotificationRead(notif.id); haptic(); }}
                         className="flex w-full cursor-pointer items-start gap-3 px-4 py-3 text-left transition-colors active:bg-muted"
                       >
+                        <span aria-hidden="true" className={cn("mt-[7px] h-2 w-2 shrink-0 rounded-full", !notif.isRead ? "bg-emerald-600" : "bg-transparent")} />
                         <span className="min-w-0 flex-1">
                           <span className="flex items-baseline justify-between gap-2">
                             <span className={cn("text-[15px] tracking-tight text-foreground", !notif.isRead ? "font-semibold" : "font-normal")}>

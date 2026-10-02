@@ -325,7 +325,7 @@ export default function ResidentLoginPage() {
           <form className="flex flex-col gap-4" onSubmit={handleLogin} noValidate>
             <div className="flex flex-col gap-1.5">
               <div className="relative">
-                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-muted-foreground/70">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-muted-foreground">
                   <Mail className="h-4 w-4" />
                 </div>
                 {emailSuggestionSuffix && (
@@ -368,7 +368,7 @@ export default function ResidentLoginPage() {
 
             <div className="flex flex-col gap-1.5">
               <div className="relative">
-                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-muted-foreground/70">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-muted-foreground">
                   <Lock className="h-4 w-4" />
                 </div>
                 <input
@@ -383,7 +383,7 @@ export default function ResidentLoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-muted-foreground/70 transition-colors hover:text-foreground"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-muted-foreground transition-colors hover:text-foreground"
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
