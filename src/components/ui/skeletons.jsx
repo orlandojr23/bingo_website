@@ -117,40 +117,38 @@ export function ResidentShellSkeleton() {
           <MapSkeleton />
         </div>
 
-        {/* Top Status Banner Skeleton */}
-        <div className="pointer-events-auto absolute top-0 inset-x-0 z-20 w-full border-b border-border/60 bg-background/80 backdrop-blur-md flex items-center overflow-hidden px-4 pt-[calc(env(safe-area-inset-top)+12px)] pb-3">
-          <div className="flex items-center gap-2.5 min-w-0 w-full">
-            <div className="h-6 w-6 shrink-0 rounded bg-foreground/10 animate-pulse" />
-            <div className="min-w-0 flex-1 flex flex-col gap-1.5">
-              <div className="h-4 w-32 rounded bg-foreground/10 animate-pulse" />
-              <div className="h-3 w-48 rounded bg-foreground/5 animate-pulse" />
+        {/* Floating Status Banner Skeleton */}
+        <div className="pointer-events-none absolute inset-x-0 top-[calc(env(safe-area-inset-top)+0.75rem)] z-20 flex justify-center px-3">
+          <div className="flex w-full max-w-md items-center rounded-3xl border border-black/10 bg-card/95 px-4 py-2.5 shadow-[0_8px_30px_rgba(0,0,0,0.12)]">
+            <div className="flex items-center gap-2.5 min-w-0 w-full">
+              <div className="min-w-0 flex-1 flex flex-col gap-1.5">
+                <div className="h-4 w-32 rounded bg-foreground/10 animate-pulse" />
+                <div className="h-3 w-48 rounded bg-foreground/5 animate-pulse" />
+              </div>
             </div>
+            <div className="ml-1 h-10 w-10 shrink-0 rounded-full bg-foreground/5 animate-pulse" />
           </div>
-          <div className="ml-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-foreground/5 animate-pulse" />
-          <div className="ml-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-foreground/5 animate-pulse" />
         </div>
 
         {/* Floating Map Action Buttons Skeleton */}
-        <div className="absolute bottom-[calc(5.5rem+env(safe-area-inset-bottom))] left-3 z-20">
-          <div className="h-11 w-11 rounded-full bg-white shadow-md animate-pulse border border-black/10" />
+        <div className="absolute bottom-[calc(6.75rem+env(safe-area-inset-bottom))] left-3 z-20">
+          <div className="h-12 w-12 rounded-full bg-white shadow-lg animate-pulse border border-black/10" />
         </div>
-        <div className="absolute bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-3 z-20">
-          <div className="h-11 w-11 rounded-full bg-white shadow-md animate-pulse border border-black/10" />
+        <div className="absolute bottom-[calc(6.75rem+env(safe-area-inset-bottom))] right-3 z-20">
+          <div className="h-12 w-12 rounded-full bg-white shadow-lg animate-pulse border border-black/10" />
         </div>
 
-        {/* Bottom Nav Bar Skeleton */}
-        <div className="fixed bottom-0 inset-x-0 z-[100] border-t border-black/10 bg-background/85 backdrop-blur-xl shadow-[0_-4px_16px_rgba(0,0,0,0.06)] pb-[env(safe-area-inset-bottom)]">
-          <div className="grid grid-cols-5 h-[64px] max-w-md mx-auto px-2">
-            {[0, 1, 2, 3, 4].map((i) => (
-              <div key={i} className={`flex flex-col items-center justify-center ${i === 2 ? '-mt-5 gap-1.5' : 'gap-1'}`}>
-                {i === 2 ? (
-                  <div className="h-[42px] w-[42px] rounded-[18px] bg-emerald-600/30 animate-pulse" />
-                ) : (
-                  <div className="h-6 w-6 rounded bg-foreground/10 animate-pulse" />
-                )}
-                <div className={`h-2 rounded animate-pulse ${i === 2 ? 'w-8 bg-emerald-600/20' : 'w-8 bg-foreground/5'}`} />
+        {/* Floating Pill Nav Skeleton */}
+        <div className="fixed inset-x-0 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-[100] flex justify-center px-4">
+          <div className="flex items-center gap-1 rounded-full border border-black/10 bg-card/95 py-2 pl-2 pr-2 shadow-[0_8px_30px_rgba(0,0,0,0.12)]">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="flex flex-col items-center gap-1 rounded-full px-4 py-1.5">
+                <div className="h-[22px] w-[22px] rounded-full bg-foreground/10 animate-pulse" />
+                <div className="h-2 w-8 rounded bg-foreground/5 animate-pulse" />
               </div>
             ))}
+            <div className="mx-1 h-8 w-px bg-black/10" />
+            <div className="h-11 w-11 rounded-full bg-foreground/10 animate-pulse" />
           </div>
         </div>
       </div>
@@ -167,35 +165,38 @@ export function DriverShellSkeleton() {
           <MapSkeleton />
         </div>
 
-        {/* Top Status Banner Skeleton */}
-        <div className="pointer-events-auto absolute top-0 inset-x-0 z-20 w-full border-b border-border/60 bg-background/80 backdrop-blur-md flex items-center overflow-hidden px-4 pt-[calc(env(safe-area-inset-top)+12px)] pb-3">
-          <div className="flex items-center gap-2.5 min-w-0 w-full">
-            <div className="h-6 w-6 shrink-0 rounded bg-foreground/10 animate-pulse" />
-            <div className="min-w-0 flex-1 flex flex-col gap-1.5">
-              <div className="h-4 w-32 rounded bg-foreground/10 animate-pulse" />
-              <div className="h-3 w-48 rounded bg-foreground/5 animate-pulse" />
+        {/* Floating Status Banner Skeleton */}
+        <div className="pointer-events-none absolute inset-x-0 top-[calc(env(safe-area-inset-top)+0.75rem)] z-20 flex justify-center px-3">
+          <div className="flex w-full max-w-md items-center rounded-3xl border border-black/10 bg-card/95 px-4 py-2.5 shadow-[0_8px_30px_rgba(0,0,0,0.12)]">
+            <div className="flex items-center gap-2.5 min-w-0 w-full">
+              <div className="min-w-0 flex-1 flex flex-col gap-1.5">
+                <div className="h-4 w-32 rounded bg-foreground/10 animate-pulse" />
+                <div className="h-3 w-48 rounded bg-foreground/5 animate-pulse" />
+              </div>
             </div>
+            <div className="ml-1 h-10 w-10 shrink-0 rounded-full bg-foreground/5 animate-pulse" />
           </div>
-          <div className="ml-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-foreground/5 animate-pulse" />
         </div>
 
         {/* Floating Map Action Buttons Skeleton */}
-        <div className="absolute bottom-[calc(5.5rem+env(safe-area-inset-bottom))] left-3 z-20">
-          <div className="h-11 w-11 rounded-full bg-white shadow-md animate-pulse border border-black/10" />
+        <div className="absolute bottom-[calc(6.75rem+env(safe-area-inset-bottom))] left-3 z-20">
+          <div className="h-12 w-12 rounded-full bg-white shadow-md animate-pulse border border-black/10" />
         </div>
-        <div className="absolute bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-3 z-20">
-          <div className="h-11 w-11 rounded-full bg-white shadow-md animate-pulse border border-black/10" />
+        <div className="absolute bottom-[calc(6.75rem+env(safe-area-inset-bottom))] right-3 z-20">
+          <div className="h-12 w-12 rounded-full bg-white shadow-md animate-pulse border border-black/10" />
         </div>
 
-        {/* Bottom Nav Bar Skeleton */}
-        <div className="fixed bottom-0 inset-x-0 z-[100] border-t border-black/10 bg-background/85 backdrop-blur-xl shadow-[0_-4px_16px_rgba(0,0,0,0.06)] pb-[env(safe-area-inset-bottom)]">
-          <div className="grid grid-cols-5 h-[64px] max-w-md mx-auto px-2">
-            {[0, 1, 2, 3, 4].map((i) => (
-              <div key={i} className="flex flex-col items-center justify-center gap-1">
-                <div className="h-6 w-6 rounded bg-foreground/10 animate-pulse" />
+        {/* Floating Pill Nav Skeleton */}
+        <div className="fixed inset-x-0 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-[100] flex justify-center px-4">
+          <div className="flex items-center gap-1 rounded-full border border-black/10 bg-card/95 py-2 pl-2 pr-2 shadow-[0_8px_30px_rgba(0,0,0,0.12)]">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="flex flex-col items-center gap-1 rounded-full px-4 py-1.5">
+                <div className="h-[22px] w-[22px] rounded-full bg-foreground/10 animate-pulse" />
                 <div className="h-2 w-8 rounded bg-foreground/5 animate-pulse" />
               </div>
             ))}
+            <div className="mx-1 h-8 w-px bg-black/10" />
+            <div className="h-11 w-11 rounded-full bg-emerald-600/30 animate-pulse" />
           </div>
         </div>
       </div>
